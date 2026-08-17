@@ -7,6 +7,12 @@ import {
   Link,
   Hash,
   Check,
+  Building2,
+  MapPin,
+  Tag,
+  IndianRupee,
+  Layers,
+  ChevronDown,
 } from 'lucide-react';
 
 export const DynamicFieldInput = ({ field, value, onChange, error }) => {
@@ -48,6 +54,7 @@ export const DynamicFieldInput = ({ field, value, onChange, error }) => {
             value={value ?? ''}
             onChange={(e) => handleChange(e.target.value)}
             rows={3}
+            style={{ resize: 'vertical' }}
           />
         );
 
@@ -71,9 +78,9 @@ export const DynamicFieldInput = ({ field, value, onChange, error }) => {
               style={{
                 position: 'absolute',
                 left: '12px',
-                color: 'var(--amber-700)',
-                fontWeight: '700',
-                fontSize: '15px',
+                color: '#B45309',
+                fontWeight: '800',
+                fontSize: '14px',
                 pointerEvents: 'none',
               }}
             >
@@ -82,7 +89,7 @@ export const DynamicFieldInput = ({ field, value, onChange, error }) => {
             <input
               type="number"
               className="form-input"
-              style={{ paddingLeft: '32px' }}
+              style={{ paddingLeft: '32px', fontWeight: '700', color: '#0F172A' }}
               placeholder={placeholder || '50000'}
               value={value ?? ''}
               onChange={(e) => handleChange(e.target.value === '' ? '' : Number(e.target.value))}
@@ -94,18 +101,18 @@ export const DynamicFieldInput = ({ field, value, onChange, error }) => {
         return (
           <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
             <Phone
-              size={15}
+              size={14}
               style={{
                 position: 'absolute',
                 left: '12px',
-                color: 'var(--text-light)',
+                color: '#64748B',
                 pointerEvents: 'none',
               }}
             />
             <input
               type="tel"
               className="form-input"
-              style={{ paddingLeft: '34px' }}
+              style={{ paddingLeft: '34px', fontFamily: 'monospace', fontWeight: '600' }}
               placeholder={placeholder || '9876543210'}
               value={value ?? ''}
               onChange={(e) => handleChange(e.target.value)}
@@ -117,11 +124,11 @@ export const DynamicFieldInput = ({ field, value, onChange, error }) => {
         return (
           <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
             <Mail
-              size={15}
+              size={14}
               style={{
                 position: 'absolute',
                 left: '12px',
-                color: 'var(--text-light)',
+                color: '#64748B',
                 pointerEvents: 'none',
               }}
             />
@@ -140,11 +147,11 @@ export const DynamicFieldInput = ({ field, value, onChange, error }) => {
         return (
           <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
             <Link
-              size={15}
+              size={14}
               style={{
                 position: 'absolute',
                 left: '12px',
-                color: 'var(--text-light)',
+                color: '#64748B',
                 pointerEvents: 'none',
               }}
             />
@@ -191,26 +198,36 @@ export const DynamicFieldInput = ({ field, value, onChange, error }) => {
 
       case 'checkbox':
         return (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '4px 0' }}>
+          <label
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px',
+              padding: '10px 14px',
+              background: Boolean(value) ? '#EFF6FF' : '#F8FAFC',
+              border: `1.5px solid ${Boolean(value) ? '#93C5FD' : '#E2E8F0'}`,
+              borderRadius: '8px',
+              cursor: 'pointer',
+              userSelect: 'none',
+              transition: 'all 0.15s ease',
+            }}
+          >
             <input
               type="checkbox"
               id={`chk_${field.id}`}
               checked={Boolean(value)}
               onChange={(e) => handleChange(e.target.checked)}
-              style={{ width: '16px', height: '16px', accentColor: '#0F766E', cursor: 'pointer' }}
+              style={{ width: '16px', height: '16px', accentColor: '#2563EB', cursor: 'pointer' }}
             />
-            <label
-              htmlFor={`chk_${field.id}`}
-              style={{ fontSize: '13.5px', color: 'var(--text-primary)', cursor: 'pointer', userSelect: 'none', fontWeight: '500' }}
-            >
-              {placeholder || 'Yes, mark as interested'}
-            </label>
-          </div>
+            <span style={{ fontSize: '13px', color: Boolean(value) ? '#1E40AF' : '#334155', fontWeight: '600' }}>
+              {placeholder || 'Yes, mark as interested / active'}
+            </span>
+          </label>
         );
 
       case 'radio':
         return (
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', padding: '4px 0' }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', padding: '2px 0' }}>
             {options.map((opt, idx) => {
               const isChecked = value === opt.value;
               return (
@@ -221,14 +238,14 @@ export const DynamicFieldInput = ({ field, value, onChange, error }) => {
                     alignItems: 'center',
                     gap: '6px',
                     cursor: 'pointer',
-                    fontSize: '13px',
-                    color: isChecked ? 'var(--primary-800)' : 'var(--text-primary)',
-                    background: isChecked ? 'var(--primary-50)' : '#FFFFFF',
-                    border: `1px solid ${isChecked ? 'var(--primary-600)' : 'var(--border-default)'}`,
-                    padding: '6px 12px',
-                    borderRadius: 'var(--radius-md)',
+                    fontSize: '12.5px',
+                    color: isChecked ? '#1D4ED8' : '#334155',
+                    background: isChecked ? '#EFF6FF' : '#FFFFFF',
+                    border: `1.5px solid ${isChecked ? '#3B82F6' : '#E2E8F0'}`,
+                    padding: '7px 14px',
+                    borderRadius: '8px',
                     transition: 'all 0.15s ease',
-                    fontWeight: isChecked ? '600' : '400',
+                    fontWeight: isChecked ? '700' : '500',
                   }}
                 >
                   <input
@@ -237,7 +254,7 @@ export const DynamicFieldInput = ({ field, value, onChange, error }) => {
                     value={opt.value}
                     checked={isChecked}
                     onChange={() => handleChange(opt.value)}
-                    style={{ accentColor: '#0F766E' }}
+                    style={{ accentColor: '#2563EB' }}
                   />
                   <span>{opt.label}</span>
                 </label>
@@ -248,18 +265,30 @@ export const DynamicFieldInput = ({ field, value, onChange, error }) => {
 
       case 'select':
         return (
-          <select
-            className="form-select"
-            value={value ?? ''}
-            onChange={(e) => handleChange(e.target.value)}
-          >
-            <option value="">{placeholder || '-- Select an option --'}</option>
-            {options.map((opt, idx) => (
-              <option key={idx} value={opt.value}>
-                {opt.label}
-              </option>
-            ))}
-          </select>
+          <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+            <select
+              className="form-select"
+              value={value ?? ''}
+              onChange={(e) => handleChange(e.target.value)}
+              style={{ appearance: 'none', paddingRight: '32px', cursor: 'pointer' }}
+            >
+              <option value="">{placeholder || '-- Select an option --'}</option>
+              {options.map((opt, idx) => (
+                <option key={idx} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+            <ChevronDown
+              size={15}
+              style={{
+                position: 'absolute',
+                right: '12px',
+                color: '#64748B',
+                pointerEvents: 'none',
+              }}
+            />
+          </div>
         );
 
       case 'multiselect': {
@@ -285,16 +314,15 @@ export const DynamicFieldInput = ({ field, value, onChange, error }) => {
                     display: 'flex',
                     alignItems: 'center',
                     gap: '5px',
-                    padding: '5px 12px',
-                    borderRadius: 'var(--radius-full)',
-                    background: isSelected ? 'var(--primary-700)' : '#FFFFFF',
-                    border: isSelected ? '1px solid var(--primary-800)' : '1px solid var(--border-default)',
-                    color: isSelected ? '#FFFFFF' : 'var(--text-primary)',
+                    padding: '6px 12px',
+                    borderRadius: '20px',
+                    background: isSelected ? '#2563EB' : '#FFFFFF',
+                    border: isSelected ? '1.5px solid #1D4ED8' : '1px solid #E2E8F0',
+                    color: isSelected ? '#FFFFFF' : '#334155',
                     fontSize: '12px',
-                    fontWeight: isSelected ? '600' : '500',
+                    fontWeight: isSelected ? '700' : '500',
                     cursor: 'pointer',
                     transition: 'all 0.15s ease',
-                    boxShadow: 'var(--shadow-xs)',
                   }}
                 >
                   {isSelected && <Check size={12} />}
@@ -312,17 +340,19 @@ export const DynamicFieldInput = ({ field, value, onChange, error }) => {
             style={{
               padding: '9px 13px',
               background: '#F8FAFC',
-              border: '1px dashed var(--border-default)',
-              borderRadius: 'var(--radius-md)',
+              border: '1.5px dashed #CBD5E1',
+              borderRadius: '8px',
               display: 'flex',
               alignItems: 'center',
               gap: '8px',
-              color: 'var(--text-muted)',
+              color: '#64748B',
               fontSize: '13px',
             }}
           >
-            <Hash size={15} color="var(--primary-700)" />
-            <span className="mono">{value || '(Auto-generated on creation)'}</span>
+            <Hash size={15} color="#2563EB" />
+            <span style={{ fontFamily: 'monospace', fontWeight: '700', color: '#1E40AF' }}>
+              {value || '(Auto-assigned by atomic sequence)'}
+            </span>
           </div>
         );
 
@@ -346,7 +376,7 @@ export const DynamicFieldInput = ({ field, value, onChange, error }) => {
       </label>
       {renderInput()}
       {description && <span className="form-help">{description}</span>}
-      {error && <span className="form-error">{error}</span>}
+      {error && <span className="form-error">⚠️ {error}</span>}
     </div>
   );
 };

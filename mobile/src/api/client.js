@@ -267,6 +267,23 @@ export const apiClient = {
     }
   },
 
+  // Update customer (e.g. status update, follow-up log)
+  async updateCustomer(id, formData, notes = '') {
+    try {
+      const base = await this.getApiBase();
+      const headers = await this.getHeaders();
+
+      const res = await fetch(`${base}/customers/${id}`, {
+        method: 'PUT',
+        headers,
+        body: JSON.stringify({ data: formData, notes }),
+      });
+      return await res.json();
+    } catch (e) {
+      return { success: false, message: `Connection error: ${e.message}. Check your server IP settings.` };
+    }
+  },
+
   // Fetch dynamic branding
   async getBranding() {
     try {

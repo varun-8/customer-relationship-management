@@ -524,19 +524,29 @@ export const CustomerListTable = ({ onAddCustomer, onEditCustomer, onViewCustome
                 const salesperson = data.salesperson || '—';
 
                 return (
-                  <tr key={c._id}>
-                    {/* 1. Real Customer ID */}
+                  <tr
+                    key={c._id}
+                    onClick={() => onViewCustomer(c)}
+                    style={{ cursor: 'pointer', transition: 'background-color 0.15s ease' }}
+                    className="customer-table-row"
+                  >
                     <td style={{ whiteSpace: 'nowrap' }}>
                       <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
                         <span
                           className="id-badge"
-                          onClick={() => onViewCustomer(c)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onViewCustomer(c);
+                          }}
                           title="View Customer Profile"
                         >
                           {c.customerId || 'CUS-NEW'}
                         </span>
                         <button
-                          onClick={(e) => copyId(c.customerId, e)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            copyId(c.customerId, e);
+                          }}
                           className="btn-icon"
                           style={{ padding: '2px' }}
                           title="Copy ID"
@@ -550,7 +560,6 @@ export const CustomerListTable = ({ onAddCustomer, onEditCustomer, onViewCustome
                       </div>
                     </td>
 
-                    {/* 2. Real Customer Name & Location */}
                     <td style={{ minWidth: '220px', whiteSpace: 'nowrap' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                         <div
@@ -561,12 +570,10 @@ export const CustomerListTable = ({ onAddCustomer, onEditCustomer, onViewCustome
                         </div>
                         <div style={{ whiteSpace: 'nowrap' }}>
                           <div
-                            onClick={() => onViewCustomer(c)}
                             style={{
                               fontWeight: '700',
                               color: 'var(--text-primary)',
                               fontSize: '13px',
-                              cursor: 'pointer',
                               whiteSpace: 'nowrap',
                             }}
                           >
@@ -582,13 +589,36 @@ export const CustomerListTable = ({ onAddCustomer, onEditCustomer, onViewCustome
                       </div>
                     </td>
 
-                    {/* 3. Real Mobile */}
                     <td style={{ whiteSpace: 'nowrap' }}>
                       {data.phone ? (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '5px', color: 'var(--text-secondary)', fontSize: '12.5px' }}>
-                          <Phone size={11} color="var(--text-light)" />
-                          <a href={`tel:${data.phone}`} style={{ color: 'inherit', textDecoration: 'none' }} className="mono">
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12.5px' }}>
+                          <a
+                            href={`tel:${data.phone}`}
+                            onClick={(e) => e.stopPropagation()}
+                            style={{ color: 'var(--text-secondary)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '4px' }}
+                            className="mono"
+                          >
+                            <Phone size={11} color="var(--text-light)" />
                             {data.phone}
+                          </a>
+                          <a
+                            href={`https://wa.me/${String(data.phone).replace(/[^0-9]/g, '').length === 10 ? '91' + String(data.phone).replace(/[^0-9]/g, '') : String(data.phone).replace(/[^0-9]/g, '')}?text=${encodeURIComponent(`Hello ${data.customerName || ''}, greeting from BuildCRM!`)}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={(e) => e.stopPropagation()}
+                            title="Chat on WhatsApp"
+                            style={{
+                              padding: '1px 5px',
+                              borderRadius: '4px',
+                              background: '#DCFCE7',
+                              color: '#15803D',
+                              fontSize: '10px',
+                              fontWeight: '700',
+                              textDecoration: 'none',
+                              border: '1px solid #86EFAC',
+                            }}
+                          >
+                            WA
                           </a>
                         </div>
                       ) : (
@@ -596,7 +626,6 @@ export const CustomerListTable = ({ onAddCustomer, onEditCustomer, onViewCustome
                       )}
                     </td>
 
-                    {/* 4. Real Customer Type */}
                     <td style={{ whiteSpace: 'nowrap' }}>
                       {data.customerType ? (
                         <span
@@ -610,7 +639,6 @@ export const CustomerListTable = ({ onAddCustomer, onEditCustomer, onViewCustome
                       )}
                     </td>
 
-                    {/* 5. Real House Stage */}
                     <td style={{ whiteSpace: 'nowrap' }}>
                       {data.houseStage ? (
                         <span style={{ fontSize: '12.5px', color: 'var(--text-secondary)', fontWeight: '500' }}>
@@ -621,7 +649,6 @@ export const CustomerListTable = ({ onAddCustomer, onEditCustomer, onViewCustome
                       )}
                     </td>
 
-                    {/* 6. Real Status */}
                     <td style={{ whiteSpace: 'nowrap' }}>
                       {data.status ? (
                         <span
@@ -636,14 +663,12 @@ export const CustomerListTable = ({ onAddCustomer, onEditCustomer, onViewCustome
                       )}
                     </td>
 
-                    {/* 7. Real Quotation Value */}
                     <td style={{ whiteSpace: 'nowrap' }}>
                       <span style={{ fontWeight: '800', color: quotationFormatted !== '—' ? 'var(--text-primary)' : 'var(--text-light)', fontSize: '13px' }}>
                         {quotationFormatted}
                       </span>
                     </td>
 
-                    {/* 8. Real Next Follow-up */}
                     <td style={{ whiteSpace: 'nowrap' }}>
                       {followUpFormatted !== '—' ? (
                         <div style={{ display: 'flex', alignItems: 'center', gap: '5px', color: '#059669', fontSize: '12px', fontWeight: '500' }}>
@@ -655,17 +680,16 @@ export const CustomerListTable = ({ onAddCustomer, onEditCustomer, onViewCustome
                       )}
                     </td>
 
-                    {/* 9. Real Salesperson */}
                     <td style={{ whiteSpace: 'nowrap' }}>
                       {salesperson !== '—' ? (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                           <div
                             style={{
-                              width: '22px',
-                              height: '22px',
+                              width: '20px',
+                              height: '20px',
                               borderRadius: '50%',
-                              backgroundColor: '#334155',
-                              color: '#FFFFFF',
+                              backgroundColor: '#F1F5F9',
+                              color: 'var(--text-secondary)',
                               fontSize: '10px',
                               fontWeight: '700',
                               display: 'flex',
@@ -684,19 +708,24 @@ export const CustomerListTable = ({ onAddCustomer, onEditCustomer, onViewCustome
                       )}
                     </td>
 
-                    {/* 10. Actions */}
                     <td style={{ textAlign: 'center', whiteSpace: 'nowrap' }}>
                       <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
                         <button
-                          onClick={() => onViewCustomer(c)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onViewCustomer(c);
+                          }}
                           className="btn-icon"
-                          title="View Details"
+                          title="View Details & Follow-up History"
                           style={{ color: '#0D9488', padding: '4px' }}
                         >
                           <Eye size={15} />
                         </button>
                         <button
-                          onClick={() => onEditCustomer(c)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onEditCustomer(c);
+                          }}
                           className="btn-icon"
                           title="Edit Customer"
                           style={{ color: '#2563EB', padding: '4px' }}
@@ -704,14 +733,15 @@ export const CustomerListTable = ({ onAddCustomer, onEditCustomer, onViewCustome
                           <Edit3 size={15} />
                         </button>
                         <button
-                          onClick={() => {
+                          onClick={(e) => {
+                            e.stopPropagation();
                             if (confirm(`Delete customer ${c.customerId}?`)) {
                               deleteCustomer(c._id);
                             }
                           }}
                           className="btn-icon"
                           title="Delete Customer"
-                          style={{ color: '#E11D48', padding: '4px' }}
+                          style={{ color: '#DC2626', padding: '4px' }}
                         >
                           <Trash2 size={15} />
                         </button>

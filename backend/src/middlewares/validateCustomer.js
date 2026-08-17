@@ -34,7 +34,13 @@ const validateCustomerData = async (req, res, next) => {
 
       // 1. Required Check
       const isMissing = value === undefined || value === null || value === '' || (Array.isArray(value) && value.length === 0);
-      if (field.required && isMissing && field.type !== 'auto_number') {
+
+      // On PUT (partial update), if field is undefined, skip validation and don't overwrite
+      if (req.method === 'PUT' && value === undefined) {
+        continue;
+      }
+
+      if (req.method === 'POST' && field.required && isMissing && field.type !== 'auto_number') {
         errors[fieldName] = `${label} is required`;
         continue;
       }

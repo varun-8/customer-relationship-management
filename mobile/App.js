@@ -81,6 +81,13 @@ export default function App() {
   const [connectionStatus, setConnectionStatus] = useState(null);
   const [testingConn, setTestingConn] = useState(false);
 
+  // Quick Follow-up Action State
+  const [followUpStatus, setFollowUpStatus] = useState('Follow-up');
+  const [followUpReason, setFollowUpReason] = useState('');
+  const [followUpNextDate, setFollowUpNextDate] = useState('');
+  const [followUpOrderValue, setFollowUpOrderValue] = useState('');
+  const [submittingFollowUp, setSubmittingFollowUp] = useState(false);
+
   useEffect(() => {
     const loadHost = async () => {
       const currentHost = await apiClient.getApiBase();
@@ -138,6 +145,80 @@ export default function App() {
     setRefreshing(true);
     await Promise.all([loadBranding(), loadFormSchema(), loadCustomers(search)]);
     setRefreshing(false);
+  };
+
+  const handleSelectCustomer = (item) => {
+    const d = item.data instanceof Map ? Object.fromEntries(item.data) : (item.data || {});
+    setSelectedCustomer(item);
+    setFollowUpStatus(d.status || 'Follow-up');
+    setFollowUpReason(d.lastReason || '');
+    setFollowUpNextDate(d.nextFollowUp || '');
+    setFollowUpOrderValue(d.orderValue !== undefined && d.orderValue !== null ? String(d.orderValue) : '');
+    setActiveScreen('detail');
+  };
+
+  const openWhatsApp = (phone, customerName = '', requirement = '') => {
+    if (!phone) {
+      Alert.alert('No Phone Number', 'This customer record does not have a phone number.');
+      return;
+    }
+    const cleanPhone = String(phone).replace(/[^0-9]/g, '');
+    if (!cleanPhone || cleanPhone.length < 10) {
+      Alert.alert('Invalid Phone', 'Please provide a valid 10-digit mobile number.');
+      return;
+    }
+    const formattedPhone = cleanPhone.length === 10 ? `91${cleanPhone}` : cleanPhone;
+    const greetingName = customerName ? ` ${customerName}` : '';
+    const brandTitle = branding.appShortName || branding.appName || 'Vasantham CRM';
+    const textMsg = `Hello${greetingName}, greetings from ${brandTitle}! Regarding your requirement for ${requirement || 'Tiles & Sanitary Wares'}...`;
+
+    const waUrl = `https://wa.me/${formattedPhone}?text=${encodeURIComponent(textMsg)}`;
+    Linking.openURL(waUrl).catch(() => {
+      Linking.openURL(`https://api.whatsapp.com/send?phone=${formattedPhone}&text=${encodeURIComponent(textMsg)}`);
+    });
+  };
+
+  const handleLogFollowUp = async () => {
+    if (!selectedCustomer) return;
+    const currentData = selectedCustomer.data instanceof Map
+      ? Object.fromEntries(selectedCustomer.data)
+      : (selectedCustomer.data || {});
+
+    const currentCount = Number(currentData.followUpCount) || 0;
+    const newCount = currentCount + 1;
+    const todayStr = new Date().toISOString().split('T')[0];
+
+    const updatedData = {
+      ...currentData,
+      status: followUpStatus,
+      lastReason: followUpReason.trim(),
+      nextFollowUp: followUpNextDate.trim(),
+      lastFollowUp: todayStr,
+      followUpCount: newCount,
+      ...(followUpOrderValue ? { orderValue: Number(followUpOrderValue) } : {}),
+    };
+
+    setSubmittingFollowUp(true);
+    try {
+      const res = await apiClient.updateCustomer(
+        selectedCustomer._id || selectedCustomer.customerId,
+        updatedData
+      );
+      if (res.success && res.data) {
+        setSelectedCustomer(res.data);
+        await loadCustomers(search);
+        Alert.alert(
+          '✓ Follow-up Recorded',
+          `Follow-up #${newCount} logged successfully!\nStatus updated to "${followUpStatus}".\nLast follow-up set to today (${todayStr}).`
+        );
+      } else {
+        Alert.alert('Update Failed', res.message || 'Could not update customer');
+      }
+    } catch (e) {
+      Alert.alert('Error', e.message);
+    } finally {
+      setSubmittingFollowUp(false);
+    }
   };
 
   const handleTestConnection = async () => {
@@ -439,62 +520,87 @@ export default function App() {
                   <TouchableOpacity
                     style={styles.customerCard}
                     activeOpacity={0.7}
-                    onPress={() => {
-                      setSelectedCustomer(item);
-                      setActiveScreen('detail');
-                    }}
+                    onPress={() => handleSelectCustomer(item)}
                   >
-                    {/* Top Row: Name, ID, Type */}
+                    {/* Header Row: Avatar, Name, ID, Type Pill */}
                     <View style={styles.cardHeaderRow}>
                       <View style={styles.cardAvatar}>
                         <Text style={styles.cardAvatarText}>{initial}</Text>
                       </View>
                       <View style={{ flex: 1 }}>
-                        <Text style={styles.cardCustomerName}>{data.customerName || 'Unnamed Customer'}</Text>
-                        <Text style={styles.cardCustomerId}>{item.customerId || 'CUS-LEAD'}</Text>
-                      </View>
-                      <View style={[styles.typePill, { backgroundColor: badgeStyle.bg, borderColor: badgeStyle.border }]}>
-                        <Text style={[styles.typePillText, { color: badgeStyle.text }]}>
-                          {data.customerType || 'Customer'}
+                        <Text style={styles.cardCustomerName} numberOfLines={1}>
+                          {data.customerName || 'Unnamed Customer'}
                         </Text>
-                      </View>
-                    </View>
-
-                    {/* Middle Info Row */}
-                    <View style={styles.cardInfoRow}>
-                      <TouchableOpacity
-                        style={styles.cardPhoneTag}
-                        onPress={() => {
-                          if (data.phone) Linking.openURL(`tel:${data.phone}`);
-                        }}
-                      >
-                        <Text style={styles.cardPhoneText}>📞 {data.phone || 'No phone'}</Text>
-                      </TouchableOpacity>
-
-                      {data.location ? (
-                        <Text style={styles.cardLocationText} numberOfLines={1}>
-                          📍 {data.location}
-                        </Text>
-                      ) : null}
-                    </View>
-
-                    <View style={styles.cardDivider} />
-
-                    {/* Bottom Row: Status & Quotation Value */}
-                    <View style={styles.cardFooterRow}>
-                      {data.status ? (
-                        <View style={[styles.statusPill, { backgroundColor: statusStyle.bg }]}>
-                          <Text style={[styles.statusPillText, { color: statusStyle.text }]}>
-                            {data.status}
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 2 }}>
+                          <Text style={styles.cardCustomerId}>{item.customerId || 'CUS-LEAD'}</Text>
+                          <Text style={styles.cardDot}>•</Text>
+                          <Text style={[styles.cardTypeLabel, { color: badgeStyle.text }]}>
+                            {data.customerType || 'Building Owner'}
                           </Text>
                         </View>
+                      </View>
+
+                      <View style={[styles.statusPill, { backgroundColor: statusStyle.bg }]}>
+                        <Text style={[styles.statusPillText, { color: statusStyle.text }]}>
+                          {data.status || 'Follow-up'}
+                        </Text>
+                      </View>
+                    </View>
+
+                    {/* Middle Highlights Row: Location, Stage & Quotation */}
+                    <View style={styles.cardHighlightsRow}>
+                      <View style={{ flex: 1 }}>
+                        {data.location ? (
+                          <Text style={styles.cardLocationText} numberOfLines={1}>
+                            📍 {data.location} {data.houseStage ? `• ${data.houseStage}` : ''}
+                          </Text>
+                        ) : data.houseStage ? (
+                          <Text style={styles.cardLocationText}>
+                            🏗️ {data.houseStage}
+                          </Text>
+                        ) : (
+                          <Text style={styles.cardLocationText}>
+                            🏢 Showroom Lead
+                          </Text>
+                        )}
+                      </View>
+
+                      {data.quotationValue ? (
+                        <Text style={styles.cardPrice}>
+                          ₹ {Number(data.quotationValue).toLocaleString('en-IN')}
+                        </Text>
                       ) : (
-                        <Text style={{ fontSize: 11, color: colors.textMuted }}>Newly Registered</Text>
+                        <Text style={styles.cardFollowUpCountBadge}>
+                          #{data.followUpCount || 0} Follow-ups
+                        </Text>
+                      )}
+                    </View>
+
+                    {/* Footer Row: Contact Action Buttons & Next Date */}
+                    <View style={styles.cardActionFooterRow}>
+                      {data.phone ? (
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                          <TouchableOpacity
+                            style={styles.cardCallChip}
+                            onPress={() => Linking.openURL(`tel:${data.phone}`)}
+                          >
+                            <Text style={styles.cardCallChipText}>📞 {data.phone}</Text>
+                          </TouchableOpacity>
+
+                          <TouchableOpacity
+                            style={styles.cardWhatsAppChip}
+                            onPress={() => openWhatsApp(data.phone, data.customerName, data.requirement)}
+                          >
+                            <Text style={styles.cardWhatsAppChipText}>💬 WhatsApp</Text>
+                          </TouchableOpacity>
+                        </View>
+                      ) : (
+                        <Text style={{ fontSize: 11.5, color: colors.textMuted }}>No Phone</Text>
                       )}
 
-                      {data.quotationValue || data.tileBudget ? (
-                        <Text style={styles.cardPrice}>
-                          ₹ {Number(data.quotationValue || data.tileBudget).toLocaleString('en-IN')}
+                      {data.nextFollowUp ? (
+                        <Text style={styles.cardNextFollowUpText}>
+                          📅 Next: {data.nextFollowUp}
                         </Text>
                       ) : null}
                     </View>
@@ -506,27 +612,43 @@ export default function App() {
         </View>
       )}
 
-      {/* Screen: Add Customer (23 Fields with 4 Tabs) */}
+      {/* Screen: Customer Add Form */}
       {activeScreen === 'add' && (
-        <View style={{ flex: 1, backgroundColor: '#F8FAFC' }}>
-          {/* Section Progress Bar */}
+        <View style={styles.screenBody}>
+          {/* Form Progress Bar */}
           <View style={styles.progressBarWrapper}>
-            <View style={[styles.progressBarFill, { width: `${((currentSectionIndex + 1) / SECTIONS.length) * 100}%` }]} />
+            <View
+              style={[
+                styles.progressBarFill,
+                { width: `${((currentSectionIndex + 1) / SECTIONS.length) * 100}%` },
+              ]}
+            />
           </View>
 
-          {/* Section Tab Bar */}
+          {/* Section Step Chips */}
           <View style={styles.sectionTabBar}>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 12, gap: 6 }}>
-              {SECTIONS.map((sec) => {
-                const isSelected = formSection === sec.id;
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 14, gap: 8 }}>
+              {SECTIONS.map((sec, idx) => {
+                const isActive = sec.id === formSection;
+                const isCompleted = idx < currentSectionIndex;
+
                 return (
                   <TouchableOpacity
                     key={sec.id}
-                    style={[styles.sectionTabChip, isSelected && styles.sectionTabChipActive]}
                     onPress={() => setFormSection(sec.id)}
+                    style={[
+                      styles.sectionTabChip,
+                      isActive && styles.sectionTabChipActive,
+                      isCompleted && styles.sectionTabChipCompleted,
+                    ]}
                   >
-                    <Text style={[styles.sectionTabChipText, isSelected && styles.sectionTabChipTextActive]}>
-                      {sec.icon} {sec.shortTitle}
+                    <Text
+                      style={[
+                        styles.sectionTabChipText,
+                        isActive && styles.sectionTabChipTextActive,
+                      ]}
+                    >
+                      {sec.shortTitle}
                     </Text>
                   </TouchableOpacity>
                 );
@@ -534,16 +656,13 @@ export default function App() {
             </ScrollView>
           </View>
 
-          {/* Form Scroll Container */}
-          <ScrollView
-            style={styles.formScrollView}
-            keyboardShouldPersistTaps="handled"
-            showsVerticalScrollIndicator={false}
-          >
-            {/* Active Section Banner */}
+          {/* Active Section Form Fields */}
+          <ScrollView style={styles.formScrollView} showsVerticalScrollIndicator={false}>
+            {/* Banner of Active Section */}
             <View style={styles.sectionBannerBox}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                 <Text style={styles.sectionBannerTitle}>
+                  {SECTIONS[currentSectionIndex]?.icon}{' '}
                   {SECTIONS[currentSectionIndex]?.title}
                 </Text>
                 <Text style={styles.sectionStepCounter}>
@@ -566,23 +685,32 @@ export default function App() {
                     key={field.id}
                     field={field}
                     value={formData[field.name]}
-                    onChange={handleFieldChange}
                     error={errors[field.name]}
+                    onChange={(val) => {
+                      setFormData((prev) => ({ ...prev, [field.name]: val }));
+                      if (errors[field.name]) {
+                        setErrors((prev) => {
+                          const updated = { ...prev };
+                          delete updated[field.name];
+                          return updated;
+                        });
+                      }
+                    }}
                   />
                 ));
               })()}
             </View>
 
-            {/* Navigation & Submit Controls */}
+            {/* Navigation Buttons for Form */}
             <View style={styles.formNavButtonsRow}>
-              {currentSectionIndex > 0 && (
+              {currentSectionIndex > 0 ? (
                 <TouchableOpacity
                   style={styles.prevSectionBtn}
                   onPress={() => setFormSection(SECTIONS[currentSectionIndex - 1].id)}
                 >
                   <Text style={styles.prevSectionBtnText}>← Previous</Text>
                 </TouchableOpacity>
-              )}
+              ) : null}
 
               {currentSectionIndex < SECTIONS.length - 1 ? (
                 <TouchableOpacity
@@ -609,7 +737,7 @@ export default function App() {
         </View>
       )}
 
-      {/* Screen: Customer Details */}
+      {/* Screen: Customer Details (Crystal Clear & Neat Information Layout) */}
       {activeScreen === 'detail' && selectedCustomer && (
         <ScrollView style={styles.detailScrollView} showsVerticalScrollIndicator={false}>
           {(() => {
@@ -618,10 +746,11 @@ export default function App() {
               : (selectedCustomer.data || {});
             const initial = (data.customerName || 'C').charAt(0).toUpperCase();
             const badgeStyle = getBadgeStyle(data.customerType);
+            const statusStyle = getStatusBadgeStyle(data.status);
 
             return (
-              <View>
-                {/* Profile Summary Card */}
+              <View style={{ paddingBottom: 40 }}>
+                {/* 1. Hero Identity Card */}
                 <View style={styles.detailHeroCard}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
                     <View style={styles.detailAvatar}>
@@ -629,7 +758,13 @@ export default function App() {
                     </View>
                     <View style={{ flex: 1 }}>
                       <Text style={styles.detailCustomerName}>{data.customerName || 'Customer Profile'}</Text>
-                      <Text style={styles.detailCustomerId}>{selectedCustomer.customerId}</Text>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 3 }}>
+                        <Text style={styles.detailCustomerId}>{selectedCustomer.customerId}</Text>
+                        <Text style={{ color: colors.border }}>|</Text>
+                        <Text style={{ fontSize: 12, color: colors.textMuted }}>
+                          {data.location || 'Showroom Lead'}
+                        </Text>
+                      </View>
                     </View>
                   </View>
 
@@ -639,53 +774,284 @@ export default function App() {
                         {data.customerType || 'Building Owner'}
                       </Text>
                     </View>
-                    {data.status ? (
-                      <View style={[styles.typePill, { backgroundColor: colors.goldBg, borderColor: colors.goldBorder }]}>
-                        <Text style={[styles.typePillText, { color: colors.gold }]}>
-                          {data.status}
-                        </Text>
-                      </View>
-                    ) : null}
+                    <View style={[styles.typePill, { backgroundColor: statusStyle.bg, borderColor: statusStyle.border }]}>
+                      <Text style={[styles.typePillText, { color: statusStyle.text }]}>
+                        ● {data.status || 'Follow-up'}
+                      </Text>
+                    </View>
                   </View>
 
-                  {/* Direct Action Dialer */}
+                  {/* 1-Tap Action Call & WhatsApp Buttons */}
                   {data.phone ? (
-                    <TouchableOpacity
-                      style={styles.quickCallBtn}
-                      onPress={() => Linking.openURL(`tel:${data.phone}`)}
-                    >
-                      <Text style={styles.quickCallBtnText}>📞 Call Customer ({data.phone})</Text>
-                    </TouchableOpacity>
+                    <View style={{ flexDirection: 'row', gap: 10, marginTop: 14 }}>
+                      <TouchableOpacity
+                        style={styles.detailActionBtnCall}
+                        onPress={() => Linking.openURL(`tel:${data.phone}`)}
+                      >
+                        <Text style={styles.detailActionBtnCallText}>📞 Call ({data.phone})</Text>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                        style={styles.detailActionBtnWhatsApp}
+                        onPress={() => openWhatsApp(data.phone, data.customerName, data.requirement)}
+                      >
+                        <Text style={styles.detailActionBtnWhatsAppText}>💬 WhatsApp Chat</Text>
+                      </TouchableOpacity>
+                    </View>
                   ) : null}
                 </View>
 
-                {/* 4 Categorized Sections */}
-                {SECTIONS.map((sec) => {
-                  const secFields = activeFields.filter((f) => sec.fieldNames.includes(f.name));
-                  return (
-                    <View key={sec.id} style={styles.detailSectionContainer}>
-                      <Text style={styles.detailSectionHeading}>
-                        {sec.icon} {sec.title}
+                {/* 2. 4 Quick Stat Tiles (2x2 Grid) */}
+                <View style={styles.statTilesGrid}>
+                  <View style={styles.statTileItem}>
+                    <Text style={styles.statTileLabel}>QUOTATION VALUE</Text>
+                    <Text style={[styles.statTileValue, { color: '#B45309' }]}>
+                      {data.quotationValue ? `₹ ${Number(data.quotationValue).toLocaleString('en-IN')}` : '₹ 0'}
+                    </Text>
+                  </View>
+
+                  <View style={styles.statTileItem}>
+                    <Text style={styles.statTileLabel}>TILE BUDGET</Text>
+                    <Text style={[styles.statTileValue, { color: '#2563EB' }]}>
+                      {data.tileBudget ? `₹ ${Number(data.tileBudget).toLocaleString('en-IN')}` : '₹ 0'}
+                    </Text>
+                  </View>
+
+                  <View style={styles.statTileItem}>
+                    <Text style={styles.statTileLabel}>HOUSE STAGE</Text>
+                    <Text style={styles.statTileValue} numberOfLines={1}>
+                      {data.houseStage || 'Flooring Stage'}
+                    </Text>
+                  </View>
+
+                  <View style={styles.statTileItem}>
+                    <Text style={styles.statTileLabel}>TOTAL INTERACTIONS</Text>
+                    <Text style={[styles.statTileValue, { color: '#15803D' }]}>
+                      #{data.followUpCount || 0} Logged
+                    </Text>
+                  </View>
+                </View>
+
+                {/* 3. ⚡ Quick Follow-up & Stage Update Hub */}
+                <View style={styles.followUpActionCard}>
+                  <View style={styles.followUpHeader}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      <Text style={{ fontSize: 16 }}>⚡</Text>
+                      <Text style={styles.followUpTitle}>Follow-up & Status Update</Text>
+                    </View>
+                    <View style={styles.followUpBadge}>
+                      <Text style={styles.followUpBadgeText}>
+                        #{data.followUpCount || 0} → Auto #{((Number(data.followUpCount) || 0) + 1)}
                       </Text>
-                      <View style={styles.detailSectionCard}>
-                        {secFields.map((f) => (
-                          <View key={f.name} style={styles.detailRow}>
-                            <Text style={styles.detailRowLabel}>{f.label}</Text>
-                            <Text style={styles.detailRowValue}>
-                              {data[f.name] !== undefined && data[f.name] !== null && data[f.name] !== ''
-                                ? Array.isArray(data[f.name])
-                                  ? data[f.name].join(', ')
-                                  : f.type === 'currency'
-                                  ? `₹ ${Number(data[f.name]).toLocaleString('en-IN')}`
-                                  : String(data[f.name])
-                                : '—'}
-                            </Text>
-                          </View>
-                        ))}
+                    </View>
+                  </View>
+
+                  <Text style={styles.followUpSubheading}>
+                    Tap a status after discussion. Auto-increments count and logs today's date.
+                  </Text>
+
+                  {/* Status Selection Pills */}
+                  <Text style={styles.fieldSectionMiniLabel}>UPDATE STAGE / STATUS:</Text>
+                  <View style={styles.statusPillsGrid}>
+                    {[
+                      'Quotation',
+                      'Negotiation',
+                      'Order Confirmed',
+                      'Follow-up',
+                      'Newly Contacted',
+                      'Walk-in',
+                      'Lost',
+                      'Future Requirement',
+                    ].map((st) => {
+                      const isSelected = followUpStatus === st;
+                      return (
+                        <TouchableOpacity
+                          key={st}
+                          onPress={() => setFollowUpStatus(st)}
+                          style={[
+                            styles.statusPillBtn,
+                            isSelected && styles.statusPillBtnActive,
+                            st === 'Order Confirmed' && isSelected && { backgroundColor: '#10B981', borderColor: '#10B981' },
+                            st === 'Lost' && isSelected && { backgroundColor: '#64748B', borderColor: '#64748B' },
+                          ]}
+                          activeOpacity={0.7}
+                        >
+                          <Text
+                            style={[
+                              styles.statusPillBtnText,
+                              isSelected && styles.statusPillBtnTextActive,
+                            ]}
+                          >
+                            {st === 'Order Confirmed' ? '🎉 ' : ''}{st}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+
+                  {/* Discussion Notes / Reason */}
+                  <Text style={styles.fieldSectionMiniLabel}>FOLLOW-UP DISCUSSION NOTES:</Text>
+                  <TextInput
+                    style={styles.followUpInput}
+                    placeholder="e.g. Discussed tile pricing, customer will visit showroom tomorrow..."
+                    placeholderTextColor={colors.textLight}
+                    value={followUpReason}
+                    onChangeText={setFollowUpReason}
+                    multiline
+                  />
+
+                  {/* Next Follow-up Date */}
+                  <Text style={styles.fieldSectionMiniLabel}>NEXT SCHEDULED FOLLOW-UP:</Text>
+                  <View style={styles.quickDateRow}>
+                    {[
+                      { label: '+2 Days', days: 2 },
+                      { label: '+3 Days', days: 3 },
+                      { label: '+1 Week', days: 7 },
+                      { label: '+2 Weeks', days: 14 },
+                    ].map((item) => (
+                      <TouchableOpacity
+                        key={item.label}
+                        style={styles.quickDateChip}
+                        onPress={() => {
+                          const target = new Date(Date.now() + item.days * 86400000);
+                          setFollowUpNextDate(target.toISOString().split('T')[0]);
+                        }}
+                      >
+                        <Text style={styles.quickDateChipText}>{item.label}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                  <TextInput
+                    style={[styles.followUpInput, { marginBottom: 12 }]}
+                    placeholder="YYYY-MM-DD (e.g. 2026-08-20)"
+                    placeholderTextColor={colors.textLight}
+                    value={followUpNextDate}
+                    onChangeText={setFollowUpNextDate}
+                  />
+
+                  {/* Order Value (if Order Confirmed) */}
+                  {followUpStatus === 'Order Confirmed' && (
+                    <View style={{ marginBottom: 12 }}>
+                      <Text style={styles.fieldSectionMiniLabel}>FINAL BOOKING / ORDER VALUE (₹):</Text>
+                      <TextInput
+                        style={styles.followUpInput}
+                        placeholder="e.g. 150000"
+                        placeholderTextColor={colors.textLight}
+                        keyboardType="numeric"
+                        value={followUpOrderValue}
+                        onChangeText={setFollowUpOrderValue}
+                      />
+                    </View>
+                  )}
+
+                  {/* Submit Follow-up Button */}
+                  <TouchableOpacity
+                    style={styles.submitFollowUpBtn}
+                    onPress={handleLogFollowUp}
+                    disabled={submittingFollowUp}
+                    activeOpacity={0.8}
+                  >
+                    {submittingFollowUp ? (
+                      <ActivityIndicator color="#FFFFFF" size="small" />
+                    ) : (
+                      <>
+                        <Text style={{ fontSize: 14 }}>⚡</Text>
+                        <Text style={styles.submitFollowUpBtnText}>
+                          Log Follow-up (#{((Number(data.followUpCount) || 0) + 1)}) & Update Status
+                        </Text>
+                      </>
+                    )}
+                  </TouchableOpacity>
+                </View>
+
+                {/* 4. Structured Clean Cards: Contact & Material Specs */}
+                {/* Card A: Contact & Profile */}
+                <View style={styles.cleanDetailSectionCard}>
+                  <View style={styles.cleanSectionHeader}>
+                    <Text style={styles.cleanSectionTitle}>👤 1. Contact & Lead Profile</Text>
+                  </View>
+                  <View style={styles.cleanSectionBody}>
+                    <View style={styles.cleanDetailRow}>
+                      <Text style={styles.cleanRowLabel}>Mobile Number</Text>
+                      <Text style={styles.cleanRowValueBold}>{data.phone || '—'}</Text>
+                    </View>
+                    <View style={styles.cleanDetailRow}>
+                      <Text style={styles.cleanRowLabel}>Site / City Location</Text>
+                      <Text style={styles.cleanRowValue}>{data.location || '—'}</Text>
+                    </View>
+                    <View style={styles.cleanDetailRow}>
+                      <Text style={styles.cleanRowLabel}>Customer Type</Text>
+                      <Text style={[styles.cleanRowValue, { color: badgeStyle.text, fontWeight: '700' }]}>
+                        {data.customerType || 'Building Owner'}
+                      </Text>
+                    </View>
+                    <View style={styles.cleanDetailRow}>
+                      <Text style={styles.cleanRowLabel}>Lead Source</Text>
+                      <Text style={styles.cleanRowValue}>{data.leadSource || 'Walk-in'}</Text>
+                    </View>
+                    <View style={[styles.cleanDetailRow, { borderBottomWidth: 0 }]}>
+                      <Text style={styles.cleanRowLabel}>Sales Executive</Text>
+                      <Text style={[styles.cleanRowValueBold, { color: '#2563EB' }]}>
+                        {data.salesperson || 'Showroom Team'}
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+
+                {/* Card B: Project & Material Specs */}
+                <View style={styles.cleanDetailSectionCard}>
+                  <View style={styles.cleanSectionHeader}>
+                    <Text style={styles.cleanSectionTitle}>📐 2. Material & Project Specifications</Text>
+                  </View>
+                  <View style={styles.cleanSectionBody}>
+                    <View style={styles.cleanDetailRow}>
+                      <Text style={styles.cleanRowLabel}>Tile Requirement</Text>
+                      <Text style={[styles.cleanRowValue, { flex: 1.3, textAlign: 'right' }]}>
+                        {data.requirement || '—'}
+                      </Text>
+                    </View>
+                    <View style={styles.cleanDetailRow}>
+                      <Text style={styles.cleanRowLabel}>Approx Area</Text>
+                      <Text style={styles.cleanRowValueBold}>
+                        {data.approxQuantity ? `${data.approxQuantity} sq.ft` : '—'}
+                      </Text>
+                    </View>
+                    <View style={styles.cleanDetailRow}>
+                      <Text style={styles.cleanRowLabel}>Sanitary Ware Needs</Text>
+                      <Text style={styles.cleanRowValue}>{data.sanitaryRequirement || '—'}</Text>
+                    </View>
+                    <View style={styles.cleanDetailRow}>
+                      <Text style={styles.cleanRowLabel}>Adhesive & Grouts</Text>
+                      <Text style={styles.cleanRowValue}>{data.adhesiveRequirement || '—'}</Text>
+                    </View>
+                    <View style={[styles.cleanDetailRow, { borderBottomWidth: 0 }]}>
+                      <Text style={styles.cleanRowLabel}>Cross-Sell Opportunities</Text>
+                      <Text style={styles.cleanRowValue}>{data.crossSell || '—'}</Text>
+                    </View>
+                  </View>
+                </View>
+
+                {/* Card C: Latest Interaction Notes */}
+                {data.lastReason ? (
+                  <View style={styles.cleanDetailSectionCard}>
+                    <View style={styles.cleanSectionHeader}>
+                      <Text style={styles.cleanSectionTitle}>💬 3. Latest Follow-up Discussion</Text>
+                    </View>
+                    <View style={{ padding: 14 }}>
+                      <Text style={{ fontSize: 13, color: '#1E293B', lineHeight: 18, fontStyle: 'italic' }}>
+                        "{data.lastReason}"
+                      </Text>
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 10 }}>
+                        <Text style={{ fontSize: 11.5, color: colors.textMuted }}>
+                          Last Contacted: {data.lastFollowUp || 'Recently'}
+                        </Text>
+                        <Text style={{ fontSize: 11.5, color: '#15803D', fontWeight: '700' }}>
+                          Next: {data.nextFollowUp || 'Not Set'}
+                        </Text>
                       </View>
                     </View>
-                  );
-                })}
+                  </View>
+                ) : null}
 
                 <View style={{ height: 50 }} />
               </View>
@@ -1342,5 +1708,335 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: 'center',
     backgroundColor: colors.primary,
+  },
+  // Quick Follow-up Action Card Styles
+  followUpActionCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: '#BFDBFE',
+    padding: 16,
+    marginBottom: 14,
+    shadowColor: '#2563EB',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  followUpHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 6,
+  },
+  followUpTitle: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: colors.text,
+  },
+  followUpBadge: {
+    backgroundColor: '#EFF6FF',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#BFDBFE',
+  },
+  followUpBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#1D4ED8',
+  },
+  followUpSubheading: {
+    fontSize: 11.5,
+    color: colors.textMuted,
+    lineHeight: 16,
+    marginBottom: 12,
+  },
+  fieldSectionMiniLabel: {
+    fontSize: 10.5,
+    fontWeight: '800',
+    color: colors.textMuted,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 6,
+  },
+  statusPillsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginBottom: 12,
+  },
+  statusPillBtn: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  statusPillBtnActive: {
+    backgroundColor: '#2563EB',
+    borderColor: '#2563EB',
+  },
+  statusPillBtnText: {
+    fontSize: 11.5,
+    color: '#475569',
+    fontWeight: '600',
+  },
+  statusPillBtnTextActive: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+  },
+  followUpInput: {
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    fontSize: 13,
+    color: colors.text,
+    marginBottom: 10,
+  },
+  quickDateRow: {
+    flexDirection: 'row',
+    gap: 6,
+    marginBottom: 6,
+  },
+  quickDateChip: {
+    backgroundColor: '#EFF6FF',
+    borderWidth: 1,
+    borderColor: '#DBEAFE',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  quickDateChipText: {
+    fontSize: 11,
+    color: '#2563EB',
+    fontWeight: '700',
+  },
+  submitFollowUpBtn: {
+    backgroundColor: '#2563EB',
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    gap: 6,
+    marginTop: 4,
+  },
+  submitFollowUpBtnText: {
+    color: '#FFFFFF',
+    fontWeight: '800',
+    fontSize: 13.5,
+  },
+  // WhatsApp Action Styles
+  cardMiniWhatsAppBtn: {
+    backgroundColor: '#DCFCE7',
+    borderWidth: 1,
+    borderColor: '#86EFAC',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  cardMiniWhatsAppText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#15803D',
+  },
+  quickWhatsAppBtn: {
+    flex: 1,
+    backgroundColor: '#10B981',
+    paddingVertical: 10,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  quickWhatsAppBtnText: {
+    color: '#FFFFFF',
+    fontWeight: '800',
+    fontSize: 13,
+  },
+  // Redesigned List Card & Detail Styles
+  cardDot: {
+    fontSize: 12,
+    color: colors.textMuted,
+  },
+  cardTypeLabel: {
+    fontSize: 11.5,
+    fontWeight: '700',
+  },
+  cardHighlightsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 10,
+    paddingVertical: 2,
+  },
+  cardLocationText: {
+    fontSize: 12.5,
+    color: colors.textSecondary,
+    fontWeight: '500',
+  },
+  cardFollowUpCountBadge: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.primary,
+  },
+  cardActionFooterRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 10,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: '#F1F5F9',
+  },
+  cardCallChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#EFF6FF',
+    borderWidth: 1,
+    borderColor: '#DBEAFE',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  cardCallChipText: {
+    fontSize: 11,
+    color: '#1D4ED8',
+    fontWeight: '700',
+  },
+  cardWhatsAppChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#DCFCE7',
+    borderWidth: 1,
+    borderColor: '#86EFAC',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  cardWhatsAppChipText: {
+    fontSize: 11,
+    color: '#15803D',
+    fontWeight: '700',
+  },
+  cardNextFollowUpText: {
+    fontSize: 11,
+    color: '#059669',
+    fontWeight: '700',
+  },
+  detailActionBtnCall: {
+    flex: 1,
+    backgroundColor: colors.primaryBg,
+    borderWidth: 1,
+    borderColor: colors.primaryLight,
+    paddingVertical: 10,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  detailActionBtnCallText: {
+    color: colors.primary,
+    fontWeight: '800',
+    fontSize: 12.5,
+  },
+  detailActionBtnWhatsApp: {
+    flex: 1,
+    backgroundColor: '#10B981',
+    paddingVertical: 10,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  detailActionBtnWhatsAppText: {
+    color: '#FFFFFF',
+    fontWeight: '800',
+    fontSize: 12.5,
+  },
+  statTilesGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    marginBottom: 14,
+  },
+  statTileItem: {
+    width: '48.5%',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: 12,
+    marginBottom: 10,
+  },
+  statTileLabel: {
+    fontSize: 9.5,
+    fontWeight: '800',
+    color: colors.textMuted,
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
+  },
+  statTileValue: {
+    fontSize: 14.5,
+    fontWeight: '800',
+    color: colors.text,
+    marginTop: 4,
+  },
+  cleanDetailSectionCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+    marginBottom: 14,
+    overflow: 'hidden',
+  },
+  cleanSectionHeader: {
+    backgroundColor: '#F8FAFC',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  cleanSectionTitle: {
+    fontSize: 12.5,
+    fontWeight: '800',
+    color: colors.text,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  cleanSectionBody: {
+    paddingHorizontal: 14,
+    paddingVertical: 2,
+  },
+  cleanDetailRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 9,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+  },
+  cleanRowLabel: {
+    fontSize: 12.5,
+    color: colors.textMuted,
+    fontWeight: '600',
+    flex: 1,
+  },
+  cleanRowValue: {
+    fontSize: 12.5,
+    color: colors.text,
+    fontWeight: '600',
+    flex: 1.2,
+    textAlign: 'right',
+  },
+  cleanRowValueBold: {
+    fontSize: 13,
+    color: colors.text,
+    fontWeight: '800',
+    flex: 1.2,
+    textAlign: 'right',
   },
 });
