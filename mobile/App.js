@@ -256,8 +256,15 @@ export default function App() {
     const activeFields = (formSchema?.fields || []).filter((f) => f.active);
     const newErrors = {};
 
+    const payload = {
+      ...formData,
+      entryDate: formData.entryDate || new Date().toISOString().split('T')[0],
+      status: formData.status || 'Newly Contacted',
+      customerType: formData.customerType || 'Building Owner',
+    };
+
     activeFields.forEach((field) => {
-      const val = formData[field.name];
+      const val = payload[field.name];
       const isMissing = val === undefined || val === null || val === '' || (Array.isArray(val) && val.length === 0);
       if (field.required && isMissing && field.type !== 'auto_number') {
         newErrors[field.name] = `${field.label} is required`;
@@ -266,20 +273,22 @@ export default function App() {
 
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
-      Alert.alert('Mandatory Fields', 'Please complete all required fields (*) marked in red before submitting.');
+      const errorList = Object.values(newErrors).join('\n• ');
+      Alert.alert('Mandatory Fields', `Please complete the following required fields:\n• ${errorList}`);
       return;
     }
 
     setSubmitting(true);
     try {
-      const res = await apiClient.createCustomer(formData);
+      const res = await apiClient.createCustomer(payload);
       if (res.success) {
         Alert.alert('Customer Saved', `Customer ${res.data?.customerId || 'record'} registered to MongoDB Atlas!`);
         setFormData({});
         setActiveScreen('list');
         await loadCustomers();
       } else {
-        Alert.alert('Submission Failed', res.message || 'Error saving customer to database.');
+        const errorDetails = res.errors ? Object.values(res.errors).join('\n• ') : res.message;
+        Alert.alert('Validation Error', `Please review the following:\n• ${errorDetails}`);
       }
     } catch (e) {
       Alert.alert('Connection Error', e.message);
@@ -336,9 +345,19 @@ export default function App() {
       {/* Modern Dynamic Executive Header */}
       <View style={styles.header}>
         <View style={styles.headerLeft}>
-          <View style={[styles.brandBadge, { backgroundColor: branding.primaryColor || '#2563EB' }]}>
+          <View
+            style={[
+              styles.brandBadge,
+              branding.logoType === 'image' && branding.logoImage
+                ? { backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E2E8F0', padding: 2 }
+                : { backgroundColor: branding.primaryColor || '#2563EB' },
+            ]}
+          >
             {branding.logoType === 'image' && branding.logoImage ? (
-              <Image source={{ uri: branding.logoImage }} style={{ width: 26, height: 26, borderRadius: 6, resizeMode: 'contain' }} />
+              <Image
+                source={{ uri: branding.logoImage }}
+                style={{ width: '100%', height: '100%', borderRadius: 6, resizeMode: 'contain' }}
+              />
             ) : (
               <Text style={styles.brandBadgeText}>
                 {branding.logoIcon === 'Building2'
@@ -355,7 +374,11 @@ export default function App() {
                   ? '📚'
                   : branding.logoIcon === 'Gem'
                   ? '💎'
-                  : (branding.appShortName?.charAt(0) || 'B').toUpperCase()}
+                  : branding.logoIcon === 'Compass'
+                  ? '🧭'
+                  : branding.logoIcon === 'Hexagon'
+                  ? '⬡'
+                  : '📦'}
               </Text>
             )}
           </View>
@@ -456,9 +479,19 @@ export default function App() {
               onPress={() => {
                 const initial = {};
                 activeFields.forEach((f) => {
-                  if (f.defaultValue) initial[f.name] = f.defaultValue;
+                  if (f.defaultValue !== undefined && f.defaultValue !== null && f.defaultValue !== '') {
+                    initial[f.name] = f.defaultValue;
+                  }
                 });
-                initial.entryDate = new Date().toISOString().split('T')[0];
+                if (!initial.entryDate) {
+                  initial.entryDate = new Date().toISOString().split('T')[0];
+                }
+                if (!initial.status) {
+                  initial.status = 'Newly Contacted';
+                }
+                if (!initial.customerType) {
+                  initial.customerType = 'Building Owner';
+                }
                 setFormData(initial);
                 setFormSection('contact');
                 setErrors({});
@@ -737,7 +770,7 @@ export default function App() {
         </View>
       )}
 
-      {/* Screen: Customer Details (Crystal Clear & Neat Information Layout) */}
+      {/* Screen: Customer Details (Ultra-Modern Executive Detail Screen) */}
       {activeScreen === 'detail' && selectedCustomer && (
         <ScrollView style={styles.detailScrollView} showsVerticalScrollIndicator={false}>
           {(() => {
@@ -750,7 +783,7 @@ export default function App() {
 
             return (
               <View style={{ paddingBottom: 40 }}>
-                {/* 1. Hero Identity Card */}
+                {/* 1. Hero Executive Identity Card */}
                 <View style={styles.detailHeroCard}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
                     <View style={styles.detailAvatar}>
@@ -758,42 +791,47 @@ export default function App() {
                     </View>
                     <View style={{ flex: 1 }}>
                       <Text style={styles.detailCustomerName}>{data.customerName || 'Customer Profile'}</Text>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 3 }}>
-                        <Text style={styles.detailCustomerId}>{selectedCustomer.customerId}</Text>
-                        <Text style={{ color: colors.border }}>|</Text>
-                        <Text style={{ fontSize: 12, color: colors.textMuted }}>
-                          {data.location || 'Showroom Lead'}
-                        </Text>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4, flexWrap: 'wrap' }}>
+                        <View style={styles.detailIdPill}>
+                          <Text style={styles.detailIdPillText}>{selectedCustomer.customerId}</Text>
+                        </View>
+                        {data.location ? (
+                          <Text style={styles.detailLocationText}>📍 {data.location}</Text>
+                        ) : null}
                       </View>
                     </View>
                   </View>
 
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 12 }}>
+                  {/* Badges Row */}
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 14, flexWrap: 'wrap' }}>
                     <View style={[styles.typePill, { backgroundColor: badgeStyle.bg, borderColor: badgeStyle.border }]}>
                       <Text style={[styles.typePillText, { color: badgeStyle.text }]}>
                         {data.customerType || 'Building Owner'}
                       </Text>
                     </View>
-                    <View style={[styles.typePill, { backgroundColor: statusStyle.bg, borderColor: statusStyle.border }]}>
+                    <View style={[styles.typePill, { backgroundColor: statusStyle.bg, borderColor: statusStyle.border, flexDirection: 'row', alignItems: 'center', gap: 5 }]}>
+                      <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: statusStyle.text }} />
                       <Text style={[styles.typePillText, { color: statusStyle.text }]}>
-                        ● {data.status || 'Follow-up'}
+                        {data.status || 'Follow-up'}
                       </Text>
                     </View>
                   </View>
 
                   {/* 1-Tap Action Call & WhatsApp Buttons */}
                   {data.phone ? (
-                    <View style={{ flexDirection: 'row', gap: 10, marginTop: 14 }}>
+                    <View style={{ flexDirection: 'row', gap: 10, marginTop: 16 }}>
                       <TouchableOpacity
                         style={styles.detailActionBtnCall}
                         onPress={() => Linking.openURL(`tel:${data.phone}`)}
+                        activeOpacity={0.8}
                       >
-                        <Text style={styles.detailActionBtnCallText}>📞 Call ({data.phone})</Text>
+                        <Text style={styles.detailActionBtnCallText}>📞 Call Customer</Text>
                       </TouchableOpacity>
 
                       <TouchableOpacity
                         style={styles.detailActionBtnWhatsApp}
                         onPress={() => openWhatsApp(data.phone, data.customerName, data.requirement)}
+                        activeOpacity={0.8}
                       >
                         <Text style={styles.detailActionBtnWhatsAppText}>💬 WhatsApp Chat</Text>
                       </TouchableOpacity>
@@ -805,7 +843,7 @@ export default function App() {
                 <View style={styles.statTilesGrid}>
                   <View style={styles.statTileItem}>
                     <Text style={styles.statTileLabel}>QUOTATION VALUE</Text>
-                    <Text style={[styles.statTileValue, { color: '#B45309' }]}>
+                    <Text style={[styles.statTileValue, { color: '#D97706' }]}>
                       {data.quotationValue ? `₹ ${Number(data.quotationValue).toLocaleString('en-IN')}` : '₹ 0'}
                     </Text>
                   </View>
@@ -819,14 +857,14 @@ export default function App() {
 
                   <View style={styles.statTileItem}>
                     <Text style={styles.statTileLabel}>HOUSE STAGE</Text>
-                    <Text style={styles.statTileValue} numberOfLines={1}>
+                    <Text style={[styles.statTileValue, { color: '#0F172A' }]} numberOfLines={1}>
                       {data.houseStage || 'Flooring Stage'}
                     </Text>
                   </View>
 
                   <View style={styles.statTileItem}>
                     <Text style={styles.statTileLabel}>TOTAL INTERACTIONS</Text>
-                    <Text style={[styles.statTileValue, { color: '#15803D' }]}>
+                    <Text style={[styles.statTileValue, { color: '#059669' }]}>
                       #{data.followUpCount || 0} Logged
                     </Text>
                   </View>
@@ -837,7 +875,7 @@ export default function App() {
                   <View style={styles.followUpHeader}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                       <Text style={{ fontSize: 16 }}>⚡</Text>
-                      <Text style={styles.followUpTitle}>Follow-up & Status Update</Text>
+                      <Text style={styles.followUpTitle}>Log Follow-up & Stage</Text>
                     </View>
                     <View style={styles.followUpBadge}>
                       <Text style={styles.followUpBadgeText}>
@@ -851,38 +889,36 @@ export default function App() {
                   </Text>
 
                   {/* Status Selection Pills */}
-                  <Text style={styles.fieldSectionMiniLabel}>UPDATE STAGE / STATUS:</Text>
+                  <Text style={styles.fieldSectionMiniLabel}>UPDATE PIPELINE STAGE:</Text>
                   <View style={styles.statusPillsGrid}>
                     {[
-                      'Quotation',
-                      'Negotiation',
-                      'Order Confirmed',
-                      'Follow-up',
-                      'Newly Contacted',
-                      'Walk-in',
-                      'Lost',
-                      'Future Requirement',
+                      { name: 'Quotation', color: '#2563EB' },
+                      { name: 'Negotiation', color: '#D97706' },
+                      { name: 'Order Confirmed', color: '#059669', icon: '🎉' },
+                      { name: 'Follow-up', color: '#3B82F6' },
+                      { name: 'Newly Contacted', color: '#6366F1' },
+                      { name: 'Walk-in', color: '#0284C7' },
+                      { name: 'Lost', color: '#475569' },
+                      { name: 'Future Requirement', color: '#8B5CF6' },
                     ].map((st) => {
-                      const isSelected = followUpStatus === st;
+                      const isSelected = followUpStatus === st.name;
                       return (
                         <TouchableOpacity
-                          key={st}
-                          onPress={() => setFollowUpStatus(st)}
+                          key={st.name}
+                          onPress={() => setFollowUpStatus(st.name)}
                           style={[
                             styles.statusPillBtn,
-                            isSelected && styles.statusPillBtnActive,
-                            st === 'Order Confirmed' && isSelected && { backgroundColor: '#10B981', borderColor: '#10B981' },
-                            st === 'Lost' && isSelected && { backgroundColor: '#64748B', borderColor: '#64748B' },
+                            isSelected && { backgroundColor: st.color, borderColor: st.color },
                           ]}
                           activeOpacity={0.7}
                         >
                           <Text
                             style={[
                               styles.statusPillBtnText,
-                              isSelected && styles.statusPillBtnTextActive,
+                              isSelected && { color: '#FFFFFF', fontWeight: '800' },
                             ]}
                           >
-                            {st === 'Order Confirmed' ? '🎉 ' : ''}{st}
+                            {st.icon ? `${st.icon} ` : ''}{st.name}
                           </Text>
                         </TouchableOpacity>
                       );
@@ -890,15 +926,40 @@ export default function App() {
                   </View>
 
                   {/* Discussion Notes / Reason */}
-                  <Text style={styles.fieldSectionMiniLabel}>FOLLOW-UP DISCUSSION NOTES:</Text>
+                  <Text style={styles.fieldSectionMiniLabel}>DISCUSSION NOTES / SUMMARY:</Text>
                   <TextInput
                     style={styles.followUpInput}
-                    placeholder="e.g. Discussed tile pricing, customer will visit showroom tomorrow..."
+                    placeholder="e.g. Client visited showroom, approved vitrified tiles quote..."
                     placeholderTextColor={colors.textLight}
                     value={followUpReason}
                     onChangeText={setFollowUpReason}
                     multiline
                   />
+
+                  {/* Quick Tag Snippets */}
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 5, marginBottom: 12 }}>
+                    {[
+                      'Visited Showroom',
+                      'Shared Quote via WA',
+                      'Requested Discount',
+                      'Payment Confirmed',
+                    ].map((snip, idx) => (
+                      <TouchableOpacity
+                        key={idx}
+                        onPress={() => setFollowUpReason((prev) => (prev ? `${prev} • ${snip}` : snip))}
+                        style={{
+                          backgroundColor: '#F8FAFC',
+                          borderWidth: 1,
+                          borderColor: '#E2E8F0',
+                          paddingHorizontal: 8,
+                          paddingVertical: 4,
+                          borderRadius: 12,
+                        }}
+                      >
+                        <Text style={{ fontSize: 11, color: '#475569', fontWeight: '600' }}>+ {snip}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
 
                   {/* Next Follow-up Date */}
                   <Text style={styles.fieldSectionMiniLabel}>NEXT SCHEDULED FOLLOW-UP:</Text>
@@ -931,10 +992,10 @@ export default function App() {
 
                   {/* Order Value (if Order Confirmed) */}
                   {followUpStatus === 'Order Confirmed' && (
-                    <View style={{ marginBottom: 12 }}>
-                      <Text style={styles.fieldSectionMiniLabel}>FINAL BOOKING / ORDER VALUE (₹):</Text>
+                    <View style={{ marginBottom: 12, backgroundColor: '#ECFDF5', padding: 10, borderRadius: 8, borderWidth: 1, borderColor: '#A7F3D0' }}>
+                      <Text style={[styles.fieldSectionMiniLabel, { color: '#047857' }]}>🎉 FINAL BOOKING / ORDER VALUE (₹):</Text>
                       <TextInput
-                        style={styles.followUpInput}
+                        style={[styles.followUpInput, { borderColor: '#059669', marginBottom: 0, fontWeight: '800', color: '#065F46' }]}
                         placeholder="e.g. 150000"
                         placeholderTextColor={colors.textLight}
                         keyboardType="numeric"
@@ -957,7 +1018,7 @@ export default function App() {
                       <>
                         <Text style={{ fontSize: 14 }}>⚡</Text>
                         <Text style={styles.submitFollowUpBtnText}>
-                          Log Follow-up (#{((Number(data.followUpCount) || 0) + 1)}) & Update Status
+                          Log Follow-up (#{((Number(data.followUpCount) || 0) + 1)}) & Save Stage
                         </Text>
                       </>
                     )}
@@ -1560,45 +1621,59 @@ const styles = StyleSheet.create({
   },
   detailHeroCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 14,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: colors.border,
-    padding: 16,
-    marginBottom: 12,
+    padding: 18,
+    marginBottom: 14,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    elevation: 2,
   },
   detailAvatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
-    backgroundColor: colors.primaryBg,
+    width: 50,
+    height: 50,
+    borderRadius: 14,
+    backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.25,
+    shadowRadius: 5,
+    elevation: 3,
   },
   detailAvatarText: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: colors.primary,
+    fontSize: 22,
+    fontWeight: '900',
+    color: '#FFFFFF',
   },
   detailCustomerName: {
-    fontSize: 16.5,
+    fontSize: 18,
     fontWeight: '800',
     color: colors.text,
+    letterSpacing: -0.2,
   },
-  detailCustomerId: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: colors.primary,
-    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
-    marginTop: 2,
-  },
-  quickCallBtn: {
-    marginTop: 14,
-    backgroundColor: colors.primaryBg,
+  detailIdPill: {
+    backgroundColor: '#EFF6FF',
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 6,
     borderWidth: 1,
-    borderColor: colors.primaryLight,
-    paddingVertical: 10,
-    borderRadius: 8,
-    alignItems: 'center',
+    borderColor: '#BFDBFE',
+  },
+  detailIdPillText: {
+    fontSize: 11.5,
+    fontWeight: '700',
+    color: '#1D4ED8',
+    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+  },
+  detailLocationText: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    fontWeight: '600',
   },
   quickCallBtnText: {
     color: colors.primary,

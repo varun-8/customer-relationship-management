@@ -91,6 +91,9 @@ export const CustomerFormModal = ({ customer, onClose, onSuccess }) => {
       if (!initialData.status) {
         initialData.status = 'Newly Contacted';
       }
+      if (!initialData.customerType) {
+        initialData.customerType = 'Building Owner';
+      }
       setFormData(initialData);
     }
   }, [customer, activeForm, isEdit]);

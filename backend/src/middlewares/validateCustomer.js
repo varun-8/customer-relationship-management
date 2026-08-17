@@ -1,7 +1,6 @@
 const CustomerForm = require('../models/CustomerForm');
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const PHONE_REGEX = /^[+]?[(]?[0-9]{1,4}[)]?[-\s./0-9]{7,15}$/;
 const URL_REGEX = /^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([/\w .-]*)*\/?$/i;
 
 const validateCustomerData = async (req, res, next) => {
@@ -28,9 +27,22 @@ const validateCustomerData = async (req, res, next) => {
       if (!field.active) continue;
 
       const fieldName = field.name;
-      const value = data[fieldName];
+      let value = data[fieldName];
       const label = field.label || fieldName;
       const valConfig = field.validation || {};
+
+      // Auto-assign defaults for common required fields if omitted
+      if ((value === undefined || value === null || value === '') && req.method === 'POST') {
+        if (fieldName === 'entryDate') {
+          value = new Date().toISOString().split('T')[0];
+        } else if (fieldName === 'status') {
+          value = field.defaultValue || 'Newly Contacted';
+        } else if (fieldName === 'customerType' && field.defaultValue) {
+          value = field.defaultValue;
+        } else if (field.defaultValue !== undefined && field.defaultValue !== null && field.defaultValue !== '') {
+          value = field.defaultValue;
+        }
+      }
 
       // 1. Required Check
       const isMissing = value === undefined || value === null || value === '' || (Array.isArray(value) && value.length === 0);
@@ -95,7 +107,8 @@ const validateCustomerData = async (req, res, next) => {
 
         case 'phone': {
           const phoneStr = String(value).trim();
-          if (!PHONE_REGEX.test(phoneStr)) {
+          const cleanDigits = phoneStr.replace(/[^0-9]/g, '');
+          if (cleanDigits.length < 10) {
             errors[fieldName] = `${label} must be a valid phone number (at least 10 digits)`;
           }
           sanitizedData[fieldName] = phoneStr;
@@ -104,7 +117,7 @@ const validateCustomerData = async (req, res, next) => {
 
         case 'email': {
           const emailStr = String(value).trim().toLowerCase();
-          if (!EMAIL_REGEX.test(emailStr)) {
+          if (emailStr && !EMAIL_REGEX.test(emailStr)) {
             errors[fieldName] = `${label} must be a valid email address`;
           }
           sanitizedData[fieldName] = emailStr;
@@ -117,7 +130,7 @@ const validateCustomerData = async (req, res, next) => {
           if (isNaN(d.getTime())) {
             errors[fieldName] = `${label} must be a valid date`;
           } else {
-            sanitizedData[fieldName] = String(value);
+            sanitizedData[fieldName] = String(value).substring(0, 10);
           }
           break;
         }
@@ -135,27 +148,40 @@ const validateCustomerData = async (req, res, next) => {
         case 'radio':
         case 'select': {
           const strVal = String(value).trim();
-          const validOptions = (field.options || []).map((opt) => opt.value);
-          if (validOptions.length > 0 && !validOptions.includes(strVal)) {
-            errors[fieldName] = `Selected value for ${label} is not a valid option`;
+          const opts = field.options || [];
+          // Match by value or label (case-insensitive)
+          const matched = opts.find(
+            (opt) =>
+              String(opt.value).toLowerCase() === strVal.toLowerCase() ||
+              String(opt.label).toLowerCase() === strVal.toLowerCase()
+          );
+
+          if (opts.length > 0 && !matched) {
+            // If field is not required and value was empty or '-- Select --', clear it
+            if (!field.required && (!strVal || strVal.startsWith('--'))) {
+              sanitizedData[fieldName] = '';
+            } else {
+              // Accept value anyway or use first option if required
+              sanitizedData[fieldName] = strVal;
+            }
+          } else {
+            sanitizedData[fieldName] = matched ? matched.value : strVal;
           }
-          sanitizedData[fieldName] = strVal;
           break;
         }
 
         case 'multiselect': {
           let arrVal = value;
           if (typeof value === 'string') {
-            try { arrVal = JSON.parse(value); } catch (e) { arrVal = [value]; }
+            try {
+              arrVal = JSON.parse(value);
+            } catch (e) {
+              arrVal = value.split(',').map((s) => s.trim()).filter(Boolean);
+            }
           }
           if (!Array.isArray(arrVal)) {
-            errors[fieldName] = `${label} must be an array of selected options`;
+            sanitizedData[fieldName] = [String(value)];
           } else {
-            const validOptions = (field.options || []).map((opt) => opt.value);
-            const invalidItems = arrVal.filter((item) => validOptions.length > 0 && !validOptions.includes(item));
-            if (invalidItems.length > 0) {
-              errors[fieldName] = `${label} contains invalid selections: ${invalidItems.join(', ')}`;
-            }
             sanitizedData[fieldName] = arrVal;
           }
           break;
@@ -163,7 +189,7 @@ const validateCustomerData = async (req, res, next) => {
 
         case 'url': {
           const urlStr = String(value).trim();
-          if (!URL_REGEX.test(urlStr)) {
+          if (urlStr && !URL_REGEX.test(urlStr)) {
             errors[fieldName] = `${label} must be a valid URL`;
           }
           sanitizedData[fieldName] = urlStr;
@@ -182,9 +208,10 @@ const validateCustomerData = async (req, res, next) => {
     }
 
     if (Object.keys(errors).length > 0) {
+      const errorSummary = Object.values(errors).join(', ');
       return res.status(400).json({
         success: false,
-        message: 'Customer form validation failed',
+        message: `Customer validation failed: ${errorSummary}`,
         errors,
       });
     }

@@ -16,7 +16,7 @@ import { useBranding } from '../../context/BrandingContext';
 
 export const Sidebar = ({ activeTab, setActiveTab, onOpenMobileSimulator, onOpenBrandingModal }) => {
   const { user, isOwner } = useAuth();
-  const { appShortName, primaryColor, renderLogo } = useBranding();
+  const { branding, appShortName, tagline, primaryColor, renderLogo } = useBranding();
 
   const navItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutGrid },
@@ -40,17 +40,40 @@ export const Sidebar = ({ activeTab, setActiveTab, onOpenMobileSimulator, onOpen
         <div
           className="sidebar-brand-logo"
           style={{
-            background: `linear-gradient(135deg, ${primaryColor}, #1D4ED8)`,
+            background: branding.logoType === 'image' && branding.logoImage ? '#FFFFFF' : `linear-gradient(135deg, ${primaryColor}, #1D4ED8)`,
             boxShadow: `0 4px 12px ${primaryColor}66`,
+            padding: branding.logoType === 'image' && branding.logoImage ? '3px' : '0',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            overflow: 'hidden',
           }}
         >
-          {renderLogo(18)}
+          {renderLogo(26)}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flex: 1, minWidth: 0 }}>
-          <div className="sidebar-brand-title" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {appShortName || 'BuildCRM'}
+          <div style={{ minWidth: 0, flex: 1 }}>
+            <div className="sidebar-brand-title" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', lineHeight: 1.2 }}>
+              {appShortName || 'BuildCRM'}
+            </div>
+            {tagline ? (
+              <div
+                style={{
+                  fontSize: '11px',
+                  color: 'var(--sidebar-text)',
+                  opacity: 0.75,
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                  marginTop: '2px',
+                  fontWeight: '500',
+                }}
+              >
+                {tagline}
+              </div>
+            ) : null}
           </div>
-          <Palette size={13} color="var(--sidebar-text)" style={{ opacity: 0.6 }} />
+          <Palette size={13} color="var(--sidebar-text)" style={{ opacity: 0.6, marginLeft: '6px', flexShrink: 0 }} />
         </div>
       </div>
 

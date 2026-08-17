@@ -87,9 +87,9 @@ const MainAppContent = () => {
               />
             )}
 
-            {(activeTab === 'settings' || activeTab === 'builder') && isOwner && <SettingsView />}
-            {activeTab === 'sequence' && isOwner && <SequenceConfigModal />}
-            {activeTab === 'versions' && isOwner && <FormVersionHistoryModal />}
+            {(activeTab === 'settings' || activeTab === 'builder') && <SettingsView />}
+            {activeTab === 'sequence' && <SequenceConfigModal />}
+            {activeTab === 'versions' && <FormVersionHistoryModal />}
           </div>
         </div>
       </main>

@@ -75,12 +75,15 @@ export const BrandingProvider = ({ children }) => {
       return (
         <img
           src={branding.logoImage}
-          alt={branding.appName}
+          alt={branding.appName || 'Showroom Logo'}
           style={{
-            width: size,
-            height: size,
+            width: typeof size === 'number' ? `${size}px` : size,
+            height: typeof size === 'number' ? `${size}px` : size,
+            maxWidth: '100%',
+            maxHeight: '100%',
             objectFit: 'contain',
-            borderRadius: '6px',
+            borderRadius: '4px',
+            display: 'block',
           }}
         />
       );
