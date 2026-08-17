@@ -15,10 +15,48 @@ import {
   Platform,
   Linking,
   Image,
+  Animated,
+  Easing,
+  Dimensions,
 } from 'react-native';
 import { colors } from './src/theme/colors';
 import { apiClient, FALLBACK_SCHEMA } from './src/api/client';
 import { DynamicFieldRenderer } from './src/components/DynamicFieldRenderer';
+
+const CONFETTI_COLORS = ['#10B981', '#3B82F6', '#F59E0B', '#EC4899', '#8B5CF6', '#F97316', '#EAB308', '#06B6D4'];
+const CONFETTI_PIECES = Array.from({ length: 26 }).map((_, i) => ({
+  id: i,
+  left: (i * 3.7) + (Math.sin(i) * 3),
+  width: (i % 3 === 0) ? 10 : (i % 2 === 0 ? 8 : 6),
+  height: (i % 2 === 0) ? 14 : 9,
+  color: CONFETTI_COLORS[i % CONFETTI_COLORS.length],
+  rot: ((i * 53) % 360) + 180,
+  radius: (i % 3 === 0) ? 2 : 4,
+}));
+
+const formatShortDate = (dateStr) => {
+  if (!dateStr) return '';
+  try {
+    const parts = String(dateStr).split('T')[0].split('-');
+    if (parts.length === 3) {
+      const monthIndex = parseInt(parts[1], 10) - 1;
+      const day = parseInt(parts[2], 10);
+      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      if (months[monthIndex]) {
+        return `${day} ${months[monthIndex]}`;
+      }
+    }
+    return dateStr;
+  } catch (e) {
+    return dateStr;
+  }
+};
+
+const formatStatusLabel = (status) => {
+  if (!status) return 'Follow-up';
+  if (status === 'Future Requirement') return 'Future Req.';
+  return status;
+};
 
 const SECTIONS = [
   {
@@ -51,6 +89,197 @@ const SECTIONS = [
   },
 ];
 
+// Professional Order Confirmed Celebration Modal Component
+function OrderConfirmedCelebrationModal({ visible, customer, orderValue, onClose, branding }) {
+  const scaleAnim = React.useRef(new Animated.Value(0)).current;
+  const opacityAnim = React.useRef(new Animated.Value(0)).current;
+  const pulseAnim = React.useRef(new Animated.Value(1)).current;
+  const confettiAnim = React.useRef(new Animated.Value(0)).current;
+
+  React.useEffect(() => {
+    if (visible) {
+      scaleAnim.setValue(0.3);
+      opacityAnim.setValue(0);
+      confettiAnim.setValue(0);
+      pulseAnim.setValue(1);
+
+      Animated.parallel([
+        Animated.timing(opacityAnim, {
+          toValue: 1,
+          duration: 350,
+          useNativeDriver: true,
+        }),
+        Animated.spring(scaleAnim, {
+          toValue: 1,
+          friction: 5,
+          tension: 55,
+          useNativeDriver: true,
+        }),
+        Animated.timing(confettiAnim, {
+          toValue: 1,
+          duration: 2400,
+          easing: Easing.out(Easing.quad),
+          useNativeDriver: true,
+        }),
+      ]).start();
+
+      const pulseLoop = Animated.loop(
+        Animated.sequence([
+          Animated.timing(pulseAnim, {
+            toValue: 1.15,
+            duration: 750,
+            useNativeDriver: true,
+          }),
+          Animated.timing(pulseAnim, {
+            toValue: 1,
+            duration: 750,
+            useNativeDriver: true,
+          }),
+        ])
+      );
+      pulseLoop.start();
+
+      return () => pulseLoop.stop();
+    }
+  }, [visible]);
+
+  if (!visible) return null;
+
+  const data = customer?.data instanceof Map
+    ? Object.fromEntries(customer.data)
+    : (customer?.data || {});
+  const name = data.customerName || 'Valued Client';
+  const val = orderValue || data.orderValue || data.quotationValue;
+  const phone = data.phone;
+
+  const handleShareWhatsApp = () => {
+    if (!phone) {
+      Alert.alert('No Phone', 'No phone number is registered for this customer.');
+      return;
+    }
+    const cleanPhone = phone.replace(/[^0-9]/g, '');
+    const phoneWithCountry = cleanPhone.length === 10 ? `91${cleanPhone}` : cleanPhone;
+    const msg = `🎉 *Order Confirmed - ${branding?.appName || 'Vasantham CRM'}*\n\nDear *${name}*,\n\nWe are delighted to confirm your order${val ? ` of *₹ ${Number(val).toLocaleString('en-IN')}*` : ''}!\n\nThank you for choosing ${branding?.appName || 'Vasantham Tiles & Sanitary Wares'}. Our delivery team is preparing your materials.`;
+    const url = `whatsapp://send?phone=${phoneWithCountry}&text=${encodeURIComponent(msg)}`;
+    Linking.canOpenURL(url)
+      .then((supported) => {
+        if (supported) Linking.openURL(url);
+        else Linking.openURL(`https://wa.me/${phoneWithCountry}?text=${encodeURIComponent(msg)}`);
+      })
+      .catch(() => Linking.openURL(`https://wa.me/${phoneWithCountry}?text=${encodeURIComponent(msg)}`));
+  };
+
+  return (
+    <Modal visible={visible} transparent animationType="none" onRequestClose={onClose}>
+      <Animated.View style={[styles.celebrationOverlay, { opacity: opacityAnim }]}>
+        {/* Animated Confetti Particles */}
+        <View style={StyleSheet.absoluteFillObject} pointerEvents="none">
+          {CONFETTI_PIECES.map((piece, i) => {
+            const translateY = confettiAnim.interpolate({
+              inputRange: [0, 1],
+              outputRange: [-40, 680 + (i * 15)],
+            });
+            const rotate = confettiAnim.interpolate({
+              inputRange: [0, 1],
+              outputRange: ['0deg', `${piece.rot}deg`],
+            });
+            const opacity = confettiAnim.interpolate({
+              inputRange: [0, 0.1, 0.8, 1],
+              outputRange: [0, 1, 1, 0],
+            });
+
+            return (
+              <Animated.View
+                key={piece.id}
+                style={[
+                  styles.confettiPiece,
+                  {
+                    left: `${piece.left}%`,
+                    width: piece.width,
+                    height: piece.height,
+                    backgroundColor: piece.color,
+                    borderRadius: piece.radius,
+                    opacity,
+                    transform: [{ translateY }, { rotate }],
+                  },
+                ]}
+              />
+            );
+          })}
+        </View>
+
+        {/* Center Celebration Card */}
+        <Animated.View style={[styles.celebrationCard, { transform: [{ scale: scaleAnim }] }]}>
+          {/* Glowing Animated Trophy Circle */}
+          <View style={styles.celebrationTrophyBox}>
+            <Animated.View style={[styles.celebrationAura, { transform: [{ scale: pulseAnim }] }]} />
+            <View style={styles.celebrationTrophyCircle}>
+              <Text style={{ fontSize: 44 }}>🏆</Text>
+            </View>
+          </View>
+
+          {/* Deal Tag */}
+          <View style={styles.celebrationBadgeChip}>
+            <Text style={styles.celebrationBadgeChipText}>🎉 DEAL WON • ORDER BOOKED</Text>
+          </View>
+
+          <Text style={styles.celebrationMainTitle}>Order Confirmed!</Text>
+          <Text style={styles.celebrationSubtitleText}>
+            Congratulations! Order successfully registered and locked into pipeline.
+          </Text>
+
+          {/* Snapshot Summary Box */}
+          <View style={styles.celebrationSnapshotCard}>
+            <View style={styles.celebrationDataRow}>
+              <Text style={styles.celebrationRowLabel}>Client</Text>
+              <Text style={styles.celebrationRowValueBold} numberOfLines={1}>
+                {name}
+              </Text>
+            </View>
+
+            <View style={styles.celebrationDataRow}>
+              <Text style={styles.celebrationRowLabel}>Customer ID</Text>
+              <Text style={styles.celebrationIdText}>
+                {customer?.customerId || 'CUS-LEAD'}
+              </Text>
+            </View>
+
+            {val ? (
+              <View style={[styles.celebrationDataRow, { borderBottomWidth: 0, paddingTop: 10 }]}>
+                <Text style={styles.celebrationRowLabel}>Booking Amount</Text>
+                <Text style={styles.celebrationAmountText}>
+                  ₹ {Number(val).toLocaleString('en-IN')}
+                </Text>
+              </View>
+            ) : null}
+          </View>
+
+          {/* Action Buttons */}
+          <View style={{ gap: 10, width: '100%', marginTop: 6 }}>
+            {phone ? (
+              <TouchableOpacity
+                style={styles.celebrationWhatsAppActionBtn}
+                activeOpacity={0.8}
+                onPress={handleShareWhatsApp}
+              >
+                <Text style={styles.celebrationWhatsAppActionBtnText}>💬 Share Receipt via WhatsApp</Text>
+              </TouchableOpacity>
+            ) : null}
+
+            <TouchableOpacity
+              style={styles.celebrationContinueBtn}
+              activeOpacity={0.7}
+              onPress={onClose}
+            >
+              <Text style={styles.celebrationContinueBtnText}>✓ Continue to CRM</Text>
+            </TouchableOpacity>
+          </View>
+        </Animated.View>
+      </Animated.View>
+    </Modal>
+  );
+}
+
 export default function App() {
   const [activeScreen, setActiveScreen] = useState('list'); // 'list' | 'add' | 'detail'
   const [formSection, setFormSection] = useState('contact');
@@ -74,6 +303,10 @@ export default function App() {
   const [refreshing, setRefreshing] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [isOnline, setIsOnline] = useState(true);
+
+  // Celebration Animation Modal State
+  const [showOrderCelebration, setShowOrderCelebration] = useState(false);
+  const [celebrationData, setCelebrationData] = useState(null);
 
   // Server IP Settings Modal
   const [showSettingsModal, setShowSettingsModal] = useState(false);
@@ -207,10 +440,18 @@ export default function App() {
       if (res.success && res.data) {
         setSelectedCustomer(res.data);
         await loadCustomers(search);
-        Alert.alert(
-          '✓ Follow-up Recorded',
-          `Follow-up #${newCount} logged successfully!\nStatus updated to "${followUpStatus}".\nLast follow-up set to today (${todayStr}).`
-        );
+        if (followUpStatus === 'Order Confirmed') {
+          setCelebrationData({
+            customer: res.data,
+            orderValue: followUpOrderValue || res.data?.data?.orderValue || res.data?.data?.quotationValue,
+          });
+          setShowOrderCelebration(true);
+        } else {
+          Alert.alert(
+            '✓ Follow-up Recorded',
+            `Follow-up #${newCount} logged successfully!\nStatus updated to "${followUpStatus}".\nLast follow-up set to today (${todayStr}).`
+          );
+        }
       } else {
         Alert.alert('Update Failed', res.message || 'Could not update customer');
       }
@@ -282,7 +523,15 @@ export default function App() {
     try {
       const res = await apiClient.createCustomer(payload);
       if (res.success) {
-        Alert.alert('Customer Saved', `Customer ${res.data?.customerId || 'record'} registered to MongoDB Atlas!`);
+        if (payload.status === 'Order Confirmed') {
+          setCelebrationData({
+            customer: res.data,
+            orderValue: payload.orderValue || payload.quotationValue,
+          });
+          setShowOrderCelebration(true);
+        } else {
+          Alert.alert('Customer Saved', `Customer ${res.data?.customerId || 'record'} registered to MongoDB Atlas!`);
+        }
         setFormData({});
         setActiveScreen('list');
         await loadCustomers();
@@ -323,12 +572,24 @@ export default function App() {
 
   const getStatusBadgeStyle = (status) => {
     switch (status) {
-      case 'Order Confirmed': return { bg: '#DCFCE7', text: '#15803D' };
+      case 'Order Confirmed':
+        return { bg: '#DCFCE7', border: '#86EFAC', text: '#15803D', dot: '#16A34A', icon: '🎉' };
       case 'Negotiation':
-      case 'Quotation': return { bg: '#FEF3C7', text: '#B45309' };
-      case 'Follow-up': return { bg: '#DBEAFE', text: '#1D4ED8' };
-      case 'Lost': return { bg: '#F1F5F9', text: '#64748B' };
-      default: return { bg: '#F3E8FF', text: '#7E22CE' };
+        return { bg: '#FEF3C7', border: '#FDE68A', text: '#B45309', dot: '#D97706', icon: '🤝' };
+      case 'Quotation':
+        return { bg: '#EFF6FF', border: '#BFDBFE', text: '#1D4ED8', dot: '#2563EB', icon: '📄' };
+      case 'Follow-up':
+        return { bg: '#EEF2FF', border: '#C7D2FE', text: '#4338CA', dot: '#4F46E5', icon: '📞' };
+      case 'Newly Contacted':
+        return { bg: '#F0F9FF', border: '#BAE6FD', text: '#0369A1', dot: '#0284C7', icon: '✨' };
+      case 'Walk-in':
+        return { bg: '#F0FDFA', border: '#99F6E4', text: '#0F766E', dot: '#0D9488', icon: '🚶' };
+      case 'Lost':
+        return { bg: '#F1F5F9', border: '#CBD5E1', text: '#475569', dot: '#64748B', icon: '✕' };
+      case 'Future Requirement':
+        return { bg: '#FAF5FF', border: '#DDD6FE', text: '#7E22CE', dot: '#9333EA', icon: '⏳' };
+      default:
+        return { bg: '#F8FAFC', border: '#E2E8F0', text: '#334155', dot: '#64748B', icon: '●' };
     }
   };
 
@@ -424,41 +685,16 @@ export default function App() {
         </View>
       </View>
 
-      {/* Screen: Customer List */}
+      {/* Screen: Customer List (Minimalist, Aesthetic & High-Contrast Modern Records) */}
       {activeScreen === 'list' && (
         <View style={styles.screenBody}>
-          {/* Executive Stats Bar */}
-          <View style={styles.statsBar}>
-            <View style={styles.statBox}>
-              <Text style={styles.statLabel}>Total Leads</Text>
-              <Text style={styles.statValue}>{customers.length}</Text>
-            </View>
-            <View style={styles.statDivider} />
-            <View style={styles.statBox}>
-              <Text style={styles.statLabel}>Building Owners</Text>
-              <Text style={[styles.statValue, { color: colors.emerald }]}>
-                {customers.filter((c) => {
-                  const d = c.data instanceof Map ? Object.fromEntries(c.data) : (c.data || {});
-                  return d.customerType === 'Building Owner';
-                }).length}
-              </Text>
-            </View>
-            <View style={styles.statDivider} />
-            <View style={[styles.statBox, { flex: 1.3 }]}>
-              <Text style={styles.statLabel}>Pipeline Value</Text>
-              <Text style={[styles.statValue, { color: colors.gold, fontSize: 13 }]}>
-                ₹ {totalPipeline.toLocaleString('en-IN')}
-              </Text>
-            </View>
-          </View>
-
-          {/* Search & Add Action Bar */}
+          {/* Search & Quick Add Action Bar */}
           <View style={styles.searchRow}>
             <View style={styles.searchInputContainer}>
               <Text style={styles.searchIcon}>🔍</Text>
               <TextInput
                 style={styles.searchInput}
-                placeholder="Search ID, Name, Phone, Location..."
+                placeholder="Search by name, ID, phone, site..."
                 placeholderTextColor={colors.textLight}
                 value={search}
                 onChangeText={(text) => {
@@ -502,44 +738,55 @@ export default function App() {
             </TouchableOpacity>
           </View>
 
-          {/* Filter Chips */}
+          {/* Minimalist Filter Chips */}
           <View style={styles.filterChipsRow}>
-            {['all', 'Building Owner', 'Mason', 'Architect'].map((type) => {
-              const isSelected = typeFilter === type;
-              return (
-                <TouchableOpacity
-                  key={type}
-                  onPress={() => setTypeFilter(type)}
-                  style={[styles.filterChip, isSelected && styles.filterChipActive]}
-                >
-                  <Text style={[styles.filterChipText, isSelected && styles.filterChipTextActive]}>
-                    {type === 'all' ? 'All Customers' : type}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6 }}>
+              {['all', 'Building Owner', 'Mason', 'Architect'].map((type) => {
+                const isSelected = typeFilter === type;
+                const count = type === 'all'
+                  ? customers.length
+                  : customers.filter((c) => {
+                      const d = c.data instanceof Map ? Object.fromEntries(c.data) : (c.data || {});
+                      return d.customerType === type;
+                    }).length;
+
+                return (
+                  <TouchableOpacity
+                    key={type}
+                    onPress={() => setTypeFilter(type)}
+                    style={[styles.filterChip, isSelected && styles.filterChipActive]}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={[styles.filterChipText, isSelected && styles.filterChipTextActive]}>
+                      {type === 'all' ? 'All Leads' : type} {count > 0 ? `(${count})` : ''}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
           </View>
 
           {/* Customer FlatList */}
           {loading ? (
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="large" color={colors.primary} />
-              <Text style={styles.loadingText}>Fetching showroom database from MongoDB Atlas...</Text>
+              <Text style={styles.loadingText}>Fetching showroom database...</Text>
             </View>
           ) : (
             <FlatList
               data={filteredCustomers}
               keyExtractor={(item, index) => item._id || String(index)}
               showsVerticalScrollIndicator={false}
+              contentContainerStyle={{ paddingBottom: 24 }}
               refreshControl={
                 <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
               }
               ListEmptyComponent={
                 <View style={styles.emptyContainer}>
-                  <Text style={{ fontSize: 32, marginBottom: 8 }}>📋</Text>
+                  <Text style={{ fontSize: 36, marginBottom: 8 }}>📋</Text>
                   <Text style={styles.emptyTitle}>No Customers Found</Text>
                   <Text style={styles.emptySubtitle}>
-                    {search ? `No matches for "${search}"` : 'Tap + Add above to register a showroom customer.'}
+                    {search ? `No matches for "${search}"` : 'Tap + Add above to register a showroom lead.'}
                   </Text>
                 </View>
               }
@@ -555,87 +802,58 @@ export default function App() {
                     activeOpacity={0.7}
                     onPress={() => handleSelectCustomer(item)}
                   >
-                    {/* Header Row: Avatar, Name, ID, Type Pill */}
-                    <View style={styles.cardHeaderRow}>
-                      <View style={styles.cardAvatar}>
-                        <Text style={styles.cardAvatarText}>{initial}</Text>
-                      </View>
-                      <View style={{ flex: 1 }}>
-                        <Text style={styles.cardCustomerName} numberOfLines={1}>
-                          {data.customerName || 'Unnamed Customer'}
-                        </Text>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 2 }}>
-                          <Text style={styles.cardCustomerId}>{item.customerId || 'CUS-LEAD'}</Text>
-                          <Text style={styles.cardDot}>•</Text>
-                          <Text style={[styles.cardTypeLabel, { color: badgeStyle.text }]}>
-                            {data.customerType || 'Building Owner'}
-                          </Text>
-                        </View>
-                      </View>
-
-                      <View style={[styles.statusPill, { backgroundColor: statusStyle.bg }]}>
-                        <Text style={[styles.statusPillText, { color: statusStyle.text }]}>
-                          {data.status || 'Follow-up'}
-                        </Text>
-                      </View>
+                    {/* Left: Avatar Initial */}
+                    <View style={styles.cardAvatar}>
+                      <Text style={styles.cardAvatarText}>{initial}</Text>
                     </View>
 
-                    {/* Middle Highlights Row: Location, Stage & Quotation */}
-                    <View style={styles.cardHighlightsRow}>
-                      <View style={{ flex: 1 }}>
-                        {data.location ? (
-                          <Text style={styles.cardLocationText} numberOfLines={1}>
-                            📍 {data.location} {data.houseStage ? `• ${data.houseStage}` : ''}
+                    {/* Middle: Customer Name & Next Follow-up Info */}
+                    <View style={styles.cardMiddleContent}>
+                      <Text style={styles.cardCustomerName} numberOfLines={1}>
+                        {data.customerName || 'Unnamed Customer'}
+                      </Text>
+                      <View style={styles.cardSubRow}>
+                        {data.nextFollowUp ? (
+                          <Text style={styles.cardNextFollowUpText}>
+                            📅 Next: {formatShortDate(data.nextFollowUp)}
                           </Text>
-                        ) : data.houseStage ? (
-                          <Text style={styles.cardLocationText}>
-                            🏗️ {data.houseStage}
+                        ) : data.followUpCount ? (
+                          <Text style={styles.cardFollowUpCountBadge}>
+                            ⚡ {data.followUpCount} Follow-ups
                           </Text>
                         ) : (
-                          <Text style={styles.cardLocationText}>
-                            🏢 Showroom Lead
+                          <Text style={styles.cardFollowUpCountBadge}>
+                            ✨ Active Lead
                           </Text>
                         )}
                       </View>
+                    </View>
 
+                    {/* Right: Quotation Price + Status Pill + Chevron Arrow */}
+                    <View style={styles.cardRightColumn}>
                       {data.quotationValue ? (
                         <Text style={styles.cardPrice}>
                           ₹ {Number(data.quotationValue).toLocaleString('en-IN')}
                         </Text>
-                      ) : (
-                        <Text style={styles.cardFollowUpCountBadge}>
-                          #{data.followUpCount || 0} Follow-ups
-                        </Text>
-                      )}
-                    </View>
-
-                    {/* Footer Row: Contact Action Buttons & Next Date */}
-                    <View style={styles.cardActionFooterRow}>
-                      {data.phone ? (
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                          <TouchableOpacity
-                            style={styles.cardCallChip}
-                            onPress={() => Linking.openURL(`tel:${data.phone}`)}
-                          >
-                            <Text style={styles.cardCallChipText}>📞 {data.phone}</Text>
-                          </TouchableOpacity>
-
-                          <TouchableOpacity
-                            style={styles.cardWhatsAppChip}
-                            onPress={() => openWhatsApp(data.phone, data.customerName, data.requirement)}
-                          >
-                            <Text style={styles.cardWhatsAppChipText}>💬 WhatsApp</Text>
-                          </TouchableOpacity>
-                        </View>
-                      ) : (
-                        <Text style={{ fontSize: 11.5, color: colors.textMuted }}>No Phone</Text>
-                      )}
-
-                      {data.nextFollowUp ? (
-                        <Text style={styles.cardNextFollowUpText}>
-                          📅 Next: {data.nextFollowUp}
-                        </Text>
                       ) : null}
+
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: data.quotationValue ? 3 : 0 }}>
+                        <View
+                          style={[
+                            styles.statusPill,
+                            {
+                              backgroundColor: statusStyle.bg,
+                              borderColor: statusStyle.border,
+                            },
+                          ]}
+                        >
+                          <View style={[styles.statusDot, { backgroundColor: statusStyle.dot }]} />
+                          <Text style={[styles.statusPillText, { color: statusStyle.text }]}>
+                            {formatStatusLabel(data.status)}
+                          </Text>
+                        </View>
+                        <Text style={styles.cardChevron}>›</Text>
+                      </View>
                     </View>
                   </TouchableOpacity>
                 );
@@ -809,9 +1027,9 @@ export default function App() {
                         {data.customerType || 'Building Owner'}
                       </Text>
                     </View>
-                    <View style={[styles.typePill, { backgroundColor: statusStyle.bg, borderColor: statusStyle.border, flexDirection: 'row', alignItems: 'center', gap: 5 }]}>
-                      <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: statusStyle.text }} />
-                      <Text style={[styles.typePillText, { color: statusStyle.text }]}>
+                    <View style={[styles.statusPill, { backgroundColor: statusStyle.bg, borderColor: statusStyle.border, paddingHorizontal: 9, paddingVertical: 3.5 }]}>
+                      <View style={[styles.statusDot, { backgroundColor: statusStyle.dot }]} />
+                      <Text style={[styles.statusPillText, { color: statusStyle.text }]}>
                         {data.status || 'Follow-up'}
                       </Text>
                     </View>
@@ -842,30 +1060,30 @@ export default function App() {
                 {/* 2. 4 Quick Stat Tiles (2x2 Grid) */}
                 <View style={styles.statTilesGrid}>
                   <View style={styles.statTileItem}>
-                    <Text style={styles.statTileLabel}>QUOTATION VALUE</Text>
+                    <Text style={styles.statTileLabel}>Quotation Value</Text>
                     <Text style={[styles.statTileValue, { color: '#D97706' }]}>
                       {data.quotationValue ? `₹ ${Number(data.quotationValue).toLocaleString('en-IN')}` : '₹ 0'}
                     </Text>
                   </View>
 
                   <View style={styles.statTileItem}>
-                    <Text style={styles.statTileLabel}>TILE BUDGET</Text>
+                    <Text style={styles.statTileLabel}>Tile Budget</Text>
                     <Text style={[styles.statTileValue, { color: '#2563EB' }]}>
                       {data.tileBudget ? `₹ ${Number(data.tileBudget).toLocaleString('en-IN')}` : '₹ 0'}
                     </Text>
                   </View>
 
                   <View style={styles.statTileItem}>
-                    <Text style={styles.statTileLabel}>HOUSE STAGE</Text>
+                    <Text style={styles.statTileLabel}>House Stage</Text>
                     <Text style={[styles.statTileValue, { color: '#0F172A' }]} numberOfLines={1}>
                       {data.houseStage || 'Flooring Stage'}
                     </Text>
                   </View>
 
                   <View style={styles.statTileItem}>
-                    <Text style={styles.statTileLabel}>TOTAL INTERACTIONS</Text>
+                    <Text style={styles.statTileLabel}>Total Interactions</Text>
                     <Text style={[styles.statTileValue, { color: '#059669' }]}>
-                      #{data.followUpCount || 0} Logged
+                      ⚡ {data.followUpCount || 0} Logged
                     </Text>
                   </View>
                 </View>
@@ -879,27 +1097,27 @@ export default function App() {
                     </View>
                     <View style={styles.followUpBadge}>
                       <Text style={styles.followUpBadgeText}>
-                        #{data.followUpCount || 0} → Auto #{((Number(data.followUpCount) || 0) + 1)}
+                        Log #{((Number(data.followUpCount) || 0) + 1)}
                       </Text>
                     </View>
                   </View>
 
                   <Text style={styles.followUpSubheading}>
-                    Tap a status after discussion. Auto-increments count and logs today's date.
+                    Select updated pipeline stage and enter discussion notes.
                   </Text>
 
                   {/* Status Selection Pills */}
-                  <Text style={styles.fieldSectionMiniLabel}>UPDATE PIPELINE STAGE:</Text>
+                  <Text style={styles.fieldSectionMiniLabel}>PIPELINE STAGE</Text>
                   <View style={styles.statusPillsGrid}>
                     {[
-                      { name: 'Quotation', color: '#2563EB' },
-                      { name: 'Negotiation', color: '#D97706' },
-                      { name: 'Order Confirmed', color: '#059669', icon: '🎉' },
-                      { name: 'Follow-up', color: '#3B82F6' },
-                      { name: 'Newly Contacted', color: '#6366F1' },
-                      { name: 'Walk-in', color: '#0284C7' },
-                      { name: 'Lost', color: '#475569' },
-                      { name: 'Future Requirement', color: '#8B5CF6' },
+                      { name: 'Quotation', bg: '#EFF6FF', border: '#BFDBFE', text: '#1D4ED8', activeBg: '#2563EB', dot: '#2563EB' },
+                      { name: 'Negotiation', bg: '#FEF3C7', border: '#FDE68A', text: '#B45309', activeBg: '#D97706', dot: '#D97706' },
+                      { name: 'Order Confirmed', bg: '#DCFCE7', border: '#86EFAC', text: '#15803D', activeBg: '#10B981', dot: '#16A34A', icon: '🎉' },
+                      { name: 'Follow-up', bg: '#EEF2FF', border: '#C7D2FE', text: '#4338CA', activeBg: '#4F46E5', dot: '#4F46E5' },
+                      { name: 'Newly Contacted', bg: '#F0F9FF', border: '#BAE6FD', text: '#0369A1', activeBg: '#0284C7', dot: '#0284C7' },
+                      { name: 'Walk-in', bg: '#F0FDFA', border: '#99F6E4', text: '#0F766E', activeBg: '#0D9488', dot: '#0D9488' },
+                      { name: 'Lost', bg: '#F1F5F9', border: '#CBD5E1', text: '#475569', activeBg: '#64748B', dot: '#64748B' },
+                      { name: 'Future Requirement', bg: '#FAF5FF', border: '#DDD6FE', text: '#7E22CE', activeBg: '#8B5CF6', dot: '#9333EA' },
                     ].map((st) => {
                       const isSelected = followUpStatus === st.name;
                       return (
@@ -908,17 +1126,24 @@ export default function App() {
                           onPress={() => setFollowUpStatus(st.name)}
                           style={[
                             styles.statusPillBtn,
-                            isSelected && { backgroundColor: st.color, borderColor: st.color },
+                            isSelected
+                              ? { backgroundColor: st.activeBg, borderColor: st.activeBg }
+                              : { backgroundColor: st.bg, borderColor: st.border },
                           ]}
                           activeOpacity={0.7}
                         >
+                          {!isSelected && (
+                            <View style={[styles.statusDot, { backgroundColor: st.dot, marginRight: 4 }]} />
+                          )}
                           <Text
                             style={[
                               styles.statusPillBtnText,
-                              isSelected && { color: '#FFFFFF', fontWeight: '800' },
+                              isSelected
+                                ? { color: '#FFFFFF', fontWeight: '800' }
+                                : { color: st.text, fontWeight: '700' },
                             ]}
                           >
-                            {st.icon ? `${st.icon} ` : ''}{st.name}
+                            {isSelected ? '✓ ' : (st.icon ? `${st.icon} ` : '')}{st.name}
                           </Text>
                         </TouchableOpacity>
                       );
@@ -926,10 +1151,10 @@ export default function App() {
                   </View>
 
                   {/* Discussion Notes / Reason */}
-                  <Text style={styles.fieldSectionMiniLabel}>DISCUSSION NOTES / SUMMARY:</Text>
+                  <Text style={styles.fieldSectionMiniLabel}>DISCUSSION NOTES</Text>
                   <TextInput
                     style={styles.followUpInput}
-                    placeholder="e.g. Client visited showroom, approved vitrified tiles quote..."
+                    placeholder="e.g. Client visited showroom, approved quote for 1200 sq.ft vitrified tiles..."
                     placeholderTextColor={colors.textLight}
                     value={followUpReason}
                     onChangeText={setFollowUpReason}
@@ -947,22 +1172,15 @@ export default function App() {
                       <TouchableOpacity
                         key={idx}
                         onPress={() => setFollowUpReason((prev) => (prev ? `${prev} • ${snip}` : snip))}
-                        style={{
-                          backgroundColor: '#F8FAFC',
-                          borderWidth: 1,
-                          borderColor: '#E2E8F0',
-                          paddingHorizontal: 8,
-                          paddingVertical: 4,
-                          borderRadius: 12,
-                        }}
+                        style={styles.snippetChip}
                       >
-                        <Text style={{ fontSize: 11, color: '#475569', fontWeight: '600' }}>+ {snip}</Text>
+                        <Text style={styles.snippetChipText}>+ {snip}</Text>
                       </TouchableOpacity>
                     ))}
                   </View>
 
                   {/* Next Follow-up Date */}
-                  <Text style={styles.fieldSectionMiniLabel}>NEXT SCHEDULED FOLLOW-UP:</Text>
+                  <Text style={styles.fieldSectionMiniLabel}>NEXT SCHEDULED FOLLOW-UP</Text>
                   <View style={styles.quickDateRow}>
                     {[
                       { label: '+2 Days', days: 2 },
@@ -992,10 +1210,10 @@ export default function App() {
 
                   {/* Order Value (if Order Confirmed) */}
                   {followUpStatus === 'Order Confirmed' && (
-                    <View style={{ marginBottom: 12, backgroundColor: '#ECFDF5', padding: 10, borderRadius: 8, borderWidth: 1, borderColor: '#A7F3D0' }}>
-                      <Text style={[styles.fieldSectionMiniLabel, { color: '#047857' }]}>🎉 FINAL BOOKING / ORDER VALUE (₹):</Text>
+                    <View style={styles.confirmedOrderValueBox}>
+                      <Text style={styles.confirmedOrderValueLabel}>🎉 FINAL BOOKING / ORDER VALUE (₹)</Text>
                       <TextInput
-                        style={[styles.followUpInput, { borderColor: '#059669', marginBottom: 0, fontWeight: '800', color: '#065F46' }]}
+                        style={styles.confirmedOrderValueInput}
                         placeholder="e.g. 150000"
                         placeholderTextColor={colors.textLight}
                         keyboardType="numeric"
@@ -1015,12 +1233,9 @@ export default function App() {
                     {submittingFollowUp ? (
                       <ActivityIndicator color="#FFFFFF" size="small" />
                     ) : (
-                      <>
-                        <Text style={{ fontSize: 14 }}>⚡</Text>
-                        <Text style={styles.submitFollowUpBtnText}>
-                          Log Follow-up (#{((Number(data.followUpCount) || 0) + 1)}) & Save Stage
-                        </Text>
-                      </>
+                      <Text style={styles.submitFollowUpBtnText}>
+                        ⚡ Log Follow-up (#{((Number(data.followUpCount) || 0) + 1)}) & Save Stage
+                      </Text>
                     )}
                   </TouchableOpacity>
                 </View>
@@ -1178,6 +1393,15 @@ export default function App() {
           </View>
         </View>
       </Modal>
+
+      {/* Deal Won & Order Confirmed Professional Celebration Modal */}
+      <OrderConfirmedCelebrationModal
+        visible={showOrderCelebration}
+        customer={celebrationData?.customer}
+        orderValue={celebrationData?.orderValue}
+        onClose={() => setShowOrderCelebration(false)}
+        branding={branding}
+      />
     </View>
   );
 }
@@ -1405,55 +1629,100 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: colors.border,
-    padding: 14,
-    marginBottom: 10,
+    borderColor: '#E2E8F0',
+    paddingVertical: 13,
+    paddingHorizontal: 14,
+    marginBottom: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
     shadowColor: '#0F172A',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.04,
     shadowRadius: 3,
     elevation: 1,
   },
-  cardHeaderRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
   cardAvatar: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    backgroundColor: colors.primaryBg,
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: '#EFF6FF',
+    borderWidth: 1,
+    borderColor: '#DBEAFE',
     alignItems: 'center',
     justifyContent: 'center',
+    marginRight: 11,
   },
   cardAvatarText: {
-    fontSize: 15,
-    fontWeight: '800',
-    color: colors.primary,
+    fontSize: 16.5,
+    fontWeight: '900',
+    color: '#2563EB',
+  },
+  cardMiddleContent: {
+    flex: 1,
+    justifyContent: 'center',
+    paddingRight: 8,
   },
   cardCustomerName: {
-    fontSize: 14.5,
-    fontWeight: '700',
-    color: colors.text,
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#0F172A',
+    letterSpacing: -0.2,
+    marginBottom: 3,
   },
-  cardCustomerId: {
+  cardSubRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  cardNextFollowUpText: {
     fontSize: 11.5,
+    color: '#059669',
     fontWeight: '700',
-    color: colors.primary,
-    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
-    marginTop: 1,
   },
-  typePill: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 8,
-    borderWidth: 1,
+  cardFollowUpCountBadge: {
+    fontSize: 11.5,
+    color: '#64748B',
+    fontWeight: '600',
+  },
+  cardRightColumn: {
+    alignItems: 'flex-end',
+    justifyContent: 'center',
+  },
+  cardPrice: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#0F172A',
+    marginBottom: 3,
+  },
+  cardChevron: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#94A3B8',
+    marginLeft: 2,
+    lineHeight: 18,
   },
   typePillText: {
     fontSize: 10.5,
     fontWeight: '700',
     textTransform: 'uppercase',
+  },
+  statusPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8.5,
+    paddingVertical: 3,
+    borderRadius: 20,
+    borderWidth: 1,
+    gap: 4.5,
+  },
+  statusDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  statusPillText: {
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.15,
   },
   cardInfoRow: {
     flexDirection: 'row',
@@ -1787,27 +2056,27 @@ const styles = StyleSheet.create({
   // Quick Follow-up Action Card Styles
   followUpActionCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 14,
-    borderWidth: 1.5,
-    borderColor: '#BFDBFE',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
     padding: 16,
     marginBottom: 14,
-    shadowColor: '#2563EB',
+    shadowColor: '#0F172A',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 3,
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    elevation: 2,
   },
   followUpHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 6,
+    marginBottom: 4,
   },
   followUpTitle: {
     fontSize: 15,
     fontWeight: '800',
-    color: colors.text,
+    color: '#0F172A',
   },
   followUpBadge: {
     backgroundColor: '#EFF6FF',
@@ -1829,78 +2098,115 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   fieldSectionMiniLabel: {
-    fontSize: 10.5,
+    fontSize: 11,
     fontWeight: '800',
-    color: colors.textMuted,
+    color: '#64748B',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
-    marginBottom: 6,
+    marginBottom: 8,
+    marginTop: 4,
   },
   statusPillsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 6,
-    marginBottom: 12,
+    marginBottom: 14,
   },
   statusPillBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 8,
-    backgroundColor: '#F8FAFC',
+    paddingVertical: 5.5,
+    borderRadius: 20,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
-  },
-  statusPillBtnActive: {
-    backgroundColor: '#2563EB',
-    borderColor: '#2563EB',
   },
   statusPillBtnText: {
     fontSize: 11.5,
-    color: '#475569',
-    fontWeight: '600',
-  },
-  statusPillBtnTextActive: {
-    color: '#FFFFFF',
-    fontWeight: '700',
+    letterSpacing: 0.1,
   },
   followUpInput: {
     backgroundColor: '#F8FAFC',
     borderWidth: 1,
     borderColor: '#E2E8F0',
-    borderRadius: 8,
+    borderRadius: 10,
     paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingVertical: 9,
     fontSize: 13,
-    color: colors.text,
+    color: '#0F172A',
     marginBottom: 10,
+  },
+  snippetChip: {
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    paddingHorizontal: 9,
+    paddingVertical: 4.5,
+    borderRadius: 12,
+  },
+  snippetChipText: {
+    fontSize: 11,
+    color: '#475569',
+    fontWeight: '600',
   },
   quickDateRow: {
     flexDirection: 'row',
     gap: 6,
-    marginBottom: 6,
+    marginBottom: 8,
   },
   quickDateChip: {
     backgroundColor: '#EFF6FF',
     borderWidth: 1,
     borderColor: '#DBEAFE',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
+    paddingHorizontal: 9,
+    paddingVertical: 4.5,
+    borderRadius: 8,
   },
   quickDateChipText: {
     fontSize: 11,
     color: '#2563EB',
     fontWeight: '700',
   },
+  confirmedOrderValueBox: {
+    marginBottom: 14,
+    backgroundColor: '#ECFDF5',
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: '#86EFAC',
+  },
+  confirmedOrderValueLabel: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#047857',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 6,
+  },
+  confirmedOrderValueInput: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1.5,
+    borderColor: '#10B981',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#065F46',
+  },
   submitFollowUpBtn: {
     backgroundColor: '#2563EB',
     paddingVertical: 12,
-    borderRadius: 8,
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
     gap: 6,
     marginTop: 4,
+    shadowColor: '#2563EB',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 3,
   },
   submitFollowUpBtnText: {
     color: '#FFFFFF',
@@ -1944,30 +2250,30 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   cardHighlightsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: 10,
-    paddingVertical: 2,
+    marginTop: 8,
+    paddingVertical: 5,
+    paddingHorizontal: 8,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 6,
   },
   cardLocationText: {
-    fontSize: 12.5,
-    color: colors.textSecondary,
-    fontWeight: '500',
+    fontSize: 12,
+    color: '#475569',
+    fontWeight: '600',
   },
   cardFollowUpCountBadge: {
-    fontSize: 12,
+    fontSize: 11.5,
     fontWeight: '700',
-    color: colors.primary,
+    color: '#64748B',
   },
   cardActionFooterRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     marginTop: 10,
-    paddingTop: 10,
+    paddingTop: 8,
     borderTopWidth: 1,
-    borderTopColor: '#F1F5F9',
+    borderTopColor: '#F8FAFC',
   },
   cardCallChip: {
     flexDirection: 'row',
@@ -1976,11 +2282,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#DBEAFE',
     paddingHorizontal: 8,
-    paddingVertical: 4,
+    paddingVertical: 3.5,
     borderRadius: 6,
   },
   cardCallChipText: {
-    fontSize: 11,
+    fontSize: 11.5,
     color: '#1D4ED8',
     fontWeight: '700',
   },
@@ -1991,17 +2297,25 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#86EFAC',
     paddingHorizontal: 8,
-    paddingVertical: 4,
+    paddingVertical: 3.5,
     borderRadius: 6,
   },
   cardWhatsAppChipText: {
-    fontSize: 11,
+    fontSize: 11.5,
     color: '#15803D',
     fontWeight: '700',
   },
+  cardDateBadge: {
+    backgroundColor: '#F0FDF4',
+    paddingHorizontal: 7,
+    paddingVertical: 2.5,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#DCFCE7',
+  },
   cardNextFollowUpText: {
-    fontSize: 11,
-    color: '#059669',
+    fontSize: 11.5,
+    color: '#15803D',
     fontWeight: '700',
   },
   detailActionBtnCall: {
@@ -2113,5 +2427,155 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     flex: 1.2,
     textAlign: 'right',
+  },
+  // Celebration Modal Styles
+  celebrationOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(15, 23, 42, 0.75)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  celebrationCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    padding: 24,
+    width: '100%',
+    maxWidth: 360,
+    alignItems: 'center',
+    shadowColor: '#10B981',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.25,
+    shadowRadius: 20,
+    elevation: 10,
+    borderWidth: 1.5,
+    borderColor: '#A7F3D0',
+  },
+  celebrationTrophyBox: {
+    position: 'relative',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 14,
+  },
+  celebrationAura: {
+    position: 'absolute',
+    width: 90,
+    height: 90,
+    borderRadius: 45,
+    backgroundColor: 'rgba(16, 185, 129, 0.15)',
+  },
+  celebrationTrophyCircle: {
+    width: 76,
+    height: 76,
+    borderRadius: 38,
+    backgroundColor: '#ECFDF5',
+    borderWidth: 2,
+    borderColor: '#6EE7B7',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  celebrationBadgeChip: {
+    backgroundColor: '#DCFCE7',
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#86EFAC',
+    marginBottom: 8,
+  },
+  celebrationBadgeChipText: {
+    fontSize: 11,
+    fontWeight: '900',
+    color: '#047857',
+    letterSpacing: 0.5,
+  },
+  celebrationMainTitle: {
+    fontSize: 22,
+    fontWeight: '900',
+    color: '#0F172A',
+    letterSpacing: -0.3,
+    textAlign: 'center',
+  },
+  celebrationSubtitleText: {
+    fontSize: 12.5,
+    color: '#64748B',
+    textAlign: 'center',
+    marginTop: 4,
+    lineHeight: 17,
+  },
+  celebrationSnapshotCard: {
+    backgroundColor: '#F8FAFC',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    padding: 14,
+    width: '100%',
+    marginVertical: 16,
+  },
+  celebrationDataRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 7,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+  },
+  celebrationRowLabel: {
+    fontSize: 12,
+    color: '#64748B',
+    fontWeight: '600',
+  },
+  celebrationRowValueBold: {
+    fontSize: 13,
+    color: '#0F172A',
+    fontWeight: '800',
+    maxWidth: '65%',
+    textAlign: 'right',
+  },
+  celebrationIdText: {
+    fontSize: 12,
+    color: '#2563EB',
+    fontWeight: '800',
+    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+  },
+  celebrationAmountText: {
+    fontSize: 16,
+    fontWeight: '900',
+    color: '#059669',
+  },
+  celebrationWhatsAppActionBtn: {
+    backgroundColor: '#10B981',
+    paddingVertical: 13,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#10B981',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  celebrationWhatsAppActionBtnText: {
+    color: '#FFFFFF',
+    fontWeight: '800',
+    fontSize: 13.5,
+  },
+  celebrationContinueBtn: {
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    paddingVertical: 12,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  celebrationContinueBtnText: {
+    color: '#334155',
+    fontWeight: '700',
+    fontSize: 13,
+  },
+  confettiPiece: {
+    position: 'absolute',
+    top: -20,
   },
 });
