@@ -13,6 +13,7 @@ import { FormBuilderView } from './components/form-builder/FormBuilderView';
 import { SequenceConfigModal } from './components/settings/SequenceConfigModal';
 import { FormVersionHistoryModal } from './components/settings/FormVersionHistoryModal';
 import { BrandingSettingsModal } from './components/settings/BrandingSettingsModal';
+import { SettingsView } from './components/settings/SettingsView';
 import { MobileSimulatorModal } from './components/mobile-simulator/MobileSimulatorModal';
 
 const MainAppContent = () => {
@@ -32,6 +33,11 @@ const MainAppContent = () => {
         return {
           title: 'Customers',
           subtitle: 'Manage and track all customer interactions',
+        };
+      case 'settings':
+        return {
+          title: 'Settings & Administration',
+          subtitle: 'App branding, showroom logo, CRM form schema, and sequence configuration',
         };
       case 'builder':
         return {
@@ -81,7 +87,7 @@ const MainAppContent = () => {
               />
             )}
 
-            {activeTab === 'builder' && isOwner && <FormBuilderView />}
+            {(activeTab === 'settings' || activeTab === 'builder') && isOwner && <SettingsView />}
             {activeTab === 'sequence' && isOwner && <SequenceConfigModal />}
             {activeTab === 'versions' && isOwner && <FormVersionHistoryModal />}
           </div>

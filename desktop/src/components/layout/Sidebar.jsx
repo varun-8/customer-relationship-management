@@ -58,12 +58,12 @@ export const Sidebar = ({ activeTab, setActiveTab, onOpenMobileSimulator, onOpen
       <nav className="sidebar-nav">
         {navItems.map((item) => {
           const Icon = item.icon;
-          const isActive = activeTab === item.id || (activeTab === 'customers' && item.id === 'customers');
+          const isActive = activeTab === item.id;
 
           return (
             <button
               key={item.id}
-              onClick={() => setActiveTab(item.id === 'settings' ? 'builder' : item.id)}
+              onClick={() => setActiveTab(item.id)}
               className={`sidebar-nav-link ${isActive ? 'sidebar-nav-link-active' : ''}`}
             >
               <Icon size={17} strokeWidth={isActive ? 2.2 : 1.8} />
