@@ -1,0 +1,23 @@
+{
+  "expo": {
+    "name": "Vasantham CRM",
+    "slug": "vasantham-crm",
+    "scheme": "vasanthamcrm",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "backgroundColor": "#FFFFFF"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.vasantham.crm"
+    },
+    "android": {
+      "package": "com.vasantham.crm",
+      "adaptiveIcon": {
+        "backgroundColor": "#FFFFFF"
+      }
+    }
+  }
+}

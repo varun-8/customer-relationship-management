@@ -1,0 +1,59 @@
+const express = require('express');
+const cors = require('cors');
+const authRoutes = require('./routes/authRoutes');
+const formRoutes = require('./routes/formRoutes');
+const customerRoutes = require('./routes/customerRoutes');
+const sequenceRoutes = require('./routes/sequenceRoutes');
+const brandingRoutes = require('./routes/brandingRoutes');
+
+const app = express();
+
+// Middleware
+app.use(cors({
+  origin: '*',
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+}));
+
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Request logging in development
+if (process.env.NODE_ENV !== 'production') {
+  app.use((req, res, next) => {
+    console.log(`[${new Date().toISOString()}] ${req.method} ${req.originalUrl}`);
+    next();
+  });
+}
+
+// Health check endpoint
+app.get('/api/health', (req, res) => {
+  res.json({
+    status: 'online',
+    service: 'Vasantham Tiles & Sanitary Wares CRM Backend',
+    timestamp: new Date(),
+  });
+});
+
+// API Routes
+app.use('/api/auth', authRoutes);
+app.use('/api/customer-form', formRoutes);
+app.use('/api/customers', customerRoutes);
+app.use('/api/sequence', sequenceRoutes);
+app.use('/api/branding', brandingRoutes);
+
+// 404 Handler
+app.use((req, res) => {
+  res.status(404).json({ success: false, message: `Route not found: ${req.originalUrl}` });
+});
+
+// Global Error Handler
+app.use((err, req, res, next) => {
+  console.error('Unhandled server error:', err);
+  res.status(err.status || 500).json({
+    success: false,
+    message: err.message || 'Internal Server Error',
+  });
+});
+
+module.exports = app;
