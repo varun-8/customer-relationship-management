@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { DynamicFieldInput } from './DynamicFieldInput';
 import { useCustomer } from '../../context/CustomerContext';
+import { api } from '../../services/api';
 
 const FIELD_SECTIONS = [
   {
@@ -65,6 +66,8 @@ export const CustomerFormModal = ({ customer, onClose, onSuccess }) => {
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
   const [generalError, setGeneralError] = useState('');
+  const [existingCustomer, setExistingCustomer] = useState(null);
+  const [lookingUpPhone, setLookingUpPhone] = useState(false);
 
   useEffect(() => {
     if (isEdit && customer) {
@@ -98,8 +101,33 @@ export const CustomerFormModal = ({ customer, onClose, onSuccess }) => {
     }
   }, [customer, activeForm, isEdit]);
 
+  const checkPhoneLookup = async (phoneVal) => {
+    if (isEdit || !phoneVal) return;
+    const clean = String(phoneVal).replace(/[^0-9]/g, '');
+    if (clean.length >= 10) {
+      setLookingUpPhone(true);
+      try {
+        const res = await api.lookupCustomerByPhone(clean);
+        if (res.success && res.exists && res.customer) {
+          setExistingCustomer(res.customer);
+        } else {
+          setExistingCustomer(null);
+        }
+      } catch (e) {
+        console.warn('Phone check error:', e);
+      } finally {
+        setLookingUpPhone(false);
+      }
+    } else {
+      setExistingCustomer(null);
+    }
+  };
+
   const handleFieldChange = (name, value) => {
     setFormData((prev) => ({ ...prev, [name]: value }));
+    if (name === 'phone') {
+      checkPhoneLookup(value);
+    }
     if (errors[name]) {
       setErrors((prev) => {
         const next = { ...prev };
@@ -395,6 +423,66 @@ export const CustomerFormModal = ({ customer, onClose, onSuccess }) => {
                     Step {currentSectionIndex + 1} of {FIELD_SECTIONS.length}
                   </span>
                 </div>
+
+                {/* Real-time Existing Customer Auto-Detection Banner */}
+                {existingCustomer && (
+                  <div
+                    style={{
+                      marginBottom: '16px',
+                      padding: '12px 14px',
+                      background: 'linear-gradient(135deg, #FFFBEB, #FEF3C7)',
+                      border: '1.5px solid #FDE68A',
+                      borderRadius: '10px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      gap: '12px',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: '#F59E0B', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <Sparkles size={16} />
+                      </div>
+                      <div>
+                        <div style={{ fontSize: '13px', fontWeight: '800', color: '#92400E' }}>
+                          🔄 Existing Customer Found: <span style={{ textDecoration: 'underline' }}>{existingCustomer.customerName}</span> (#{existingCustomer.customerId})
+                        </div>
+                        <div style={{ fontSize: '11.5px', color: '#B45309', marginTop: '2px' }}>
+                          Type: {existingCustomer.customerType} • Location: {existingCustomer.location || 'Showroom'} • Past Orders: {existingCustomer.pastOrdersCount}
+                        </div>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setFormData((prev) => ({
+                          ...prev,
+                          customerName: existingCustomer.customerName || prev.customerName,
+                          customerType: existingCustomer.customerType || prev.customerType,
+                          location: existingCustomer.location || prev.location,
+                          leadSource: 'Existing Customer',
+                          salesperson: existingCustomer.salesperson || prev.salesperson,
+                          isRepeatCustomer: true,
+                        }));
+                      }}
+                      style={{
+                        padding: '6px 14px',
+                        background: '#D97706',
+                        color: '#FFFFFF',
+                        fontWeight: '800',
+                        fontSize: '12px',
+                        borderRadius: '8px',
+                        border: 'none',
+                        cursor: 'pointer',
+                        whiteSpace: 'nowrap',
+                        boxShadow: '0 2px 4px rgba(217, 119, 6, 0.25)',
+                      }}
+                    >
+                      ⚡ Auto-fill Profile
+                    </button>
+                  </div>
+                )}
 
                 {/* 2-Column Responsive Form Fields */}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', gap: '16px' }}>

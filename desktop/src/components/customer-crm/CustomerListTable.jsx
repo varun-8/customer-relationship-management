@@ -572,15 +572,22 @@ export const CustomerListTable = ({ onAddCustomer, onEditCustomer, onViewCustome
                           {avatar.char}
                         </div>
                         <div style={{ whiteSpace: 'nowrap' }}>
-                          <div
-                            style={{
-                              fontWeight: '700',
-                              color: 'var(--text-primary)',
-                              fontSize: '13px',
-                              whiteSpace: 'nowrap',
-                            }}
-                          >
-                            {data.customerName || 'Unnamed Customer'}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <span
+                              style={{
+                                fontWeight: '700',
+                                color: 'var(--text-primary)',
+                                fontSize: '13px',
+                                whiteSpace: 'nowrap',
+                              }}
+                            >
+                              {data.customerName || 'Unnamed Customer'}
+                            </span>
+                            {(data.leadSource === 'Existing Customer' || data.isRepeatCustomer) && (
+                              <span style={{ fontSize: '9.5px', fontWeight: '800', background: '#FEF3C7', color: '#B45309', border: '1px solid #FDE68A', padding: '1px 5px', borderRadius: '4px' }}>
+                                🔄 Repeat
+                              </span>
+                            )}
                           </div>
                           {data.location ? (
                             <div style={{ fontSize: '11.5px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '3px', marginTop: '1px', whiteSpace: 'nowrap' }}>

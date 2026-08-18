@@ -223,10 +223,69 @@ const deleteCustomer = async (req, res) => {
   }
 };
 
+// @desc Lookup customer by phone number to detect repeat/existing customers
+// @route GET /api/customers/lookup-phone/:phone
+const lookupCustomerByPhone = async (req, res) => {
+  try {
+    const { phone } = req.params;
+    if (!phone) {
+      return res.status(400).json({ success: false, message: 'Phone number is required' });
+    }
+
+    const cleanPhone = String(phone).replace(/[^0-9]/g, '');
+    if (cleanPhone.length < 10) {
+      return res.json({ success: true, exists: false });
+    }
+
+    const last10 = cleanPhone.slice(-10);
+
+    // Search for any customer matching the 10-digit number
+    const matchingCustomers = await Customer.find({
+      'data.phone': { $regex: last10 },
+    }).sort({ createdAt: -1 });
+
+    if (!matchingCustomers || matchingCustomers.length === 0) {
+      return res.json({ success: true, exists: false });
+    }
+
+    const latestDoc = matchingCustomers[0];
+    const d = latestDoc.data instanceof Map ? Object.fromEntries(latestDoc.data) : (latestDoc.data || {});
+
+    // Count past orders
+    const pastOrders = matchingCustomers.filter((c) => {
+      const cd = c.data instanceof Map ? Object.fromEntries(c.data) : (c.data || {});
+      return cd.status === 'Order Confirmed';
+    });
+
+    res.json({
+      success: true,
+      exists: true,
+      count: matchingCustomers.length,
+      customer: {
+        _id: latestDoc._id,
+        customerId: latestDoc.customerId,
+        customerName: d.customerName || 'Existing Customer',
+        customerType: d.customerType || 'Building Owner',
+        phone: d.phone,
+        location: d.location || '',
+        salesperson: d.salesperson || '',
+        leadSource: d.leadSource || 'Walk-in',
+        tileBudget: d.tileBudget || '',
+        lastOrderValue: d.orderValue || d.quotationValue || 0,
+        pastOrdersCount: pastOrders.length,
+        status: d.status,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 module.exports = {
   getCustomers,
   getCustomerById,
   createCustomer,
   updateCustomer,
   deleteCustomer,
+  lookupCustomerByPhone,
 };

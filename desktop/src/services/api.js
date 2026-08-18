@@ -231,6 +231,17 @@ export const api = {
     return data;
   },
 
+  async lookupCustomerByPhone(phone) {
+    const cleanPhone = String(phone).replace(/[^0-9]/g, '');
+    const headers = await getAuthHeaders();
+    const res = await fetch(`${API_BASE}/customers/lookup-phone/${cleanPhone}`, {
+      headers,
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || 'Lookup failed');
+    return data;
+  },
+
   // Sequence Config
   async getSequenceConfig() {
     const headers = await getAuthHeaders();

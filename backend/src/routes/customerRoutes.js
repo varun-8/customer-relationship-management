@@ -6,6 +6,7 @@ const {
   createCustomer,
   updateCustomer,
   deleteCustomer,
+  lookupCustomerByPhone,
 } = require('../controllers/customerController');
 const { protect } = require('../middlewares/authMiddleware');
 const { validateCustomerData } = require('../middlewares/validateCustomer');
@@ -14,6 +15,7 @@ const { validateCustomerData } = require('../middlewares/validateCustomer');
 router.use(protect);
 
 router.get('/', getCustomers);
+router.get('/lookup-phone/:phone', lookupCustomerByPhone);
 router.get('/:id', getCustomerById);
 router.post('/', validateCustomerData, createCustomer);
 router.put('/:id', validateCustomerData, updateCustomer);

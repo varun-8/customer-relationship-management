@@ -284,24 +284,45 @@ export const apiClient = {
     }
   },
 
-  // Fetch dynamic branding
+  // Fetch and cache dynamic branding & logo
   async getBranding() {
+    // 1. Try reading cached branding from local storage first
+    let cachedBranding = null;
+    try {
+      const cached = await AsyncStorage.getItem('vasantham_mobile_branding');
+      if (cached) {
+        cachedBranding = JSON.parse(cached);
+      }
+    } catch (e) {
+      // Ignore cache read errors
+    }
+
+    // 2. Query live server on MongoDB Atlas
     try {
       const base = await this.getApiBase();
       const res = await fetch(`${base}/branding`);
       const data = await res.json();
       if (data.success && data.data) {
+        // Persist fresh branding to AsyncStorage for offline and instant boot
+        await AsyncStorage.setItem('vasantham_mobile_branding', JSON.stringify(data.data));
         return data.data;
       }
     } catch (e) {
-      console.warn('Error fetching branding on mobile:', e.message);
+      console.warn('Live branding fetch warning:', e.message);
     }
+
+    // 3. Return cached branding if available
+    if (cachedBranding) {
+      return cachedBranding;
+    }
+
     return {
       appName: 'BuildCRM',
       appShortName: 'BuildCRM',
       tagline: 'Tiles & Sanitary Wares CRM',
       logoType: 'icon',
       logoIcon: 'Box',
+      logoImage: '',
       primaryColor: '#2563EB',
     };
   },
@@ -424,6 +445,51 @@ export const apiClient = {
       return await res.json();
     } catch (e) {
       return { success: false, message: `Connection error: ${e.message}` };
+    }
+  },
+
+  // Follow-up Sheet & Lead Nurturing
+  async getFollowupsList(params = {}) {
+    try {
+      const base = await this.getApiBase();
+      const headers = await this.getHeaders();
+      const query = new URLSearchParams(params).toString();
+      const res = await fetch(`${base}/followups${query ? `?${query}` : ''}`, {
+        headers,
+      });
+      return await res.json();
+    } catch (e) {
+      return { success: false, message: `Connection error: ${e.message}` };
+    }
+  },
+
+  async logFollowupActivity(id, activityData) {
+    try {
+      const base = await this.getApiBase();
+      const headers = await this.getHeaders();
+      const res = await fetch(`${base}/followups/${id}/log`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(activityData),
+      });
+      return await res.json();
+    } catch (e) {
+      return { success: false, message: `Connection error: ${e.message}` };
+    }
+  },
+
+  // Lookup existing customer by mobile number
+  async lookupCustomerByPhone(phone) {
+    try {
+      const base = await this.getApiBase();
+      const headers = await this.getHeaders();
+      const cleanPhone = String(phone).replace(/[^0-9]/g, '');
+      const res = await fetch(`${base}/customers/lookup-phone/${cleanPhone}`, {
+        headers,
+      });
+      return await res.json();
+    } catch (e) {
+      return { success: false, exists: false, message: e.message };
     }
   },
 };

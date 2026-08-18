@@ -22,6 +22,10 @@ import {
 import { colors } from './src/theme/colors';
 import { apiClient, FALLBACK_SCHEMA } from './src/api/client';
 import { DynamicFieldRenderer } from './src/components/DynamicFieldRenderer';
+import { PROFILES, ProfileSelectorModal } from './src/components/profile/ProfileSelectorModal';
+import { MobileFollowupSheet } from './src/components/followups/MobileFollowupSheet';
+import { MobileFollowupLogModal } from './src/components/followups/MobileFollowupLogModal';
+import { MobileLostSaleModal } from './src/components/lost-sales/MobileLostSaleModal';
 
 const CONFETTI_COLORS = ['#10B981', '#3B82F6', '#F59E0B', '#EC4899', '#8B5CF6', '#F97316', '#EAB308', '#06B6D4'];
 const CONFETTI_PIECES = Array.from({ length: 26 }).map((_, i) => ({
@@ -56,6 +60,21 @@ const formatStatusLabel = (status) => {
   if (!status) return 'Follow-up';
   if (status === 'Future Requirement') return 'Future Req.';
   return status;
+};
+
+const getBrandingIconEmoji = (iconName) => {
+  switch (iconName) {
+    case 'Box': return '📦';
+    case 'Layers': return '📚';
+    case 'Building': return '🏢';
+    case 'Sparkles': return '✨';
+    case 'Gem': return '💎';
+    case 'ShoppingBag': return '🛍️';
+    case 'Store': return '🏬';
+    case 'Briefcase': return '💼';
+    case 'Shield': return '🛡️';
+    default: return '🏢';
+  }
 };
 
 const SECTIONS = [
@@ -281,7 +300,7 @@ function OrderConfirmedCelebrationModal({ visible, customer, orderValue, onClose
 }
 
 export default function App() {
-  const [activeScreen, setActiveScreen] = useState('list'); // 'list' | 'add' | 'detail'
+  const [activeScreen, setActiveScreen] = useState('list'); // 'list' | 'followups' | 'add' | 'detail'
   const [formSection, setFormSection] = useState('contact');
   const [formSchema, setFormSchema] = useState(FALLBACK_SCHEMA);
   const [branding, setBranding] = useState({
@@ -303,6 +322,22 @@ export default function App() {
   const [refreshing, setRefreshing] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [isOnline, setIsOnline] = useState(true);
+  const [existingCustomerAlert, setExistingCustomerAlert] = useState(null);
+  const [checkingMobilePhone, setCheckingMobilePhone] = useState(false);
+
+  // Active Staff / Owner Profile State
+  const [currentProfile, setCurrentProfile] = useState(PROFILES[0]);
+  const [showProfileModal, setShowProfileModal] = useState(false);
+  const [ownerStaffFilter, setOwnerStaffFilter] = useState('all');
+
+  // Follow-up Management State
+  const [followups, setFollowups] = useState([]);
+  const [followupCounts, setFollowupCounts] = useState({ today: 0, upcoming: 0, overdue: 0, hot: 0, total: 0 });
+  const [followupTab, setFollowupTab] = useState('today');
+  const [followupTempFilter, setFollowupTempFilter] = useState('all');
+  const [loadingFollowups, setLoadingFollowups] = useState(false);
+  const [loggingFollowupItem, setLoggingFollowupItem] = useState(null);
+  const [markingLostItem, setMarkingLostItem] = useState(null);
 
   // Celebration Animation Modal State
   const [showOrderCelebration, setShowOrderCelebration] = useState(false);
@@ -313,12 +348,6 @@ export default function App() {
   const [serverHost, setServerHost] = useState('');
   const [connectionStatus, setConnectionStatus] = useState(null);
   const [testingConn, setTestingConn] = useState(false);
-
-  // Quick Follow-up & Stage Log State
-  const [followUpStatus, setFollowUpStatus] = useState('Follow-up');
-  const [followUpReason, setFollowUpReason] = useState('');
-  const [followUpNextDate, setFollowUpNextDate] = useState('');
-  const [submittingFollowUp, setSubmittingFollowUp] = useState(false);
 
   // Daily KPI State
   const [showKpiModal, setShowKpiModal] = useState(false);
@@ -378,28 +407,51 @@ export default function App() {
     }
   }, []);
 
+  const loadFollowups = useCallback(async (
+    tab = followupTab,
+    temp = followupTempFilter,
+    staff = (currentProfile.role === 'employee' ? currentProfile.name : ownerStaffFilter)
+  ) => {
+    setLoadingFollowups(true);
+    try {
+      const params = { tab };
+      if (temp !== 'all') params.temperature = temp;
+      if (staff !== 'all') params.salesperson = staff;
+      const res = await apiClient.getFollowupsList(params);
+      if (res && res.success) {
+        setFollowups(res.data || []);
+        if (res.counts) setFollowupCounts(res.counts);
+      }
+    } catch (e) {
+      console.warn('Follow-ups fetch warning:', e.message);
+    } finally {
+      setLoadingFollowups(false);
+    }
+  }, [followupTab, followupTempFilter, currentProfile, ownerStaffFilter]);
+
   const initData = useCallback(async () => {
     setLoading(true);
-    await Promise.all([loadBranding(), loadFormSchema(), loadCustomers()]);
+    await Promise.all([loadBranding(), loadFormSchema(), loadCustomers(), loadFollowups()]);
     setLoading(false);
-  }, [loadBranding, loadFormSchema, loadCustomers]);
+  }, [loadBranding, loadFormSchema, loadCustomers, loadFollowups]);
 
   useEffect(() => {
     initData();
   }, [initData]);
 
+  // When profile or owner filter changes, re-fetch followups
+  useEffect(() => {
+    loadFollowups();
+  }, [currentProfile, ownerStaffFilter]);
+
   const onRefresh = async () => {
     setRefreshing(true);
-    await Promise.all([loadBranding(), loadFormSchema(), loadCustomers(search)]);
+    await Promise.all([loadBranding(), loadFormSchema(), loadCustomers(search), loadFollowups()]);
     setRefreshing(false);
   };
 
   const handleSelectCustomer = (item) => {
-    const d = item.data instanceof Map ? Object.fromEntries(item.data) : (item.data || {});
     setSelectedCustomer(item);
-    setFollowUpStatus(d.status || 'Follow-up');
-    setFollowUpReason(d.lastReason || '');
-    setFollowUpNextDate(d.nextFollowUp || '');
     setActiveScreen('detail');
   };
 
@@ -424,56 +476,6 @@ export default function App() {
     });
   };
 
-  const handleLogFollowUp = async () => {
-    if (!selectedCustomer) return;
-    const currentData = selectedCustomer.data instanceof Map
-      ? Object.fromEntries(selectedCustomer.data)
-      : (selectedCustomer.data || {});
-
-    const currentCount = Number(currentData.followUpCount) || 0;
-    const newCount = currentCount + 1;
-    const todayStr = new Date().toISOString().split('T')[0];
-
-    const updatedData = {
-      ...currentData,
-      status: followUpStatus,
-      lastReason: followUpReason.trim(),
-      nextFollowUp: followUpNextDate.trim(),
-      lastFollowUp: todayStr,
-      followUpCount: newCount,
-    };
-
-    setSubmittingFollowUp(true);
-    try {
-      const res = await apiClient.updateCustomer(
-        selectedCustomer._id || selectedCustomer.customerId,
-        updatedData
-      );
-      if (res.success && res.data) {
-        setSelectedCustomer(res.data);
-        await loadCustomers(search);
-        if (followUpStatus === 'Order Confirmed') {
-          setCelebrationData({
-            customer: res.data,
-            orderValue: res.data?.data?.orderValue || res.data?.data?.quotationValue || res.data?.data?.tileBudget,
-          });
-          setShowOrderCelebration(true);
-        } else {
-          Alert.alert(
-            '✓ Status & Follow-up Logged',
-            `Pipeline status updated to "${followUpStatus}".\nFollow-up #${newCount} recorded for today (${todayStr}).`
-          );
-        }
-      } else {
-        Alert.alert('Update Failed', res.message || 'Could not update customer');
-      }
-    } catch (e) {
-      Alert.alert('Error', e.message);
-    } finally {
-      setSubmittingFollowUp(false);
-    }
-  };
-
   const handleTestConnection = async () => {
     setTestingConn(true);
     setConnectionStatus(null);
@@ -496,6 +498,28 @@ export default function App() {
 
   const handleFieldChange = (name, value) => {
     setFormData((prev) => ({ ...prev, [name]: value }));
+
+    if (name === 'phone') {
+      const clean = String(value).replace(/[^0-9]/g, '');
+      if (clean.length >= 10) {
+        setCheckingMobilePhone(true);
+        apiClient.lookupCustomerByPhone(clean)
+          .then((res) => {
+            setCheckingMobilePhone(false);
+            if (res && res.success && res.exists && res.customer) {
+              setExistingCustomerAlert(res.customer);
+            } else {
+              setExistingCustomerAlert(null);
+            }
+          })
+          .catch(() => {
+            setCheckingMobilePhone(false);
+          });
+      } else {
+        setExistingCustomerAlert(null);
+      }
+    }
+
     if (errors[name]) {
       setErrors((prev) => {
         const next = { ...prev };
@@ -514,59 +538,94 @@ export default function App() {
       entryDate: formData.entryDate || new Date().toISOString().split('T')[0],
       status: formData.status || 'Newly Contacted',
       customerType: formData.customerType || 'Building Owner',
+      salesperson: formData.salesperson || (currentProfile.role === 'employee' ? currentProfile.name : 'Karthik Raja'),
     };
+
+    let firstFailingSection = null;
 
     activeFields.forEach((field) => {
       const val = payload[field.name];
       const isMissing = val === undefined || val === null || val === '' || (Array.isArray(val) && val.length === 0);
       if (field.required && isMissing && field.type !== 'auto_number') {
-        newErrors[field.name] = `${field.label} is required`;
+        newErrors[field.name] = `${field.label || field.name} is required`;
+        if (!firstFailingSection) {
+          const sec = SECTIONS.find((s) => s.fieldNames.includes(field.name));
+          if (sec) firstFailingSection = sec.id;
+        }
+      }
+
+      // Phone digit validation if provided
+      if (field.name === 'phone' && val) {
+        const clean = String(val).replace(/[^0-9]/g, '');
+        if (clean.length < 10) {
+          newErrors[field.name] = 'Mobile number must contain at least 10 digits';
+          if (!firstFailingSection) firstFailingSection = 'contact';
+        }
       }
     });
 
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
+      if (firstFailingSection) {
+        setFormSection(firstFailingSection);
+      }
       const errorList = Object.values(newErrors).join('\n• ');
-      Alert.alert('Mandatory Fields', `Please complete the following required fields:\n• ${errorList}`);
+      Alert.alert('Required Fields Missing', `Please fill in the highlighted fields:\n• ${errorList}`);
       return;
     }
 
     setSubmitting(true);
     try {
       const res = await apiClient.createCustomer(payload);
-      if (res.success) {
+      if (res && res.success && res.data) {
         if (payload.status === 'Order Confirmed') {
           setCelebrationData({
             customer: res.data,
-            orderValue: payload.orderValue || payload.quotationValue,
+            orderValue: payload.orderValue || payload.quotationValue || payload.tileBudget,
           });
           setShowOrderCelebration(true);
         } else {
-          Alert.alert('Customer Saved', `Customer ${res.data?.customerId || 'record'} registered to MongoDB Atlas!`);
+          Alert.alert(
+            '✓ Customer Registered',
+            `Lead #${res.data?.customerId || 'New'} for "${payload.customerName || 'Customer'}" successfully saved to MongoDB Atlas.`
+          );
         }
         setFormData({});
+        setErrors({});
+        setExistingCustomerAlert(null);
         setActiveScreen('list');
         await loadCustomers();
+        await loadFollowups();
       } else {
-        const errorDetails = res.errors ? Object.values(res.errors).join('\n• ') : res.message;
-        Alert.alert('Validation Error', `Please review the following:\n• ${errorDetails}`);
+        const serverErrors = res?.errors || {};
+        if (Object.keys(serverErrors).length > 0) {
+          setErrors(serverErrors);
+          const firstErrKey = Object.keys(serverErrors)[0];
+          const sec = SECTIONS.find((s) => s.fieldNames.includes(firstErrKey));
+          if (sec) setFormSection(sec.id);
+        }
+        const errorDetails = Object.keys(serverErrors).length > 0
+          ? Object.values(serverErrors).join('\n• ')
+          : (res?.message || 'Could not register customer');
+        Alert.alert('Registration Failed', `Server validation error:\n• ${errorDetails}`);
       }
     } catch (e) {
-      Alert.alert('Connection Error', e.message);
+      Alert.alert('Connection Error', `Failed to register lead: ${e.message}. Verify backend server connection.`);
     } finally {
       setSubmitting(false);
     }
   };
 
-  const loadTodayMobileKpi = async () => {
+  const loadTodayMobileKpi = async (targetStaff = null) => {
     try {
       const today = new Date().toISOString().split('T')[0];
-      const res = await apiClient.getKPIAutoFill({ date: today, staffName: kpiStaff });
-      if (res.success && res.data) {
-        const auto = res.data.autoValues;
-        setKpiVisits(String(auto.walkins.visits || 0));
-        setKpiQuotes(String(auto.walkins.quotes || 0));
-        setKpiOrders(String(auto.walkins.orders || 0));
+      const staffParam = targetStaff || (currentProfile.role === 'employee' ? currentProfile.name : (kpiStaff || 'Karthik Raja'));
+      const res = await apiClient.getKPIAutoFill({ date: today, staffName: staffParam });
+      if (res && res.success && res.data) {
+        const auto = res.data.autoValues || {};
+        setKpiVisits(String(auto.walkins?.visits || 0));
+        setKpiQuotes(String(auto.walkins?.quotes || 0));
+        setKpiOrders(String(auto.walkins?.orders || 0));
         setKpiFollowups(String(auto.followUpsCount || 0));
         setKpiTotalBills(String(auto.ordersCount || 0));
         setKpiSalesValue(String(auto.salesValue || 0));
@@ -581,11 +640,17 @@ export default function App() {
 
   const activeFields = (formSchema?.fields || []).filter((f) => f.active);
 
-  // Filter customers by type
+  // Filter customers by type and profile assignment
   const filteredCustomers = customers.filter((c) => {
-    if (typeFilter === 'all') return true;
     const d = c.data instanceof Map ? Object.fromEntries(c.data) : (c.data || {});
-    return d.customerType === typeFilter;
+    if (typeFilter !== 'all' && d.customerType !== typeFilter) return false;
+    if (currentProfile.role === 'employee') {
+      return (d.salesperson || '').toLowerCase().includes(currentProfile.name.toLowerCase());
+    }
+    if (ownerStaffFilter !== 'all') {
+      return (d.salesperson || '').toLowerCase().includes(ownerStaffFilter.toLowerCase());
+    }
+    return true;
   });
 
   // Calculate Metrics
@@ -636,66 +701,60 @@ export default function App() {
         translucent={false}
       />
 
-      {/* Modern Dynamic Executive Header */}
+      {/* Sleek Minimalist Executive Header */}
       <View style={styles.header}>
         <View style={styles.headerLeft}>
           <View
             style={[
               styles.brandBadge,
-              branding.logoType === 'image' && branding.logoImage
-                ? { backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E2E8F0', padding: 2 }
+              branding.logoImage && branding.logoImage.trim() !== ''
+                ? { backgroundColor: '#FFFFFF', borderWidth: 1.5, borderColor: '#E2E8F0', padding: 2 }
                 : { backgroundColor: branding.primaryColor || '#2563EB' },
             ]}
           >
-            {branding.logoType === 'image' && branding.logoImage ? (
+            {branding.logoImage && branding.logoImage.trim() !== '' ? (
               <Image
                 source={{ uri: branding.logoImage }}
-                style={{ width: '100%', height: '100%', borderRadius: 6, resizeMode: 'contain' }}
+                style={styles.brandBadgeLogoImage}
+                resizeMode="contain"
               />
             ) : (
               <Text style={styles.brandBadgeText}>
-                {branding.logoIcon === 'Building2'
-                  ? '🏢'
-                  : branding.logoIcon === 'Store'
-                  ? '🏪'
-                  : branding.logoIcon === 'Sparkles'
-                  ? '✨'
-                  : branding.logoIcon === 'Crown'
-                  ? '👑'
-                  : branding.logoIcon === 'Shield'
-                  ? '🛡️'
-                  : branding.logoIcon === 'Layers'
-                  ? '📚'
-                  : branding.logoIcon === 'Gem'
-                  ? '💎'
-                  : branding.logoIcon === 'Compass'
-                  ? '🧭'
-                  : branding.logoIcon === 'Hexagon'
-                  ? '⬡'
-                  : '📦'}
+                {getBrandingIconEmoji(branding.logoIcon)}
               </Text>
             )}
           </View>
-          <View>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-              <Text style={styles.headerBrandTitle}>
-                {(branding.appShortName || branding.appName || 'BuildCRM').toUpperCase()}
-              </Text>
-              <View style={[styles.onlineDot, { backgroundColor: isOnline ? '#10B981' : '#F59E0B' }]} />
-            </View>
-            <Text style={styles.headerBrandSubtitle}>
-              {branding.tagline || 'Tiles & Sanitary'} • Schema v{formSchema?.version || 1}
+          <View style={{ justifyContent: 'center' }}>
+            <Text style={styles.headerBrandTitle} numberOfLines={1}>
+              {(branding.appShortName || branding.appName || 'BuildCRM').toUpperCase()}
             </Text>
+            <View style={styles.headerStatusRow}>
+              <View style={[styles.onlineStatusPill, { backgroundColor: isOnline ? '#ECFDF5' : '#FFFBEB', borderColor: isOnline ? '#A7F3D0' : '#FDE68A' }]}>
+                <View style={[styles.onlineDot, { backgroundColor: isOnline ? '#10B981' : '#F59E0B' }]} />
+                <Text style={[styles.onlineStatusText, { color: isOnline ? '#047857' : '#B45309' }]}>
+                  {isOnline ? 'Online' : 'Connecting'}
+                </Text>
+              </View>
+              <Text style={styles.headerRoleDot}>•</Text>
+              <Text style={styles.headerRoleSnippet} numberOfLines={1}>
+                {currentProfile.role === 'owner' ? 'Showroom Owner' : currentProfile.name.split(' ')[0]}
+              </Text>
+            </View>
           </View>
         </View>
 
         <View style={styles.headerRight}>
+          {/* Quick Profile Switcher Pill */}
           <TouchableOpacity
-            style={styles.headerKpiBtn}
-            onPress={() => setShowKpiModal(true)}
-            activeOpacity={0.7}
+            style={[styles.headerProfilePill, { backgroundColor: currentProfile.bg, borderColor: currentProfile.border }]}
+            onPress={() => setShowProfileModal(true)}
+            activeOpacity={0.8}
           >
-            <Text style={styles.headerKpiBtnText}>📊 KPI</Text>
+            <Text style={{ fontSize: 13 }}>{currentProfile.icon}</Text>
+            <Text style={[styles.headerProfilePillText, { color: currentProfile.color }]} numberOfLines={1}>
+              {currentProfile.name.split(' ')[0]}
+            </Text>
+            <Text style={{ fontSize: 10, color: currentProfile.color, marginLeft: -2 }}>▾</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -706,7 +765,7 @@ export default function App() {
             <Text style={{ fontSize: 14 }}>⚙️</Text>
           </TouchableOpacity>
 
-          {activeScreen !== 'list' ? (
+          {activeScreen === 'add' || activeScreen === 'detail' ? (
             <TouchableOpacity
               style={styles.headerBackBtn}
               onPress={() => setActiveScreen('list')}
@@ -714,19 +773,11 @@ export default function App() {
             >
               <Text style={styles.headerBackBtnText}>← Back</Text>
             </TouchableOpacity>
-          ) : (
-            <TouchableOpacity
-              style={styles.syncBtn}
-              onPress={onRefresh}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.syncBtnText}>↻ Sync</Text>
-            </TouchableOpacity>
-          )}
+          ) : null}
         </View>
       </View>
 
-      {/* Screen: Customer List (Minimalist, Aesthetic & High-Contrast Modern Records) */}
+      {/* Screen: Customer List (Modern, Minimalist & High-Performance) */}
       {activeScreen === 'list' && (
         <View style={styles.screenBody}>
           {/* Search & Quick Add Action Bar */}
@@ -735,8 +786,8 @@ export default function App() {
               <Text style={styles.searchIcon}>🔍</Text>
               <TextInput
                 style={styles.searchInput}
-                placeholder="Search by name, ID, phone, site..."
-                placeholderTextColor={colors.textLight}
+                placeholder="Search name, phone, #ID..."
+                placeholderTextColor="#94A3B8"
                 value={search}
                 onChangeText={(text) => {
                   setSearch(text);
@@ -744,15 +795,18 @@ export default function App() {
                 }}
               />
               {search ? (
-                <TouchableOpacity onPress={() => { setSearch(''); loadCustomers(''); }}>
-                  <Text style={{ fontSize: 12, color: colors.textMuted }}>✕</Text>
+                <TouchableOpacity
+                  onPress={() => { setSearch(''); loadCustomers(''); }}
+                  style={{ padding: 4 }}
+                >
+                  <Text style={{ fontSize: 13, color: '#94A3B8', fontWeight: 'bold' }}>✕</Text>
                 </TouchableOpacity>
               ) : null}
             </View>
 
             <TouchableOpacity
               style={styles.primaryAddBtn}
-              activeOpacity={0.8}
+              activeOpacity={0.85}
               onPress={() => {
                 const initial = {};
                 activeFields.forEach((f) => {
@@ -775,39 +829,159 @@ export default function App() {
                 setActiveScreen('add');
               }}
             >
-              <Text style={styles.primaryAddBtnText}>+ Add</Text>
+              <Text style={styles.primaryAddBtnText}>+ New Lead</Text>
             </TouchableOpacity>
           </View>
 
-          {/* Minimalist Filter Chips */}
-          <View style={styles.filterChipsRow}>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6 }}>
-              {['all', 'Building Owner', 'Mason', 'Architect'].map((type) => {
+          {/* Executive Command Hub for Showroom Owner */}
+          {currentProfile.role === 'owner' && (
+            <View style={styles.ownerCommandCard}>
+              {/* Top Banner Row */}
+              <View style={styles.ownerCommandHeader}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Text style={{ fontSize: 13 }}>👑</Text>
+                  <Text style={styles.ownerCommandTitle}>SHOWROOM EXECUTIVE PULSE</Text>
+                </View>
+                <View style={styles.ownerStaffCountBadge}>
+                  <Text style={styles.ownerStaffCountText}>4 Sales Executives</Text>
+                </View>
+              </View>
+
+              {/* 3 Executive Stat Columns */}
+              <View style={styles.ownerStatGrid}>
+                <View style={styles.ownerStatBox}>
+                  <Text style={styles.ownerStatLabel}>TOTAL PIPELINE</Text>
+                  <Text style={styles.ownerStatValueGreen}>
+                    ₹{totalPipeline >= 100000 ? `${(totalPipeline / 100000).toFixed(2)}L` : totalPipeline.toLocaleString('en-IN')}
+                  </Text>
+                  <Text style={styles.ownerStatSubtext}>Live Deal Value</Text>
+                </View>
+
+                <View style={styles.ownerStatDivider} />
+
+                <View style={styles.ownerStatBox}>
+                  <Text style={styles.ownerStatLabel}>ACTIVE LEADS</Text>
+                  <Text style={styles.ownerStatValueWhite}>{customers.length}</Text>
+                  <Text style={styles.ownerStatSubtext}>Total Customers</Text>
+                </View>
+
+                <View style={styles.ownerStatDivider} />
+
+                <View style={styles.ownerStatBox}>
+                  <Text style={styles.ownerStatLabel}>URGENT CALLS</Text>
+                  <Text style={[styles.ownerStatValueWhite, (followupCounts.overdue + followupCounts.today) > 0 && { color: '#F87171' }]}>
+                    {followupCounts.overdue + followupCounts.today}
+                  </Text>
+                  <Text style={[styles.ownerStatSubtext, (followupCounts.overdue + followupCounts.today) > 0 && { color: '#FCA5A5' }]}>
+                    {followupCounts.overdue > 0 ? `${followupCounts.overdue} Overdue` : 'Due Today'}
+                  </Text>
+                </View>
+              </View>
+
+              {/* Quick Staff Rep Allocation Ticker */}
+              <View style={styles.ownerRepTickerRow}>
+                <Text style={styles.ownerTickerTitle}>REP WORKLOAD:</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 5 }}>
+                  {['Karthik Raja', 'Senthil Kumar', 'Priya Dharshini', 'Manoj Kumar'].map((staff) => {
+                    const count = customers.filter((c) => {
+                      const d = c.data instanceof Map ? Object.fromEntries(c.data) : (c.data || {});
+                      return (d.salesperson || '').toLowerCase().includes(staff.toLowerCase());
+                    }).length;
+                    const isSelected = ownerStaffFilter === staff;
+
+                    return (
+                      <TouchableOpacity
+                        key={staff}
+                        onPress={() => setOwnerStaffFilter(isSelected ? 'all' : staff)}
+                        style={[styles.ownerMiniStaffPill, isSelected && styles.ownerMiniStaffPillActive]}
+                        activeOpacity={0.7}
+                      >
+                        <Text style={[styles.ownerMiniStaffText, isSelected && styles.ownerMiniStaffTextActive]}>
+                          {staff.split(' ')[0]}: <Text style={{ fontWeight: '900' }}>{count}</Text>
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </ScrollView>
+              </View>
+            </View>
+          )}
+
+          {/* Professional Theme-Cohesive Filter Bar */}
+          <View style={styles.filterDockContainer}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterScrollContent}>
+              {/* Customer Segment Filter Capsules */}
+              {['all', 'Building Owner', 'Architect', 'Mason'].map((type) => {
                 const isSelected = typeFilter === type;
                 const count = type === 'all'
-                  ? customers.length
+                  ? (ownerStaffFilter === 'all' ? customers.length : filteredCustomers.length)
                   : customers.filter((c) => {
                       const d = c.data instanceof Map ? Object.fromEntries(c.data) : (c.data || {});
-                      return d.customerType === type;
+                      const matchesStaff = ownerStaffFilter === 'all' || (d.salesperson || '').toLowerCase().includes(ownerStaffFilter.toLowerCase());
+                      return d.customerType === type && matchesStaff;
                     }).length;
+
+                const label = type === 'all' ? 'All Leads' : type === 'Building Owner' ? 'Building Owner' : type;
+                const icon = type === 'all' ? '🏷️' : type === 'Building Owner' ? '🏢' : type === 'Architect' ? '📐' : '🧱';
 
                 return (
                   <TouchableOpacity
                     key={type}
                     onPress={() => setTypeFilter(type)}
-                    style={[styles.filterChip, isSelected && styles.filterChipActive]}
-                    activeOpacity={0.7}
+                    style={[styles.filterCapsule, isSelected && styles.filterCapsuleActive]}
+                    activeOpacity={0.75}
                   >
-                    <Text style={[styles.filterChipText, isSelected && styles.filterChipTextActive]}>
-                      {type === 'all' ? 'All Leads' : type} {count > 0 ? `(${count})` : ''}
+                    <Text style={{ fontSize: 12 }}>{icon}</Text>
+                    <Text style={[styles.filterCapsuleText, isSelected && styles.filterCapsuleTextActive]}>
+                      {label}
                     </Text>
+                    <View style={[styles.filterCountBadge, isSelected && styles.filterCountBadgeActive]}>
+                      <Text style={[styles.filterCountBadgeText, isSelected && styles.filterCountBadgeTextActive]}>
+                        {count}
+                      </Text>
+                    </View>
                   </TouchableOpacity>
                 );
               })}
+
+              {/* Showroom Owner Staff Filter Divider & Chips */}
+              {currentProfile.role === 'owner' && (
+                <>
+                  <View style={styles.filterDividerVertical} />
+                  {['all', 'Karthik Raja', 'Senthil Kumar', 'Priya Dharshini', 'Manoj Kumar'].map((staff) => {
+                    const isSelected = ownerStaffFilter === staff;
+                    const staffCount = staff === 'all'
+                      ? customers.length
+                      : customers.filter((c) => {
+                          const d = c.data instanceof Map ? Object.fromEntries(c.data) : (c.data || {});
+                          return (d.salesperson || '').toLowerCase().includes(staff.toLowerCase());
+                        }).length;
+
+                    return (
+                      <TouchableOpacity
+                        key={staff}
+                        onPress={() => setOwnerStaffFilter(staff)}
+                        style={[styles.filterCapsuleStaff, isSelected && styles.filterCapsuleStaffActive]}
+                        activeOpacity={0.75}
+                      >
+                        <Text style={{ fontSize: 11 }}>👤</Text>
+                        <Text style={[styles.filterCapsuleStaffText, isSelected && styles.filterCapsuleStaffTextActive]}>
+                          {staff === 'all' ? 'All Reps' : staff.split(' ')[0]}
+                        </Text>
+                        <View style={[styles.filterStaffCountBadge, isSelected && styles.filterStaffCountBadgeActive]}>
+                          <Text style={[styles.filterStaffCountBadgeText, isSelected && styles.filterStaffCountBadgeTextActive]}>
+                            {staffCount}
+                          </Text>
+                        </View>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </>
+              )}
             </ScrollView>
           </View>
 
-          {/* Customer FlatList */}
+          {/* High-Performance Customer FlatList */}
           {loading ? (
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="large" color={colors.primary} />
@@ -818,16 +992,20 @@ export default function App() {
               data={filteredCustomers}
               keyExtractor={(item, index) => item._id || String(index)}
               showsVerticalScrollIndicator={false}
-              contentContainerStyle={{ paddingBottom: 24 }}
+              contentContainerStyle={{ paddingBottom: 30 }}
+              initialNumToRender={10}
+              maxToRenderPerBatch={10}
+              windowSize={7}
+              removeClippedSubviews={Platform.OS === 'android'}
               refreshControl={
                 <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
               }
               ListEmptyComponent={
                 <View style={styles.emptyContainer}>
-                  <Text style={{ fontSize: 36, marginBottom: 8 }}>📋</Text>
+                  <Text style={{ fontSize: 40, marginBottom: 8 }}>📋</Text>
                   <Text style={styles.emptyTitle}>No Customers Found</Text>
                   <Text style={styles.emptySubtitle}>
-                    {search ? `No matches for "${search}"` : 'Tap + Add above to register a showroom lead.'}
+                    {search ? `No matches found for "${search}"` : 'Tap + New Lead above to register a customer.'}
                   </Text>
                 </View>
               }
@@ -836,130 +1014,46 @@ export default function App() {
                 const initial = (data.customerName || 'C').charAt(0).toUpperCase();
                 const badgeStyle = getBadgeStyle(data.customerType);
                 const statusStyle = getStatusBadgeStyle(data.status);
-                const reqString = Array.isArray(data.requirement) ? data.requirement.join(', ') : (data.requirement || '');
 
                 return (
                   <TouchableOpacity
-                    style={styles.customerCard}
-                    activeOpacity={0.8}
+                    style={[
+                      styles.leadCard,
+                      { borderLeftColor: statusStyle.dot || '#2563EB' },
+                    ]}
+                    activeOpacity={0.75}
                     onPress={() => handleSelectCustomer(item)}
                   >
-                    {/* Top Bar: Customer ID & Status Badge */}
-                    <View style={styles.cardHeaderRow}>
-                      <View style={styles.cardIdBadge}>
-                        <Text style={styles.cardIdBadgeText}>{item.customerId || 'CUS-LEAD'}</Text>
+                    {/* Left: Avatar + Customer Name & Customer ID */}
+                    <View style={styles.leadLeftGroup}>
+                      <View style={[styles.leadAvatar, { backgroundColor: badgeStyle.bg, borderColor: badgeStyle.border }]}>
+                        <Text style={[styles.leadAvatarText, { color: badgeStyle.text }]}>{initial}</Text>
                       </View>
 
-                      {/* Log / Pipeline Status with Dot & Label */}
+                      <View style={styles.leadInfoCol}>
+                        <Text style={styles.leadName} numberOfLines={1}>
+                          {data.customerName || 'Unnamed Customer'}
+                        </Text>
+                        <View style={styles.leadIdBadge}>
+                          <Text style={styles.leadIdBadgeText}>#{item.customerId || 'CUS'}</Text>
+                        </View>
+                      </View>
+                    </View>
+
+                    {/* Right: Status Pill & Chevron */}
+                    <View style={styles.leadRightGroup}>
                       <View
                         style={[
-                          styles.cardStatusPill,
-                          {
-                            backgroundColor: statusStyle.bg,
-                            borderColor: statusStyle.border,
-                          },
+                          styles.leadStatusPill,
+                          { backgroundColor: statusStyle.bg, borderColor: statusStyle.border },
                         ]}
                       >
-                        <View style={[styles.cardStatusDot, { backgroundColor: statusStyle.dot }]} />
-                        <Text style={[styles.cardStatusText, { color: statusStyle.text }]}>
-                          {statusStyle.icon} {formatStatusLabel(data.status)}
+                        <View style={[styles.leadStatusDot, { backgroundColor: statusStyle.dot }]} />
+                        <Text style={[styles.leadStatusText, { color: statusStyle.text }]}>
+                          {formatStatusLabel(data.status)}
                         </Text>
                       </View>
-                    </View>
-
-                    {/* Middle Section: Avatar, Customer Name & Metadata */}
-                    <View style={styles.cardMainBody}>
-                      <View style={[styles.cardAvatar, { backgroundColor: badgeStyle.bg, borderColor: badgeStyle.border }]}>
-                        <Text style={[styles.cardAvatarText, { color: badgeStyle.text }]}>{initial}</Text>
-                      </View>
-
-                      <View style={styles.cardInfoCol}>
-                        <Text style={styles.cardCustomerName} numberOfLines={1}>
-                          {data.customerName || 'Unnamed Lead'}
-                        </Text>
-
-                        <View style={styles.cardMetaRow}>
-                          {data.customerType ? (
-                            <View style={[styles.cardTypeChip, { backgroundColor: badgeStyle.bg, borderColor: badgeStyle.border }]}>
-                              <Text style={[styles.cardTypeChipText, { color: badgeStyle.text }]}>
-                                {data.customerType}
-                              </Text>
-                            </View>
-                          ) : null}
-
-                          {data.location ? (
-                            <Text style={styles.cardLocationText} numberOfLines={1}>
-                              📍 {data.location}
-                            </Text>
-                          ) : null}
-                        </View>
-
-                        {reqString ? (
-                          <Text style={styles.cardReqText} numberOfLines={1}>
-                            🏷️ {reqString} {data.approxQuantity ? `(${data.approxQuantity} sq.ft)` : ''}
-                          </Text>
-                        ) : null}
-                      </View>
-                    </View>
-
-                    {/* Bottom Action & Metrics Bar */}
-                    <View style={styles.cardFooterBar}>
-                      <View style={styles.cardFooterLeft}>
-                        {data.quotationValue ? (
-                          <View>
-                            <Text style={styles.cardMetricLabel}>QUOTATION</Text>
-                            <Text style={styles.cardPrice}>
-                              ₹ {Number(data.quotationValue).toLocaleString('en-IN')}
-                            </Text>
-                          </View>
-                        ) : data.tileBudget ? (
-                          <View>
-                            <Text style={styles.cardMetricLabel}>BUDGET</Text>
-                            <Text style={styles.cardPrice}>
-                              ₹ {Number(data.tileBudget).toLocaleString('en-IN')}
-                            </Text>
-                          </View>
-                        ) : (
-                          <View>
-                            <Text style={styles.cardMetricLabel}>INTERACTIONS</Text>
-                            <Text style={styles.cardFollowUpCountText}>
-                              ⚡ {data.followUpCount || 0} Logged
-                            </Text>
-                          </View>
-                        )}
-                      </View>
-
-                      <View style={styles.cardFooterRight}>
-                        {data.nextFollowUp ? (
-                          <View style={styles.cardNextFollowUpPill}>
-                            <Text style={styles.cardNextFollowUpText}>
-                              📅 {formatShortDate(data.nextFollowUp)}
-                            </Text>
-                          </View>
-                        ) : null}
-
-                        {data.phone ? (
-                          <View style={styles.cardQuickActionsRow}>
-                            <TouchableOpacity
-                              style={styles.cardQuickCallBtn}
-                              onPress={() => Linking.openURL(`tel:${data.phone}`)}
-                              activeOpacity={0.7}
-                            >
-                              <Text style={{ fontSize: 13 }}>📞</Text>
-                            </TouchableOpacity>
-
-                            <TouchableOpacity
-                              style={styles.cardQuickWABtn}
-                              onPress={() => openWhatsApp(data.phone, data.customerName, reqString)}
-                              activeOpacity={0.7}
-                            >
-                              <Text style={{ fontSize: 13 }}>💬</Text>
-                            </TouchableOpacity>
-                          </View>
-                        ) : null}
-
-                        <Text style={styles.cardChevronIcon}>›</Text>
-                      </View>
+                      <Text style={styles.leadChevron}>›</Text>
                     </View>
                   </TouchableOpacity>
                 );
@@ -967,6 +1061,36 @@ export default function App() {
             />
           )}
         </View>
+      )}
+
+      {/* Screen: Follow-up & Lead Nurturing Hub */}
+      {activeScreen === 'followups' && (
+        <MobileFollowupSheet
+          followups={followups}
+          counts={followupCounts}
+          loading={loadingFollowups}
+          refreshing={refreshing}
+          onRefresh={onRefresh}
+          activeTab={followupTab}
+          onTabChange={(tab) => {
+            setFollowupTab(tab);
+            loadFollowups(tab, followupTempFilter);
+          }}
+          temperatureFilter={followupTempFilter}
+          onTemperatureChange={(temp) => {
+            setFollowupTempFilter(temp);
+            loadFollowups(followupTab, temp);
+          }}
+          ownerStaffFilter={ownerStaffFilter}
+          onOwnerStaffChange={(staff) => {
+            setOwnerStaffFilter(staff);
+            loadFollowups(followupTab, followupTempFilter, staff);
+          }}
+          currentProfile={currentProfile}
+          onLogActivity={(item) => setLoggingFollowupItem(item)}
+          onRecordLost={(item) => setMarkingLostItem(item)}
+          openWhatsApp={openWhatsApp}
+        />
       )}
 
       {/* Screen: Customer Add Form */}
@@ -1033,15 +1157,57 @@ export default function App() {
               </Text>
             </View>
 
+            {/* Real-time Existing Customer Auto-Detection Banner */}
+            {existingCustomerAlert && (
+              <View style={styles.existingCustomerBanner}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
+                  <Text style={{ fontSize: 22 }}>🔄</Text>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.existingCustomerBannerTitle}>
+                      Existing Customer Detected!
+                    </Text>
+                    <Text style={styles.existingCustomerBannerSubtitle} numberOfLines={1}>
+                      {existingCustomerAlert.customerName} (#{existingCustomerAlert.customerId}) • {existingCustomerAlert.customerType}
+                    </Text>
+                  </View>
+                </View>
+
+                <TouchableOpacity
+                  style={styles.autoFillProfileBtn}
+                  onPress={() => {
+                    setFormData((prev) => ({
+                      ...prev,
+                      customerName: existingCustomerAlert.customerName || prev.customerName,
+                      customerType: existingCustomerAlert.customerType || prev.customerType,
+                      location: existingCustomerAlert.location || prev.location,
+                      leadSource: 'Existing Customer',
+                      salesperson: existingCustomerAlert.salesperson || prev.salesperson,
+                      isRepeatCustomer: true,
+                    }));
+                  }}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.autoFillProfileBtnText}>⚡ Auto-fill</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+
             {/* Dynamic Field Inputs for this Section */}
             <View style={styles.inputsCard}>
               {(() => {
                 const currentSec = SECTIONS.find((s) => s.id === formSection);
-                const sectionFields = activeFields.filter((f) => currentSec?.fieldNames.includes(f.name));
+                const allMappedFieldNames = SECTIONS.flatMap((s) => s.fieldNames);
+                let sectionFields = activeFields.filter((f) => currentSec?.fieldNames.includes(f.name));
+
+                // Append any dynamically added custom fields on the final section so they are never missed
+                if (currentSec?.id === 'followup') {
+                  const unmappedFields = activeFields.filter((f) => !allMappedFieldNames.includes(f.name));
+                  sectionFields = [...sectionFields, ...unmappedFields];
+                }
 
                 return sectionFields.map((field) => (
                   <DynamicFieldRenderer
-                    key={field.id}
+                    key={field.id || field.name}
                     field={field}
                     value={formData[field.name]}
                     error={errors[field.name]}
@@ -1187,165 +1353,7 @@ export default function App() {
                   </View>
                 </View>
 
-                {/* 3. ⚡ Follow-up & Pipeline Stage Update Hub */}
-                <View style={styles.followUpActionCard}>
-                  <View style={styles.followUpHeader}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                      <Text style={{ fontSize: 18 }}>⚡</Text>
-                      <Text style={styles.followUpTitle}>Log Interaction & Update Status</Text>
-                    </View>
-                    <View style={styles.followUpBadge}>
-                      <Text style={styles.followUpBadgeText}>
-                        Log #{((Number(data.followUpCount) || 0) + 1)}
-                      </Text>
-                    </View>
-                  </View>
-
-                  <Text style={styles.followUpSubheading}>
-                    Select updated pipeline stage and enter discussion notes.
-                  </Text>
-
-                  {/* Active Selected Stage Banner */}
-                  <View style={styles.selectedStatusBanner}>
-                    <Text style={styles.selectedStatusBannerLabel}>Active Status Selected:</Text>
-                    <View
-                      style={[
-                        styles.cardStatusPill,
-                        {
-                          backgroundColor: getStatusBadgeStyle(followUpStatus).bg,
-                          borderColor: getStatusBadgeStyle(followUpStatus).border,
-                        },
-                      ]}
-                    >
-                      <View style={[styles.cardStatusDot, { backgroundColor: getStatusBadgeStyle(followUpStatus).dot }]} />
-                      <Text style={[styles.cardStatusText, { color: getStatusBadgeStyle(followUpStatus).text }]}>
-                        {getStatusBadgeStyle(followUpStatus).icon} {followUpStatus}
-                      </Text>
-                    </View>
-                  </View>
-
-                  {/* Status Selection Pills */}
-                  <Text style={styles.fieldSectionMiniLabel}>CHOOSE NEW STAGE</Text>
-                  <View style={styles.statusPillsGrid}>
-                    {[
-                      { name: 'Quotation', bg: '#EFF6FF', border: '#BFDBFE', text: '#1D4ED8', activeBg: '#2563EB', dot: '#2563EB', icon: '📄' },
-                      { name: 'Negotiation', bg: '#FEF3C7', border: '#FDE68A', text: '#B45309', activeBg: '#D97706', dot: '#D97706', icon: '🤝' },
-                      { name: 'Order Confirmed', bg: '#DCFCE7', border: '#86EFAC', text: '#15803D', activeBg: '#10B981', dot: '#16A34A', icon: '🎉' },
-                      { name: 'Follow-up', bg: '#EEF2FF', border: '#C7D2FE', text: '#4338CA', activeBg: '#4F46E5', dot: '#4F46E5', icon: '📞' },
-                      { name: 'Newly Contacted', bg: '#F0F9FF', border: '#BAE6FD', text: '#0369A1', activeBg: '#0284C7', dot: '#0284C7', icon: '✨' },
-                      { name: 'Walk-in', bg: '#F0FDFA', border: '#99F6E4', text: '#0F766E', activeBg: '#0D9488', dot: '#0D9488', icon: '🚶' },
-                      { name: 'Lost', bg: '#F1F5F9', border: '#CBD5E1', text: '#475569', activeBg: '#64748B', dot: '#64748B', icon: '✕' },
-                      { name: 'Future Requirement', bg: '#FAF5FF', border: '#DDD6FE', text: '#7E22CE', activeBg: '#8B5CF6', dot: '#9333EA', icon: '⏳' },
-                    ].map((st) => {
-                      const isSelected = followUpStatus === st.name;
-                      return (
-                        <TouchableOpacity
-                          key={st.name}
-                          onPress={() => setFollowUpStatus(st.name)}
-                          style={[
-                            styles.statusPillBtn,
-                            isSelected
-                              ? { backgroundColor: st.activeBg, borderColor: st.activeBg, shadowColor: st.activeBg, elevation: 3, shadowOpacity: 0.25, shadowRadius: 4 }
-                              : { backgroundColor: st.bg, borderColor: st.border },
-                          ]}
-                          activeOpacity={0.7}
-                        >
-                          {!isSelected && (
-                            <View style={[styles.statusDot, { backgroundColor: st.dot, marginRight: 4 }]} />
-                          )}
-                          <Text
-                            style={[
-                              styles.statusPillBtnText,
-                              isSelected
-                                ? { color: '#FFFFFF', fontWeight: '800' }
-                                : { color: st.text, fontWeight: '700' },
-                            ]}
-                          >
-                            {isSelected ? '✓ ' : (st.icon ? `${st.icon} ` : '')}{st.name}
-                          </Text>
-                        </TouchableOpacity>
-                      );
-                    })}
-                  </View>
-
-                  {/* Discussion Notes / Reason */}
-                  <Text style={styles.fieldSectionMiniLabel}>DISCUSSION NOTES</Text>
-                  <TextInput
-                    style={styles.followUpInput}
-                    placeholder="e.g. Client visited showroom, approved quote for 1200 sq.ft vitrified tiles..."
-                    placeholderTextColor={colors.textLight}
-                    value={followUpReason}
-                    onChangeText={setFollowUpReason}
-                    multiline
-                  />
-
-                  {/* Quick Tag Snippets */}
-                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 5, marginBottom: 12 }}>
-                    {[
-                      'Visited Showroom',
-                      'Shared Quote via WA',
-                      'Requested Discount',
-                      'Order Finalized',
-                      'Follow-up Required',
-                    ].map((snip, idx) => (
-                      <TouchableOpacity
-                        key={idx}
-                        onPress={() => setFollowUpReason((prev) => (prev ? `${prev} • ${snip}` : snip))}
-                        style={styles.snippetChip}
-                      >
-                        <Text style={styles.snippetChipText}>+ {snip}</Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-
-                  {/* Next Follow-up Date */}
-                  <Text style={styles.fieldSectionMiniLabel}>NEXT SCHEDULED FOLLOW-UP</Text>
-                  <View style={styles.quickDateRow}>
-                    {[
-                      { label: '+1 Day', days: 1 },
-                      { label: '+2 Days', days: 2 },
-                      { label: '+3 Days', days: 3 },
-                      { label: '+1 Week', days: 7 },
-                      { label: '+2 Weeks', days: 14 },
-                    ].map((item) => (
-                      <TouchableOpacity
-                        key={item.label}
-                        style={styles.quickDateChip}
-                        onPress={() => {
-                          const target = new Date(Date.now() + item.days * 86400000);
-                          setFollowUpNextDate(target.toISOString().split('T')[0]);
-                        }}
-                      >
-                        <Text style={styles.quickDateChipText}>{item.label}</Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                  <TextInput
-                    style={[styles.followUpInput, { marginBottom: 14 }]}
-                    placeholder="YYYY-MM-DD (e.g. 2026-08-20)"
-                    placeholderTextColor={colors.textLight}
-                    value={followUpNextDate}
-                    onChangeText={setFollowUpNextDate}
-                  />
-
-                  {/* Submit Follow-up Button */}
-                  <TouchableOpacity
-                    style={styles.submitFollowUpBtn}
-                    onPress={handleLogFollowUp}
-                    disabled={submittingFollowUp}
-                    activeOpacity={0.8}
-                  >
-                    {submittingFollowUp ? (
-                      <ActivityIndicator color="#FFFFFF" size="small" />
-                    ) : (
-                      <Text style={styles.submitFollowUpBtnText}>
-                        ⚡ Save Status & Record Follow-up (#{((Number(data.followUpCount) || 0) + 1)})
-                      </Text>
-                    )}
-                  </TouchableOpacity>
-                </View>
-
-                {/* 4. Structured Clean Cards: Contact & Material Specs */}
+                {/* 3. Structured Clean Cards: Contact & Material Specs */}
                 {/* Card A: Contact & Profile */}
                 <View style={styles.cleanDetailSectionCard}>
                   <View style={styles.cleanSectionHeader}>
@@ -1522,10 +1530,39 @@ export default function App() {
               Live performance metrics automatically calculated from CRM activity.
             </Text>
 
-            <ScrollView showsVerticalScrollIndicator={false} style={{ marginVertical: 12 }}>
+            {/* Showroom Owner Staff Switcher */}
+            {currentProfile.role === 'owner' && (
+              <View style={{ marginBottom: 12 }}>
+                <Text style={styles.kpiInputLabel}>Select Sales Rep</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6, paddingTop: 4 }}>
+                  {['Karthik Raja', 'Senthil Kumar', 'Priya Dharshini', 'Manoj Kumar'].map((staff) => {
+                    const isSel = (kpiStaff || 'Karthik Raja') === staff;
+                    return (
+                      <TouchableOpacity
+                        key={staff}
+                        style={[styles.kpiStaffChip, isSel && styles.kpiStaffChipActive]}
+                        onPress={() => {
+                          setKpiStaff(staff);
+                          loadTodayMobileKpi(staff);
+                        }}
+                        activeOpacity={0.7}
+                      >
+                        <Text style={[styles.kpiStaffChipText, isSel && styles.kpiStaffChipTextActive]}>
+                          👤 {staff.split(' ')[0]}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </ScrollView>
+              </View>
+            )}
+
+            <ScrollView showsVerticalScrollIndicator={false} style={{ marginVertical: 8 }}>
               {/* Sales Value Hero Card */}
               <View style={{ backgroundColor: '#ECFDF5', borderWidth: 1, borderColor: '#A7F3D0', borderRadius: 14, padding: 14, marginBottom: 12, alignItems: 'center' }}>
-                <Text style={{ fontSize: 11, fontWeight: '800', color: '#047857', letterSpacing: 0.5 }}>TODAY'S CLOSED REVENUE</Text>
+                <Text style={{ fontSize: 11, fontWeight: '800', color: '#047857', letterSpacing: 0.5 }}>
+                  {currentProfile.role === 'owner' ? `${(kpiStaff || 'Karthik').split(' ')[0].toUpperCase()}'S REVENUE TODAY` : "TODAY'S CLOSED REVENUE"}
+                </Text>
                 <Text style={{ fontSize: 26, fontWeight: '900', color: '#065F46', marginVertical: 4 }}>
                   ₹{Number(kpiSalesValue || 0).toLocaleString('en-IN')}
                 </Text>
@@ -1589,6 +1626,99 @@ export default function App() {
           </View>
         </View>
       </Modal>
+
+      {/* Profile Selector Modal (Owner vs Staff) */}
+      <ProfileSelectorModal
+        visible={showProfileModal}
+        currentProfile={currentProfile}
+        onSelectProfile={(p) => setCurrentProfile(p)}
+        onClose={() => setShowProfileModal(false)}
+      />
+
+      {/* Follow-up Activity Logger Modal */}
+      <MobileFollowupLogModal
+        visible={Boolean(loggingFollowupItem)}
+        followUp={loggingFollowupItem}
+        onClose={() => setLoggingFollowupItem(null)}
+        onSaved={() => {
+          loadFollowups();
+          loadCustomers();
+        }}
+        onOpenLostSale={(item) => setMarkingLostItem(item)}
+      />
+
+      {/* Lost Sale & Competitor Analysis Modal */}
+      <MobileLostSaleModal
+        visible={Boolean(markingLostItem)}
+        customer={markingLostItem}
+        onClose={() => setMarkingLostItem(null)}
+        onSaved={() => {
+          loadFollowups();
+          loadCustomers();
+        }}
+      />
+
+      {/* Floating Modern Glassmorphic Bottom Navigation Bar */}
+      {activeScreen !== 'detail' && activeScreen !== 'add' && (
+        <View style={styles.bottomNavContainer}>
+          <TouchableOpacity
+            style={[styles.bottomNavItem, activeScreen === 'list' && styles.bottomNavItemActive]}
+            onPress={() => setActiveScreen('list')}
+            activeOpacity={0.75}
+          >
+            <View style={[styles.bottomNavIconBox, activeScreen === 'list' && styles.bottomNavIconBoxActive]}>
+              <Text style={{ fontSize: 17 }}>📋</Text>
+            </View>
+            <Text style={[styles.bottomNavLabel, activeScreen === 'list' && styles.bottomNavLabelActive]}>
+              Leads
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.bottomNavItem, activeScreen === 'followups' && styles.bottomNavItemActiveFollowup]}
+            onPress={() => {
+              setActiveScreen('followups');
+              loadFollowups();
+            }}
+            activeOpacity={0.75}
+          >
+            <View style={{ position: 'relative' }}>
+              <View style={[styles.bottomNavIconBox, activeScreen === 'followups' && styles.bottomNavIconBoxActiveFollowup]}>
+                <Text style={{ fontSize: 17 }}>📞</Text>
+              </View>
+              {(followupCounts.overdue > 0 || followupCounts.today > 0) && (
+                <View
+                  style={[
+                    styles.navBadge,
+                    { backgroundColor: followupCounts.overdue > 0 ? '#EF4444' : '#2563EB' },
+                  ]}
+                >
+                  <Text style={styles.navBadgeText}>
+                    {followupCounts.overdue > 0 ? followupCounts.overdue : followupCounts.today}
+                  </Text>
+                </View>
+              )}
+            </View>
+            <Text style={[styles.bottomNavLabel, activeScreen === 'followups' && styles.bottomNavLabelActiveFollowup]}>
+              Follow-ups
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.bottomNavItem}
+            onPress={() => {
+              loadTodayMobileKpi();
+              setShowKpiModal(true);
+            }}
+            activeOpacity={0.75}
+          >
+            <View style={styles.bottomNavIconBox}>
+              <Text style={{ fontSize: 17 }}>📊</Text>
+            </View>
+            <Text style={styles.bottomNavLabel}>KPI Shift</Text>
+          </TouchableOpacity>
+        </View>
+      )}
     </View>
   );
 }
@@ -1604,10 +1734,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingVertical: 10,
     backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    borderBottomColor: '#F1F5F9',
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.03,
+    shadowRadius: 3,
+    elevation: 2,
   },
   headerLeft: {
     flexDirection: 'row',
@@ -1616,12 +1751,22 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   brandBadge: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
+    width: 38,
+    height: 38,
+    borderRadius: 11,
     backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 1.5 },
+    shadowOpacity: 0.08,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  brandBadgeLogoImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 8,
   },
   brandBadgeText: {
     color: '#FFFFFF',
@@ -1629,45 +1774,85 @@ const styles = StyleSheet.create({
     fontSize: 18,
   },
   headerBrandTitle: {
-    color: colors.text,
-    fontWeight: '800',
+    color: '#0F172A',
+    fontWeight: '900',
     fontSize: 15,
-    letterSpacing: 0.5,
+    letterSpacing: 0.3,
+  },
+  headerStatusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    marginTop: 2,
+  },
+  onlineStatusPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 6,
+    paddingVertical: 1.5,
+    borderRadius: 10,
+    borderWidth: 1,
   },
   onlineDot: {
-    width: 7,
-    height: 7,
-    borderRadius: 4,
+    width: 5.5,
+    height: 5.5,
+    borderRadius: 3,
   },
-  headerBrandSubtitle: {
-    color: colors.primary,
+  onlineStatusText: {
+    fontSize: 10,
+    fontWeight: '700',
+  },
+  headerRoleDot: {
+    fontSize: 10,
+    color: '#94A3B8',
+  },
+  headerRoleSnippet: {
     fontSize: 11,
     fontWeight: '600',
+    color: '#64748B',
+    maxWidth: 100,
   },
   headerRight: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
   },
-  headerIconBtn: {
-    padding: 7,
-    borderRadius: 8,
-    backgroundColor: colors.surfaceElevated,
+  headerProfilePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 20,
     borderWidth: 1,
-    borderColor: colors.border,
+  },
+  headerProfilePillText: {
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  headerIconBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   headerBackBtn: {
     paddingHorizontal: 11,
-    paddingVertical: 6,
-    borderRadius: 8,
-    backgroundColor: colors.surfaceElevated,
-    borderWidth: 1,
-    borderColor: colors.border,
+    paddingVertical: 6.5,
+    borderRadius: 9,
+    backgroundColor: '#0F172A',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   headerBackBtnText: {
-    color: colors.text,
-    fontSize: 12.5,
-    fontWeight: '700',
+    color: '#FFFFFF',
+    fontSize: 11.5,
+    fontWeight: '800',
   },
   syncBtn: {
     paddingHorizontal: 10,
@@ -1718,6 +1903,7 @@ const styles = StyleSheet.create({
     color: colors.text,
     marginTop: 2,
   },
+  // Modern Sleek Search & Add Lead Action Bar
   searchRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1729,60 +1915,298 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 10,
-    paddingHorizontal: 10,
-    height: 42,
+    borderWidth: 1.5,
+    borderColor: '#E2E8F0',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    height: 44,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.03,
+    shadowRadius: 2,
+    elevation: 1,
   },
   searchIcon: {
     fontSize: 13,
     marginRight: 6,
+    opacity: 0.7,
   },
   searchInput: {
     flex: 1,
-    color: colors.text,
-    fontSize: 13,
+    color: '#0F172A',
+    fontSize: 13.5,
+    fontWeight: '500',
     paddingVertical: 0,
   },
   primaryAddBtn: {
-    backgroundColor: colors.primary,
-    paddingHorizontal: 16,
-    height: 42,
-    borderRadius: 10,
+    backgroundColor: '#2563EB',
+    paddingHorizontal: 15,
+    height: 44,
+    borderRadius: 12,
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    gap: 4,
+    shadowColor: '#2563EB',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.25,
+    shadowRadius: 5,
+    elevation: 3,
   },
   primaryAddBtnText: {
     color: '#FFFFFF',
-    fontWeight: '700',
-    fontSize: 13.5,
+    fontWeight: '800',
+    fontSize: 13,
+    letterSpacing: 0.2,
   },
-  filterChipsRow: {
+  // Professional Theme-Cohesive Filter Dock
+  filterDockContainer: {
+    marginBottom: 10,
+  },
+  filterScrollContent: {
+    gap: 7,
+    paddingVertical: 2,
+  },
+  filterCapsule: {
     flexDirection: 'row',
+    alignItems: 'center',
     gap: 6,
-    marginBottom: 12,
-  },
-  filterChip: {
     paddingHorizontal: 11,
-    paddingVertical: 5,
+    paddingVertical: 6,
     borderRadius: 20,
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: '#E2E8F0',
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.03,
+    shadowRadius: 2,
+    elevation: 1,
   },
-  filterChipActive: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
+  filterCapsuleActive: {
+    backgroundColor: '#0F172A',
+    borderColor: '#0F172A',
+    shadowOpacity: 0.15,
   },
-  filterChipText: {
+  filterCapsuleText: {
     fontSize: 11.5,
-    color: colors.textSecondary,
-    fontWeight: '600',
-  },
-  filterChipTextActive: {
-    color: '#FFFFFF',
+    color: '#475569',
     fontWeight: '700',
+  },
+  filterCapsuleTextActive: {
+    color: '#FFFFFF',
+    fontWeight: '800',
+  },
+  filterCountBadge: {
+    backgroundColor: '#F1F5F9',
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: 10,
+    minWidth: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  filterCountBadgeActive: {
+    backgroundColor: 'rgba(255, 255, 255, 0.22)',
+  },
+  filterCountBadgeText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#64748B',
+  },
+  filterCountBadgeTextActive: {
+    color: '#FFFFFF',
+    fontWeight: '900',
+  },
+  filterDividerVertical: {
+    width: 1,
+    height: 20,
+    backgroundColor: '#CBD5E1',
+    alignSelf: 'center',
+    marginHorizontal: 3,
+  },
+  filterCapsuleStaff: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 20,
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  filterCapsuleStaffActive: {
+    backgroundColor: '#2563EB',
+    borderColor: '#1D4ED8',
+  },
+  filterCapsuleStaffText: {
+    fontSize: 11,
+    color: '#475569',
+    fontWeight: '700',
+  },
+  filterCapsuleStaffTextActive: {
+    color: '#FFFFFF',
+    fontWeight: '800',
+  },
+  filterStaffCountBadge: {
+    backgroundColor: '#E2E8F0',
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+    borderRadius: 8,
+    minWidth: 16,
+    alignItems: 'center',
+  },
+  filterStaffCountBadgeActive: {
+    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+  },
+  filterStaffCountBadgeText: {
+    fontSize: 9.5,
+    fontWeight: '800',
+    color: '#475569',
+  },
+  filterStaffCountBadgeTextActive: {
+    color: '#FFFFFF',
+    fontWeight: '900',
+  },
+  // Showroom Owner Executive Command Card
+  ownerCommandCard: {
+    backgroundColor: '#0F172A',
+    borderRadius: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: '#1E293B',
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  ownerCommandHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingBottom: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#1E293B',
+    marginBottom: 10,
+  },
+  ownerCommandTitle: {
+    fontSize: 10.5,
+    fontWeight: '900',
+    color: '#38BDF8',
+    letterSpacing: 0.8,
+  },
+  ownerStaffCountBadge: {
+    backgroundColor: '#1E293B',
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#334155',
+  },
+  ownerStaffCountText: {
+    fontSize: 9.5,
+    fontWeight: '800',
+    color: '#94A3B8',
+  },
+  ownerStatGrid: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  ownerStatBox: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  ownerStatDivider: {
+    width: 1,
+    height: 28,
+    backgroundColor: '#334155',
+  },
+  ownerStatLabel: {
+    fontSize: 8.5,
+    fontWeight: '800',
+    color: '#94A3B8',
+    letterSpacing: 0.4,
+    textTransform: 'uppercase',
+  },
+  ownerStatValueGreen: {
+    fontSize: 15,
+    fontWeight: '900',
+    color: '#34D399',
+    marginTop: 2,
+  },
+  ownerStatValueWhite: {
+    fontSize: 15,
+    fontWeight: '900',
+    color: '#FFFFFF',
+    marginTop: 2,
+  },
+  ownerStatSubtext: {
+    fontSize: 8.5,
+    fontWeight: '600',
+    color: '#64748B',
+    marginTop: 1,
+  },
+  ownerRepTickerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 10,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#1E293B',
+  },
+  ownerTickerTitle: {
+    fontSize: 8.5,
+    fontWeight: '900',
+    color: '#64748B',
+    letterSpacing: 0.5,
+  },
+  ownerMiniStaffPill: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+    backgroundColor: '#1E293B',
+    borderWidth: 1,
+    borderColor: '#334155',
+  },
+  ownerMiniStaffPillActive: {
+    backgroundColor: '#2563EB',
+    borderColor: '#3B82F6',
+  },
+  ownerMiniStaffText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#94A3B8',
+  },
+  ownerMiniStaffTextActive: {
+    color: '#FFFFFF',
+    fontWeight: '800',
+  },
+  kpiStaffChip: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  kpiStaffChipActive: {
+    backgroundColor: '#2563EB',
+    borderColor: '#1D4ED8',
+  },
+  kpiStaffChipText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#475569',
+  },
+  kpiStaffChipTextActive: {
+    color: '#FFFFFF',
+    fontWeight: '800',
   },
   loadingContainer: {
     flex: 1,
@@ -1793,7 +2217,7 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontSize: 13,
-    color: colors.textMuted,
+    color: '#64748B',
     fontWeight: '600',
   },
   emptyContainer: {
@@ -1803,159 +2227,146 @@ const styles = StyleSheet.create({
   },
   emptyTitle: {
     fontSize: 16,
-    fontWeight: '700',
-    color: colors.text,
+    fontWeight: '800',
+    color: '#0F172A',
   },
   emptySubtitle: {
     fontSize: 12,
-    color: colors.textMuted,
+    color: '#64748B',
     marginTop: 4,
     textAlign: 'center',
   },
-  // Premium Customer Record Card Styles
-  customerCard: {
+  // Ultra-Minimalist Modern Lead Record Card Styles
+  leadCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     backgroundColor: '#FFFFFF',
-    borderRadius: 16,
+    borderRadius: 14,
     borderWidth: 1,
     borderColor: '#E2E8F0',
-    padding: 14,
-    marginBottom: 10,
+    borderLeftWidth: 4,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    marginBottom: 8,
     shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 5,
+    shadowOffset: { width: 0, height: 1.5 },
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
     elevation: 2,
   },
-  cardHeaderRow: {
+  leadLeftGroup: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 10,
+    flex: 1,
+    marginRight: 10,
   },
-  cardIdBadge: {
-    backgroundColor: '#F1F5F9',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
+  leadAvatar: {
+    width: 38,
+    height: 38,
+    borderRadius: 11,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  leadAvatarText: {
+    fontSize: 15,
+    fontWeight: '900',
+  },
+  leadInfoCol: {
+    marginLeft: 10,
+    flex: 1,
+  },
+  leadName: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#0F172A',
+    letterSpacing: -0.2,
+  },
+  leadIdBadge: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#F8FAFC',
+    paddingHorizontal: 6,
+    paddingVertical: 1.5,
+    borderRadius: 4,
     borderWidth: 1,
     borderColor: '#E2E8F0',
+    marginTop: 2,
   },
-  cardIdBadgeText: {
-    fontSize: 11,
+  leadIdBadgeText: {
+    fontSize: 10,
     fontWeight: '800',
     color: '#475569',
     fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
   },
-  cardStatusPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 9,
-    paddingVertical: 3.5,
-    borderRadius: 20,
-    borderWidth: 1,
-    gap: 5,
-  },
-  cardStatusDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-  },
-  cardStatusText: {
-    fontSize: 11,
-    fontWeight: '800',
-    letterSpacing: 0.15,
-  },
-  cardMainBody: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 12,
-    marginBottom: 12,
-  },
-  cardAvatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
-    borderWidth: 1.5,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  cardAvatarText: {
-    fontSize: 18,
-    fontWeight: '900',
-  },
-  cardInfoCol: {
-    flex: 1,
-    justifyContent: 'center',
-  },
-  cardCustomerName: {
-    fontSize: 15.5,
-    fontWeight: '800',
-    color: '#0F172A',
-    letterSpacing: -0.2,
-    marginBottom: 4,
-  },
-  cardMetaRow: {
+  leadRightGroup: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    flexWrap: 'wrap',
-    marginBottom: 3,
   },
-  cardTypeChip: {
-    paddingHorizontal: 7,
-    paddingVertical: 2,
-    borderRadius: 6,
+  leadStatusPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 9,
+    paddingVertical: 4.5,
+    borderRadius: 20,
     borderWidth: 1,
+    gap: 4.5,
   },
-  cardTypeChipText: {
+  leadStatusDot: {
+    width: 5.5,
+    height: 5.5,
+    borderRadius: 3,
+  },
+  leadStatusText: {
     fontSize: 10.5,
-    fontWeight: '700',
+    fontWeight: '800',
   },
-  cardLocationText: {
-    fontSize: 11.5,
-    color: '#64748B',
+  leadChevron: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#94A3B8',
+    marginLeft: 2,
+  },
+  // Existing Customer Auto-Detection Banner (Mobile Form)
+  existingCustomerBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#FFFBEB',
+    borderWidth: 1.5,
+    borderColor: '#FDE68A',
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 12,
+    gap: 10,
+  },
+  existingCustomerBannerTitle: {
+    fontSize: 12.5,
+    fontWeight: '800',
+    color: '#92400E',
+  },
+  existingCustomerBannerSubtitle: {
+    fontSize: 11,
+    color: '#B45309',
+    marginTop: 2,
     fontWeight: '600',
   },
-  cardReqText: {
+  autoFillProfileBtn: {
+    backgroundColor: '#D97706',
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 8,
+    shadowColor: '#D97706',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  autoFillProfileBtnText: {
     fontSize: 11.5,
-    color: '#475569',
-    fontWeight: '500',
-    marginTop: 1,
-  },
-  cardFooterBar: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingTop: 10,
-    borderTopWidth: 1,
-    borderTopColor: '#F1F5F9',
-  },
-  cardFooterLeft: {
-    justifyContent: 'center',
-  },
-  cardMetricLabel: {
-    fontSize: 9.5,
     fontWeight: '800',
-    color: '#94A3B8',
-    letterSpacing: 0.4,
-    textTransform: 'uppercase',
-  },
-  cardPrice: {
-    fontSize: 14.5,
-    fontWeight: '900',
-    color: '#0F172A',
-    marginTop: 1,
-  },
-  cardFollowUpCountText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#059669',
-    marginTop: 1,
-  },
-  cardFooterRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 7,
+    color: '#FFFFFF',
   },
   cardNextFollowUpPill: {
     backgroundColor: '#ECFDF5',
@@ -1966,7 +2377,7 @@ const styles = StyleSheet.create({
     borderColor: '#A7F3D0',
   },
   cardNextFollowUpText: {
-    fontSize: 11,
+    fontSize: 10.5,
     color: '#059669',
     fontWeight: '700',
   },
@@ -1976,9 +2387,9 @@ const styles = StyleSheet.create({
     gap: 5,
   },
   cardQuickCallBtn: {
-    width: 30,
-    height: 30,
-    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
     backgroundColor: '#EFF6FF',
     borderWidth: 1,
     borderColor: '#DBEAFE',
@@ -1986,21 +2397,24 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   cardQuickWABtn: {
-    width: 30,
-    height: 30,
-    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
     backgroundColor: '#DCFCE7',
     borderWidth: 1,
     borderColor: '#86EFAC',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  cardChevronIcon: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#94A3B8',
-    marginLeft: 2,
-    lineHeight: 18,
+  cardActionBtnLabel: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#2563EB',
+  },
+  cardActionBtnLabelGreen: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#15803D',
   },
   // Form Screen Styles
   progressBarWrapper: {
@@ -2837,5 +3251,139 @@ const styles = StyleSheet.create({
   kpiToggleBadgeActive: {
     color: '#059669',
     backgroundColor: '#DCFCE7',
+  },
+  // Profile Switcher Bar Styles
+  profileBar: {
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+  },
+  profileBarBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  profileAvatar: {
+    width: 32,
+    height: 32,
+    borderRadius: 9,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  profileNameText: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#0F172A',
+  },
+  profileRoleBadge: {
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+    borderRadius: 4,
+    borderWidth: 1,
+  },
+  profileRoleBadgeText: {
+    fontSize: 9.5,
+    fontWeight: '800',
+  },
+  profileContextText: {
+    fontSize: 10.5,
+    color: '#64748B',
+    marginTop: 1,
+  },
+  profileSwitchPill: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  profileSwitchPillText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#2563EB',
+  },
+  // Bottom Navigation Bar Styles
+  bottomNavContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-around',
+    backgroundColor: '#FFFFFF',
+    borderTopWidth: 1,
+    borderTopColor: '#F1F5F9',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: -3 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 10,
+  },
+  bottomNavItem: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 3,
+  },
+  bottomNavItemActive: {},
+  bottomNavItemActiveFollowup: {},
+  bottomNavIconBox: {
+    width: 38,
+    height: 30,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'transparent',
+  },
+  bottomNavIconBoxActive: {
+    backgroundColor: '#EFF6FF',
+    borderWidth: 1,
+    borderColor: '#DBEAFE',
+  },
+  bottomNavIconBoxActiveFollowup: {
+    backgroundColor: '#EEF2FF',
+    borderWidth: 1,
+    borderColor: '#C7D2FE',
+  },
+  bottomNavLabel: {
+    fontSize: 10.5,
+    fontWeight: '700',
+    color: '#64748B',
+    marginTop: 2,
+  },
+  bottomNavLabelActive: {
+    color: '#2563EB',
+    fontWeight: '800',
+  },
+  bottomNavLabelActiveFollowup: {
+    color: '#4F46E5',
+    fontWeight: '800',
+  },
+  navBadge: {
+    position: 'absolute',
+    top: -4,
+    right: -8,
+    minWidth: 17,
+    height: 17,
+    borderRadius: 9,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 3.5,
+    borderWidth: 1.5,
+    borderColor: '#FFFFFF',
+    elevation: 3,
+  },
+  navBadgeText: {
+    fontSize: 9.5,
+    fontWeight: '900',
+    color: '#FFFFFF',
   },
 });
