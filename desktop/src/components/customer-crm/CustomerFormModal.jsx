@@ -282,7 +282,7 @@ export const CustomerFormModal = ({ customer, onClose, onSuccess }) => {
             </div>
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <h2 style={{ fontSize: '18px', fontWeight: '800', margin: 0, letterSpacing: '-0.01em' }}>
+                <h2 style={{ fontSize: '18px', fontWeight: '800', margin: 0, letterSpacing: '-0.01em', color: '#FFFFFF' }}>
                   {isEdit ? `Edit Customer Profile` : 'Register New Showroom Customer'}
                 </h2>
                 <span

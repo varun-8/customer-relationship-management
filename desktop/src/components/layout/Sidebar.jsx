@@ -10,6 +10,7 @@ import {
   ChevronDown,
   LogOut,
   Palette,
+  UserCheck,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useBranding } from '../../context/BrandingContext';
@@ -24,7 +25,7 @@ export const Sidebar = ({ activeTab, setActiveTab, onOpenMobileSimulator, onOpen
     { id: 'kpi', label: 'Daily KPI', icon: Target },
     { id: 'followups', label: 'Follow-ups', icon: Clock },
     { id: 'lost', label: 'Lost Sales', icon: FileX },
-    { id: 'reports', label: 'Reports', icon: BarChart3 },
+    { id: 'employees', label: 'Employees', icon: UserCheck },
     { id: 'settings', label: 'Settings', icon: Settings },
   ];
 

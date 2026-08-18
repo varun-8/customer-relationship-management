@@ -19,6 +19,7 @@ import { DailyKpiView } from './components/kpi/DailyKpiView';
 import { LostSalesView } from './components/lost-sales/LostSalesView';
 import { ExecutiveDashboardView } from './components/dashboard/ExecutiveDashboardView';
 import { FollowupSheetView } from './components/followups/FollowupSheetView';
+import { EmployeeManagementView } from './components/employees/EmployeeManagementView';
 
 const MainAppContent = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -57,6 +58,11 @@ const MainAppContent = () => {
         return {
           title: 'Lost Sales & Competitor Intelligence',
           subtitle: 'Analyze lost deal root causes, competitor pricing gaps, and product leakage',
+        };
+      case 'employees':
+        return {
+          title: 'Showroom Staff & Mobile Logins',
+          subtitle: 'Manage sales staff credentials, assign showroom roles, and control access',
         };
       case 'settings':
         return {
@@ -119,6 +125,7 @@ const MainAppContent = () => {
               <FollowupSheetView onEditCustomer={(customer) => setEditingCustomer(customer)} />
             )}
             {activeTab === 'lost' && <LostSalesView />}
+            {activeTab === 'employees' && <EmployeeManagementView />}
 
             {(activeTab === 'settings' || activeTab === 'builder') && <SettingsView />}
             {activeTab === 'sequence' && <SequenceConfigModal />}

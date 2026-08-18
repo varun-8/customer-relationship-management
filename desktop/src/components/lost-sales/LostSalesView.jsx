@@ -158,79 +158,128 @@ export const LostSalesView = () => {
   const productBreakdown = analytics?.productBreakdown || [];
 
   return (
-    <div className="kpi-view-container lost-sales-container">
-      {/* 1. Executive Intelligence Stat Cards */}
-      <div className="kpi-scorecard-grid">
+    <div className="kpi-view-container lost-sales-container" style={{ display: 'flex', flexDirection: 'column', gap: '18px', maxWidth: '1200px', margin: '0 auto' }}>
+      {/* 1. Minimalist Scorecard Stat Cards */}
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+          gap: '14px',
+        }}
+      >
         {/* Card 1: Total Lost Revenue */}
-        <div className="kpi-stat-card lost-stat-card-red">
-          <div className="kpi-stat-header">
-            <span className="kpi-stat-title">Total Lost Revenue ({selectedMonth})</span>
-            <div className="kpi-stat-icon-bubble" style={{ background: '#FEE2E2', color: '#DC2626' }}>
-              <IndianRupee size={16} />
+        <div
+          style={{
+            background: '#FFFFFF',
+            borderRadius: '14px',
+            border: '1px solid #FEE2E2',
+            padding: '16px 20px',
+            boxShadow: '0 1px 3px rgba(220, 38, 38, 0.05)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '14px',
+          }}
+        >
+          <div style={{ width: '42px', height: '42px', borderRadius: '10px', background: '#FEF2F2', color: '#DC2626', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <IndianRupee size={20} />
+          </div>
+          <div>
+            <div style={{ fontSize: '11px', color: '#991B1B', fontWeight: '800', textTransform: 'uppercase' }}>
+              Total Lost Revenue ({selectedMonth})
             </div>
-          </div>
-          <div className="kpi-stat-value" style={{ color: '#DC2626' }}>
-            ₹{(analytics?.totalLostValue || 0).toLocaleString('en-IN')}
-          </div>
-          <div className="kpi-stat-footer">
-            <span className="kpi-pill-sub">Lost Deals: <strong>{analytics?.totalLostDeals || 0} quotes</strong></span>
-            <span className="kpi-pill-sub">Avg: <strong>₹{(analytics?.avgLostDealValue || 0).toLocaleString('en-IN')}</strong></span>
+            <div style={{ fontSize: '20px', fontWeight: '900', color: '#DC2626', marginTop: '2px' }}>
+              ₹{(analytics?.totalLostValue || 0).toLocaleString('en-IN')}
+            </div>
+            <div style={{ fontSize: '11.5px', color: '#64748B', marginTop: '2px' }}>
+              <strong>{analytics?.totalLostDeals || 0}</strong> deals • Avg: ₹{(analytics?.avgLostDealValue || 0).toLocaleString('en-IN')}
+            </div>
           </div>
         </div>
 
         {/* Card 2: Top Winning Competitor */}
-        <div className="kpi-stat-card lost-stat-card-orange">
-          <div className="kpi-stat-header">
-            <span className="kpi-stat-title">Top Competing Showroom</span>
-            <div className="kpi-stat-icon-bubble" style={{ background: '#FFEDD5', color: '#EA580C' }}>
-              <Building2 size={16} />
+        <div
+          style={{
+            background: '#FFFFFF',
+            borderRadius: '14px',
+            border: '1px solid #FFEDD5',
+            padding: '16px 20px',
+            boxShadow: '0 1px 3px rgba(234, 88, 12, 0.05)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '14px',
+          }}
+        >
+          <div style={{ width: '42px', height: '42px', borderRadius: '10px', background: '#FFF7ED', color: '#EA580C', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Building2 size={20} />
+          </div>
+          <div style={{ minWidth: 0 }}>
+            <div style={{ fontSize: '11px', color: '#C2410C', fontWeight: '800', textTransform: 'uppercase' }}>
+              Top Competing Showroom
             </div>
-          </div>
-          <div className="kpi-stat-value" style={{ fontSize: '18px', color: '#0F172A', lineHeight: 1.3 }}>
-            {topCompetitor ? topCompetitor.competitor : 'No Competitor Losses'}
-          </div>
-          <div className="kpi-stat-footer">
-            {topCompetitor ? (
-              <span className="kpi-pill-sub">Captured <strong>₹{topCompetitor.totalValue.toLocaleString('en-IN')}</strong> ({topCompetitor.count} deals)</span>
-            ) : (
-              <span className="kpi-pill-sub">Zero competitor losses recorded</span>
-            )}
+            <div style={{ fontSize: '16px', fontWeight: '800', color: '#0F172A', marginTop: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {topCompetitor ? topCompetitor.competitor : 'None'}
+            </div>
+            <div style={{ fontSize: '11.5px', color: '#64748B', marginTop: '2px' }}>
+              {topCompetitor ? `Captured ₹${topCompetitor.totalValue.toLocaleString('en-IN')} (${topCompetitor.count} deals)` : 'Zero competitor losses'}
+            </div>
           </div>
         </div>
 
         {/* Card 3: Primary Root Cause */}
-        <div className="kpi-stat-card lost-stat-card-amber">
-          <div className="kpi-stat-header">
-            <span className="kpi-stat-title">Primary Root Cause</span>
-            <div className="kpi-stat-icon-bubble" style={{ background: '#FEF3C7', color: '#D97706' }}>
-              <AlertTriangle size={16} />
+        <div
+          style={{
+            background: '#FFFFFF',
+            borderRadius: '14px',
+            border: '1px solid #FEF3C7',
+            padding: '16px 20px',
+            boxShadow: '0 1px 3px rgba(217, 119, 6, 0.05)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '14px',
+          }}
+        >
+          <div style={{ width: '42px', height: '42px', borderRadius: '10px', background: '#FFFBEB', color: '#D97706', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <AlertTriangle size={20} />
+          </div>
+          <div style={{ minWidth: 0 }}>
+            <div style={{ fontSize: '11px', color: '#B45309', fontWeight: '800', textTransform: 'uppercase' }}>
+              Primary Root Cause
             </div>
-          </div>
-          <div className="kpi-stat-value" style={{ fontSize: '16px', color: '#B45309', lineHeight: 1.3 }}>
-            {topReason ? topReason.reason : 'No Data Available'}
-          </div>
-          <div className="kpi-stat-footer">
-            {topReason ? (
-              <span className="kpi-pill-sub">Accounts for <strong>{topReason.percentage}%</strong> of lost inquiries</span>
-            ) : (
-              <span className="kpi-pill-sub">Record reasons to see distribution</span>
-            )}
+            <div style={{ fontSize: '16px', fontWeight: '800', color: '#0F172A', marginTop: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {topReason ? topReason.reason : 'No Data'}
+            </div>
+            <div style={{ fontSize: '11.5px', color: '#64748B', marginTop: '2px' }}>
+              {topReason ? `${topReason.percentage}% of lost inquiries` : 'Record reasons to track'}
+            </div>
           </div>
         </div>
 
         {/* Card 4: Price Gap Analysis */}
-        <div className="kpi-stat-card lost-stat-card-blue">
-          <div className="kpi-stat-header">
-            <span className="kpi-stat-title">Average Pricing Gap</span>
-            <div className="kpi-stat-icon-bubble" style={{ background: '#EFF6FF', color: '#2563EB' }}>
-              <TrendingDown size={16} />
+        <div
+          style={{
+            background: '#FFFFFF',
+            borderRadius: '14px',
+            border: '1px solid #BFDBFE',
+            padding: '16px 20px',
+            boxShadow: '0 1px 3px rgba(37, 99, 235, 0.05)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '14px',
+          }}
+        >
+          <div style={{ width: '42px', height: '42px', borderRadius: '10px', background: '#EFF6FF', color: '#2563EB', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <TrendingDown size={20} />
+          </div>
+          <div>
+            <div style={{ fontSize: '11px', color: '#1D4ED8', fontWeight: '800', textTransform: 'uppercase' }}>
+              Avg Pricing Gap
             </div>
-          </div>
-          <div className="kpi-stat-value" style={{ color: '#2563EB' }}>
-            ₹{(analytics?.averagePriceDifference || 0).toLocaleString('en-IN')}
-          </div>
-          <div className="kpi-stat-footer">
-            <span className="kpi-pill-sub">Competitor discount vs showroom quote</span>
+            <div style={{ fontSize: '20px', fontWeight: '900', color: '#2563EB', marginTop: '2px' }}>
+              ₹{(analytics?.averagePriceDifference || 0).toLocaleString('en-IN')}
+            </div>
+            <div style={{ fontSize: '11.5px', color: '#64748B', marginTop: '2px' }}>
+              Competitor discount variance
+            </div>
           </div>
         </div>
       </div>

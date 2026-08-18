@@ -484,4 +484,50 @@ export const api = {
     if (!res.ok) throw new Error(data.message || 'Failed to log follow-up activity');
     return data;
   },
+
+  // Showroom Staff & Employee Management
+  async getUsers() {
+    const headers = await getAuthHeaders();
+    const res = await fetch(`${API_BASE}/users`, {
+      headers,
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || 'Failed to fetch employees');
+    return data;
+  },
+
+  async createUser(userData) {
+    const headers = await getAuthHeaders();
+    const res = await fetch(`${API_BASE}/users`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(userData),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || 'Failed to create employee');
+    return data;
+  },
+
+  async updateUser(id, userData) {
+    const headers = await getAuthHeaders();
+    const res = await fetch(`${API_BASE}/users/${id}`, {
+      method: 'PUT',
+      headers,
+      body: JSON.stringify(userData),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || 'Failed to update employee');
+    return data;
+  },
+
+  async deleteUser(id) {
+    const headers = await getAuthHeaders();
+    const res = await fetch(`${API_BASE}/users/${id}`, {
+      method: 'DELETE',
+      headers,
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || 'Failed to delete employee');
+    return data;
+  },
 };
