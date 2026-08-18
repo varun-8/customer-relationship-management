@@ -5,6 +5,7 @@ const formRoutes = require('./routes/formRoutes');
 const customerRoutes = require('./routes/customerRoutes');
 const sequenceRoutes = require('./routes/sequenceRoutes');
 const brandingRoutes = require('./routes/brandingRoutes');
+const kpiRoutes = require('./routes/kpiRoutes');
 
 const app = express();
 
@@ -41,6 +42,7 @@ app.use('/api/customer-form', formRoutes);
 app.use('/api/customers', customerRoutes);
 app.use('/api/sequence', sequenceRoutes);
 app.use('/api/branding', brandingRoutes);
+app.use('/api/kpi', kpiRoutes);
 
 // 404 Handler
 app.use((req, res) => {

@@ -276,4 +276,83 @@ export const api = {
     if (!res.ok) throw new Error(data.message || 'Failed to update branding');
     return data;
   },
+
+  // Daily KPI Tracking
+  async createOrUpdateKPI(kpiData) {
+    const headers = await getAuthHeaders();
+    const res = await fetch(`${API_BASE}/kpi`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(kpiData),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || 'Failed to save Daily KPI');
+    return data;
+  },
+
+  async getKPIList(params = {}) {
+    const headers = await getAuthHeaders();
+    const query = new URLSearchParams(params).toString();
+    const res = await fetch(`${API_BASE}/kpi${query ? `?${query}` : ''}`, {
+      headers,
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || 'Failed to fetch Daily KPI records');
+    return data;
+  },
+
+  async getKPISummary(params = {}) {
+    const headers = await getAuthHeaders();
+    const query = new URLSearchParams(params).toString();
+    const res = await fetch(`${API_BASE}/kpi/summary${query ? `?${query}` : ''}`, {
+      headers,
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || 'Failed to fetch KPI summary analytics');
+    return data;
+  },
+
+  async getKPIAutoFill(params = {}) {
+    const headers = await getAuthHeaders();
+    const query = new URLSearchParams(params).toString();
+    const res = await fetch(`${API_BASE}/kpi/auto-fill${query ? `?${query}` : ''}`, {
+      headers,
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || 'Failed to auto-calculate CRM metrics');
+    return data;
+  },
+
+  async getDayPerformance(params = {}) {
+    const headers = await getAuthHeaders();
+    const query = new URLSearchParams(params).toString();
+    const res = await fetch(`${API_BASE}/kpi/day-performance${query ? `?${query}` : ''}`, {
+      headers,
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || 'Failed to fetch day performance breakdown');
+    return data;
+  },
+
+  async getDailyTrends(params = {}) {
+    const headers = await getAuthHeaders();
+    const query = new URLSearchParams(params).toString();
+    const res = await fetch(`${API_BASE}/kpi/daily-trends${query ? `?${query}` : ''}`, {
+      headers,
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || 'Failed to fetch daily trends matrix');
+    return data;
+  },
+
+  async deleteKPI(id) {
+    const headers = await getAuthHeaders();
+    const res = await fetch(`${API_BASE}/kpi/${id}`, {
+      method: 'DELETE',
+      headers,
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || 'Failed to delete KPI record');
+    return data;
+  },
 };

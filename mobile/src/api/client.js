@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Default host set to local network IP for physical devices, with fallback to emulator/localhost
-const DEFAULT_HOST = 'http://10.169.195.152:5000/api';
+const DEFAULT_HOST = 'http://10.169.195.176:5000/api';
 const HOST_STORAGE_KEY = 'vasantham_api_host_url';
 const SCHEMA_CACHE_KEY = 'vasantham_cached_form_schema';
 const TOKEN_KEY = 'vasantham_mobile_jwt';
@@ -141,7 +141,7 @@ export const FALLBACK_SCHEMA = {
 export const apiClient = {
   async getApiBase() {
     const custom = await AsyncStorage.getItem(HOST_STORAGE_KEY);
-    if (custom && (custom.includes('10.169.195.237') || custom.includes('192.168.1.5'))) {
+    if (custom && (custom.includes('10.169.195.237') || custom.includes('10.169.195.152') || custom.includes('192.168.1.5'))) {
       await AsyncStorage.removeItem(HOST_STORAGE_KEY);
       return DEFAULT_HOST;
     }
@@ -322,6 +322,64 @@ export const apiClient = {
       return data;
     } catch (e) {
       return { success: false, message: e.message };
+    }
+  },
+
+  // Daily KPI Tracking
+  async createOrUpdateKPI(kpiData) {
+    try {
+      const base = await this.getApiBase();
+      const headers = await this.getHeaders();
+      const res = await fetch(`${base}/kpi`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(kpiData),
+      });
+      return await res.json();
+    } catch (e) {
+      return { success: false, message: `Connection error: ${e.message}` };
+    }
+  },
+
+  async getKPISummary(params = {}) {
+    try {
+      const base = await this.getApiBase();
+      const headers = await this.getHeaders();
+      const query = new URLSearchParams(params).toString();
+      const res = await fetch(`${base}/kpi/summary${query ? `?${query}` : ''}`, {
+        headers,
+      });
+      return await res.json();
+    } catch (e) {
+      return { success: false, message: `Connection error: ${e.message}` };
+    }
+  },
+
+  async getKPIAutoFill(params = {}) {
+    try {
+      const base = await this.getApiBase();
+      const headers = await this.getHeaders();
+      const query = new URLSearchParams(params).toString();
+      const res = await fetch(`${base}/kpi/auto-fill${query ? `?${query}` : ''}`, {
+        headers,
+      });
+      return await res.json();
+    } catch (e) {
+      return { success: false, message: `Connection error: ${e.message}` };
+    }
+  },
+
+  async getKPIList(params = {}) {
+    try {
+      const base = await this.getApiBase();
+      const headers = await this.getHeaders();
+      const query = new URLSearchParams(params).toString();
+      const res = await fetch(`${base}/kpi${query ? `?${query}` : ''}`, {
+        headers,
+      });
+      return await res.json();
+    } catch (e) {
+      return { success: false, message: `Connection error: ${e.message}` };
     }
   },
 };

@@ -15,6 +15,7 @@ import { FormVersionHistoryModal } from './components/settings/FormVersionHistor
 import { BrandingSettingsModal } from './components/settings/BrandingSettingsModal';
 import { SettingsView } from './components/settings/SettingsView';
 import { MobileSimulatorModal } from './components/mobile-simulator/MobileSimulatorModal';
+import { DailyKpiView } from './components/kpi/DailyKpiView';
 
 const MainAppContent = () => {
   const [activeTab, setActiveTab] = useState('customers');
@@ -33,6 +34,11 @@ const MainAppContent = () => {
         return {
           title: 'Customers',
           subtitle: 'Manage and track all customer interactions',
+        };
+      case 'kpi':
+        return {
+          title: 'Daily KPI Performance Hub',
+          subtitle: 'Track showroom footfall, quotation funnel, follow-ups, and daily sales value',
         };
       case 'settings':
         return {
@@ -86,6 +92,8 @@ const MainAppContent = () => {
                 onViewCustomer={(customer) => setViewingCustomer(customer)}
               />
             )}
+
+            {activeTab === 'kpi' && <DailyKpiView />}
 
             {(activeTab === 'settings' || activeTab === 'builder') && <SettingsView />}
             {activeTab === 'sequence' && <SequenceConfigModal />}

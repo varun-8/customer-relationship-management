@@ -3,8 +3,8 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "start": "cross-env REACT_NATIVE_PACKAGER_HOSTNAME=10.169.195.152 expo start",
-    "start:lan": "cross-env REACT_NATIVE_PACKAGER_HOSTNAME=10.169.195.152 expo start",
+    "start": "cross-env REACT_NATIVE_PACKAGER_HOSTNAME=10.169.195.176 expo start",
+    "start:lan": "cross-env REACT_NATIVE_PACKAGER_HOSTNAME=10.169.195.176 expo start",
     "start:tunnel": "expo start --tunnel",
     "start:localhost": "expo start --host localhost",
     "android": "expo start --android",

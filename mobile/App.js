@@ -314,12 +314,26 @@ export default function App() {
   const [connectionStatus, setConnectionStatus] = useState(null);
   const [testingConn, setTestingConn] = useState(false);
 
-  // Quick Follow-up Action State
+  // Quick Follow-up & Stage Log State
   const [followUpStatus, setFollowUpStatus] = useState('Follow-up');
   const [followUpReason, setFollowUpReason] = useState('');
   const [followUpNextDate, setFollowUpNextDate] = useState('');
-  const [followUpOrderValue, setFollowUpOrderValue] = useState('');
   const [submittingFollowUp, setSubmittingFollowUp] = useState(false);
+
+  // Daily KPI State
+  const [showKpiModal, setShowKpiModal] = useState(false);
+  const [kpiStaff, setKpiStaff] = useState('Karthik Raja');
+  const [kpiVisits, setKpiVisits] = useState('0');
+  const [kpiQuotes, setKpiQuotes] = useState('0');
+  const [kpiOrders, setKpiOrders] = useState('0');
+  const [kpiFollowups, setKpiFollowups] = useState('0');
+  const [kpiTotalBills, setKpiTotalBills] = useState('0');
+  const [kpiSalesValue, setKpiSalesValue] = useState('0');
+  const [kpiOldCustomers, setKpiOldCustomers] = useState(false);
+  const [kpiEngineerCalls, setKpiEngineerCalls] = useState(false);
+  const [kpiCrossSell, setKpiCrossSell] = useState(false);
+  const [kpiNotes, setKpiNotes] = useState('');
+  const [submittingKpi, setSubmittingKpi] = useState(false);
 
   useEffect(() => {
     const loadHost = async () => {
@@ -386,7 +400,6 @@ export default function App() {
     setFollowUpStatus(d.status || 'Follow-up');
     setFollowUpReason(d.lastReason || '');
     setFollowUpNextDate(d.nextFollowUp || '');
-    setFollowUpOrderValue(d.orderValue !== undefined && d.orderValue !== null ? String(d.orderValue) : '');
     setActiveScreen('detail');
   };
 
@@ -428,7 +441,6 @@ export default function App() {
       nextFollowUp: followUpNextDate.trim(),
       lastFollowUp: todayStr,
       followUpCount: newCount,
-      ...(followUpOrderValue ? { orderValue: Number(followUpOrderValue) } : {}),
     };
 
     setSubmittingFollowUp(true);
@@ -443,13 +455,13 @@ export default function App() {
         if (followUpStatus === 'Order Confirmed') {
           setCelebrationData({
             customer: res.data,
-            orderValue: followUpOrderValue || res.data?.data?.orderValue || res.data?.data?.quotationValue,
+            orderValue: res.data?.data?.orderValue || res.data?.data?.quotationValue || res.data?.data?.tileBudget,
           });
           setShowOrderCelebration(true);
         } else {
           Alert.alert(
-            '✓ Follow-up Recorded',
-            `Follow-up #${newCount} logged successfully!\nStatus updated to "${followUpStatus}".\nLast follow-up set to today (${todayStr}).`
+            '✓ Status & Follow-up Logged',
+            `Pipeline status updated to "${followUpStatus}".\nFollow-up #${newCount} recorded for today (${todayStr}).`
           );
         }
       } else {
@@ -543,6 +555,27 @@ export default function App() {
       Alert.alert('Connection Error', e.message);
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const loadTodayMobileKpi = async () => {
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      const res = await apiClient.getKPIAutoFill({ date: today, staffName: kpiStaff });
+      if (res.success && res.data) {
+        const auto = res.data.autoValues;
+        setKpiVisits(String(auto.walkins.visits || 0));
+        setKpiQuotes(String(auto.walkins.quotes || 0));
+        setKpiOrders(String(auto.walkins.orders || 0));
+        setKpiFollowups(String(auto.followUpsCount || 0));
+        setKpiTotalBills(String(auto.ordersCount || 0));
+        setKpiSalesValue(String(auto.salesValue || 0));
+        setKpiOldCustomers(Boolean(auto.oldCustomers));
+        setKpiEngineerCalls(Boolean(auto.engineerCalls));
+        setKpiCrossSell(Boolean(auto.crossSell));
+      }
+    } catch (e) {
+      console.warn('KPI auto-fetch error:', e.message);
     }
   };
 
@@ -657,6 +690,14 @@ export default function App() {
         </View>
 
         <View style={styles.headerRight}>
+          <TouchableOpacity
+            style={styles.headerKpiBtn}
+            onPress={() => setShowKpiModal(true)}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.headerKpiBtnText}>📊 KPI</Text>
+          </TouchableOpacity>
+
           <TouchableOpacity
             style={styles.headerIconBtn}
             onPress={() => setShowSettingsModal(true)}
@@ -795,64 +836,129 @@ export default function App() {
                 const initial = (data.customerName || 'C').charAt(0).toUpperCase();
                 const badgeStyle = getBadgeStyle(data.customerType);
                 const statusStyle = getStatusBadgeStyle(data.status);
+                const reqString = Array.isArray(data.requirement) ? data.requirement.join(', ') : (data.requirement || '');
 
                 return (
                   <TouchableOpacity
                     style={styles.customerCard}
-                    activeOpacity={0.7}
+                    activeOpacity={0.8}
                     onPress={() => handleSelectCustomer(item)}
                   >
-                    {/* Left: Avatar Initial */}
-                    <View style={styles.cardAvatar}>
-                      <Text style={styles.cardAvatarText}>{initial}</Text>
-                    </View>
+                    {/* Top Bar: Customer ID & Status Badge */}
+                    <View style={styles.cardHeaderRow}>
+                      <View style={styles.cardIdBadge}>
+                        <Text style={styles.cardIdBadgeText}>{item.customerId || 'CUS-LEAD'}</Text>
+                      </View>
 
-                    {/* Middle: Customer Name & Next Follow-up Info */}
-                    <View style={styles.cardMiddleContent}>
-                      <Text style={styles.cardCustomerName} numberOfLines={1}>
-                        {data.customerName || 'Unnamed Customer'}
-                      </Text>
-                      <View style={styles.cardSubRow}>
-                        {data.nextFollowUp ? (
-                          <Text style={styles.cardNextFollowUpText}>
-                            📅 Next: {formatShortDate(data.nextFollowUp)}
-                          </Text>
-                        ) : data.followUpCount ? (
-                          <Text style={styles.cardFollowUpCountBadge}>
-                            ⚡ {data.followUpCount} Follow-ups
-                          </Text>
-                        ) : (
-                          <Text style={styles.cardFollowUpCountBadge}>
-                            ✨ Active Lead
-                          </Text>
-                        )}
+                      {/* Log / Pipeline Status with Dot & Label */}
+                      <View
+                        style={[
+                          styles.cardStatusPill,
+                          {
+                            backgroundColor: statusStyle.bg,
+                            borderColor: statusStyle.border,
+                          },
+                        ]}
+                      >
+                        <View style={[styles.cardStatusDot, { backgroundColor: statusStyle.dot }]} />
+                        <Text style={[styles.cardStatusText, { color: statusStyle.text }]}>
+                          {statusStyle.icon} {formatStatusLabel(data.status)}
+                        </Text>
                       </View>
                     </View>
 
-                    {/* Right: Quotation Price + Status Pill + Chevron Arrow */}
-                    <View style={styles.cardRightColumn}>
-                      {data.quotationValue ? (
-                        <Text style={styles.cardPrice}>
-                          ₹ {Number(data.quotationValue).toLocaleString('en-IN')}
-                        </Text>
-                      ) : null}
+                    {/* Middle Section: Avatar, Customer Name & Metadata */}
+                    <View style={styles.cardMainBody}>
+                      <View style={[styles.cardAvatar, { backgroundColor: badgeStyle.bg, borderColor: badgeStyle.border }]}>
+                        <Text style={[styles.cardAvatarText, { color: badgeStyle.text }]}>{initial}</Text>
+                      </View>
 
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: data.quotationValue ? 3 : 0 }}>
-                        <View
-                          style={[
-                            styles.statusPill,
-                            {
-                              backgroundColor: statusStyle.bg,
-                              borderColor: statusStyle.border,
-                            },
-                          ]}
-                        >
-                          <View style={[styles.statusDot, { backgroundColor: statusStyle.dot }]} />
-                          <Text style={[styles.statusPillText, { color: statusStyle.text }]}>
-                            {formatStatusLabel(data.status)}
-                          </Text>
+                      <View style={styles.cardInfoCol}>
+                        <Text style={styles.cardCustomerName} numberOfLines={1}>
+                          {data.customerName || 'Unnamed Lead'}
+                        </Text>
+
+                        <View style={styles.cardMetaRow}>
+                          {data.customerType ? (
+                            <View style={[styles.cardTypeChip, { backgroundColor: badgeStyle.bg, borderColor: badgeStyle.border }]}>
+                              <Text style={[styles.cardTypeChipText, { color: badgeStyle.text }]}>
+                                {data.customerType}
+                              </Text>
+                            </View>
+                          ) : null}
+
+                          {data.location ? (
+                            <Text style={styles.cardLocationText} numberOfLines={1}>
+                              📍 {data.location}
+                            </Text>
+                          ) : null}
                         </View>
-                        <Text style={styles.cardChevron}>›</Text>
+
+                        {reqString ? (
+                          <Text style={styles.cardReqText} numberOfLines={1}>
+                            🏷️ {reqString} {data.approxQuantity ? `(${data.approxQuantity} sq.ft)` : ''}
+                          </Text>
+                        ) : null}
+                      </View>
+                    </View>
+
+                    {/* Bottom Action & Metrics Bar */}
+                    <View style={styles.cardFooterBar}>
+                      <View style={styles.cardFooterLeft}>
+                        {data.quotationValue ? (
+                          <View>
+                            <Text style={styles.cardMetricLabel}>QUOTATION</Text>
+                            <Text style={styles.cardPrice}>
+                              ₹ {Number(data.quotationValue).toLocaleString('en-IN')}
+                            </Text>
+                          </View>
+                        ) : data.tileBudget ? (
+                          <View>
+                            <Text style={styles.cardMetricLabel}>BUDGET</Text>
+                            <Text style={styles.cardPrice}>
+                              ₹ {Number(data.tileBudget).toLocaleString('en-IN')}
+                            </Text>
+                          </View>
+                        ) : (
+                          <View>
+                            <Text style={styles.cardMetricLabel}>INTERACTIONS</Text>
+                            <Text style={styles.cardFollowUpCountText}>
+                              ⚡ {data.followUpCount || 0} Logged
+                            </Text>
+                          </View>
+                        )}
+                      </View>
+
+                      <View style={styles.cardFooterRight}>
+                        {data.nextFollowUp ? (
+                          <View style={styles.cardNextFollowUpPill}>
+                            <Text style={styles.cardNextFollowUpText}>
+                              📅 {formatShortDate(data.nextFollowUp)}
+                            </Text>
+                          </View>
+                        ) : null}
+
+                        {data.phone ? (
+                          <View style={styles.cardQuickActionsRow}>
+                            <TouchableOpacity
+                              style={styles.cardQuickCallBtn}
+                              onPress={() => Linking.openURL(`tel:${data.phone}`)}
+                              activeOpacity={0.7}
+                            >
+                              <Text style={{ fontSize: 13 }}>📞</Text>
+                            </TouchableOpacity>
+
+                            <TouchableOpacity
+                              style={styles.cardQuickWABtn}
+                              onPress={() => openWhatsApp(data.phone, data.customerName, reqString)}
+                              activeOpacity={0.7}
+                            >
+                              <Text style={{ fontSize: 13 }}>💬</Text>
+                            </TouchableOpacity>
+                          </View>
+                        ) : null}
+
+                        <Text style={styles.cardChevronIcon}>›</Text>
                       </View>
                     </View>
                   </TouchableOpacity>
@@ -892,14 +998,16 @@ export default function App() {
                       isActive && styles.sectionTabChipActive,
                       isCompleted && styles.sectionTabChipCompleted,
                     ]}
+                    activeOpacity={0.75}
                   >
                     <Text
                       style={[
                         styles.sectionTabChipText,
                         isActive && styles.sectionTabChipTextActive,
+                        isCompleted && styles.sectionTabChipTextCompleted,
                       ]}
                     >
-                      {sec.shortTitle}
+                      {isCompleted ? '✓ ' : ''}{sec.shortTitle}
                     </Text>
                   </TouchableOpacity>
                 );
@@ -937,16 +1045,7 @@ export default function App() {
                     field={field}
                     value={formData[field.name]}
                     error={errors[field.name]}
-                    onChange={(val) => {
-                      setFormData((prev) => ({ ...prev, [field.name]: val }));
-                      if (errors[field.name]) {
-                        setErrors((prev) => {
-                          const updated = { ...prev };
-                          delete updated[field.name];
-                          return updated;
-                        });
-                      }
-                    }}
+                    onChange={(val) => handleFieldChange(field.name, val)}
                   />
                 ));
               })()}
@@ -1088,12 +1187,12 @@ export default function App() {
                   </View>
                 </View>
 
-                {/* 3. ⚡ Quick Follow-up & Stage Update Hub */}
+                {/* 3. ⚡ Follow-up & Pipeline Stage Update Hub */}
                 <View style={styles.followUpActionCard}>
                   <View style={styles.followUpHeader}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                      <Text style={{ fontSize: 16 }}>⚡</Text>
-                      <Text style={styles.followUpTitle}>Log Follow-up & Stage</Text>
+                      <Text style={{ fontSize: 18 }}>⚡</Text>
+                      <Text style={styles.followUpTitle}>Log Interaction & Update Status</Text>
                     </View>
                     <View style={styles.followUpBadge}>
                       <Text style={styles.followUpBadgeText}>
@@ -1106,18 +1205,37 @@ export default function App() {
                     Select updated pipeline stage and enter discussion notes.
                   </Text>
 
+                  {/* Active Selected Stage Banner */}
+                  <View style={styles.selectedStatusBanner}>
+                    <Text style={styles.selectedStatusBannerLabel}>Active Status Selected:</Text>
+                    <View
+                      style={[
+                        styles.cardStatusPill,
+                        {
+                          backgroundColor: getStatusBadgeStyle(followUpStatus).bg,
+                          borderColor: getStatusBadgeStyle(followUpStatus).border,
+                        },
+                      ]}
+                    >
+                      <View style={[styles.cardStatusDot, { backgroundColor: getStatusBadgeStyle(followUpStatus).dot }]} />
+                      <Text style={[styles.cardStatusText, { color: getStatusBadgeStyle(followUpStatus).text }]}>
+                        {getStatusBadgeStyle(followUpStatus).icon} {followUpStatus}
+                      </Text>
+                    </View>
+                  </View>
+
                   {/* Status Selection Pills */}
-                  <Text style={styles.fieldSectionMiniLabel}>PIPELINE STAGE</Text>
+                  <Text style={styles.fieldSectionMiniLabel}>CHOOSE NEW STAGE</Text>
                   <View style={styles.statusPillsGrid}>
                     {[
-                      { name: 'Quotation', bg: '#EFF6FF', border: '#BFDBFE', text: '#1D4ED8', activeBg: '#2563EB', dot: '#2563EB' },
-                      { name: 'Negotiation', bg: '#FEF3C7', border: '#FDE68A', text: '#B45309', activeBg: '#D97706', dot: '#D97706' },
+                      { name: 'Quotation', bg: '#EFF6FF', border: '#BFDBFE', text: '#1D4ED8', activeBg: '#2563EB', dot: '#2563EB', icon: '📄' },
+                      { name: 'Negotiation', bg: '#FEF3C7', border: '#FDE68A', text: '#B45309', activeBg: '#D97706', dot: '#D97706', icon: '🤝' },
                       { name: 'Order Confirmed', bg: '#DCFCE7', border: '#86EFAC', text: '#15803D', activeBg: '#10B981', dot: '#16A34A', icon: '🎉' },
-                      { name: 'Follow-up', bg: '#EEF2FF', border: '#C7D2FE', text: '#4338CA', activeBg: '#4F46E5', dot: '#4F46E5' },
-                      { name: 'Newly Contacted', bg: '#F0F9FF', border: '#BAE6FD', text: '#0369A1', activeBg: '#0284C7', dot: '#0284C7' },
-                      { name: 'Walk-in', bg: '#F0FDFA', border: '#99F6E4', text: '#0F766E', activeBg: '#0D9488', dot: '#0D9488' },
-                      { name: 'Lost', bg: '#F1F5F9', border: '#CBD5E1', text: '#475569', activeBg: '#64748B', dot: '#64748B' },
-                      { name: 'Future Requirement', bg: '#FAF5FF', border: '#DDD6FE', text: '#7E22CE', activeBg: '#8B5CF6', dot: '#9333EA' },
+                      { name: 'Follow-up', bg: '#EEF2FF', border: '#C7D2FE', text: '#4338CA', activeBg: '#4F46E5', dot: '#4F46E5', icon: '📞' },
+                      { name: 'Newly Contacted', bg: '#F0F9FF', border: '#BAE6FD', text: '#0369A1', activeBg: '#0284C7', dot: '#0284C7', icon: '✨' },
+                      { name: 'Walk-in', bg: '#F0FDFA', border: '#99F6E4', text: '#0F766E', activeBg: '#0D9488', dot: '#0D9488', icon: '🚶' },
+                      { name: 'Lost', bg: '#F1F5F9', border: '#CBD5E1', text: '#475569', activeBg: '#64748B', dot: '#64748B', icon: '✕' },
+                      { name: 'Future Requirement', bg: '#FAF5FF', border: '#DDD6FE', text: '#7E22CE', activeBg: '#8B5CF6', dot: '#9333EA', icon: '⏳' },
                     ].map((st) => {
                       const isSelected = followUpStatus === st.name;
                       return (
@@ -1127,7 +1245,7 @@ export default function App() {
                           style={[
                             styles.statusPillBtn,
                             isSelected
-                              ? { backgroundColor: st.activeBg, borderColor: st.activeBg }
+                              ? { backgroundColor: st.activeBg, borderColor: st.activeBg, shadowColor: st.activeBg, elevation: 3, shadowOpacity: 0.25, shadowRadius: 4 }
                               : { backgroundColor: st.bg, borderColor: st.border },
                           ]}
                           activeOpacity={0.7}
@@ -1167,7 +1285,8 @@ export default function App() {
                       'Visited Showroom',
                       'Shared Quote via WA',
                       'Requested Discount',
-                      'Payment Confirmed',
+                      'Order Finalized',
+                      'Follow-up Required',
                     ].map((snip, idx) => (
                       <TouchableOpacity
                         key={idx}
@@ -1183,6 +1302,7 @@ export default function App() {
                   <Text style={styles.fieldSectionMiniLabel}>NEXT SCHEDULED FOLLOW-UP</Text>
                   <View style={styles.quickDateRow}>
                     {[
+                      { label: '+1 Day', days: 1 },
                       { label: '+2 Days', days: 2 },
                       { label: '+3 Days', days: 3 },
                       { label: '+1 Week', days: 7 },
@@ -1201,27 +1321,12 @@ export default function App() {
                     ))}
                   </View>
                   <TextInput
-                    style={[styles.followUpInput, { marginBottom: 12 }]}
+                    style={[styles.followUpInput, { marginBottom: 14 }]}
                     placeholder="YYYY-MM-DD (e.g. 2026-08-20)"
                     placeholderTextColor={colors.textLight}
                     value={followUpNextDate}
                     onChangeText={setFollowUpNextDate}
                   />
-
-                  {/* Order Value (if Order Confirmed) */}
-                  {followUpStatus === 'Order Confirmed' && (
-                    <View style={styles.confirmedOrderValueBox}>
-                      <Text style={styles.confirmedOrderValueLabel}>🎉 FINAL BOOKING / ORDER VALUE (₹)</Text>
-                      <TextInput
-                        style={styles.confirmedOrderValueInput}
-                        placeholder="e.g. 150000"
-                        placeholderTextColor={colors.textLight}
-                        keyboardType="numeric"
-                        value={followUpOrderValue}
-                        onChangeText={setFollowUpOrderValue}
-                      />
-                    </View>
-                  )}
 
                   {/* Submit Follow-up Button */}
                   <TouchableOpacity
@@ -1234,7 +1339,7 @@ export default function App() {
                       <ActivityIndicator color="#FFFFFF" size="small" />
                     ) : (
                       <Text style={styles.submitFollowUpBtnText}>
-                        ⚡ Log Follow-up (#{((Number(data.followUpCount) || 0) + 1)}) & Save Stage
+                        ⚡ Save Status & Record Follow-up (#{((Number(data.followUpCount) || 0) + 1)})
                       </Text>
                     )}
                   </TouchableOpacity>
@@ -1351,11 +1456,11 @@ export default function App() {
                 style={styles.modalTextInput}
                 value={serverHost}
                 onChangeText={setServerHost}
-                placeholder="http://10.169.195.152:5000/api"
+                placeholder="http://10.169.195.176:5000/api"
                 autoCapitalize="none"
               />
               <Text style={{ fontSize: 11, color: colors.textMuted, marginTop: 4 }}>
-                Current Wi-Fi IP: http://10.169.195.152:5000/api
+                Current Wi-Fi IP: http://10.169.195.176:5000/api
               </Text>
             </View>
 
@@ -1402,6 +1507,88 @@ export default function App() {
         onClose={() => setShowOrderCelebration(false)}
         branding={branding}
       />
+
+      {/* Daily Shift Performance Snapshot for Mobile (Auto-Fetched) */}
+      <Modal visible={showKpiModal} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalCard, { maxHeight: '90%', padding: 20 }]}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+              <Text style={styles.modalHeading}>📊 Today's KPI Performance</Text>
+              <TouchableOpacity onPress={() => setShowKpiModal(false)} style={{ padding: 4 }}>
+                <Text style={{ fontSize: 16, color: colors.textMuted, fontWeight: '700' }}>✕</Text>
+              </TouchableOpacity>
+            </View>
+            <Text style={styles.modalSubheading}>
+              Live performance metrics automatically calculated from CRM activity.
+            </Text>
+
+            <ScrollView showsVerticalScrollIndicator={false} style={{ marginVertical: 12 }}>
+              {/* Sales Value Hero Card */}
+              <View style={{ backgroundColor: '#ECFDF5', borderWidth: 1, borderColor: '#A7F3D0', borderRadius: 14, padding: 14, marginBottom: 12, alignItems: 'center' }}>
+                <Text style={{ fontSize: 11, fontWeight: '800', color: '#047857', letterSpacing: 0.5 }}>TODAY'S CLOSED REVENUE</Text>
+                <Text style={{ fontSize: 26, fontWeight: '900', color: '#065F46', marginVertical: 4 }}>
+                  ₹{Number(kpiSalesValue || 0).toLocaleString('en-IN')}
+                </Text>
+                <Text style={{ fontSize: 12, fontWeight: '700', color: '#059669' }}>
+                  {kpiTotalBills || 0} Bills Invoiced Today
+                </Text>
+              </View>
+
+              {/* Showroom Funnel Grid */}
+              <Text style={styles.kpiInputLabel}>Showroom Footfall & Conversion</Text>
+              <View style={{ flexDirection: 'row', gap: 8, marginBottom: 12 }}>
+                <View style={{ flex: 1, backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 10, padding: 10, alignItems: 'center' }}>
+                  <Text style={{ fontSize: 11, color: '#64748B', fontWeight: '700' }}>Visits</Text>
+                  <Text style={{ fontSize: 18, fontWeight: '900', color: '#2563EB' }}>{kpiVisits || 0}</Text>
+                </View>
+                <View style={{ flex: 1, backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 10, padding: 10, alignItems: 'center' }}>
+                  <Text style={{ fontSize: 11, color: '#64748B', fontWeight: '700' }}>Quotes</Text>
+                  <Text style={{ fontSize: 18, fontWeight: '900', color: '#0F172A' }}>{kpiQuotes || 0}</Text>
+                </View>
+                <View style={{ flex: 1, backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 10, padding: 10, alignItems: 'center' }}>
+                  <Text style={{ fontSize: 11, color: '#64748B', fontWeight: '700' }}>Orders</Text>
+                  <Text style={{ fontSize: 18, fontWeight: '900', color: '#059669' }}>{kpiOrders || 0}</Text>
+                </View>
+              </View>
+
+              {/* Follow-ups */}
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 10, padding: 12, marginBottom: 8 }}>
+                <Text style={{ fontSize: 13, fontWeight: '700', color: '#334155' }}>Follow-ups Logged</Text>
+                <Text style={{ fontSize: 14, fontWeight: '900', color: '#7C3AED' }}>{kpiFollowups || 0} calls/chats</Text>
+              </View>
+
+              {/* Strategic Indicators */}
+              <View style={[styles.kpiToggleRow, kpiOldCustomers && styles.kpiToggleRowActive]}>
+                <Text style={styles.kpiToggleLabel}>Repeat / Old Customers Served</Text>
+                <Text style={[styles.kpiToggleBadge, kpiOldCustomers && styles.kpiToggleBadgeActive]}>
+                  {kpiOldCustomers ? '✓ Yes' : '✕ No'}
+                </Text>
+              </View>
+
+              <View style={[styles.kpiToggleRow, kpiEngineerCalls && styles.kpiToggleRowActive]}>
+                <Text style={styles.kpiToggleLabel}>Engineer / Architect Interactions</Text>
+                <Text style={[styles.kpiToggleBadge, kpiEngineerCalls && styles.kpiToggleBadgeActive]}>
+                  {kpiEngineerCalls ? '✓ Yes' : '✕ No'}
+                </Text>
+              </View>
+
+              <View style={[styles.kpiToggleRow, kpiCrossSell && styles.kpiToggleRowActive]}>
+                <Text style={styles.kpiToggleLabel}>Cross-sell Achieved</Text>
+                <Text style={[styles.kpiToggleBadge, kpiCrossSell && styles.kpiToggleBadgeActive]}>
+                  {kpiCrossSell ? '✓ Yes' : '✕ No'}
+                </Text>
+              </View>
+            </ScrollView>
+
+            <TouchableOpacity
+              style={[styles.modalSaveBtn, { width: '100%', marginTop: 8 }]}
+              onPress={() => setShowKpiModal(false)}
+            >
+              <Text style={{ color: '#FFFFFF', fontWeight: '800', textAlign: 'center' }}>Close</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -1625,154 +1812,199 @@ const styles = StyleSheet.create({
     marginTop: 4,
     textAlign: 'center',
   },
+  // Premium Customer Record Card Styles
   customerCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 14,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: '#E2E8F0',
-    paddingVertical: 13,
-    paddingHorizontal: 14,
-    marginBottom: 8,
+    padding: 14,
+    marginBottom: 10,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 5,
+    elevation: 2,
+  },
+  cardHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  cardIdBadge: {
+    backgroundColor: '#F1F5F9',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  cardIdBadgeText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#475569',
+    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+  },
+  cardStatusPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 3,
-    elevation: 1,
+    paddingHorizontal: 9,
+    paddingVertical: 3.5,
+    borderRadius: 20,
+    borderWidth: 1,
+    gap: 5,
+  },
+  cardStatusDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  cardStatusText: {
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 0.15,
+  },
+  cardMainBody: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+    marginBottom: 12,
   },
   cardAvatar: {
-    width: 40,
-    height: 40,
+    width: 44,
+    height: 44,
     borderRadius: 12,
+    borderWidth: 1.5,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cardAvatarText: {
+    fontSize: 18,
+    fontWeight: '900',
+  },
+  cardInfoCol: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  cardCustomerName: {
+    fontSize: 15.5,
+    fontWeight: '800',
+    color: '#0F172A',
+    letterSpacing: -0.2,
+    marginBottom: 4,
+  },
+  cardMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    flexWrap: 'wrap',
+    marginBottom: 3,
+  },
+  cardTypeChip: {
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 6,
+    borderWidth: 1,
+  },
+  cardTypeChipText: {
+    fontSize: 10.5,
+    fontWeight: '700',
+  },
+  cardLocationText: {
+    fontSize: 11.5,
+    color: '#64748B',
+    fontWeight: '600',
+  },
+  cardReqText: {
+    fontSize: 11.5,
+    color: '#475569',
+    fontWeight: '500',
+    marginTop: 1,
+  },
+  cardFooterBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: '#F1F5F9',
+  },
+  cardFooterLeft: {
+    justifyContent: 'center',
+  },
+  cardMetricLabel: {
+    fontSize: 9.5,
+    fontWeight: '800',
+    color: '#94A3B8',
+    letterSpacing: 0.4,
+    textTransform: 'uppercase',
+  },
+  cardPrice: {
+    fontSize: 14.5,
+    fontWeight: '900',
+    color: '#0F172A',
+    marginTop: 1,
+  },
+  cardFollowUpCountText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#059669',
+    marginTop: 1,
+  },
+  cardFooterRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
+  },
+  cardNextFollowUpPill: {
+    backgroundColor: '#ECFDF5',
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#A7F3D0',
+  },
+  cardNextFollowUpText: {
+    fontSize: 11,
+    color: '#059669',
+    fontWeight: '700',
+  },
+  cardQuickActionsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  cardQuickCallBtn: {
+    width: 30,
+    height: 30,
+    borderRadius: 8,
     backgroundColor: '#EFF6FF',
     borderWidth: 1,
     borderColor: '#DBEAFE',
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 11,
   },
-  cardAvatarText: {
-    fontSize: 16.5,
-    fontWeight: '900',
-    color: '#2563EB',
-  },
-  cardMiddleContent: {
-    flex: 1,
-    justifyContent: 'center',
-    paddingRight: 8,
-  },
-  cardCustomerName: {
-    fontSize: 15,
-    fontWeight: '800',
-    color: '#0F172A',
-    letterSpacing: -0.2,
-    marginBottom: 3,
-  },
-  cardSubRow: {
-    flexDirection: 'row',
+  cardQuickWABtn: {
+    width: 30,
+    height: 30,
+    borderRadius: 8,
+    backgroundColor: '#DCFCE7',
+    borderWidth: 1,
+    borderColor: '#86EFAC',
     alignItems: 'center',
-  },
-  cardNextFollowUpText: {
-    fontSize: 11.5,
-    color: '#059669',
-    fontWeight: '700',
-  },
-  cardFollowUpCountBadge: {
-    fontSize: 11.5,
-    color: '#64748B',
-    fontWeight: '600',
-  },
-  cardRightColumn: {
-    alignItems: 'flex-end',
     justifyContent: 'center',
   },
-  cardPrice: {
-    fontSize: 14,
-    fontWeight: '800',
-    color: '#0F172A',
-    marginBottom: 3,
-  },
-  cardChevron: {
+  cardChevronIcon: {
     fontSize: 18,
     fontWeight: '600',
     color: '#94A3B8',
     marginLeft: 2,
     lineHeight: 18,
   },
-  typePillText: {
-    fontSize: 10.5,
-    fontWeight: '700',
-    textTransform: 'uppercase',
-  },
-  statusPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 8.5,
-    paddingVertical: 3,
-    borderRadius: 20,
-    borderWidth: 1,
-    gap: 4.5,
-  },
-  statusDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-  },
-  statusPillText: {
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 0.15,
-  },
-  cardInfoRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    marginTop: 10,
-  },
-  cardPhoneTag: {
-    backgroundColor: colors.surfaceElevated,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-  },
-  cardPhoneText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: colors.textSecondary,
-    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
-  },
-  cardLocationText: {
-    fontSize: 12,
-    color: colors.textMuted,
-    flex: 1,
-  },
-  cardDivider: {
-    height: 1,
-    backgroundColor: '#F1F5F9',
-    marginVertical: 10,
-  },
-  cardFooterRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  statusPill: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
-  },
-  statusPillText: {
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  cardPrice: {
-    fontSize: 14,
-    fontWeight: '800',
-    color: colors.gold,
-  },
+  // Form Screen Styles
   progressBarWrapper: {
-    height: 3,
+    height: 4,
     backgroundColor: '#E2E8F0',
   },
   progressBarFill: {
@@ -1781,30 +2013,43 @@ const styles = StyleSheet.create({
   },
   sectionTabBar: {
     backgroundColor: '#FFFFFF',
-    paddingVertical: 8,
+    paddingVertical: 10,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    borderBottomColor: '#E2E8F0',
   },
   sectionTabChip: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 16,
-    backgroundColor: colors.surfaceElevated,
-    borderWidth: 1,
-    borderColor: colors.border,
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: 20,
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1.5,
+    borderColor: '#E2E8F0',
   },
   sectionTabChipActive: {
     backgroundColor: colors.primary,
     borderColor: colors.primary,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  sectionTabChipCompleted: {
+    backgroundColor: '#ECFDF5',
+    borderColor: '#A7F3D0',
   },
   sectionTabChipText: {
     fontSize: 12,
-    fontWeight: '600',
-    color: colors.textSecondary,
+    fontWeight: '700',
+    color: '#64748B',
   },
   sectionTabChipTextActive: {
     color: '#FFFFFF',
-    fontWeight: '700',
+    fontWeight: '800',
+  },
+  sectionTabChipTextCompleted: {
+    color: '#059669',
+    fontWeight: '800',
   },
   formScrollView: {
     flex: 1,
@@ -1812,77 +2057,108 @@ const styles = StyleSheet.create({
   },
   sectionBannerBox: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 12,
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: colors.border,
-    padding: 14,
-    marginBottom: 12,
+    borderColor: '#E2E8F0',
+    padding: 16,
+    marginBottom: 14,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.03,
+    shadowRadius: 4,
+    elevation: 1,
   },
   sectionBannerTitle: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: colors.text,
+    fontSize: 17,
+    fontWeight: '900',
+    color: '#0F172A',
+    letterSpacing: -0.3,
   },
   sectionStepCounter: {
     fontSize: 11.5,
-    fontWeight: '700',
+    fontWeight: '800',
     color: colors.primary,
+    backgroundColor: '#ECFDF5',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
   },
   sectionBannerSubtitle: {
-    fontSize: 11.5,
-    color: colors.textMuted,
-    marginTop: 3,
+    fontSize: 12,
+    color: '#64748B',
+    marginTop: 4,
+    fontWeight: '500',
   },
   inputsCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 12,
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: colors.border,
-    padding: 14,
+    borderColor: '#E2E8F0',
+    padding: 18,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    elevation: 2,
   },
   formNavButtonsRow: {
     flexDirection: 'row',
     gap: 10,
-    marginTop: 16,
+    marginTop: 18,
   },
   prevSectionBtn: {
     flex: 1,
     backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: colors.border,
-    paddingVertical: 12,
-    borderRadius: 10,
+    borderWidth: 1.5,
+    borderColor: '#E2E8F0',
+    paddingVertical: 14,
+    borderRadius: 12,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   prevSectionBtnText: {
-    color: colors.text,
-    fontSize: 13.5,
-    fontWeight: '700',
+    color: '#475569',
+    fontSize: 14,
+    fontWeight: '800',
   },
   nextSectionBtn: {
     flex: 1,
     backgroundColor: colors.primary,
-    paddingVertical: 12,
-    borderRadius: 10,
+    paddingVertical: 14,
+    borderRadius: 12,
     alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.25,
+    shadowRadius: 5,
+    elevation: 3,
   },
   nextSectionBtnText: {
-    color: '#FFFFFF',
-    fontSize: 13.5,
-    fontWeight: '700',
-  },
-  submitFinalBtn: {
-    flex: 1,
-    backgroundColor: '#059669',
-    paddingVertical: 12,
-    borderRadius: 10,
-    alignItems: 'center',
-  },
-  submitFinalBtnText: {
     color: '#FFFFFF',
     fontSize: 14,
     fontWeight: '800',
   },
+  submitFinalBtn: {
+    flex: 1,
+    backgroundColor: '#059669',
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#059669',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 4,
+  },
+  submitFinalBtnText: {
+    color: '#FFFFFF',
+    fontSize: 14.5,
+    fontWeight: '900',
+    letterSpacing: 0.2,
+  },
+  // Customer Detail Screen Styles
   detailScrollView: {
     flex: 1,
     backgroundColor: '#F8FAFC',
@@ -1944,116 +2220,93 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     fontWeight: '600',
   },
-  quickCallBtnText: {
-    color: colors.primary,
+  typePill: {
+    paddingHorizontal: 9,
+    paddingVertical: 3.5,
+    borderRadius: 6,
+    borderWidth: 1,
+  },
+  typePillText: {
+    fontSize: 10.5,
     fontWeight: '700',
-    fontSize: 13,
-  },
-  detailSectionContainer: {
-    marginBottom: 12,
-  },
-  detailSectionHeading: {
-    fontSize: 12,
-    fontWeight: '800',
-    color: colors.textMuted,
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    marginBottom: 6,
-    marginLeft: 2,
   },
-  detailSectionCard: {
+  statusPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 9,
+    paddingVertical: 3.5,
+    borderRadius: 20,
+    borderWidth: 1,
+    gap: 4.5,
+  },
+  statusDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  statusPillText: {
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.15,
+  },
+  detailActionBtnCall: {
+    flex: 1,
+    backgroundColor: colors.primaryBg,
+    borderWidth: 1,
+    borderColor: colors.primaryLight,
+    paddingVertical: 10,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  detailActionBtnCallText: {
+    color: colors.primary,
+    fontWeight: '800',
+    fontSize: 12.5,
+  },
+  detailActionBtnWhatsApp: {
+    flex: 1,
+    backgroundColor: '#10B981',
+    paddingVertical: 10,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  detailActionBtnWhatsAppText: {
+    color: '#FFFFFF',
+    fontWeight: '800',
+    fontSize: 12.5,
+  },
+  statTilesGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    marginBottom: 14,
+  },
+  statTileItem: {
+    width: '48.5%',
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
     borderWidth: 1,
     borderColor: colors.border,
-    overflow: 'hidden',
+    padding: 12,
+    marginBottom: 10,
   },
-  detailRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
-  },
-  detailRowLabel: {
-    fontSize: 12,
-    fontWeight: '600',
+  statTileLabel: {
+    fontSize: 9.5,
+    fontWeight: '800',
     color: colors.textMuted,
-    flex: 1,
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
   },
-  detailRowValue: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: colors.text,
-    flex: 1.2,
-    textAlign: 'right',
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(15, 23, 42, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  modalCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 20,
-    width: '100%',
-    maxWidth: 380,
-  },
-  modalHeading: {
-    fontSize: 16,
+  statTileValue: {
+    fontSize: 14.5,
     fontWeight: '800',
     color: colors.text,
+    marginTop: 4,
   },
-  modalSubheading: {
-    fontSize: 12,
-    color: colors.textMuted,
-    marginTop: 3,
-    lineHeight: 16,
-  },
-  modalInputLabel: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: colors.text,
-    marginBottom: 5,
-  },
-  modalTextInput: {
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    fontSize: 13,
-    color: colors.text,
-  },
-  statusAlert: {
-    padding: 8,
-    borderRadius: 6,
-    borderWidth: 1,
-    marginTop: 6,
-  },
-  modalCancelBtn: {
-    flex: 1,
-    paddingVertical: 10,
-    borderRadius: 8,
-    alignItems: 'center',
-    backgroundColor: colors.surfaceElevated,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  modalSaveBtn: {
-    flex: 1,
-    paddingVertical: 10,
-    borderRadius: 8,
-    alignItems: 'center',
-    backgroundColor: colors.primary,
-  },
-  // Quick Follow-up Action Card Styles
+  // Follow-up & Stage Log Action Hub Styles
   followUpActionCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
@@ -2095,7 +2348,24 @@ const styles = StyleSheet.create({
     fontSize: 11.5,
     color: colors.textMuted,
     lineHeight: 16,
+    marginBottom: 10,
+  },
+  selectedStatusBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
     marginBottom: 12,
+  },
+  selectedStatusBannerLabel: {
+    fontSize: 11.5,
+    fontWeight: '700',
+    color: '#475569',
   },
   fieldSectionMiniLabel: {
     fontSize: 11,
@@ -2166,33 +2436,6 @@ const styles = StyleSheet.create({
     color: '#2563EB',
     fontWeight: '700',
   },
-  confirmedOrderValueBox: {
-    marginBottom: 14,
-    backgroundColor: '#ECFDF5',
-    padding: 12,
-    borderRadius: 12,
-    borderWidth: 1.5,
-    borderColor: '#86EFAC',
-  },
-  confirmedOrderValueLabel: {
-    fontSize: 11,
-    fontWeight: '800',
-    color: '#047857',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    marginBottom: 6,
-  },
-  confirmedOrderValueInput: {
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1.5,
-    borderColor: '#10B981',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    fontSize: 14,
-    fontWeight: '800',
-    color: '#065F46',
-  },
   submitFollowUpBtn: {
     backgroundColor: '#2563EB',
     paddingVertical: 12,
@@ -2213,167 +2456,7 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     fontSize: 13.5,
   },
-  // WhatsApp Action Styles
-  cardMiniWhatsAppBtn: {
-    backgroundColor: '#DCFCE7',
-    borderWidth: 1,
-    borderColor: '#86EFAC',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
-  },
-  cardMiniWhatsAppText: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: '#15803D',
-  },
-  quickWhatsAppBtn: {
-    flex: 1,
-    backgroundColor: '#10B981',
-    paddingVertical: 10,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  quickWhatsAppBtnText: {
-    color: '#FFFFFF',
-    fontWeight: '800',
-    fontSize: 13,
-  },
-  // Redesigned List Card & Detail Styles
-  cardDot: {
-    fontSize: 12,
-    color: colors.textMuted,
-  },
-  cardTypeLabel: {
-    fontSize: 11.5,
-    fontWeight: '700',
-  },
-  cardHighlightsRow: {
-    marginTop: 8,
-    paddingVertical: 5,
-    paddingHorizontal: 8,
-    backgroundColor: '#F8FAFC',
-    borderRadius: 6,
-  },
-  cardLocationText: {
-    fontSize: 12,
-    color: '#475569',
-    fontWeight: '600',
-  },
-  cardFollowUpCountBadge: {
-    fontSize: 11.5,
-    fontWeight: '700',
-    color: '#64748B',
-  },
-  cardActionFooterRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: 10,
-    paddingTop: 8,
-    borderTopWidth: 1,
-    borderTopColor: '#F8FAFC',
-  },
-  cardCallChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#EFF6FF',
-    borderWidth: 1,
-    borderColor: '#DBEAFE',
-    paddingHorizontal: 8,
-    paddingVertical: 3.5,
-    borderRadius: 6,
-  },
-  cardCallChipText: {
-    fontSize: 11.5,
-    color: '#1D4ED8',
-    fontWeight: '700',
-  },
-  cardWhatsAppChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#DCFCE7',
-    borderWidth: 1,
-    borderColor: '#86EFAC',
-    paddingHorizontal: 8,
-    paddingVertical: 3.5,
-    borderRadius: 6,
-  },
-  cardWhatsAppChipText: {
-    fontSize: 11.5,
-    color: '#15803D',
-    fontWeight: '700',
-  },
-  cardDateBadge: {
-    backgroundColor: '#F0FDF4',
-    paddingHorizontal: 7,
-    paddingVertical: 2.5,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: '#DCFCE7',
-  },
-  cardNextFollowUpText: {
-    fontSize: 11.5,
-    color: '#15803D',
-    fontWeight: '700',
-  },
-  detailActionBtnCall: {
-    flex: 1,
-    backgroundColor: colors.primaryBg,
-    borderWidth: 1,
-    borderColor: colors.primaryLight,
-    paddingVertical: 10,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  detailActionBtnCallText: {
-    color: colors.primary,
-    fontWeight: '800',
-    fontSize: 12.5,
-  },
-  detailActionBtnWhatsApp: {
-    flex: 1,
-    backgroundColor: '#10B981',
-    paddingVertical: 10,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  detailActionBtnWhatsAppText: {
-    color: '#FFFFFF',
-    fontWeight: '800',
-    fontSize: 12.5,
-  },
-  statTilesGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    marginBottom: 14,
-  },
-  statTileItem: {
-    width: '48.5%',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: 12,
-    marginBottom: 10,
-  },
-  statTileLabel: {
-    fontSize: 9.5,
-    fontWeight: '800',
-    color: colors.textMuted,
-    textTransform: 'uppercase',
-    letterSpacing: 0.4,
-  },
-  statTileValue: {
-    fontSize: 14.5,
-    fontWeight: '800',
-    color: colors.text,
-    marginTop: 4,
-  },
+  // Clean Structured Specs Sections
   cleanDetailSectionCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
@@ -2427,6 +2510,70 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     flex: 1.2,
     textAlign: 'right',
+  },
+  // Diagnostic Settings Modal Styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(15, 23, 42, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 20,
+    width: '100%',
+    maxWidth: 380,
+  },
+  modalHeading: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: colors.text,
+  },
+  modalSubheading: {
+    fontSize: 12,
+    color: colors.textMuted,
+    marginTop: 3,
+    lineHeight: 16,
+  },
+  modalInputLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.text,
+    marginBottom: 5,
+  },
+  modalTextInput: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    fontSize: 13,
+    color: colors.text,
+  },
+  statusAlert: {
+    padding: 8,
+    borderRadius: 6,
+    borderWidth: 1,
+    marginTop: 6,
+  },
+  modalCancelBtn: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: 8,
+    alignItems: 'center',
+    backgroundColor: colors.surfaceElevated,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  modalSaveBtn: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: 8,
+    alignItems: 'center',
+    backgroundColor: colors.primary,
   },
   // Celebration Modal Styles
   celebrationOverlay: {
@@ -2577,5 +2724,118 @@ const styles = StyleSheet.create({
   confettiPiece: {
     position: 'absolute',
     top: -20,
+  },
+  // Mobile KPI Modal Styles
+  headerKpiBtn: {
+    backgroundColor: '#EFF6FF',
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#BFDBFE',
+    marginRight: 2,
+  },
+  headerKpiBtnText: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#1D4ED8',
+  },
+  kpiAutoFillBtn: {
+    backgroundColor: '#EFF6FF',
+    borderWidth: 1,
+    borderColor: '#93C5FD',
+    borderRadius: 10,
+    paddingVertical: 9,
+    paddingHorizontal: 12,
+    alignItems: 'center',
+    marginVertical: 6,
+  },
+  kpiAutoFillBtnText: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#1D4ED8',
+  },
+  kpiInputLabel: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#334155',
+    marginBottom: 5,
+    marginTop: 6,
+    textTransform: 'uppercase',
+    letterSpacing: 0.3,
+  },
+  kpiSubLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#64748B',
+    marginBottom: 4,
+  },
+  kpiNumberInput: {
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#0F172A',
+    textAlign: 'center',
+  },
+  kpiStaffChip: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 16,
+    backgroundColor: '#F1F5F9',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  kpiStaffChipActive: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  kpiStaffChipText: {
+    fontSize: 11.5,
+    fontWeight: '700',
+    color: '#475569',
+  },
+  kpiStaffChipTextActive: {
+    color: '#FFFFFF',
+    fontWeight: '800',
+  },
+  kpiToggleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: 8,
+  },
+  kpiToggleRowActive: {
+    backgroundColor: '#ECFDF5',
+    borderColor: '#86EFAC',
+  },
+  kpiToggleLabel: {
+    fontSize: 12.5,
+    fontWeight: '700',
+    color: '#334155',
+    flex: 1,
+  },
+  kpiToggleBadge: {
+    fontSize: 11.5,
+    fontWeight: '800',
+    color: '#64748B',
+    backgroundColor: '#E2E8F0',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  kpiToggleBadgeActive: {
+    color: '#059669',
+    backgroundColor: '#DCFCE7',
   },
 });
