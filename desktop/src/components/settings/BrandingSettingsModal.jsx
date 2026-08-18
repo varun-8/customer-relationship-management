@@ -37,15 +37,6 @@ export const BrandingSettingsModal = ({ onClose }) => {
   const [savedSuccess, setSavedSuccess] = useState(false);
   const [error, setError] = useState('');
 
-  const PRESET_COLORS = [
-    { label: 'Royal Blue', hex: '#2563EB' },
-    { label: 'Emerald Teal', hex: '#059669' },
-    { label: 'Violet Luxe', hex: '#7C3AED' },
-    { label: 'Amber Gold', hex: '#D97706' },
-    { label: 'Crimson Rose', hex: '#E11D48' },
-    { label: 'Dark Slate', hex: '#0F172A' },
-  ];
-
   // Handle Logo Upload (File to Base64)
   const handleImageUpload = (e) => {
     const file = e.target.files?.[0];
@@ -488,37 +479,6 @@ export const BrandingSettingsModal = ({ onClose }) => {
                 )}
               </div>
             )}
-          </div>
-
-          {/* Accent Color Picker */}
-          <div>
-            <label style={{ display: 'block', fontSize: '13px', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '8px' }}>
-              Brand Theme Color
-            </label>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              {PRESET_COLORS.map((c) => (
-                <button
-                  key={c.hex}
-                  type="button"
-                  onClick={() => setPrimaryColor(c.hex)}
-                  style={{
-                    width: '32px',
-                    height: '32px',
-                    borderRadius: '50%',
-                    backgroundColor: c.hex,
-                    border: primaryColor === c.hex ? '3px solid #0F172A' : '2px solid transparent',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    boxShadow: primaryColor === c.hex ? '0 0 0 2px #FFFFFF' : 'none',
-                  }}
-                  title={c.label}
-                >
-                  {primaryColor === c.hex && <Check size={14} color="#FFFFFF" strokeWidth={3} />}
-                </button>
-              ))}
-            </div>
           </div>
         </div>
 

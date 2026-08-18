@@ -103,7 +103,7 @@ const MainAppContent = () => {
         />
 
         <div className="app-content">
-          <div className="workspace-section">
+          <div key={activeTab} className="tab-view-transition workspace-section">
             {activeTab === 'dashboard' && <ExecutiveDashboardView />}
 
             {activeTab === 'customers' && (

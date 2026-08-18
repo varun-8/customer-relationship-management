@@ -47,7 +47,15 @@ const customerSchema = new mongoose.Schema({
   },
 });
 
-// Text index for general search
+// High-performance query indexes
 customerSchema.index({ customerId: 'text' });
+customerSchema.index({ 'data.phone': 1 });
+customerSchema.index({ 'data.status': 1 });
+customerSchema.index({ 'data.salesperson': 1 });
+customerSchema.index({ 'data.entryDate': -1 });
+customerSchema.index({ 'data.nextFollowUp': 1 });
+customerSchema.index({ 'data.customerType': 1 });
+customerSchema.index({ 'data.status': 1, 'data.salesperson': 1 });
+customerSchema.index({ 'data.entryDate': -1, 'data.salesperson': 1 });
 
 module.exports = mongoose.model('Customer', customerSchema);

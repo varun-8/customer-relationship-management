@@ -126,12 +126,13 @@ export const CustomerProvider = ({ children }) => {
   const updateSequence = async (newConfig) => {
     try {
       const res = await api.updateSequenceConfig(newConfig);
-      if (res.success) {
+      if (res && res.success) {
         setSequenceConfig(res.data);
         return { success: true, data: res.data };
       }
+      return { success: false, message: res?.message || 'Failed to update sequence' };
     } catch (err) {
-      return { success: false, message: err.message };
+      return { success: false, message: err.message || 'Network error updating sequence' };
     }
   };
 

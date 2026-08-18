@@ -45,7 +45,7 @@ const extractCustomerData = (customerDoc) => {
  * Helper: Automatically compute KPI metrics from CRM Customers for a given date
  */
 const calculateCrmKpiForDate = async (targetDateStr, staffFilter = null) => {
-  const allCustomers = await Customer.find({ status: { $ne: 'archived' } });
+  const allCustomers = await Customer.find({ status: { $ne: 'archived' } }).lean();
 
   const matched = [];
   allCustomers.forEach((doc) => {
@@ -234,11 +234,11 @@ exports.getKPIList = async (req, res) => {
       query.staffName = staffName;
     }
 
-    const records = await DailyKPI.find(query).sort({ dateString: -1, staffName: 1 });
+    const records = await DailyKPI.find(query).sort({ dateString: -1, staffName: 1 }).lean();
 
     // Map existing records
     const formattedRecords = records.map((rec) => {
-      const doc = rec.toObject();
+      const doc = { ...rec };
       const visits = doc.walkins?.visits || 0;
       const walkinOrders = doc.walkins?.orders || 0;
       const walkinQuotes = doc.walkins?.quotes || 0;
@@ -286,7 +286,7 @@ exports.getDayPerformance = async (req, res) => {
     if (staffName && staffName !== 'all') {
       kpiQuery.staffName = staffName;
     }
-    const savedKpis = await DailyKPI.find(kpiQuery);
+    const savedKpis = await DailyKPI.find(kpiQuery).lean();
 
     // 2. Fetch live CRM calculation for that day
     const liveCrmCalc = await calculateCrmKpiForDate(targetDateStr, staffName);

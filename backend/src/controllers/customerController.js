@@ -78,7 +78,8 @@ const getCustomers = async (req, res) => {
       .sort(sort)
       .skip(skip)
       .limit(limitNum)
-      .populate('createdBy.userId', 'name email role');
+      .populate('createdBy.userId', 'name email role')
+      .lean();
 
     res.json({
       success: true,
@@ -103,7 +104,7 @@ const getCustomerById = async (req, res) => {
 
     const customer = await Customer.findOne({
       $or: [{ _id: id.match(/^[0-9a-fA-F]{24}$/) ? id : null }, { customerId: id }],
-    });
+    }).lean();
 
     if (!customer) {
       return res.status(404).json({ success: false, message: 'Customer not found' });
@@ -257,7 +258,7 @@ const lookupCustomerByPhone = async (req, res) => {
     // Search for any customer matching the 10-digit number
     const matchingCustomers = await Customer.find({
       'data.phone': { $regex: last10 },
-    }).sort({ createdAt: -1 });
+    }).sort({ createdAt: -1 }).lean();
 
     if (!matchingCustomers || matchingCustomers.length === 0) {
       return res.json({ success: true, exists: false });

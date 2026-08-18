@@ -49,15 +49,6 @@ export const SettingsView = ({ initialTab = 'branding' }) => {
   const [savedSuccess, setSavedSuccess] = useState(false);
   const [error, setError] = useState('');
 
-  const PRESET_COLORS = [
-    { label: 'Royal Blue', hex: '#2563EB' },
-    { label: 'Emerald Teal', hex: '#059669' },
-    { label: 'Violet Luxe', hex: '#7C3AED' },
-    { label: 'Amber Gold', hex: '#D97706' },
-    { label: 'Crimson Rose', hex: '#E11D48' },
-    { label: 'Dark Slate', hex: '#0F172A' },
-  ];
-
   const handleImageUpload = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -530,51 +521,6 @@ export const SettingsView = ({ initialTab = 'branding' }) => {
               placeholder="e.g. Tiles, Sanitary Wares, CP Fittings & Adhesives"
               style={{ borderRadius: '8px' }}
             />
-          </div>
-
-          {/* Section 3: Theme Accent Color */}
-          <div>
-            <label className="form-label" style={{ fontSize: '11.5px', fontWeight: '800', color: '#475569', textTransform: 'uppercase', marginBottom: '8px' }}>
-              <span>Theme Accent Color Palette</span>
-            </label>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-              {PRESET_COLORS.map((c) => {
-                const isSelected = primaryColor.toLowerCase() === c.hex.toLowerCase();
-                return (
-                  <button
-                    key={c.hex}
-                    type="button"
-                    onClick={() => setPrimaryColor(c.hex)}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '8px',
-                      padding: '8px 14px',
-                      borderRadius: '8px',
-                      border: isSelected ? `2px solid ${c.hex}` : '1px solid #E2E8F0',
-                      background: isSelected ? '#EFF6FF' : '#FFFFFF',
-                      cursor: 'pointer',
-                      fontSize: '12.5px',
-                      fontWeight: isSelected ? '800' : '600',
-                      color: '#0F172A',
-                    }}
-                  >
-                    <span
-                      style={{
-                        width: '16px',
-                        height: '16px',
-                        borderRadius: '50%',
-                        backgroundColor: c.hex,
-                        display: 'inline-block',
-                        boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
-                      }}
-                    />
-                    <span>{c.label}</span>
-                    {isSelected && <Check size={13} color={c.hex} />}
-                  </button>
-                );
-              })}
-            </div>
           </div>
 
           {/* Save Action Footer */}

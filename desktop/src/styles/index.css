@@ -1608,6 +1608,12 @@ h6 {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.dash-hero-target-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.25);
 }
 
 @media (min-width: 1024px) {
@@ -1669,7 +1675,7 @@ h6 {
 .dash-progress-fill {
   height: 100%;
   border-radius: 3px;
-  transition: width 0.4s ease;
+  transition: width 0.75s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .dash-hero-footer {
@@ -2045,9 +2051,37 @@ h6 {
   }
 }
 
+/* Smooth Page & Tab View Transitions */
+@keyframes tabFadeInUp {
+  0% {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
 
+.tab-view-transition {
+  animation: tabFadeInUp 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  will-change: transform, opacity;
+  width: 100%;
+}
 
+.sidebar-nav-link {
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
 
+.dashboard-stat-card {
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
 
+.dashboard-stat-card:hover {
+  transform: translateY(-3px) !important;
+  box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.08), 0 8px 10px -6px rgba(15, 23, 42, 0.04) !important;
+}
 
-
+.smooth-progress-fill {
+  transition: width 0.8s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}

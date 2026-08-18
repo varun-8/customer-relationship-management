@@ -62,9 +62,9 @@ exports.getDashboardMetrics = async (req, res) => {
 
     // 2. Fetch all active customers, KPIs, and Lost Sales
     const [allCustomers, allKpis, allLostSales] = await Promise.all([
-      Customer.find({ status: { $ne: 'archived' } }),
-      DailyKPI.find({ dateString: { $regex: `^${targetMonth}` } }),
-      LostSale.find({ dateString: { $regex: `^${targetMonth}` } }),
+      Customer.find({ status: { $ne: 'archived' } }).lean(),
+      DailyKPI.find({ dateString: { $regex: `^${targetMonth}` } }).lean(),
+      LostSale.find({ dateString: { $regex: `^${targetMonth}` } }).lean(),
     ]);
 
     // 3. Process Customer records for the target month

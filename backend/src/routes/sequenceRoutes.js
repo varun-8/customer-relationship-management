@@ -5,9 +5,9 @@ const {
   updateSequenceConfig,
 } = require('../controllers/sequenceController');
 const { protect } = require('../middlewares/authMiddleware');
-const { requireOwnerOrAdmin } = require('../middlewares/roleMiddleware');
+const { requireEmployeeOrAbove } = require('../middlewares/roleMiddleware');
 
 router.get('/customer-id', protect, getSequenceConfig);
-router.put('/customer-id', protect, requireOwnerOrAdmin, updateSequenceConfig);
+router.put('/customer-id', protect, requireEmployeeOrAbove, updateSequenceConfig);
 
 module.exports = router;

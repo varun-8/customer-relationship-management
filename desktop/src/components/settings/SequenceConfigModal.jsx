@@ -9,8 +9,10 @@ export const SequenceConfigModal = () => {
   const [startValue, setStartValue] = useState(1);
   const [padding, setPadding] = useState(6);
   const [step, setStep] = useState(1);
+  const [currentValue, setCurrentValue] = useState(0);
   const [saving, setSaving] = useState(false);
   const [savedSuccess, setSavedSuccess] = useState(false);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     if (sequenceConfig) {
@@ -18,29 +20,38 @@ export const SequenceConfigModal = () => {
       setStartValue(sequenceConfig.startValue ?? 1);
       setPadding(sequenceConfig.padding ?? 6);
       setStep(sequenceConfig.step ?? 1);
+      setCurrentValue(sequenceConfig.currentValue ?? 0);
     }
   }, [sequenceConfig]);
 
-  const previewNumber = sequenceConfig ? sequenceConfig.currentValue + step : startValue;
-  const livePreview = `${prefix}${String(previewNumber).padStart(Number(padding) || 6, '0')}`;
+  const previewNumber = Number(currentValue) + Number(step);
+  const livePreview = `${prefix || ''}${String(Math.max(1, previewNumber)).padStart(Number(padding) || 6, '0')}`;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!prefix.trim()) {
+      setError('Prefix code cannot be empty.');
+      return;
+    }
     setSaving(true);
     setSavedSuccess(false);
+    setError('');
     try {
       const res = await updateSequence({
-        prefix,
+        prefix: prefix.trim().toUpperCase(),
         startValue: Number(startValue),
         padding: Number(padding),
         step: Number(step),
+        currentValue: Number(currentValue),
       });
-      if (res.success) {
+      if (res && res.success) {
         setSavedSuccess(true);
         setTimeout(() => setSavedSuccess(false), 3000);
+      } else {
+        setError(res?.message || 'Failed to update customer sequence settings.');
       }
     } catch (err) {
-      alert('Error updating sequence: ' + err.message);
+      setError(err.message || 'Error updating sequence');
     } finally {
       setSaving(false);
     }
@@ -78,7 +89,7 @@ export const SequenceConfigModal = () => {
                 Customer ID Sequence Generator
               </h2>
               <p style={{ fontSize: '12.5px', color: '#64748B', margin: '3px 0 0' }}>
-                Configure the automated, atomic Customer ID numbering format for all showroom transactions.
+                Configure automated, non-duplicative Customer ID generation format for showroom leads.
               </p>
             </div>
           </div>
@@ -91,6 +102,12 @@ export const SequenceConfigModal = () => {
           )}
         </div>
 
+        {error && (
+          <div style={{ padding: '12px 16px', borderRadius: '8px', background: '#FEF2F2', border: '1px solid #FECACA', color: '#DC2626', fontSize: '13px', fontWeight: '700', marginBottom: '18px' }}>
+            ⚠️ {error}
+          </div>
+        )}
+
         {/* Live Preview Box */}
         <div
           style={{
@@ -102,6 +119,8 @@ export const SequenceConfigModal = () => {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: '12px',
           }}
         >
           <div>
@@ -112,7 +131,7 @@ export const SequenceConfigModal = () => {
               {livePreview}
             </div>
             <div style={{ fontSize: '12px', color: '#94A3B8', marginTop: '3px' }}>
-              Current database sequence counter: #{sequenceConfig?.currentValue ?? 0}
+              Current database sequence counter: #{currentValue}
             </div>
           </div>
           <span style={{ padding: '6px 12px', fontSize: '11.5px', fontWeight: '800', color: '#059669', background: '#ECFDF5', border: '1px solid #A7F3D0', borderRadius: '8px' }}>
@@ -130,7 +149,10 @@ export const SequenceConfigModal = () => {
                 type="text"
                 className="form-input mono"
                 value={prefix}
-                onChange={(e) => setPrefix(e.target.value.toUpperCase())}
+                onChange={(e) => {
+                  setPrefix(e.target.value.toUpperCase());
+                  setError('');
+                }}
                 placeholder="VAS-"
                 required
                 style={{ borderRadius: '8px', fontWeight: '800', color: '#2563EB' }}
@@ -167,6 +189,22 @@ export const SequenceConfigModal = () => {
                 onChange={(e) => setStartValue(e.target.value)}
                 style={{ borderRadius: '8px' }}
               />
+              <span className="form-help" style={{ fontSize: '11.5px', color: '#64748B', marginTop: '4px' }}>Base initial count (e.g. 1)</span>
+            </div>
+
+            <div className="form-group">
+              <label className="form-label" style={{ fontSize: '11.5px', fontWeight: '800', color: '#475569', textTransform: 'uppercase' }}>
+                <span>Current Sequence Counter</span>
+              </label>
+              <input
+                type="number"
+                className="form-input"
+                value={currentValue}
+                min={0}
+                onChange={(e) => setCurrentValue(Number(e.target.value))}
+                style={{ borderRadius: '8px', fontWeight: '700' }}
+              />
+              <span className="form-help" style={{ fontSize: '11.5px', color: '#64748B', marginTop: '4px' }}>Last issued number in showroom</span>
             </div>
 
             <div className="form-group">
@@ -182,6 +220,7 @@ export const SequenceConfigModal = () => {
                 onChange={(e) => setStep(e.target.value)}
                 style={{ borderRadius: '8px' }}
               />
+              <span className="form-help" style={{ fontSize: '11.5px', color: '#64748B', marginTop: '4px' }}>Increment by 1 per new lead</span>
             </div>
           </div>
 
