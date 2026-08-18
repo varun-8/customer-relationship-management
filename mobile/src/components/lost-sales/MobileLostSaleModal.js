@@ -57,7 +57,7 @@ export function MobileLostSaleModal({
         : [customer.requirement]
       : ['Tile']
   );
-  const [salesperson, setSalesperson] = useState(customer.salesperson || 'Karthik Raja');
+  const [salesperson, setSalesperson] = useState(customer.salesperson || '');
   const [lostReason, setLostReason] = useState('Price Too High / Cheaper Competitor Quote');
   const [competitor, setCompetitor] = useState('Supreme Tiles');
   const [customCompetitor, setCustomCompetitor] = useState('');
@@ -143,30 +143,33 @@ export function MobileLostSaleModal({
   };
 
   return (
-    <Modal visible={visible} transparent animationType="slide">
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <View style={styles.modalOverlay}>
         <View style={styles.modalCard}>
-          {/* Header */}
-          <View style={styles.headerRow}>
+          {/* Signature Dark Header */}
+          <View style={styles.headerDark}>
+            <View style={styles.headerIconBox}>
+              <Text style={{ fontSize: 20 }}>🏷️</Text>
+            </View>
             <View style={{ flex: 1 }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                <Text style={styles.title}>Record Lost Sale & Intel</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <Text style={styles.headerTitleDark}>Record Lost Sale & Intel</Text>
                 {customer.customerId && (
-                  <View style={styles.idBadge}>
-                    <Text style={styles.idBadgeText}>#{customer.customerId}</Text>
+                  <View style={styles.headerIdBadge}>
+                    <Text style={styles.headerIdBadgeText}>#{customer.customerId}</Text>
                   </View>
                 )}
               </View>
-              <Text style={styles.subtitle}>
+              <Text style={styles.headerSubtitleDark}>
                 Track competitor discounts, product leakage & lost reasons
               </Text>
             </View>
-            <TouchableOpacity onPress={onClose} style={styles.closeBtn} activeOpacity={0.7}>
-              <Text style={styles.closeBtnText}>✕</Text>
+            <TouchableOpacity onPress={onClose} style={styles.headerCloseBtn} activeOpacity={0.7}>
+              <Text style={styles.headerCloseBtnText}>✕</Text>
             </TouchableOpacity>
           </View>
 
-          <ScrollView showsVerticalScrollIndicator={false} style={styles.scroll}>
+          <ScrollView showsVerticalScrollIndicator={false} style={styles.scroll} contentContainerStyle={{ padding: 18 }}>
             {/* Section 1: Customer Lead Summary */}
             <View style={styles.leadSummaryBox}>
               <View style={{ flex: 1 }}>
@@ -315,56 +318,79 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
-    paddingHorizontal: 20,
-    paddingTop: 18,
+    overflow: 'hidden',
     paddingBottom: Platform.OS === 'ios' ? 34 : 20,
     maxHeight: '90%',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 10,
   },
-  headerRow: {
+  headerDark: {
+    backgroundColor: '#0F172A',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
-    paddingBottom: 10,
+    gap: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
+    borderBottomColor: 'rgba(255, 255, 255, 0.08)',
   },
-  title: {
+  headerIconBox: {
+    width: 42,
+    height: 42,
+    borderRadius: 12,
+    backgroundColor: '#DC2626',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#DC2626',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.35,
+    shadowRadius: 5,
+    elevation: 3,
+  },
+  headerTitleDark: {
     fontSize: 16,
-    fontWeight: '800',
-    color: '#991B1B',
+    fontWeight: '900',
+    color: '#FFFFFF',
+    letterSpacing: -0.2,
   },
-  subtitle: {
+  headerSubtitleDark: {
     fontSize: 12,
-    color: '#64748B',
+    color: '#94A3B8',
     marginTop: 2,
+    fontWeight: '600',
   },
-  idBadge: {
-    backgroundColor: '#FEE2E2',
-    paddingHorizontal: 6,
-    paddingVertical: 1,
-    borderRadius: 5,
+  headerIdBadge: {
+    backgroundColor: 'rgba(255, 255, 255, 0.12)',
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 6,
     borderWidth: 1,
-    borderColor: '#FECDD3',
+    borderColor: 'rgba(255, 255, 255, 0.15)',
   },
-  idBadgeText: {
+  headerIdBadgeText: {
     fontSize: 10.5,
     fontWeight: '800',
-    color: '#DC2626',
+    color: '#FCA5A5',
     fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
   },
-  closeBtn: {
-    padding: 6,
-    borderRadius: 8,
-    backgroundColor: '#F1F5F9',
+  headerCloseBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  closeBtnText: {
+  headerCloseBtnText: {
     fontSize: 13,
     fontWeight: '800',
-    color: '#475569',
+    color: '#CBD5E1',
   },
   scroll: {
-    marginVertical: 4,
+    marginVertical: 0,
   },
   leadSummaryBox: {
     flexDirection: 'row',

@@ -22,7 +22,8 @@ import { FormBuilderView } from '../form-builder/FormBuilderView';
 export const ActiveFormSchemaViewer = ({ activeForm }) => {
   const [viewMode, setViewMode] = useState('preview'); // 'preview' | 'builder'
 
-  const fields = activeForm?.fields || [];
+  const rawFields = activeForm?.fields || [];
+  const fields = rawFields.filter((f, idx, self) => self.findIndex((x) => x.name === f.name) === idx);
   const activeFields = fields.filter((f) => f.active);
   const requiredCount = activeFields.filter((f) => f.required).length;
   const optionalCount = activeFields.length - requiredCount;

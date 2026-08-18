@@ -16,8 +16,8 @@ const getUsers = async (req, res) => {
   try {
     let users = await User.find({}).select('-password').sort({ role: 1, name: 1 }).lean();
 
-    // If database only has owner or default users, ensure standard showroom staff are seeded
-    if (users.length <= 2) {
+    // If database has 0 users, ensure standard showroom staff are seeded initially
+    if (users.length === 0) {
       for (const staff of DEFAULT_SHOWROOM_STAFF) {
         const exists = users.some((u) => u.email.toLowerCase() === staff.email.toLowerCase() || u.name.toLowerCase() === staff.name.toLowerCase());
         if (!exists) {

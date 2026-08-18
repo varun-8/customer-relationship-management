@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import {
   X,
   FileX,
@@ -193,8 +194,17 @@ export const LostSaleModal = ({ initialData, customer, onClose, onSaved }) => {
     }
   };
 
-  return (
-    <div className="modal-backdrop" onClick={onClose} style={{ zIndex: 1100 }}>
+  return createPortal(
+    <div
+      className="modal-backdrop"
+      onClick={onClose}
+      style={{
+        zIndex: 1100,
+        backgroundColor: 'rgba(15, 23, 42, 0.65)',
+        backdropFilter: 'blur(8px)',
+        WebkitBackdropFilter: 'blur(8px)',
+      }}
+    >
       <div
         className="modal-card"
         style={{
@@ -205,7 +215,8 @@ export const LostSaleModal = ({ initialData, customer, onClose, onSaved }) => {
           overflow: 'hidden',
           display: 'flex',
           flexDirection: 'column',
-          boxShadow: '0 25px 50px -12px rgba(15, 23, 42, 0.4)',
+          boxShadow: '0 25px 60px -15px rgba(15, 23, 42, 0.4)',
+          background: '#FFFFFF',
         }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -239,7 +250,7 @@ export const LostSaleModal = ({ initialData, customer, onClose, onSaved }) => {
             </div>
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '800', letterSpacing: '-0.01em' }}>
+                <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '800', letterSpacing: '-0.01em', color: '#FFFFFF' }}>
                   {initialData ? 'Edit Lost Sale Analysis' : 'Record Lost Sale & Competitor Intelligence'}
                 </h3>
                 {customerId && (
@@ -636,6 +647,7 @@ export const LostSaleModal = ({ initialData, customer, onClose, onSaved }) => {
           </div>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

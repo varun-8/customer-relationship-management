@@ -14,8 +14,6 @@ import {
   Modal,
 } from 'react-native';
 
-const STAFF_MEMBERS = ['all', 'Karthik Raja', 'Senthil Kumar', 'Priya Dharshini', 'Manoj Kumar'];
-
 const formatRelativeUrgency = (nextFollowUp) => {
   if (!nextFollowUp) return { label: 'No Date', color: '#64748B', bg: '#F1F5F9', border: '#E2E8F0', dot: '#94A3B8', isOverdue: false, isToday: false };
   try {

@@ -89,30 +89,33 @@ export function MobileFollowupLogModal({
   };
 
   return (
-    <Modal visible={visible} transparent animationType="slide">
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <View style={styles.modalOverlay}>
         <View style={styles.modalCard}>
-          {/* Header */}
-          <View style={styles.headerRow}>
+          {/* Signature Dark Header */}
+          <View style={styles.headerDark}>
+            <View style={styles.headerIconBox}>
+              <Text style={{ fontSize: 20 }}>📞</Text>
+            </View>
             <View style={{ flex: 1 }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                <Text style={styles.title}>Log Follow-up Activity</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <Text style={styles.headerTitleDark}>Log Follow-up Activity</Text>
                 {followUp.customerId && (
-                  <View style={styles.idBadge}>
-                    <Text style={styles.idBadgeText}>#{followUp.customerId}</Text>
+                  <View style={styles.headerIdBadge}>
+                    <Text style={styles.headerIdBadgeText}>#{followUp.customerId}</Text>
                   </View>
                 )}
               </View>
-              <Text style={styles.subtitle} numberOfLines={1}>
+              <Text style={styles.headerSubtitleDark} numberOfLines={1}>
                 {followUp.customerName} • 📞 {followUp.phone || 'No phone'}
               </Text>
             </View>
-            <TouchableOpacity onPress={onClose} style={styles.closeBtn} activeOpacity={0.7}>
-              <Text style={styles.closeBtnText}>✕</Text>
+            <TouchableOpacity onPress={onClose} style={styles.headerCloseBtn} activeOpacity={0.7}>
+              <Text style={styles.headerCloseBtnText}>✕</Text>
             </TouchableOpacity>
           </View>
 
-          <ScrollView showsVerticalScrollIndicator={false} style={styles.scroll}>
+          <ScrollView showsVerticalScrollIndicator={false} style={styles.scroll} contentContainerStyle={{ padding: 18 }}>
             {/* Section 1: Outcome Picker */}
             <Text style={styles.sectionLabel}>1. DISCUSSION OUTCOME *</Text>
             <View style={styles.outcomeChipsContainer}>
@@ -274,56 +277,79 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
-    paddingHorizontal: 20,
-    paddingTop: 18,
+    overflow: 'hidden',
     paddingBottom: Platform.OS === 'ios' ? 34 : 20,
-    maxHeight: '88%',
+    maxHeight: '90%',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 10,
   },
-  headerRow: {
+  headerDark: {
+    backgroundColor: '#0F172A',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
-    paddingBottom: 10,
+    gap: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
+    borderBottomColor: 'rgba(255, 255, 255, 0.08)',
   },
-  title: {
+  headerIconBox: {
+    width: 42,
+    height: 42,
+    borderRadius: 12,
+    backgroundColor: '#2563EB',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#2563EB',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.35,
+    shadowRadius: 5,
+    elevation: 3,
+  },
+  headerTitleDark: {
     fontSize: 16,
-    fontWeight: '800',
-    color: '#0F172A',
+    fontWeight: '900',
+    color: '#FFFFFF',
+    letterSpacing: -0.2,
   },
-  subtitle: {
+  headerSubtitleDark: {
     fontSize: 12,
-    color: '#64748B',
+    color: '#94A3B8',
     marginTop: 2,
+    fontWeight: '600',
   },
-  idBadge: {
-    backgroundColor: '#EFF6FF',
-    paddingHorizontal: 6,
-    paddingVertical: 1,
-    borderRadius: 5,
+  headerIdBadge: {
+    backgroundColor: 'rgba(255, 255, 255, 0.12)',
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 6,
     borderWidth: 1,
-    borderColor: '#BFDBFE',
+    borderColor: 'rgba(255, 255, 255, 0.15)',
   },
-  idBadgeText: {
+  headerIdBadgeText: {
     fontSize: 10.5,
     fontWeight: '800',
-    color: '#2563EB',
+    color: '#93C5FD',
     fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
   },
-  closeBtn: {
-    padding: 6,
-    borderRadius: 8,
-    backgroundColor: '#F1F5F9',
+  headerCloseBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  closeBtnText: {
+  headerCloseBtnText: {
     fontSize: 13,
     fontWeight: '800',
-    color: '#475569',
+    color: '#CBD5E1',
   },
   scroll: {
-    marginVertical: 4,
+    marginVertical: 0,
   },
   sectionLabel: {
     fontSize: 11,

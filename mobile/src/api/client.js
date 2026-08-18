@@ -40,11 +40,7 @@ export const FALLBACK_SCHEMA = {
       type: 'select',
       active: true,
       order: 6,
-      options: [
-        { label: 'Karthik Raja', value: 'Karthik Raja' },
-        { label: 'Senthil Kumar', value: 'Senthil Kumar' },
-        { label: 'Priya Dharshini', value: 'Priya Dharshini' },
-      ],
+      options: [],
     },
     {
       id: 'field_customer_type',
@@ -173,9 +169,10 @@ export const apiClient = {
     let token = await this.getToken();
     if (!token) {
       try {
-        const loginRes = await this.login('employee@vasantham.com', 'employee123');
-        if (loginRes.success && loginRes.data?.token) {
+        const loginRes = await this.login('owner@vasantham.com', 'password123');
+        if (loginRes && loginRes.success && loginRes.data?.token) {
           token = loginRes.data.token;
+          await this.setToken(token);
         }
       } catch (e) {
         console.warn('Auto auth error:', e.message);
@@ -192,7 +189,7 @@ export const apiClient = {
     try {
       const base = customBase || await this.getApiBase();
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 3500);
+      const timeoutId = setTimeout(() => controller.abort(), 8000);
 
       const res = await fetch(`${base}/health`, { signal: controller.signal });
       clearTimeout(timeoutId);
@@ -210,7 +207,7 @@ export const apiClient = {
       const headers = await this.getHeaders();
 
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 4000);
+      const timeoutId = setTimeout(() => controller.abort(), 12000);
 
       const res = await fetch(`${base}/customer-form`, { headers, signal: controller.signal });
       clearTimeout(timeoutId);
@@ -237,7 +234,7 @@ export const apiClient = {
       const headers = await this.getHeaders();
 
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 4000);
+      const timeoutId = setTimeout(() => controller.abort(), 12000);
 
       const res = await fetch(`${base}/customers?search=${encodeURIComponent(search)}`, { headers, signal: controller.signal });
       clearTimeout(timeoutId);
@@ -490,6 +487,20 @@ export const apiClient = {
       return await res.json();
     } catch (e) {
       return { success: false, exists: false, message: e.message };
+    }
+  },
+
+  // Get live showroom employees & mobile logins
+  async getUsers() {
+    try {
+      const base = await this.getApiBase();
+      const headers = await this.getHeaders();
+      const res = await fetch(`${base}/users`, {
+        headers,
+      });
+      return await res.json();
+    } catch (e) {
+      return { success: false, message: e.message };
     }
   },
 };

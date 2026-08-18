@@ -327,6 +327,7 @@ export default function App() {
   const [checkingMobilePhone, setCheckingMobilePhone] = useState(false);
 
   // Active Staff / Owner Profile State
+  const [profiles, setProfiles] = useState(PROFILES);
   const [currentProfile, setCurrentProfile] = useState(PROFILES[0]);
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [ownerStaffFilter, setOwnerStaffFilter] = useState('all');
@@ -353,7 +354,7 @@ export default function App() {
 
   // Daily KPI State
   const [showKpiModal, setShowKpiModal] = useState(false);
-  const [kpiStaff, setKpiStaff] = useState('Karthik Raja');
+  const [kpiStaff, setKpiStaff] = useState('');
   const [kpiVisits, setKpiVisits] = useState('0');
   const [kpiQuotes, setKpiQuotes] = useState('0');
   const [kpiOrders, setKpiOrders] = useState('0');
@@ -389,7 +390,10 @@ export default function App() {
     try {
       const schema = await apiClient.getActiveForm();
       if (schema && schema.fields && schema.fields.length > 0) {
-        setFormSchema(schema);
+        const uniqueFields = schema.fields.filter(
+          (f, idx, self) => self.findIndex((x) => x.name === f.name) === idx
+        );
+        setFormSchema({ ...schema, fields: uniqueFields });
         setIsOnline(true);
       }
     } catch (e) {
@@ -436,11 +440,94 @@ export default function App() {
     }
   }, [followupTab, followupTempFilter, currentProfile]);
 
+  const loadStaffProfiles = useCallback(async () => {
+    try {
+      const res = await apiClient.getUsers();
+      if (res && res.success && Array.isArray(res.data) && res.data.length > 0) {
+        const rawUsers = res.data;
+        const colorPalette = [
+          { color: '#2563EB', bg: '#EFF6FF', border: '#BFDBFE' },
+          { color: '#059669', bg: '#ECFDF5', border: '#A7F3D0' },
+          { color: '#7C3AED', bg: '#F5F3FF', border: '#DDD6FE' },
+          { color: '#EA580C', bg: '#FFF7ED', border: '#FED7AA' },
+          { color: '#0891B2', bg: '#ECFEFF', border: '#A5F3FC' },
+          { color: '#DB2777', bg: '#FDF2F8', border: '#FBCFE8' },
+        ];
+
+        const mappedProfiles = [];
+
+        // 1. Ensure Showroom Owner is at the top
+        const ownerUser = rawUsers.find((u) => u.role === 'owner');
+        mappedProfiles.push({
+          id: ownerUser ? ownerUser._id : 'owner',
+          name: ownerUser ? ownerUser.name : 'Showroom Owner',
+          email: ownerUser ? ownerUser.email : 'owner@vasantham.com',
+          role: 'owner',
+          icon: '👑',
+          roleTitle: 'Showroom Owner',
+          subtitle: 'All Showroom Leads & Team Control',
+          color: '#D97706',
+          bg: '#FEF3C7',
+          border: '#FDE68A',
+        });
+
+        // 2. Add all active employees
+        const employeeUsers = rawUsers.filter((u) => u.role !== 'owner' && u.active !== false);
+        employeeUsers.forEach((u, idx) => {
+          const theme = colorPalette[idx % colorPalette.length];
+          mappedProfiles.push({
+            id: u._id,
+            name: u.name,
+            email: u.email,
+            role: 'employee',
+            icon: '👤',
+            roleTitle: 'Sales Executive',
+            subtitle: u.phone ? `📞 ${u.phone}` : 'Assigned Pipeline',
+            color: theme.color,
+            bg: theme.bg,
+            border: theme.border,
+          });
+        });
+
+        setProfiles(mappedProfiles);
+
+        // If current profile was updated or deleted
+        setCurrentProfile((prev) => {
+          if (!prev) return mappedProfiles[0];
+          const matched = mappedProfiles.find(
+            (p) => p.id === prev.id || p.email === prev.email || p.name === prev.name
+          );
+          return matched || mappedProfiles[0];
+        });
+
+        // Dynamically update salesperson options in form schema
+        const staffOptions = employeeUsers.map((u) => ({ label: u.name, value: u.name }));
+        if (staffOptions.length > 0) {
+          setFormSchema((prevSchema) => {
+            if (!prevSchema || !prevSchema.fields) return prevSchema;
+            const updatedFields = prevSchema.fields.map((field) => {
+              if (field.name === 'salesperson') {
+                return {
+                  ...field,
+                  options: staffOptions,
+                };
+              }
+              return field;
+            });
+            return { ...prevSchema, fields: updatedFields };
+          });
+        }
+      }
+    } catch (e) {
+      console.warn('Staff profiles fetch warning:', e.message);
+    }
+  }, []);
+
   const initData = useCallback(async () => {
     setLoading(true);
-    await Promise.all([loadBranding(), loadFormSchema(), loadCustomers(), loadFollowups()]);
+    await Promise.all([loadBranding(), loadFormSchema(), loadStaffProfiles(), loadCustomers(), loadFollowups()]);
     setLoading(false);
-  }, [loadBranding, loadFormSchema, loadCustomers, loadFollowups]);
+  }, [loadBranding, loadFormSchema, loadStaffProfiles, loadCustomers, loadFollowups]);
 
   useEffect(() => {
     initData();
@@ -453,7 +540,7 @@ export default function App() {
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await Promise.all([loadBranding(), loadFormSchema(), loadCustomers(search), loadFollowups()]);
+    await Promise.all([loadBranding(), loadFormSchema(), loadStaffProfiles(), loadCustomers(search), loadFollowups()]);
     setRefreshing(false);
   };
 
@@ -638,7 +725,7 @@ export default function App() {
       entryDate: formData.entryDate || new Date().toISOString().split('T')[0],
       status: formData.status || 'Newly Contacted',
       customerType: formData.customerType || 'Building Owner',
-      salesperson: formData.salesperson || (currentProfile.role === 'employee' ? currentProfile.name : 'Karthik Raja'),
+      salesperson: formData.salesperson || (currentProfile.role === 'employee' ? currentProfile.name : (profiles.find((p) => p.role === 'employee')?.name || '')),
     };
 
     let firstFailingSection = null;
@@ -719,7 +806,8 @@ export default function App() {
   const loadTodayMobileKpi = async (targetStaff = null) => {
     try {
       const today = new Date().toISOString().split('T')[0];
-      const staffParam = targetStaff || (currentProfile.role === 'employee' ? currentProfile.name : (kpiStaff || 'Karthik Raja'));
+      const defaultStaff = profiles.find((p) => p.role === 'employee')?.name || '';
+      const staffParam = targetStaff || (currentProfile.role === 'employee' ? currentProfile.name : (kpiStaff || defaultStaff));
       const res = await apiClient.getKPIAutoFill({ date: today, staffName: staffParam });
       if (res && res.success && res.data) {
         const auto = res.data.autoValues || {};
@@ -870,7 +958,10 @@ export default function App() {
           {/* Quick Profile Switcher Pill */}
           <TouchableOpacity
             style={[styles.headerProfilePill, { backgroundColor: currentProfile.bg, borderColor: currentProfile.border }]}
-            onPress={() => setShowProfileModal(true)}
+            onPress={() => {
+              loadStaffProfiles();
+              setShowProfileModal(true);
+            }}
             activeOpacity={0.8}
           >
             <Text style={{ fontSize: 13 }}>{currentProfile.icon}</Text>
@@ -1008,7 +1099,7 @@ export default function App() {
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterScrollContent}>
               {currentProfile.role === 'owner' ? (
                 // Owner View: Filter based on Employee
-                ['all', 'Karthik Raja', 'Senthil Kumar', 'Priya Dharshini', 'Manoj Kumar'].map((staff) => {
+                ['all', ...profiles.filter((p) => p.role === 'employee').map((p) => p.name)].map((staff) => {
                   const isSelected = ownerStaffFilter === staff;
                   const count = staff === 'all'
                     ? customers.filter((c) => {
@@ -1094,7 +1185,7 @@ export default function App() {
               data={filteredCustomers}
               keyExtractor={(item, index) => item._id || String(index)}
               showsVerticalScrollIndicator={false}
-              contentContainerStyle={{ paddingBottom: 30 }}
+              contentContainerStyle={{ paddingBottom: 110 }}
               initialNumToRender={10}
               maxToRenderPerBatch={10}
               windowSize={7}
@@ -1632,8 +1723,9 @@ export default function App() {
               <View style={{ marginBottom: 12 }}>
                 <Text style={styles.kpiInputLabel}>Select Sales Rep</Text>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6, paddingTop: 4 }}>
-                  {['Karthik Raja', 'Senthil Kumar', 'Priya Dharshini', 'Manoj Kumar'].map((staff) => {
-                    const isSel = (kpiStaff || 'Karthik Raja') === staff;
+                  {profiles.filter((p) => p.role === 'employee').map((p) => p.name).map((staff) => {
+                    const defaultEmp = profiles.find((p) => p.role === 'employee')?.name || '';
+                    const isSel = (kpiStaff || defaultEmp) === staff;
                     return (
                       <TouchableOpacity
                         key={staff}
@@ -1658,7 +1750,7 @@ export default function App() {
               {/* Sales Value Hero Card */}
               <View style={{ backgroundColor: '#ECFDF5', borderWidth: 1, borderColor: '#A7F3D0', borderRadius: 14, padding: 14, marginBottom: 12, alignItems: 'center' }}>
                 <Text style={{ fontSize: 11, fontWeight: '800', color: '#047857', letterSpacing: 0.5 }}>
-                  {currentProfile.role === 'owner' ? `${(kpiStaff || 'Karthik').split(' ')[0].toUpperCase()}'S REVENUE TODAY` : "TODAY'S CLOSED REVENUE"}
+                  {currentProfile.role === 'owner' ? `${(kpiStaff || profiles.find((p) => p.role === 'employee')?.name || 'TEAM').split(' ')[0].toUpperCase()}'S REVENUE TODAY` : "TODAY'S CLOSED REVENUE"}
                 </Text>
                 <Text style={{ fontSize: 26, fontWeight: '900', color: '#065F46', marginVertical: 4 }}>
                   ₹{Number(kpiSalesValue || 0).toLocaleString('en-IN')}
@@ -1728,6 +1820,7 @@ export default function App() {
       <ProfileSelectorModal
         visible={showProfileModal}
         currentProfile={currentProfile}
+        profiles={profiles}
         onSelectProfile={(p) => setCurrentProfile(p)}
         onClose={() => setShowProfileModal(false)}
       />
@@ -1763,82 +1856,101 @@ export default function App() {
         onClose={() => setWhatsAppModalCustomer(null)}
       />
 
-      {/* Floating Modern Glassmorphic Bottom Navigation Bar */}
+      {/* Ultra-Premium iOS Floating Glassmorphic Dock */}
       {activeScreen !== 'detail' && activeScreen !== 'add' && (
-        <View style={styles.bottomNavContainer}>
-          <TouchableOpacity
-            style={[styles.bottomNavItem, activeScreen === 'list' && styles.bottomNavItemActive]}
-            onPress={() => setActiveScreen('list')}
-            activeOpacity={0.75}
-          >
-            <View style={[styles.bottomNavIconBox, activeScreen === 'list' && styles.bottomNavIconBoxActive]}>
-              <Text style={{ fontSize: 17 }}>📋</Text>
-            </View>
-            <Text style={[styles.bottomNavLabel, activeScreen === 'list' && styles.bottomNavLabelActive]}>
-              Leads
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.bottomNavItem, activeScreen === 'followups' && styles.bottomNavItemActiveFollowup]}
-            onPress={() => {
-              setActiveScreen('followups');
-              loadFollowups();
-            }}
-            activeOpacity={0.75}
-          >
-            <View style={{ position: 'relative' }}>
-              <View style={[styles.bottomNavIconBox, activeScreen === 'followups' && styles.bottomNavIconBoxActiveFollowup]}>
-                <Text style={{ fontSize: 17 }}>📞</Text>
+        <View style={styles.floatingDockWrapper} pointerEvents="box-none">
+          <View style={styles.floatingDockContainer}>
+            {/* Tab 1: Leads Directory */}
+            <TouchableOpacity
+              style={[styles.dockTab, activeScreen === 'list' && styles.dockTabActive]}
+              onPress={() => setActiveScreen('list')}
+              activeOpacity={0.75}
+            >
+              <View style={[styles.dockIconCapsule, activeScreen === 'list' && styles.dockIconCapsuleActive]}>
+                <Text style={[styles.dockIconEmoji, activeScreen === 'list' && styles.dockIconEmojiActive]}>📋</Text>
               </View>
-              {(followupCounts.overdue > 0 || followupCounts.today > 0) && (
-                <View
-                  style={[
-                    styles.navBadge,
-                    { backgroundColor: followupCounts.overdue > 0 ? '#EF4444' : '#2563EB' },
-                  ]}
-                >
-                  <Text style={styles.navBadgeText}>
-                    {followupCounts.overdue > 0 ? followupCounts.overdue : followupCounts.today}
-                  </Text>
+              <Text style={[styles.dockTabLabel, activeScreen === 'list' && styles.dockTabLabelActive]}>
+                Leads
+              </Text>
+              {activeScreen === 'list' && <View style={styles.activePillIndicator} />}
+            </TouchableOpacity>
+
+            {/* Tab 2: Follow-ups Queue */}
+            <TouchableOpacity
+              style={[styles.dockTab, activeScreen === 'followups' && styles.dockTabActive]}
+              onPress={() => {
+                setActiveScreen('followups');
+                loadFollowups();
+              }}
+              activeOpacity={0.75}
+            >
+              <View style={{ position: 'relative' }}>
+                <View style={[styles.dockIconCapsule, activeScreen === 'followups' && styles.dockIconCapsuleActive]}>
+                  <Text style={[styles.dockIconEmoji, activeScreen === 'followups' && styles.dockIconEmojiActive]}>📞</Text>
                 </View>
-              )}
-            </View>
-            <Text style={[styles.bottomNavLabel, activeScreen === 'followups' && styles.bottomNavLabelActiveFollowup]}>
-              Follow-ups
-            </Text>
-          </TouchableOpacity>
+                {(followupCounts.overdue > 0 || followupCounts.today > 0) && (
+                  <View
+                    style={[
+                      styles.dockBadge,
+                      { backgroundColor: followupCounts.overdue > 0 ? '#EF4444' : '#2563EB' },
+                    ]}
+                  >
+                    <Text style={styles.dockBadgeText}>
+                      {followupCounts.overdue > 0 ? followupCounts.overdue : followupCounts.today}
+                    </Text>
+                  </View>
+                )}
+              </View>
+              <Text style={[styles.dockTabLabel, activeScreen === 'followups' && styles.dockTabLabelActive]}>
+                Follow-ups
+              </Text>
+              {activeScreen === 'followups' && <View style={styles.activePillIndicator} />}
+            </TouchableOpacity>
 
-          {/* Quick Add Lead Center Button */}
-          <TouchableOpacity
-            style={styles.bottomNavItem}
-            onPress={() => {
-              setFormData({});
-              setErrors({});
-              setFormSection('contact');
-              setActiveScreen('add');
-            }}
-            activeOpacity={0.75}
-          >
-            <View style={[styles.bottomNavIconBox, { backgroundColor: '#EFF6FF', borderColor: '#BFDBFE' }]}>
-              <Text style={{ fontSize: 18, color: '#2563EB', fontWeight: '900' }}>➕</Text>
-            </View>
-            <Text style={[styles.bottomNavLabel, { color: '#2563EB', fontWeight: '800' }]}>+ Add Lead</Text>
-          </TouchableOpacity>
+            {/* Center Elevated Hero Action Button: + New Lead */}
+            <TouchableOpacity
+              style={styles.dockCenterHeroBtn}
+              onPress={() => {
+                setFormData({});
+                setErrors({});
+                setFormSection('contact');
+                setActiveScreen('add');
+              }}
+              activeOpacity={0.85}
+            >
+              <View style={styles.dockCenterHeroGlow} />
+              <View style={styles.dockCenterHeroInner}>
+                <Text style={styles.dockCenterHeroPlus}>＋</Text>
+              </View>
+            </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.bottomNavItem}
-            onPress={() => {
-              loadTodayMobileKpi();
-              setShowKpiModal(true);
-            }}
-            activeOpacity={0.75}
-          >
-            <View style={styles.bottomNavIconBox}>
-              <Text style={{ fontSize: 17 }}>📊</Text>
-            </View>
-            <Text style={styles.bottomNavLabel}>KPI Shift</Text>
-          </TouchableOpacity>
+            {/* Tab 3: KPI Shift */}
+            <TouchableOpacity
+              style={styles.dockTab}
+              onPress={() => {
+                loadTodayMobileKpi();
+                setShowKpiModal(true);
+              }}
+              activeOpacity={0.75}
+            >
+              <View style={styles.dockIconCapsule}>
+                <Text style={styles.dockIconEmoji}>📊</Text>
+              </View>
+              <Text style={styles.dockTabLabel}>Shift KPI</Text>
+            </TouchableOpacity>
+
+            {/* Tab 4: Server Settings / Profile */}
+            <TouchableOpacity
+              style={styles.dockTab}
+              onPress={() => setShowSettingsModal(true)}
+              activeOpacity={0.75}
+            >
+              <View style={styles.dockIconCapsule}>
+                <Text style={styles.dockIconEmoji}>⚙️</Text>
+              </View>
+              <Text style={styles.dockTabLabel}>Cloud</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       )}
     </View>
@@ -3440,79 +3552,148 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: '#2563EB',
   },
-  // Bottom Navigation Bar Styles
-  bottomNavContainer: {
+  // Ultra-Premium iOS Floating Glassmorphic Dock Styles
+  floatingDockWrapper: {
+    position: 'absolute',
+    bottom: Platform.OS === 'ios' ? 24 : 14,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 12,
+    zIndex: 999,
+  },
+  floatingDockContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-around',
+    justifyContent: 'space-between',
     backgroundColor: '#FFFFFF',
-    borderTopWidth: 1,
-    borderTopColor: '#F1F5F9',
-    paddingVertical: 8,
-    paddingHorizontal: 16,
+    borderRadius: 36,
+    paddingHorizontal: 6,
+    paddingVertical: 6,
+    width: '100%',
+    maxWidth: 420,
+    borderWidth: 1.2,
+    borderColor: '#E2E8F0',
     shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: -3 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 10,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.14,
+    shadowRadius: 20,
+    elevation: 16,
   },
-  bottomNavItem: {
+  dockTab: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 3,
+    paddingVertical: 5,
+    paddingHorizontal: 4,
+    borderRadius: 20,
+    marginHorizontal: 1.5,
   },
-  bottomNavItemActive: {},
-  bottomNavItemActiveFollowup: {},
-  bottomNavIconBox: {
-    width: 38,
-    height: 30,
-    borderRadius: 10,
+  dockTabActive: {
+    backgroundColor: '#EFF6FF',
+    borderWidth: 1.2,
+    borderColor: '#BFDBFE',
+    shadowColor: '#2563EB',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.12,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  dockIconCapsule: {
+    width: 36,
+    height: 26,
+    borderRadius: 13,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'transparent',
   },
-  bottomNavIconBoxActive: {
-    backgroundColor: '#EFF6FF',
-    borderWidth: 1,
-    borderColor: '#DBEAFE',
+  dockIconCapsuleActive: {
+    backgroundColor: '#DBEAFE',
   },
-  bottomNavIconBoxActiveFollowup: {
-    backgroundColor: '#EEF2FF',
-    borderWidth: 1,
-    borderColor: '#C7D2FE',
+  dockIconEmoji: {
+    fontSize: 16,
+    opacity: 0.7,
   },
-  bottomNavLabel: {
-    fontSize: 10.5,
+  dockIconEmojiActive: {
+    opacity: 1,
+    fontSize: 17,
+  },
+  dockTabLabel: {
+    fontSize: 10,
     fontWeight: '700',
     color: '#64748B',
     marginTop: 2,
+    letterSpacing: -0.1,
   },
-  bottomNavLabelActive: {
-    color: '#2563EB',
-    fontWeight: '800',
+  dockTabLabelActive: {
+    color: '#1D4ED8',
+    fontWeight: '900',
+    fontSize: 10.5,
   },
-  bottomNavLabelActiveFollowup: {
-    color: '#4F46E5',
-    fontWeight: '800',
+  activePillIndicator: {
+    width: 14,
+    height: 2.5,
+    borderRadius: 2,
+    backgroundColor: '#2563EB',
+    marginTop: 2,
   },
-  navBadge: {
+  dockBadge: {
     position: 'absolute',
     top: -4,
-    right: -8,
-    minWidth: 17,
-    height: 17,
-    borderRadius: 9,
+    right: -6,
+    minWidth: 16,
+    height: 16,
+    borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 3.5,
+    paddingHorizontal: 3,
     borderWidth: 1.5,
     borderColor: '#FFFFFF',
-    elevation: 3,
+    elevation: 4,
   },
-  navBadgeText: {
-    fontSize: 9.5,
+  dockBadgeText: {
+    fontSize: 9,
     fontWeight: '900',
     color: '#FFFFFF',
+  },
+  dockCenterHeroBtn: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: -22,
+    position: 'relative',
+    marginHorizontal: 4,
+  },
+  dockCenterHeroGlow: {
+    position: 'absolute',
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: '#2563EB',
+    shadowColor: '#2563EB',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.5,
+    shadowRadius: 10,
+    elevation: 8,
+  },
+  dockCenterHeroInner: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#2563EB',
+    borderWidth: 2.5,
+    borderColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  dockCenterHeroPlus: {
+    color: '#FFFFFF',
+    fontSize: 25,
+    fontWeight: '900',
+    lineHeight: 27,
+    marginTop: -2,
   },
 });

@@ -194,7 +194,8 @@ export const CustomerFormModal = ({ customer, onClose, onSuccess }) => {
     }
   };
 
-  const activeFields = activeForm ? activeForm.fields.filter((f) => f.active) : [];
+  const rawActiveFields = activeForm ? activeForm.fields.filter((f) => f.active) : [];
+  const activeFields = rawActiveFields.filter((f, idx, self) => self.findIndex((x) => x.name === f.name) === idx);
 
   const getFieldsForSection = (fieldNames) => {
     return activeFields.filter((f) => fieldNames.includes(f.name));

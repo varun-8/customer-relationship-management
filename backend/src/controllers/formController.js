@@ -470,8 +470,18 @@ const saveDraftForm = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Fields must be an array' });
     }
 
-    // Re-index order
-    const orderedFields = fields.map((f, idx) => ({
+    // Deduplicate fields by name and re-index order
+    const seenNames = new Set();
+    const uniqueFields = [];
+    for (const f of fields) {
+      const fieldName = f.name?.trim();
+      if (fieldName && !seenNames.has(fieldName)) {
+        seenNames.add(fieldName);
+        uniqueFields.push(f);
+      }
+    }
+
+    const orderedFields = uniqueFields.map((f, idx) => ({
       ...f,
       order: idx,
     }));

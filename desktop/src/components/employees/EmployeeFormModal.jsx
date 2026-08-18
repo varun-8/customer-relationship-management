@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import {
   X,
   User,
@@ -108,18 +109,24 @@ export const EmployeeFormModal = ({ employee, onClose, onSuccess }) => {
     }
   };
 
-  return (
+  return createPortal(
     <div
       className="modal-backdrop"
       onClick={onClose}
       style={{
-        zIndex: 120,
-        backgroundColor: 'rgba(15, 23, 42, 0.65)',
-        backdropFilter: 'blur(8px)',
+        position: 'fixed',
+        inset: 0,
+        width: '100vw',
+        height: '100vh',
+        zIndex: 9999,
+        backgroundColor: 'rgba(15, 23, 42, 0.8)',
+        backdropFilter: 'blur(12px)',
+        WebkitBackdropFilter: 'blur(12px)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: '16px',
+        padding: '20px',
+        margin: 0,
       }}
     >
       <div
@@ -127,12 +134,16 @@ export const EmployeeFormModal = ({ employee, onClose, onSuccess }) => {
         style={{
           maxWidth: '560px',
           width: '100%',
+          maxHeight: '92vh',
           borderRadius: '20px',
           overflow: 'hidden',
-          boxShadow: '0 25px 60px -15px rgba(15, 23, 42, 0.35)',
+          boxShadow: '0 30px 80px -15px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(255, 255, 255, 0.08)',
           background: '#FFFFFF',
-          animation: 'tabFadeInUp 0.25s ease',
-          border: '1px solid rgba(226, 232, 240, 0.8)',
+          animation: 'modalCardScaleIn 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
+          display: 'flex',
+          flexDirection: 'column',
+          margin: 'auto',
+          border: 'none',
         }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -495,6 +506,7 @@ export const EmployeeFormModal = ({ employee, onClose, onSuccess }) => {
           </div>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

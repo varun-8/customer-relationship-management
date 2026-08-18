@@ -16,59 +16,17 @@ export const PROFILES = [
     name: 'Showroom Owner',
     role: 'owner',
     icon: '👑',
-    roleTitle: 'Executive View',
+    roleTitle: 'Showroom Owner',
     subtitle: 'All Showroom Leads & Full Team Command',
     color: '#D97706',
     bg: '#FEF3C7',
     border: '#FDE68A',
   },
-  {
-    id: 'karthik',
-    name: 'Karthik Raja',
-    role: 'employee',
-    icon: '👤',
-    roleTitle: 'Sales Executive',
-    subtitle: 'Personal Follow-ups & Assigned Pipeline',
-    color: '#2563EB',
-    bg: '#EFF6FF',
-    border: '#BFDBFE',
-  },
-  {
-    id: 'senthil',
-    name: 'Senthil Kumar',
-    role: 'employee',
-    icon: '👤',
-    roleTitle: 'Sales Executive',
-    subtitle: 'Personal Follow-ups & Assigned Pipeline',
-    color: '#059669',
-    bg: '#ECFDF5',
-    border: '#A7F3D0',
-  },
-  {
-    id: 'priya',
-    name: 'Priya Dharshini',
-    role: 'employee',
-    icon: '👤',
-    roleTitle: 'Sales Executive',
-    subtitle: 'Personal Follow-ups & Assigned Pipeline',
-    color: '#7C3AED',
-    bg: '#F5F3FF',
-    border: '#DDD6FE',
-  },
-  {
-    id: 'manoj',
-    name: 'Manoj Kumar',
-    role: 'employee',
-    icon: '👤',
-    roleTitle: 'Sales Executive',
-    subtitle: 'Personal Follow-ups & Assigned Pipeline',
-    color: '#EA580C',
-    bg: '#FFF7ED',
-    border: '#FED7AA',
-  },
 ];
 
-export function ProfileSelectorModal({ visible, currentProfile, onSelectProfile, onClose }) {
+export function ProfileSelectorModal({ visible, currentProfile, profiles = PROFILES, onSelectProfile, onClose }) {
+  const displayProfiles = profiles && profiles.length > 0 ? profiles : PROFILES;
+
   return (
     <Modal visible={visible} transparent animationType="slide">
       <View style={styles.modalOverlay}>
@@ -88,7 +46,7 @@ export function ProfileSelectorModal({ visible, currentProfile, onSelectProfile,
 
           {/* Profiles List */}
           <ScrollView showsVerticalScrollIndicator={false} style={styles.scroll}>
-            {PROFILES.map((p) => {
+            {displayProfiles.map((p) => {
               const isSelected = currentProfile?.id === p.id;
               return (
                 <TouchableOpacity
