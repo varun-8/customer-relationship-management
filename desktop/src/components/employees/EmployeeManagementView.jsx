@@ -111,7 +111,7 @@ export const EmployeeManagementView = () => {
   const employeeCount = users.filter((u) => u.role === 'employee').length;
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', maxWidth: '1100px', margin: '0 auto' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', animation: 'tabFadeInUp 0.3s ease' }}>
       {/* Toast Notification */}
       {toastMessage && (
         <div
@@ -122,14 +122,15 @@ export const EmployeeManagementView = () => {
             background: '#0F172A',
             color: '#FFFFFF',
             padding: '12px 20px',
-            borderRadius: '10px',
-            boxShadow: '0 10px 25px rgba(0,0,0,0.2)',
+            borderRadius: '12px',
+            boxShadow: '0 12px 30px rgba(0,0,0,0.25)',
             display: 'flex',
             alignItems: 'center',
-            gap: '8px',
+            gap: '10px',
             zIndex: 9999,
             fontSize: '13px',
             fontWeight: '700',
+            animation: 'tabFadeInUp 0.25s ease',
           }}
         >
           <CheckCircle size={16} color="#10B981" />
@@ -137,114 +138,118 @@ export const EmployeeManagementView = () => {
         </div>
       )}
 
-      {/* 1. Scorecard Grid */}
+      {/* 1. Scorecard Metric Row */}
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-          gap: '14px',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+          gap: '12px',
         }}
       >
         {/* Card 1: Total Team */}
         <div
+          className="metric-card-item"
           style={{
             background: '#FFFFFF',
             borderRadius: '14px',
             border: '1px solid #E2E8F0',
-            padding: '16px 20px',
+            padding: '14px 18px',
             display: 'flex',
             alignItems: 'center',
             gap: '14px',
             boxShadow: '0 1px 3px rgba(15, 23, 42, 0.03)',
           }}
         >
-          <div style={{ width: '42px', height: '42px', borderRadius: '10px', background: '#EFF6FF', color: '#2563EB', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Users size={22} />
+          <div className="metric-icon-box" style={{ width: '42px', height: '42px', borderRadius: '10px', background: '#EFF6FF', color: '#2563EB', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Users size={20} />
           </div>
           <div>
-            <div style={{ fontSize: '11px', color: '#64748B', fontWeight: '800', textTransform: 'uppercase' }}>
-              Total Showroom Team
+            <div className="metric-value" style={{ fontSize: '20px', fontWeight: '900', color: '#0F172A', lineHeight: 1.1 }}>
+              {totalUsers}
             </div>
-            <div style={{ fontSize: '22px', fontWeight: '900', color: '#0F172A', marginTop: '2px' }}>
-              {totalUsers} <span style={{ fontSize: '12px', fontWeight: '600', color: '#64748B' }}>members</span>
+            <div className="metric-label" style={{ fontSize: '11.5px', color: '#64748B', fontWeight: '700', marginTop: '2px' }}>
+              Total Showroom Team
             </div>
           </div>
         </div>
 
-        {/* Card 2: Active Employees */}
+        {/* Card 2: Sales Executives */}
         <div
+          className="metric-card-item"
           style={{
             background: '#FFFFFF',
             borderRadius: '14px',
             border: '1px solid #E2E8F0',
-            padding: '16px 20px',
+            padding: '14px 18px',
             display: 'flex',
             alignItems: 'center',
             gap: '14px',
             boxShadow: '0 1px 3px rgba(15, 23, 42, 0.03)',
           }}
         >
-          <div style={{ width: '42px', height: '42px', borderRadius: '10px', background: '#ECFDF5', color: '#059669', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Briefcase size={22} />
+          <div className="metric-icon-box" style={{ width: '42px', height: '42px', borderRadius: '10px', background: '#ECFDF5', color: '#059669', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Briefcase size={20} />
           </div>
           <div>
-            <div style={{ fontSize: '11px', color: '#64748B', fontWeight: '800', textTransform: 'uppercase' }}>
-              Sales Executives
+            <div className="metric-value" style={{ fontSize: '20px', fontWeight: '900', color: '#059669', lineHeight: 1.1 }}>
+              {employeeCount}
             </div>
-            <div style={{ fontSize: '22px', fontWeight: '900', color: '#059669', marginTop: '2px' }}>
-              {employeeCount} <span style={{ fontSize: '12px', fontWeight: '600', color: '#64748B' }}>staff</span>
+            <div className="metric-label" style={{ fontSize: '11.5px', color: '#64748B', fontWeight: '700', marginTop: '2px' }}>
+              Sales Executives
             </div>
           </div>
         </div>
 
         {/* Card 3: Showroom Owners */}
         <div
+          className="metric-card-item"
           style={{
             background: '#FFFFFF',
             borderRadius: '14px',
             border: '1px solid #E2E8F0',
-            padding: '16px 20px',
+            padding: '14px 18px',
             display: 'flex',
             alignItems: 'center',
             gap: '14px',
             boxShadow: '0 1px 3px rgba(15, 23, 42, 0.03)',
           }}
         >
-          <div style={{ width: '42px', height: '42px', borderRadius: '10px', background: '#F5F3FF', color: '#7C3AED', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Shield size={22} />
+          <div className="metric-icon-box" style={{ width: '42px', height: '42px', borderRadius: '10px', background: '#F5F3FF', color: '#7C3AED', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Shield size={20} />
           </div>
           <div>
-            <div style={{ fontSize: '11px', color: '#64748B', fontWeight: '800', textTransform: 'uppercase' }}>
-              Showroom Owners
+            <div className="metric-value" style={{ fontSize: '20px', fontWeight: '900', color: '#7C3AED', lineHeight: 1.1 }}>
+              {ownerCount}
             </div>
-            <div style={{ fontSize: '22px', fontWeight: '900', color: '#7C3AED', marginTop: '2px' }}>
-              {ownerCount} <span style={{ fontSize: '12px', fontWeight: '600', color: '#64748B' }}>admin</span>
+            <div className="metric-label" style={{ fontSize: '11.5px', color: '#64748B', fontWeight: '700', marginTop: '2px' }}>
+              Showroom Owners
             </div>
           </div>
         </div>
 
-        {/* Card 4: Mobile Access */}
+        {/* Card 4: Mobile Credentials */}
         <div
+          className="metric-card-item"
           style={{
             background: '#FFFFFF',
             borderRadius: '14px',
             border: '1px solid #E2E8F0',
-            padding: '16px 20px',
+            padding: '14px 18px',
             display: 'flex',
             alignItems: 'center',
             gap: '14px',
             boxShadow: '0 1px 3px rgba(15, 23, 42, 0.03)',
           }}
         >
-          <div style={{ width: '42px', height: '42px', borderRadius: '10px', background: '#FFFBEB', color: '#D97706', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Smartphone size={22} />
+          <div className="metric-icon-box" style={{ width: '42px', height: '42px', borderRadius: '10px', background: '#FFFBEB', color: '#D97706', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Smartphone size={20} />
           </div>
           <div>
-            <div style={{ fontSize: '11px', color: '#64748B', fontWeight: '800', textTransform: 'uppercase' }}>
-              Mobile Credentials
+            <div className="metric-value" style={{ fontSize: '20px', fontWeight: '900', color: '#D97706', lineHeight: 1.1 }}>
+              {activeUsers}
             </div>
-            <div style={{ fontSize: '22px', fontWeight: '900', color: '#D97706', marginTop: '2px' }}>
-              {activeUsers} <span style={{ fontSize: '12px', fontWeight: '600', color: '#64748B' }}>ready</span>
+            <div className="metric-label" style={{ fontSize: '11.5px', color: '#64748B', fontWeight: '700', marginTop: '2px' }}>
+              Active Mobile Logins
             </div>
           </div>
         </div>
@@ -254,18 +259,18 @@ export const EmployeeManagementView = () => {
       <div
         style={{
           background: '#FFFFFF',
-          borderRadius: '14px',
+          borderRadius: '16px',
           border: '1px solid #E2E8F0',
-          padding: '16px 20px',
+          padding: '14px 18px',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
           flexWrap: 'wrap',
           gap: '12px',
-          boxShadow: '0 1px 3px rgba(15, 23, 42, 0.03)',
+          boxShadow: '0 1px 4px rgba(15, 23, 42, 0.03)',
         }}
       >
-        {/* Left: Search & Filter */}
+        {/* Left: Search & Filter Tabs */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
           <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
             <Search size={15} style={{ position: 'absolute', left: '12px', color: '#94A3B8' }} />
@@ -275,13 +280,20 @@ export const EmployeeManagementView = () => {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search by name, email, phone..."
-              style={{ width: '260px', paddingLeft: '34px', borderRadius: '8px', fontSize: '12.5px' }}
+              style={{
+                width: '260px',
+                paddingLeft: '34px',
+                borderRadius: '10px',
+                fontSize: '12.5px',
+                background: '#F8FAFC',
+                border: '1px solid #E2E8F0',
+              }}
             />
           </div>
 
-          <div style={{ display: 'flex', gap: '6px', background: '#F8FAFC', padding: '4px', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
+          <div style={{ display: 'flex', gap: '4px', background: '#F1F5F9', padding: '4px', borderRadius: '10px' }}>
             {[
-              { id: 'all', label: 'All Roles' },
+              { id: 'all', label: 'All Team' },
               { id: 'employee', label: 'Sales Staff' },
               { id: 'owner', label: 'Owners' },
             ].map((r) => (
@@ -290,14 +302,16 @@ export const EmployeeManagementView = () => {
                 type="button"
                 onClick={() => setRoleFilter(r.id)}
                 style={{
-                  padding: '5px 12px',
-                  borderRadius: '6px',
+                  padding: '6px 14px',
+                  borderRadius: '8px',
                   border: 'none',
-                  background: roleFilter === r.id ? '#2563EB' : 'transparent',
-                  color: roleFilter === r.id ? '#FFFFFF' : '#64748B',
+                  background: roleFilter === r.id ? '#FFFFFF' : 'transparent',
+                  color: roleFilter === r.id ? '#2563EB' : '#64748B',
+                  boxShadow: roleFilter === r.id ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
                   fontSize: '12px',
                   fontWeight: roleFilter === r.id ? '800' : '600',
                   cursor: 'pointer',
+                  transition: 'all 0.2s ease',
                 }}
               >
                 {r.label}
@@ -310,9 +324,10 @@ export const EmployeeManagementView = () => {
             onClick={fetchUsers}
             className="btn btn-secondary"
             title="Refresh list"
-            style={{ padding: '8px 12px', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}
+            style={{ padding: '8px 12px', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px' }}
           >
             <RefreshCw size={14} className={loading ? 'spin' : ''} />
+            <span>Refresh</span>
           </button>
         </div>
 
@@ -326,16 +341,17 @@ export const EmployeeManagementView = () => {
           className="btn btn-primary"
           style={{
             padding: '9px 18px',
+            borderRadius: '10px',
             fontSize: '13px',
             fontWeight: '800',
-            borderRadius: '8px',
             display: 'flex',
             alignItems: 'center',
             gap: '8px',
+            boxShadow: '0 4px 12px rgba(37, 99, 235, 0.25)',
           }}
         >
           <UserPlus size={16} />
-          <span>Add Employee / Mobile Login</span>
+          <span>+ Add Staff Member</span>
         </button>
       </div>
 

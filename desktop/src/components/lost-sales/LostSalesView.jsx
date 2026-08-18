@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   FileX,
   Plus,
@@ -20,6 +20,9 @@ import {
   Users,
   ChevronRight,
   Sparkles,
+  ChevronDown,
+  ChevronUp,
+  BarChart3,
 } from 'lucide-react';
 import { api } from '../../services/api';
 import { LostSaleModal } from './LostSaleModal';
@@ -32,12 +35,12 @@ export const LostSalesView = () => {
   const [analytics, setAnalytics] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [showAnalytics, setShowAnalytics] = useState(false);
 
   // Filters
   const [search, setSearch] = useState('');
   const [selectedMonth, setSelectedMonth] = useState(todayStr.substring(0, 7));
   const [productFilter, setProductFilter] = useState('all');
-  const [competitorFilter, setCompetitorFilter] = useState('all');
   const [staffFilter, setStaffFilter] = useState('all');
 
   // Modals
@@ -56,7 +59,6 @@ export const LostSalesView = () => {
       };
       if (search.trim()) params.search = search.trim();
       if (productFilter !== 'all') params.product = productFilter;
-      if (competitorFilter !== 'all') params.competitor = competitorFilter;
       if (staffFilter !== 'all') params.salesperson = staffFilter;
 
       const [listRes, analyticsRes] = await Promise.all([
@@ -76,7 +78,7 @@ export const LostSalesView = () => {
 
   useEffect(() => {
     fetchData();
-  }, [selectedMonth, productFilter, competitorFilter, staffFilter]);
+  }, [selectedMonth, productFilter, staffFilter]);
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
@@ -147,7 +149,7 @@ export const LostSalesView = () => {
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement('a');
     link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `Lost_Sales_Analysis_${selectedMonth}.csv`);
+    link.setAttribute('download', `Lost_Sales_${selectedMonth}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -158,253 +160,315 @@ export const LostSalesView = () => {
   const productBreakdown = analytics?.productBreakdown || [];
 
   return (
-    <div className="kpi-view-container lost-sales-container" style={{ display: 'flex', flexDirection: 'column', gap: '18px', maxWidth: '1200px', margin: '0 auto' }}>
-      {/* 1. Minimalist Scorecard Stat Cards */}
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', animation: 'tabFadeInUp 0.3s ease' }}>
+      {/* 1. Minimalist Executive Metric Scorecards */}
       <div
         style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-          gap: '14px',
+          gap: '12px',
         }}
       >
-        {/* Card 1: Total Lost Revenue */}
+        {/* Card 1: Total Lost Value */}
         <div
+          className="metric-card-item"
           style={{
             background: '#FFFFFF',
             borderRadius: '14px',
-            border: '1px solid #FEE2E2',
-            padding: '16px 20px',
-            boxShadow: '0 1px 3px rgba(220, 38, 38, 0.05)',
+            border: '1px solid #E2E8F0',
+            padding: '14px 18px',
+            boxShadow: '0 1px 3px rgba(15, 23, 42, 0.03)',
             display: 'flex',
             alignItems: 'center',
             gap: '14px',
           }}
         >
-          <div style={{ width: '42px', height: '42px', borderRadius: '10px', background: '#FEF2F2', color: '#DC2626', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div className="metric-icon-box" style={{ width: '42px', height: '42px', borderRadius: '10px', background: '#FEF2F2', color: '#DC2626', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <IndianRupee size={20} />
           </div>
           <div>
-            <div style={{ fontSize: '11px', color: '#991B1B', fontWeight: '800', textTransform: 'uppercase' }}>
-              Total Lost Revenue ({selectedMonth})
-            </div>
-            <div style={{ fontSize: '20px', fontWeight: '900', color: '#DC2626', marginTop: '2px' }}>
+            <div className="metric-value" style={{ fontSize: '20px', fontWeight: '900', color: '#DC2626', lineHeight: 1.1 }}>
               ₹{(analytics?.totalLostValue || 0).toLocaleString('en-IN')}
             </div>
-            <div style={{ fontSize: '11.5px', color: '#64748B', marginTop: '2px' }}>
-              <strong>{analytics?.totalLostDeals || 0}</strong> deals • Avg: ₹{(analytics?.avgLostDealValue || 0).toLocaleString('en-IN')}
+            <div className="metric-label" style={{ fontSize: '11.5px', color: '#64748B', fontWeight: '700', marginTop: '2px' }}>
+              Lost Revenue ({selectedMonth})
+            </div>
+            <div style={{ fontSize: '11px', color: '#94A3B8', marginTop: '2px' }}>
+              <strong>{analytics?.totalLostDeals || 0}</strong> deals logged
             </div>
           </div>
         </div>
 
-        {/* Card 2: Top Winning Competitor */}
+        {/* Card 2: Top Winning Showroom */}
         <div
+          className="metric-card-item"
           style={{
             background: '#FFFFFF',
             borderRadius: '14px',
-            border: '1px solid #FFEDD5',
-            padding: '16px 20px',
-            boxShadow: '0 1px 3px rgba(234, 88, 12, 0.05)',
+            border: '1px solid #E2E8F0',
+            padding: '14px 18px',
+            boxShadow: '0 1px 3px rgba(15, 23, 42, 0.03)',
             display: 'flex',
             alignItems: 'center',
             gap: '14px',
           }}
         >
-          <div style={{ width: '42px', height: '42px', borderRadius: '10px', background: '#FFF7ED', color: '#EA580C', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div className="metric-icon-box" style={{ width: '42px', height: '42px', borderRadius: '10px', background: '#FFF7ED', color: '#EA580C', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <Building2 size={20} />
           </div>
           <div style={{ minWidth: 0 }}>
-            <div style={{ fontSize: '11px', color: '#C2410C', fontWeight: '800', textTransform: 'uppercase' }}>
-              Top Competing Showroom
-            </div>
-            <div style={{ fontSize: '16px', fontWeight: '800', color: '#0F172A', marginTop: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            <div className="metric-value" style={{ fontSize: '15.5px', fontWeight: '900', color: '#0F172A', lineHeight: 1.2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {topCompetitor ? topCompetitor.competitor : 'None'}
             </div>
-            <div style={{ fontSize: '11.5px', color: '#64748B', marginTop: '2px' }}>
-              {topCompetitor ? `Captured ₹${topCompetitor.totalValue.toLocaleString('en-IN')} (${topCompetitor.count} deals)` : 'Zero competitor losses'}
+            <div className="metric-label" style={{ fontSize: '11.5px', color: '#64748B', fontWeight: '700', marginTop: '2px' }}>
+              Top Competitor Loss
+            </div>
+            <div style={{ fontSize: '11px', color: '#94A3B8', marginTop: '2px' }}>
+              {topCompetitor ? `Captured ${topCompetitor.count} deals` : 'No losses logged'}
             </div>
           </div>
         </div>
 
-        {/* Card 3: Primary Root Cause */}
+        {/* Card 3: Primary Cause */}
         <div
+          className="metric-card-item"
           style={{
             background: '#FFFFFF',
             borderRadius: '14px',
-            border: '1px solid #FEF3C7',
-            padding: '16px 20px',
-            boxShadow: '0 1px 3px rgba(217, 119, 6, 0.05)',
+            border: '1px solid #E2E8F0',
+            padding: '14px 18px',
+            boxShadow: '0 1px 3px rgba(15, 23, 42, 0.03)',
             display: 'flex',
             alignItems: 'center',
             gap: '14px',
           }}
         >
-          <div style={{ width: '42px', height: '42px', borderRadius: '10px', background: '#FFFBEB', color: '#D97706', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div className="metric-icon-box" style={{ width: '42px', height: '42px', borderRadius: '10px', background: '#FFFBEB', color: '#D97706', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <AlertTriangle size={20} />
           </div>
           <div style={{ minWidth: 0 }}>
-            <div style={{ fontSize: '11px', color: '#B45309', fontWeight: '800', textTransform: 'uppercase' }}>
-              Primary Root Cause
-            </div>
-            <div style={{ fontSize: '16px', fontWeight: '800', color: '#0F172A', marginTop: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            <div className="metric-value" style={{ fontSize: '15.5px', fontWeight: '900', color: '#0F172A', lineHeight: 1.2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {topReason ? topReason.reason : 'No Data'}
             </div>
-            <div style={{ fontSize: '11.5px', color: '#64748B', marginTop: '2px' }}>
-              {topReason ? `${topReason.percentage}% of lost inquiries` : 'Record reasons to track'}
+            <div className="metric-label" style={{ fontSize: '11.5px', color: '#64748B', fontWeight: '700', marginTop: '2px' }}>
+              Primary Root Cause
+            </div>
+            <div style={{ fontSize: '11px', color: '#94A3B8', marginTop: '2px' }}>
+              {topReason ? `${topReason.percentage}% of lost deals` : 'Record reasons to track'}
             </div>
           </div>
         </div>
 
-        {/* Card 4: Price Gap Analysis */}
+        {/* Card 4: Avg Price Gap */}
         <div
+          className="metric-card-item"
           style={{
             background: '#FFFFFF',
             borderRadius: '14px',
-            border: '1px solid #BFDBFE',
-            padding: '16px 20px',
-            boxShadow: '0 1px 3px rgba(37, 99, 235, 0.05)',
+            border: '1px solid #E2E8F0',
+            padding: '14px 18px',
+            boxShadow: '0 1px 3px rgba(15, 23, 42, 0.03)',
             display: 'flex',
             alignItems: 'center',
             gap: '14px',
           }}
         >
-          <div style={{ width: '42px', height: '42px', borderRadius: '10px', background: '#EFF6FF', color: '#2563EB', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div className="metric-icon-box" style={{ width: '42px', height: '42px', borderRadius: '10px', background: '#EFF6FF', color: '#2563EB', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <TrendingDown size={20} />
           </div>
           <div>
-            <div style={{ fontSize: '11px', color: '#1D4ED8', fontWeight: '800', textTransform: 'uppercase' }}>
-              Avg Pricing Gap
-            </div>
-            <div style={{ fontSize: '20px', fontWeight: '900', color: '#2563EB', marginTop: '2px' }}>
+            <div className="metric-value" style={{ fontSize: '20px', fontWeight: '900', color: '#2563EB', lineHeight: 1.1 }}>
               ₹{(analytics?.averagePriceDifference || 0).toLocaleString('en-IN')}
             </div>
-            <div style={{ fontSize: '11.5px', color: '#64748B', marginTop: '2px' }}>
-              Competitor discount variance
+            <div className="metric-label" style={{ fontSize: '11.5px', color: '#64748B', fontWeight: '700', marginTop: '2px' }}>
+              Avg Pricing Gap
+            </div>
+            <div style={{ fontSize: '11px', color: '#94A3B8', marginTop: '2px' }}>
+              Competitor discount margin
             </div>
           </div>
         </div>
       </div>
 
-      {/* 2. Visual Intelligence Panels: Reasons & Competitor Landscape */}
+      {/* 2. Optional Minimalist Analytics Drawer Toggle */}
       {analytics && analytics.totalLostDeals > 0 && (
-        <div className="lost-charts-grid">
-          {/* Panel A: Root Cause Distribution */}
-          <div className="lost-panel-card">
-            <div className="lost-panel-header">
-              <span className="lost-panel-title">📊 Root Cause Distribution</span>
-              <span style={{ fontSize: '11.5px', color: '#64748B' }}>By deal volume</span>
+        <div
+          style={{
+            background: '#FFFFFF',
+            borderRadius: '14px',
+            border: '1px solid #E2E8F0',
+            boxShadow: '0 1px 3px rgba(15, 23, 42, 0.03)',
+            overflow: 'hidden',
+          }}
+        >
+          <button
+            type="button"
+            onClick={() => setShowAnalytics(!showAnalytics)}
+            style={{
+              width: '100%',
+              padding: '12px 18px',
+              background: 'transparent',
+              border: 'none',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              cursor: 'pointer',
+              fontSize: '13px',
+              fontWeight: '800',
+              color: '#0F172A',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <BarChart3 size={16} color="#2563EB" />
+              <span>Lost Sales Root Cause & Competitor Intelligence Analysis</span>
+              <span style={{ fontSize: '11.5px', background: '#EFF6FF', color: '#2563EB', padding: '2px 8px', borderRadius: '6px', fontWeight: '700' }}>
+                {analytics.totalLostDeals} deals analyzed
+              </span>
             </div>
-            <div className="lost-reasons-list">
-              {(analytics.reasonsBreakdown || []).slice(0, 5).map((r) => (
-                <div key={r.reason} className="lost-reason-item">
-                  <div className="lost-reason-label-row">
-                    <span className="lost-reason-name">{r.reason}</span>
-                    <span className="lost-reason-val">
-                      {r.count} deals ({r.percentage}%) • ₹{r.totalValue.toLocaleString('en-IN')}
-                    </span>
-                  </div>
-                  <div className="lost-bar-track">
-                    <div
-                      className="lost-bar-fill"
-                      style={{ width: `${Math.min(r.percentage, 100)}%`, backgroundColor: '#DC2626' }}
-                    />
-                  </div>
-                </div>
-              ))}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#64748B', fontSize: '12px', fontWeight: '600' }}>
+              <span>{showAnalytics ? 'Hide Analytics' : 'View Breakdown'}</span>
+              {showAnalytics ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
             </div>
-          </div>
+          </button>
 
-          {/* Panel B: Competitor Market Share Loss */}
-          <div className="lost-panel-card">
-            <div className="lost-panel-header">
-              <span className="lost-panel-title">🏆 Competitor Loss Leaderboard</span>
-              <span style={{ fontSize: '11.5px', color: '#64748B' }}>Showrooms winning quotes</span>
-            </div>
-            <div className="lost-competitors-list">
-              {(analytics.competitorLeaderboard || []).slice(0, 5).map((c, idx) => (
-                <div key={c.competitor} className="lost-competitor-item">
-                  <div className="lost-comp-rank">#{idx + 1}</div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontWeight: '800', fontSize: '13px', color: '#0F172A' }}>
-                      {c.competitor}
-                    </div>
-                    <div style={{ fontSize: '11px', color: '#64748B' }}>
-                      {c.count} {c.count === 1 ? 'deal' : 'deals'} captured
-                    </div>
-                  </div>
-                  <div style={{ fontWeight: '900', fontSize: '13.5px', color: '#DC2626' }}>
-                    ₹{c.totalValue.toLocaleString('en-IN')}
-                  </div>
+          {showAnalytics && (
+            <div
+              style={{
+                padding: '16px 18px 20px',
+                borderTop: '1px solid #F1F5F9',
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+                gap: '16px',
+                background: '#FAFAFA',
+              }}
+            >
+              {/* Breakdown 1: Root Causes */}
+              <div style={{ background: '#FFFFFF', padding: '16px', borderRadius: '12px', border: '1px solid #E2E8F0' }}>
+                <div style={{ fontSize: '12px', fontWeight: '800', color: '#475569', textTransform: 'uppercase', marginBottom: '12px' }}>
+                  Root Cause Breakdown
                 </div>
-              ))}
-            </div>
-          </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  {(analytics.reasonsBreakdown || []).slice(0, 4).map((r) => (
+                    <div key={r.reason}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '4px' }}>
+                        <span style={{ fontWeight: '700', color: '#0F172A' }}>{r.reason}</span>
+                        <span style={{ color: '#64748B' }}>{r.percentage}% ({r.count})</span>
+                      </div>
+                      <div style={{ width: '100%', height: '6px', background: '#F1F5F9', borderRadius: '3px', overflow: 'hidden' }}>
+                        <div style={{ width: `${r.percentage}%`, height: '100%', background: '#DC2626', borderRadius: '3px' }} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
 
-          {/* Panel C: Product Lines Impact */}
-          <div className="lost-panel-card">
-            <div className="lost-panel-header">
-              <span className="lost-panel-title">📦 Product Line Impact</span>
-              <span style={{ fontSize: '11.5px', color: '#64748B' }}>Category leakage</span>
+              {/* Breakdown 2: Top Competitors */}
+              <div style={{ background: '#FFFFFF', padding: '16px', borderRadius: '12px', border: '1px solid #E2E8F0' }}>
+                <div style={{ fontSize: '12px', fontWeight: '800', color: '#475569', textTransform: 'uppercase', marginBottom: '12px' }}>
+                  Competing Showrooms
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {(analytics.competitorLeaderboard || []).slice(0, 4).map((c, i) => (
+                    <div key={c.competitor} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '12px', padding: '6px 8px', background: '#F8FAFC', borderRadius: '8px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ width: '18px', height: '18px', borderRadius: '50%', background: '#E2E8F0', color: '#475569', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', fontWeight: '800' }}>
+                          {i + 1}
+                        </span>
+                        <span style={{ fontWeight: '700', color: '#0F172A' }}>{c.competitor}</span>
+                      </div>
+                      <span style={{ fontWeight: '800', color: '#DC2626' }}>₹{c.totalValue.toLocaleString('en-IN')}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Breakdown 3: Product Leakage */}
+              <div style={{ background: '#FFFFFF', padding: '16px', borderRadius: '12px', border: '1px solid #E2E8F0' }}>
+                <div style={{ fontSize: '12px', fontWeight: '800', color: '#475569', textTransform: 'uppercase', marginBottom: '12px' }}>
+                  Category Revenue Loss
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                  {['Tile', 'Sanitary', 'CP', 'Adhesive'].map((pName) => {
+                    const pData = productBreakdown.find((p) => p.product === pName) || { count: 0, value: 0 };
+                    return (
+                      <div key={pName} style={{ padding: '8px 10px', background: '#F8FAFC', borderRadius: '8px', border: '1px solid #F1F5F9' }}>
+                        <div style={{ fontSize: '11px', color: '#64748B', fontWeight: '700' }}>{pName}</div>
+                        <div style={{ fontSize: '14px', fontWeight: '900', color: '#0F172A', marginTop: '2px' }}>₹{pData.value.toLocaleString('en-IN')}</div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
-            <div className="lost-product-leakage-grid">
-              {['Tile', 'Sanitary', 'CP', 'Adhesive'].map((pName) => {
-                const pData = productBreakdown.find((p) => p.product === pName) || { count: 0, value: 0 };
-                return (
-                  <div key={pName} className="lost-prod-impact-card">
-                    <div style={{ fontSize: '11.5px', fontWeight: '800', color: '#475569' }}>
-                      {pName}
-                    </div>
-                    <div style={{ fontSize: '18px', fontWeight: '900', color: '#991B1B', margin: '4px 0' }}>
-                      ₹{pData.value.toLocaleString('en-IN')}
-                    </div>
-                    <div style={{ fontSize: '11px', color: '#64748B' }}>
-                      {pData.count} {pData.count === 1 ? 'quote' : 'quotes'} lost
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
+          )}
         </div>
       )}
 
-      {/* 3. Filter & Action Toolbar */}
-      <div className="kpi-header-toolbar">
-        <div className="kpi-toolbar-left-group">
-          <form onSubmit={handleSearchSubmit} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <div style={{ position: 'relative' }}>
-              <input
-                type="text"
-                className="form-input form-input-sm"
-                placeholder="Search by customer, competitor, reason..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                style={{ width: '220px', paddingLeft: '28px', borderRadius: '8px', fontSize: '12.5px' }}
-              />
-              <Search
-                size={13}
-                style={{ position: 'absolute', left: '9px', top: '9px', color: '#94A3B8' }}
-              />
-            </div>
+      {/* 3. Streamlined Minimalist Control Toolbar */}
+      <div
+        style={{
+          background: '#FFFFFF',
+          borderRadius: '14px',
+          border: '1px solid #E2E8F0',
+          boxShadow: '0 1px 3px rgba(15, 23, 42, 0.03)',
+          padding: '10px 16px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: '12px',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+          {/* Search Input */}
+          <form onSubmit={handleSearchSubmit} style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+            <Search size={14} style={{ position: 'absolute', left: '10px', color: '#94A3B8' }} />
+            <input
+              type="text"
+              placeholder="Search lost deals, competitors..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              style={{
+                paddingLeft: '32px',
+                paddingRight: search ? '28px' : '10px',
+                height: '34px',
+                borderRadius: '8px',
+                border: '1px solid #E2E8F0',
+                background: '#F8FAFC',
+                fontSize: '12.5px',
+                width: '240px',
+              }}
+            />
             {search && (
               <button
                 type="button"
-                className="btn btn-outline btn-sm"
                 onClick={() => { setSearch(''); fetchData(); }}
-                style={{ borderRadius: '8px', padding: '5px 8px' }}
+                style={{ position: 'absolute', right: '8px', background: 'transparent', border: 'none', color: '#94A3B8', cursor: 'pointer', fontSize: '12px' }}
               >
                 ✕
               </button>
             )}
           </form>
 
-          {/* Product Pill Filter */}
-          <div style={{ display: 'flex', gap: '4px' }}>
+          {/* Product Category Segmented Pills */}
+          <div style={{ display: 'flex', gap: '4px', background: '#F1F5F9', padding: '3px', borderRadius: '8px' }}>
             {['all', 'Tile', 'Sanitary', 'CP', 'Adhesive'].map((p) => (
               <button
                 key={p}
                 type="button"
-                className={`lost-pill-filter ${productFilter === p ? 'lost-pill-filter-active' : ''}`}
                 onClick={() => setProductFilter(p)}
+                style={{
+                  padding: '4px 10px',
+                  borderRadius: '6px',
+                  border: 'none',
+                  background: productFilter === p ? '#FFFFFF' : 'transparent',
+                  color: productFilter === p ? '#0F172A' : '#64748B',
+                  fontWeight: productFilter === p ? '800' : '600',
+                  fontSize: '11.5px',
+                  cursor: 'pointer',
+                  boxShadow: productFilter === p ? '0 1px 2px rgba(0,0,0,0.06)' : 'none',
+                  transition: 'all 0.15s ease',
+                }}
               >
                 {p === 'all' ? 'All Products' : p}
               </button>
@@ -412,52 +476,84 @@ export const LostSalesView = () => {
           </div>
         </div>
 
-        <div className="kpi-toolbar-right-group">
-          {/* Staff Filter */}
-          <div className="kpi-filter-box">
-            <span className="kpi-filter-label">Staff:</span>
-            <select
-              className="form-select form-select-sm"
-              value={staffFilter}
-              onChange={(e) => setStaffFilter(e.target.value)}
-              style={{ minWidth: '135px', borderRadius: '8px', fontSize: '12.5px' }}
-            >
-              <option value="all">All Sales Staff</option>
-              <option value="Karthik Raja">Karthik Raja</option>
-              <option value="Senthil Kumar">Senthil Kumar</option>
-              <option value="Priya Dharshini">Priya Dharshini</option>
-              <option value="Manoj Kumar">Manoj Kumar</option>
-            </select>
-          </div>
+        {/* Right Filter & Action Group */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+          {/* Sales Staff Select */}
+          <select
+            value={staffFilter}
+            onChange={(e) => setStaffFilter(e.target.value)}
+            style={{
+              height: '34px',
+              borderRadius: '8px',
+              border: '1px solid #E2E8F0',
+              background: '#F8FAFC',
+              fontSize: '12px',
+              padding: '0 10px',
+              color: '#334155',
+              fontWeight: '600',
+            }}
+          >
+            <option value="all">All Sales Staff</option>
+            <option value="Karthik Raja">Karthik Raja</option>
+            <option value="Senthil Kumar">Senthil Kumar</option>
+            <option value="Priya Dharshini">Priya Dharshini</option>
+            <option value="Manoj Kumar">Manoj Kumar</option>
+          </select>
 
-          {/* Month Filter */}
-          <div className="kpi-filter-box">
-            <span className="kpi-filter-label">Month:</span>
-            <input
-              type="month"
-              className="form-input form-input-sm"
-              value={selectedMonth}
-              onChange={(e) => setSelectedMonth(e.target.value)}
-              style={{ borderRadius: '8px', fontSize: '12.5px' }}
-            />
-          </div>
+          {/* Month Selector */}
+          <input
+            type="month"
+            value={selectedMonth}
+            onChange={(e) => setSelectedMonth(e.target.value)}
+            style={{
+              height: '34px',
+              borderRadius: '8px',
+              border: '1px solid #E2E8F0',
+              background: '#F8FAFC',
+              fontSize: '12px',
+              padding: '0 8px',
+              color: '#334155',
+              fontWeight: '600',
+            }}
+          />
 
           <button
             type="button"
-            className="btn btn-outline btn-sm"
             onClick={fetchData}
-            title="Refresh records"
-            style={{ borderRadius: '8px', padding: '6px 10px' }}
+            title="Refresh"
+            style={{
+              height: '34px',
+              width: '34px',
+              borderRadius: '8px',
+              border: '1px solid #E2E8F0',
+              background: '#FFFFFF',
+              color: '#64748B',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
           >
             <RefreshCw size={13} className={loading ? 'spin' : ''} />
           </button>
 
           <button
             type="button"
-            className="btn btn-outline btn-sm"
             onClick={handleExportCSV}
-            title="Export CSV"
-            style={{ borderRadius: '8px', padding: '6px 12px', gap: '6px' }}
+            style={{
+              height: '34px',
+              padding: '0 12px',
+              borderRadius: '8px',
+              border: '1px solid #E2E8F0',
+              background: '#FFFFFF',
+              color: '#334155',
+              fontSize: '12px',
+              fontWeight: '700',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+            }}
           >
             <Download size={13} />
             <span>CSV</span>
@@ -465,193 +561,246 @@ export const LostSalesView = () => {
 
           <button
             type="button"
-            className="btn btn-primary btn-sm"
             onClick={() => {
               setEditingRecord(null);
               setShowModal(true);
             }}
-            style={{ backgroundColor: '#DC2626', borderColor: '#DC2626', display: 'flex', alignItems: 'center', gap: '5px', borderRadius: '8px', fontWeight: '800' }}
+            style={{
+              height: '34px',
+              padding: '0 14px',
+              borderRadius: '8px',
+              border: 'none',
+              background: '#DC2626',
+              color: '#FFFFFF',
+              fontSize: '12.5px',
+              fontWeight: '800',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              boxShadow: '0 2px 8px rgba(220, 38, 38, 0.25)',
+            }}
           >
-            <Plus size={14} />
+            <Plus size={15} />
             <span>Record Lost Sale</span>
           </button>
         </div>
       </div>
 
-      {/* 4. Lost Sales Deals Table */}
-      <div className="kpi-table-card">
-        <div className="kpi-table-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      {/* 4. Minimalist Lost Sales Ledger Table Card */}
+      <div
+        style={{
+          background: '#FFFFFF',
+          borderRadius: '16px',
+          border: '1px solid #E2E8F0',
+          boxShadow: '0 1px 3px rgba(15, 23, 42, 0.03)',
+          overflow: 'hidden',
+        }}
+      >
+        <div style={{ padding: '14px 20px', borderBottom: '1px solid #F1F5F9', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <FileX size={16} color="#DC2626" />
             <span style={{ fontWeight: '800', fontSize: '13.5px', color: '#0F172A' }}>
-              Lost Sales Intelligence Ledger ({lostSales.length} records)
+              Lost Quotations Ledger
+            </span>
+            <span style={{ fontSize: '11.5px', background: '#F1F5F9', color: '#64748B', padding: '2px 8px', borderRadius: '12px', fontWeight: '700' }}>
+              {lostSales.length} {lostSales.length === 1 ? 'record' : 'records'}
             </span>
           </div>
-          <span style={{ fontSize: '11.5px', color: '#64748B' }}>
-            Root causes, competitor prices & win-back tracking
+
+          <span style={{ fontSize: '11.5px', color: '#94A3B8' }}>
+            Price gaps & win-back opportunities
           </span>
         </div>
 
         {lostSales.length === 0 ? (
-          <div className="kpi-empty-state">
-            <div style={{ fontSize: '36px', marginBottom: '8px' }}>🏷️</div>
-            <div className="kpi-empty-title">No lost sales logged for {selectedMonth}</div>
-            <div className="kpi-empty-sub">
-              Record lost quotations to uncover competitor discounts, popular competing showrooms, and pricing gaps.
+          <div style={{ padding: '48px 24px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
+            <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: '#FEF2F2', color: '#DC2626', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <FileX size={24} />
             </div>
+            <div style={{ fontWeight: '800', fontSize: '15px', color: '#0F172A' }}>No lost sales logged for {selectedMonth}</div>
+            <p style={{ fontSize: '12px', color: '#64748B', maxWidth: '380px', margin: 0 }}>
+              Record lost customer quotes to uncover competitor discounts and winning showrooms.
+            </p>
             <button
               type="button"
-              className="btn btn-primary btn-sm"
               onClick={() => setShowModal(true)}
-              style={{ marginTop: '14px', backgroundColor: '#DC2626', borderColor: '#DC2626', borderRadius: '8px' }}
+              style={{
+                marginTop: '6px',
+                padding: '8px 18px',
+                borderRadius: '8px',
+                border: 'none',
+                background: '#DC2626',
+                color: '#FFFFFF',
+                fontSize: '12.5px',
+                fontWeight: '800',
+                cursor: 'pointer',
+              }}
             >
               + Record Lost Sale
             </button>
           </div>
         ) : (
-          <div className="table-responsive">
-            <table className="kpi-table">
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12.5px', textAlign: 'left' }}>
               <thead>
-                <tr>
-                  <th>Date</th>
-                  <th>Customer</th>
-                  <th>Quote Value</th>
-                  <th>Products</th>
-                  <th>Salesperson</th>
-                  <th>Lost Reason</th>
-                  <th>Competitor</th>
-                  <th>Price Gap</th>
-                  <th>Status</th>
-                  <th style={{ textAlign: 'right' }}>Actions</th>
+                <tr style={{ background: '#F8FAFC', borderBottom: '1px solid #E2E8F0', color: '#475569', fontWeight: '800' }}>
+                  <th style={{ padding: '10px 16px' }}>Date</th>
+                  <th style={{ padding: '10px 16px' }}>Customer</th>
+                  <th style={{ padding: '10px 16px' }}>Quote Value</th>
+                  <th style={{ padding: '10px 16px' }}>Lost Reason & Competitor</th>
+                  <th style={{ padding: '10px 16px' }}>Price Gap</th>
+                  <th style={{ padding: '10px 16px' }}>Salesperson</th>
+                  <th style={{ padding: '10px 16px' }}>Status</th>
+                  <th style={{ padding: '10px 16px', textAlign: 'right' }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {lostSales.map((s) => {
+                {lostSales.map((s, idx) => {
                   const isWinBack = s.status === 'win_back';
                   const initial = (s.customerName || 'C').charAt(0).toUpperCase();
 
                   return (
-                    <tr key={s._id}>
+                    <tr
+                      key={s._id}
+                      style={{
+                        borderBottom: idx < lostSales.length - 1 ? '1px solid #F1F5F9' : 'none',
+                        transition: 'background-color 0.1s ease',
+                      }}
+                      onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#F8FAFC')}
+                      onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+                    >
                       {/* Date */}
-                      <td style={{ fontWeight: '700', color: '#0F172A', whiteSpace: 'nowrap' }}>
+                      <td style={{ padding: '10px 16px', color: '#64748B', fontSize: '12px', whiteSpace: 'nowrap' }}>
                         {s.dateString}
                       </td>
 
                       {/* Customer */}
-                      <td>
+                      <td style={{ padding: '10px 16px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: '#FEE2E2', color: '#DC2626', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: '800' }}>
+                          <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: '#F1F5F9', color: '#334155', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: '800' }}>
                             {initial}
                           </div>
                           <div>
                             <div style={{ fontWeight: '800', color: '#0F172A', fontSize: '13px' }}>
                               {s.customerName}
                             </div>
-                            <div style={{ fontSize: '11px', color: '#64748B', display: 'flex', gap: '6px' }}>
-                              {s.customerId && (
-                                <span style={{ color: '#2563EB', fontWeight: '700', fontFamily: 'monospace' }}>
-                                  #{s.customerId}
-                                </span>
-                              )}
-                              {s.phone && <span>📞 {s.phone}</span>}
+                            <div style={{ fontSize: '11px', color: '#94A3B8', display: 'flex', gap: '6px' }}>
+                              {s.customerId && <span style={{ color: '#2563EB', fontFamily: 'monospace' }}>#{s.customerId}</span>}
+                              {s.phone && <span>{s.phone}</span>}
                             </div>
                           </div>
                         </div>
                       </td>
 
                       {/* Quote Value */}
-                      <td style={{ fontWeight: '800', color: '#DC2626', fontSize: '13.5px', whiteSpace: 'nowrap' }}>
+                      <td style={{ padding: '10px 16px', fontWeight: '800', color: '#DC2626', fontSize: '13px', whiteSpace: 'nowrap' }}>
                         ₹{(s.quoteValue || 0).toLocaleString('en-IN')}
                       </td>
 
-                      {/* Products */}
-                      <td>
-                        <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
-                          {(s.products || ['Tile']).map((p) => (
-                            <span key={p} className="lost-prod-tag">
-                              {p}
-                            </span>
-                          ))}
+                      {/* Lost Reason & Competitor */}
+                      <td style={{ padding: '10px 16px' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                          <div style={{ fontWeight: '700', color: '#0F172A', fontSize: '12px' }}>
+                            {s.lostReason}
+                          </div>
+                          <div style={{ fontSize: '11px', color: '#64748B' }}>
+                            via <strong style={{ color: '#C2410C' }}>{s.competitor}</strong>
+                          </div>
                         </div>
                       </td>
 
-                      {/* Salesperson */}
-                      <td style={{ fontWeight: '600', color: '#334155', whiteSpace: 'nowrap', fontSize: '12.5px' }}>
-                        {s.salesperson}
-                      </td>
-
-                      {/* Lost Reason */}
-                      <td>
-                        <span className="lost-reason-pill" title={s.notes || s.lostReason}>
-                          {s.lostReason}
-                        </span>
-                      </td>
-
-                      {/* Competitor */}
-                      <td>
-                        <span className="lost-competitor-tag">
-                          🏢 {s.competitor}
-                        </span>
-                      </td>
-
                       {/* Price Difference */}
-                      <td>
+                      <td style={{ padding: '10px 16px', whiteSpace: 'nowrap' }}>
                         {s.priceDifference > 0 ? (
-                          <span className="lost-gap-badge">
-                            -₹{s.priceDifference.toLocaleString('en-IN')}
-                            {s.priceDiffPercentage > 0 ? ` (${s.priceDiffPercentage}%)` : ''}
+                          <span style={{ fontSize: '11.5px', fontWeight: '700', color: '#DC2626', background: '#FEF2F2', padding: '2px 6px', borderRadius: '4px' }}>
+                            -₹{s.priceDifference.toLocaleString('en-IN')} {s.priceDiffPercentage > 0 ? `(${s.priceDiffPercentage}%)` : ''}
                           </span>
                         ) : (
-                          <span style={{ color: '#94A3B8', fontSize: '11.5px' }}>—</span>
+                          <span style={{ color: '#CBD5E1' }}>—</span>
                         )}
                       </td>
 
+                      {/* Salesperson */}
+                      <td style={{ padding: '10px 16px', color: '#475569', fontSize: '12px', whiteSpace: 'nowrap' }}>
+                        {s.salesperson}
+                      </td>
+
                       {/* Status */}
-                      <td>
+                      <td style={{ padding: '10px 16px', whiteSpace: 'nowrap' }}>
                         {isWinBack ? (
-                          <span className="kpi-status-badge kpi-status-closed">
+                          <span style={{ fontSize: '11px', fontWeight: '800', color: '#059669', background: '#ECFDF5', border: '1px solid #A7F3D0', padding: '2px 8px', borderRadius: '12px' }}>
                             ⚡ Win-Back
                           </span>
                         ) : (
-                          <span className="kpi-status-badge" style={{ background: '#FEE2E2', color: '#991B1B', border: '1px solid #FECDD3' }}>
+                          <span style={{ fontSize: '11px', fontWeight: '700', color: '#991B1B', background: '#FEF2F2', padding: '2px 8px', borderRadius: '12px' }}>
                             Lost
                           </span>
                         )}
                       </td>
 
                       {/* Actions */}
-                      <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
-                        <div style={{ display: 'inline-flex', gap: '6px' }}>
+                      <td style={{ padding: '10px 16px', textAlign: 'right', whiteSpace: 'nowrap' }}>
+                        <div style={{ display: 'inline-flex', gap: '4px' }}>
                           {!isWinBack && (
                             <button
                               type="button"
-                              className="btn btn-outline btn-sm"
-                              style={{ fontSize: '11px', padding: '4px 8px', color: '#059669', borderColor: '#A7F3D0', borderRadius: '6px' }}
-                              title="Reopen deal as Win-Back opportunity"
                               onClick={() => setReopeningRecord(s)}
+                              title="Reopen as Win-Back"
+                              style={{
+                                padding: '4px 8px',
+                                borderRadius: '6px',
+                                border: '1px solid #A7F3D0',
+                                background: '#ECFDF5',
+                                color: '#059669',
+                                fontSize: '11px',
+                                fontWeight: '700',
+                                cursor: 'pointer',
+                              }}
                             >
-                              <RotateCcw size={12} style={{ marginRight: '3px' }} />
-                              <span>Win-Back</span>
+                              ⚡ Win-Back
                             </button>
                           )}
                           <button
                             type="button"
-                            className="btn-icon"
-                            title="Edit Lost Sale"
                             onClick={() => {
                               setEditingRecord(s);
                               setShowModal(true);
                             }}
+                            title="Edit"
+                            style={{
+                              width: '28px',
+                              height: '28px',
+                              borderRadius: '6px',
+                              border: 'none',
+                              background: 'transparent',
+                              color: '#64748B',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                            }}
                           >
-                            <Edit2 size={13} color="#2563EB" />
+                            <Edit2 size={13} />
                           </button>
                           <button
                             type="button"
-                            className="btn-icon"
-                            title="Delete"
                             onClick={() => handleDelete(s._id, s.customerName)}
+                            title="Delete"
+                            style={{
+                              width: '28px',
+                              height: '28px',
+                              borderRadius: '6px',
+                              border: 'none',
+                              background: 'transparent',
+                              color: '#DC2626',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                            }}
                           >
-                            <Trash2 size={13} color="#DC2626" />
+                            <Trash2 size={13} />
                           </button>
                         </div>
                       </td>
@@ -678,44 +827,59 @@ export const LostSalesView = () => {
 
       {/* Win-Back Reopen Confirmation Dialog */}
       {reopeningRecord && (
-        <div className="modal-overlay" onClick={() => setReopeningRecord(null)}>
-          <div className="modal-content" style={{ maxWidth: '420px' }} onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
+        <div className="modal-backdrop" onClick={() => setReopeningRecord(null)} style={{ zIndex: 9999 }}>
+          <div
+            className="modal-card"
+            style={{ maxWidth: '440px', background: '#FFFFFF', borderRadius: '16px', overflow: 'hidden' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ padding: '16px 20px', background: '#ECFDF5', borderBottom: '1px solid #A7F3D0', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Sparkles size={18} color="#059669" />
               <h3 style={{ margin: 0, fontSize: '15px', fontWeight: '800', color: '#065F46' }}>
-                ⚡ Reopen Deal as Win-Back Opportunity
+                Reopen as Win-Back Opportunity
               </h3>
             </div>
-            <div className="modal-body" style={{ padding: '16px 20px' }}>
-              <p style={{ fontSize: '13px', color: '#334155', lineHeight: 1.5 }}>
-                Marking <strong>{reopeningRecord.customerName}</strong> (₹{reopeningRecord.quoteValue.toLocaleString('en-IN')}) as a Win-Back opportunity.
-                This will move the lead back to active negotiation in the CRM.
+            <div style={{ padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <p style={{ fontSize: '13px', color: '#334155', lineHeight: 1.5, margin: 0 }}>
+                Move <strong>{reopeningRecord.customerName}</strong> (₹{reopeningRecord.quoteValue.toLocaleString('en-IN')}) back to active showroom negotiation.
               </p>
-              <label className="form-label" style={{ marginTop: '10px' }}>
-                Win-Back Strategy / Special Offer Notes:
-              </label>
-              <textarea
-                className="form-input"
-                rows="2"
-                placeholder="e.g. Matched competitor price with 5% discount + free transport..."
-                value={winBackNotes}
-                onChange={(e) => setWinBackNotes(e.target.value)}
-              />
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                <label style={{ fontSize: '11.5px', fontWeight: '800', color: '#475569', textTransform: 'uppercase' }}>
+                  Win-Back Strategy / Special Offer Notes:
+                </label>
+                <textarea
+                  rows={3}
+                  placeholder="e.g. Matched competitor price with 5% discount + free transport..."
+                  value={winBackNotes}
+                  onChange={(e) => setWinBackNotes(e.target.value)}
+                  style={{ borderRadius: '8px', padding: '8px', border: '1px solid #CBD5E1', fontSize: '12.5px' }}
+                />
+              </div>
             </div>
-            <div className="modal-footer" style={{ padding: '12px 20px' }}>
+            <div style={{ padding: '14px 20px', background: '#F8FAFC', borderTop: '1px solid #E2E8F0', display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
               <button
                 type="button"
                 className="btn btn-secondary btn-sm"
                 onClick={() => setReopeningRecord(null)}
+                style={{ borderRadius: '8px', fontSize: '12px' }}
               >
                 Cancel
               </button>
               <button
                 type="button"
-                className="btn btn-primary btn-sm"
-                style={{ backgroundColor: '#059669', borderColor: '#059669', fontWeight: '800' }}
                 onClick={handleReopenSubmit}
+                style={{
+                  padding: '7px 16px',
+                  borderRadius: '8px',
+                  border: 'none',
+                  background: '#059669',
+                  color: '#FFFFFF',
+                  fontSize: '12.5px',
+                  fontWeight: '800',
+                  cursor: 'pointer',
+                }}
               >
-                ✓ Reopen & Win-Back Lead
+                ✓ Reopen & Win-Back
               </button>
             </div>
           </div>
@@ -724,3 +888,4 @@ export const LostSalesView = () => {
     </div>
   );
 };
+

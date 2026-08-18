@@ -17,6 +17,7 @@ import {
   Award,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   ArrowUpRight,
   ArrowDownRight,
   CalendarDays,
@@ -476,114 +477,93 @@ export const DailyKpiView = () => {
         )}
       </div>
 
-      {/* 4. Sales Staff Performance Leaderboard (Click-to-Expand) */}
+      {/* 4. Sales Staff Performance Strip (Styled like Monthly Performance Calendar) */}
       {todayStaffPerformance.length > 0 && (
-        <div className="kpi-leaderboard-card">
+        <div className="kpi-calendar-strip-card">
           <div
+            className="kpi-calendar-strip-header"
+            style={{ cursor: 'pointer', userSelect: 'none', padding: '12px 16px' }}
             onClick={() => setStaffSectionExpanded(!staffSectionExpanded)}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              padding: '14px 18px',
-              cursor: 'pointer',
-              userSelect: 'none',
-              background: staffSectionExpanded ? '#F8FAFC' : '#FFFFFF',
-              borderRadius: staffSectionExpanded ? '12px 12px 0 0' : '12px',
-              borderBottom: staffSectionExpanded ? '1px solid #E2E8F0' : 'none',
-              transition: 'background 0.2s ease',
-            }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: '#FEF3C7', color: '#D97706', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Award size={18} />
-              </div>
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span style={{ fontWeight: '800', fontSize: '13.5px', color: '#0F172A' }}>
-                    Sales Staff Performance ({formattedDayTitle})
-                  </span>
-                  {isToday && (
-                    <span className="badge" style={{ fontSize: '10px', background: '#ECFDF5', color: '#047857', border: '1px solid #A7F3D0', fontWeight: '800' }}>
-                      TODAY
-                    </span>
-                  )}
-                  <span style={{ fontSize: '11px', background: '#EFF6FF', color: '#2563EB', padding: '2px 8px', borderRadius: '12px', fontWeight: '800' }}>
-                    {todayStaffPerformance.length} staff
-                  </span>
-                </div>
-                <div style={{ fontSize: '11.5px', color: '#64748B', marginTop: '1px' }}>
-                  {staffSectionExpanded ? 'Click header to collapse staff view' : 'Click to expand staff performance breakdown & conversion rates'}
-                </div>
-              </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Award size={16} color="#D97706" />
+              <span style={{ fontWeight: '800', fontSize: '13px', color: '#0F172A' }}>
+                Sales Staff Performance ({formattedDayTitle})
+              </span>
+              {isToday && (
+                <span className="badge" style={{ fontSize: '10px', background: '#ECFDF5', color: '#047857', border: '1px solid #A7F3D0', fontWeight: '800' }}>
+                  LIVE TODAY
+                </span>
+              )}
+              <span className="kpi-minimal-badge">
+                {staffSectionExpanded ? `${todayStaffPerformance.length} Active Staff` : 'Click to View Staff'}
+              </span>
             </div>
 
-            <button
-              type="button"
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                padding: '6px 12px',
-                borderRadius: '8px',
-                border: '1px solid #E2E8F0',
-                background: '#FFFFFF',
-                color: '#2563EB',
-                fontWeight: '800',
-                fontSize: '12px',
-                cursor: 'pointer',
-              }}
-            >
-              <span>{staffSectionExpanded ? 'Collapse' : 'Click to View'}</span>
-              <ChevronDown
-                size={14}
-                style={{
-                  transform: staffSectionExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
-                  transition: 'transform 0.25s ease',
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ fontSize: '11.5px', color: '#64748B' }}>
+                {staffSectionExpanded ? 'Hide Staff Details' : 'Expand Staff Performance'}
+              </span>
+              <button
+                type="button"
+                className="btn btn-outline btn-xs"
+                style={{ padding: '3px 8px', fontSize: '11px', borderRadius: '6px' }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setStaffSectionExpanded(!staffSectionExpanded);
                 }}
-              />
-            </button>
+              >
+                {staffSectionExpanded ? '⌃' : '⌄'}
+              </button>
+            </div>
           </div>
 
           {staffSectionExpanded && (
-            <div style={{ padding: '16px 18px', animation: 'tabFadeInUp 0.25s ease' }}>
-              <div className="kpi-leaderboard-grid">
-                {todayStaffPerformance.map((s, idx) => {
-                  const rankColor = idx === 0 ? '#F59E0B' : idx === 1 ? '#94A3B8' : idx === 2 ? '#B45309' : '#64748B';
-                  const initial = (s.staffName || 'S').charAt(0).toUpperCase();
-                  const isExpanded = expandedStaffMember === s.staffName;
+            <div className="kpi-calendar-strip-scroll" style={{ padding: '10px 16px 14px' }}>
+              {todayStaffPerformance.map((s, idx) => {
+                const isSelected = expandedStaffMember === s.staffName;
+                const hasOrders = s.ordersCount > 0;
+                const rankBadge = idx === 0 ? '👑 #1' : idx === 1 ? '🥈 #2' : idx === 2 ? '🥉 #3' : `#${idx + 1}`;
+                const rankColor = idx === 0 ? '#D97706' : idx === 1 ? '#475569' : idx === 2 ? '#B45309' : '#64748B';
 
-                  return (
-                    <div
-                      key={s.staffName}
-                      className="kpi-leaderboard-item"
-                      onClick={() => setExpandedStaffMember(isExpanded ? null : s.staffName)}
-                      style={{
-                        cursor: 'pointer',
-                        border: isExpanded ? '1.5px solid #2563EB' : '1px solid #E2E8F0',
-                        boxShadow: isExpanded ? '0 4px 12px rgba(37, 99, 235, 0.12)' : 'none',
-                        transition: 'all 0.2s ease',
-                      }}
-                    >
-                      <div className="kpi-leaderboard-rank" style={{ background: `${rankColor}15`, color: rankColor, borderColor: `${rankColor}40` }}>
-                        #{idx + 1}
-                      </div>
-                      <div className="kpi-staff-avatar">
-                        {initial}
-                      </div>
-                      <div className="kpi-leaderboard-info">
-                        <div className="kpi-leaderboard-name">{s.staffName}</div>
-                        <div className="kpi-leaderboard-sub">
-                          {s.ordersCount} {s.ordersCount === 1 ? 'deal' : 'deals'} closed • {s.conversionRate}% conv.
-                        </div>
-                      </div>
-                      <div className="kpi-leaderboard-revenue">
-                        ₹{s.salesValue.toLocaleString('en-IN')}
-                      </div>
+                return (
+                  <button
+                    key={s.staffName}
+                    type="button"
+                    className={`kpi-calendar-pill ${isSelected ? 'kpi-calendar-pill-selected' : ''} ${hasOrders ? 'kpi-calendar-pill-active' : ''}`}
+                    style={{
+                      minWidth: '140px',
+                      padding: '12px 14px',
+                      cursor: 'pointer',
+                      textAlign: 'center',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      gap: '4px',
+                    }}
+                    onClick={() => setExpandedStaffMember(isSelected ? null : s.staffName)}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', marginBottom: '2px' }}>
+                      <span style={{ fontSize: '10.5px', fontWeight: '800', color: rankColor, background: `${rankColor}15`, padding: '1px 6px', borderRadius: '4px' }}>
+                        {rankBadge}
+                      </span>
+                      {hasOrders && <span className="kpi-pill-today-dot" style={{ background: '#10B981' }} />}
                     </div>
-                  );
-                })}
-              </div>
+
+                    <div style={{ fontWeight: '800', fontSize: '13px', color: '#0F172A', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '125px' }}>
+                      {s.staffName}
+                    </div>
+
+                    <div className="kpi-pill-sales" style={{ fontSize: '14px', fontWeight: '900', color: s.salesValue > 0 ? '#059669' : '#64748B' }}>
+                      {s.salesValue > 0 ? `₹${Math.round(s.salesValue / 1000)}k` : '₹0'}
+                    </div>
+
+                    <div className="kpi-pill-orders-badge" style={{ marginTop: '2px' }}>
+                      {s.ordersCount} {s.ordersCount === 1 ? 'deal' : 'deals'} • {s.conversionRate}% conv.
+                    </div>
+                  </button>
+                );
+              })}
             </div>
           )}
         </div>

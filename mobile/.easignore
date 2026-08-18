@@ -1,0 +1,8 @@
+node_modules
+android/.cxx
+android/app/.cxx
+android/build
+android/app/build
+.expo
+dist
+.temp

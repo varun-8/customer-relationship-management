@@ -12,6 +12,7 @@ import {
   Sparkles,
   KeyRound,
   UserCheck,
+  UserPlus,
 } from 'lucide-react';
 import { api } from '../../services/api';
 
@@ -108,26 +109,40 @@ export const EmployeeFormModal = ({ employee, onClose, onSuccess }) => {
   };
 
   return (
-    <div className="modal-backdrop" onClick={onClose} style={{ zIndex: 120 }}>
+    <div
+      className="modal-backdrop"
+      onClick={onClose}
+      style={{
+        zIndex: 120,
+        backgroundColor: 'rgba(15, 23, 42, 0.65)',
+        backdropFilter: 'blur(8px)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '16px',
+      }}
+    >
       <div
         className="modal-card"
         style={{
-          maxWidth: '580px',
-          width: '95%',
-          borderRadius: '16px',
+          maxWidth: '560px',
+          width: '100%',
+          borderRadius: '20px',
           overflow: 'hidden',
-          boxShadow: '0 25px 50px -12px rgba(15, 23, 42, 0.35)',
+          boxShadow: '0 25px 60px -15px rgba(15, 23, 42, 0.35)',
           background: '#FFFFFF',
+          animation: 'tabFadeInUp 0.25s ease',
+          border: '1px solid rgba(226, 232, 240, 0.8)',
         }}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Dark Modern Header */}
+        {/* Modern Minimalist Dark Header */}
         <div
           style={{
             background: 'linear-gradient(135deg, #0F172A 0%, #1E293B 100%)',
             padding: '20px 24px',
             color: '#FFFFFF',
-            borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+            borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
@@ -138,25 +153,42 @@ export const EmployeeFormModal = ({ employee, onClose, onSuccess }) => {
               style={{
                 width: '42px',
                 height: '42px',
-                borderRadius: '10px',
+                borderRadius: '12px',
                 background: isEdit ? 'linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)' : 'linear-gradient(135deg, #059669 0%, #047857 100%)',
                 color: '#FFFFFF',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                boxShadow: isEdit ? '0 4px 12px rgba(37, 99, 235, 0.4)' : '0 4px 12px rgba(5, 150, 105, 0.4)',
+                boxShadow: isEdit ? '0 4px 14px rgba(37, 99, 235, 0.4)' : '0 4px 14px rgba(5, 150, 105, 0.4)',
               }}
             >
-              {isEdit ? <UserCheck size={20} /> : <User size={20} />}
+              {isEdit ? <UserCheck size={20} /> : <UserPlus size={20} />}
             </div>
             <div>
-              <h2 style={{ fontSize: '17px', fontWeight: '800', margin: 0, color: '#FFFFFF', letterSpacing: '-0.01em' }}>
-                {isEdit ? `Edit Staff Credentials` : 'Add Showroom Staff / Login'}
-              </h2>
-              <p style={{ fontSize: '12px', color: '#94A3B8', margin: '2px 0 0' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <h2 style={{ fontSize: '17px', fontWeight: '800', margin: 0, color: '#FFFFFF', letterSpacing: '-0.01em' }}>
+                  {isEdit ? `Edit Staff Member` : 'Add New Staff Member'}
+                </h2>
+                <span
+                  style={{
+                    fontSize: '10px',
+                    fontWeight: '800',
+                    padding: '2px 8px',
+                    borderRadius: '10px',
+                    background: isEdit ? 'rgba(37, 99, 235, 0.2)' : 'rgba(5, 150, 105, 0.2)',
+                    color: isEdit ? '#93C5FD' : '#6EE7B7',
+                    border: isEdit ? '1px solid rgba(147, 197, 253, 0.3)' : '1px solid rgba(110, 231, 183, 0.3)',
+                    letterSpacing: '0.04em',
+                    textTransform: 'uppercase',
+                  }}
+                >
+                  {isEdit ? 'Credentials' : 'New Login'}
+                </span>
+              </div>
+              <p style={{ fontSize: '12px', color: '#94A3B8', margin: '3px 0 0' }}>
                 {isEdit
-                  ? `Update role, mobile credentials and profile for ${employee.name}`
-                  : 'Create mobile app credentials and assign showroom roles'}
+                  ? `Update showroom role and mobile credentials for ${employee.name}`
+                  : 'Create staff credentials to record leads on mobile CRM'}
               </p>
             </div>
           </div>
@@ -168,15 +200,16 @@ export const EmployeeFormModal = ({ employee, onClose, onSuccess }) => {
               color: '#94A3B8',
               background: 'rgba(255, 255, 255, 0.08)',
               border: 'none',
-              borderRadius: '8px',
-              padding: '6px',
+              borderRadius: '10px',
+              padding: '7px',
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
+              transition: 'background 0.2s ease',
             }}
           >
-            <X size={18} />
+            <X size={17} />
           </button>
         </div>
 
@@ -185,24 +218,28 @@ export const EmployeeFormModal = ({ employee, onClose, onSuccess }) => {
           {error && (
             <div
               style={{
-                padding: '10px 14px',
-                borderRadius: '8px',
+                padding: '11px 16px',
+                borderRadius: '10px',
                 background: '#FEF2F2',
                 border: '1px solid #FECACA',
                 color: '#DC2626',
                 fontSize: '12.5px',
                 fontWeight: '700',
-                marginBottom: '16px',
+                marginBottom: '18px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
               }}
             >
-              ⚠️ {error}
+              <span>⚠️</span>
+              <span>{error}</span>
             </div>
           )}
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             {/* Staff Full Name */}
-            <div className="form-group">
-              <label className="form-label" style={{ fontSize: '11.5px', fontWeight: '800', color: '#475569', textTransform: 'uppercase' }}>
+            <div className="form-group" style={{ margin: 0 }}>
+              <label className="form-label" style={{ fontSize: '11.5px', fontWeight: '800', color: '#475569', letterSpacing: '0.03em', textTransform: 'uppercase', marginBottom: '6px' }}>
                 <span>Staff Full Name</span> <span className="required-star">*</span>
               </label>
               <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
@@ -217,15 +254,15 @@ export const EmployeeFormModal = ({ employee, onClose, onSuccess }) => {
                   }}
                   placeholder="e.g. Karthik Raja"
                   required
-                  style={{ paddingLeft: '34px', borderRadius: '8px' }}
+                  style={{ paddingLeft: '34px', borderRadius: '10px', background: '#F8FAFC', border: '1px solid #E2E8F0', fontSize: '13px' }}
                 />
               </div>
             </div>
 
             {/* Login Email */}
-            <div className="form-group">
-              <label className="form-label" style={{ fontSize: '11.5px', fontWeight: '800', color: '#475569', textTransform: 'uppercase' }}>
-                <span>Mobile Login Email / Username</span> <span className="required-star">*</span>
+            <div className="form-group" style={{ margin: 0 }}>
+              <label className="form-label" style={{ fontSize: '11.5px', fontWeight: '800', color: '#475569', letterSpacing: '0.03em', textTransform: 'uppercase', marginBottom: '6px' }}>
+                <span>Login Email / Identifier</span> <span className="required-star">*</span>
               </label>
               <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
                 <Mail size={15} style={{ position: 'absolute', left: '12px', color: '#94A3B8' }} />
@@ -239,33 +276,32 @@ export const EmployeeFormModal = ({ employee, onClose, onSuccess }) => {
                   }}
                   placeholder="e.g. karthik@vasantham.com"
                   required
-                  style={{ paddingLeft: '34px', borderRadius: '8px' }}
+                  style={{ paddingLeft: '34px', borderRadius: '10px', background: '#F8FAFC', border: '1px solid #E2E8F0', fontSize: '13px' }}
                 />
               </div>
-              <span className="form-help" style={{ fontSize: '11px', color: '#64748B', marginTop: '3px' }}>
-                Used by staff to identify their showroom transactions.
-              </span>
             </div>
 
             {/* Mobile Login Password */}
-            <div className="form-group">
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
-                <label className="form-label" style={{ margin: 0, fontSize: '11.5px', fontWeight: '800', color: '#475569', textTransform: 'uppercase' }}>
-                  <span>{isEdit ? 'New Password (Optional)' : 'Mobile Password'}</span> {!isEdit && <span className="required-star">*</span>}
+            <div className="form-group" style={{ margin: 0 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                <label className="form-label" style={{ margin: 0, fontSize: '11.5px', fontWeight: '800', color: '#475569', letterSpacing: '0.03em', textTransform: 'uppercase' }}>
+                  <span>{isEdit ? 'Update Password (Optional)' : 'Password'}</span> {!isEdit && <span className="required-star">*</span>}
                 </label>
                 <button
                   type="button"
                   onClick={generateRandomPassword}
                   style={{
-                    background: 'none',
-                    border: 'none',
+                    background: '#EFF6FF',
+                    border: '1px solid #DBEAFE',
                     color: '#2563EB',
                     fontSize: '11.5px',
-                    fontWeight: '700',
+                    fontWeight: '800',
+                    padding: '2px 10px',
+                    borderRadius: '6px',
                     cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '4px',
+                    gap: '5px',
                   }}
                 >
                   <Sparkles size={12} />
@@ -283,9 +319,9 @@ export const EmployeeFormModal = ({ employee, onClose, onSuccess }) => {
                     setPassword(e.target.value);
                     setError('');
                   }}
-                  placeholder={isEdit ? 'Leave blank to keep unchanged' : 'Minimum 6 characters'}
+                  placeholder={isEdit ? 'Leave blank to keep current password' : 'Minimum 6 characters'}
                   required={!isEdit}
-                  style={{ paddingLeft: '34px', paddingRight: '40px', borderRadius: '8px' }}
+                  style={{ paddingLeft: '34px', paddingRight: '40px', borderRadius: '10px', background: '#F8FAFC', border: '1px solid #E2E8F0', fontSize: '13px' }}
                 />
                 <button
                   type="button"
@@ -307,9 +343,9 @@ export const EmployeeFormModal = ({ employee, onClose, onSuccess }) => {
 
             {/* Contact Phone & Status Row */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
-              <div className="form-group">
-                <label className="form-label" style={{ fontSize: '11.5px', fontWeight: '800', color: '#475569', textTransform: 'uppercase' }}>
-                  <span>Phone Number</span>
+              <div className="form-group" style={{ margin: 0 }}>
+                <label className="form-label" style={{ fontSize: '11.5px', fontWeight: '800', color: '#475569', letterSpacing: '0.03em', textTransform: 'uppercase', marginBottom: '6px' }}>
+                  <span>Contact Phone</span>
                 </label>
                 <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
                   <Phone size={15} style={{ position: 'absolute', left: '12px', color: '#94A3B8' }} />
@@ -318,17 +354,17 @@ export const EmployeeFormModal = ({ employee, onClose, onSuccess }) => {
                     className="form-input"
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
-                    placeholder="9840123456"
-                    style={{ paddingLeft: '34px', borderRadius: '8px' }}
+                    placeholder="e.g. 9840123456"
+                    style={{ paddingLeft: '34px', borderRadius: '10px', background: '#F8FAFC', border: '1px solid #E2E8F0', fontSize: '13px' }}
                   />
                 </div>
               </div>
 
-              <div className="form-group">
-                <label className="form-label" style={{ fontSize: '11.5px', fontWeight: '800', color: '#475569', textTransform: 'uppercase' }}>
+              <div className="form-group" style={{ margin: 0 }}>
+                <label className="form-label" style={{ fontSize: '11.5px', fontWeight: '800', color: '#475569', letterSpacing: '0.03em', textTransform: 'uppercase', marginBottom: '6px' }}>
                   <span>Account Status</span>
                 </label>
-                <div style={{ display: 'flex', alignItems: 'center', height: '38px', gap: '8px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', height: '40px' }}>
                   <button
                     type="button"
                     onClick={() => setActive(!active)}
@@ -336,8 +372,8 @@ export const EmployeeFormModal = ({ employee, onClose, onSuccess }) => {
                       display: 'flex',
                       alignItems: 'center',
                       gap: '8px',
-                      padding: '7px 14px',
-                      borderRadius: '8px',
+                      padding: '8px 14px',
+                      borderRadius: '10px',
                       border: active ? '1.5px solid #A7F3D0' : '1px solid #E2E8F0',
                       background: active ? '#ECFDF5' : '#F8FAFC',
                       color: active ? '#047857' : '#64748B',
@@ -346,10 +382,11 @@ export const EmployeeFormModal = ({ employee, onClose, onSuccess }) => {
                       cursor: 'pointer',
                       width: '100%',
                       justifyContent: 'center',
+                      transition: 'all 0.2s ease',
                     }}
                   >
                     <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: active ? '#10B981' : '#94A3B8' }} />
-                    <span>{active ? 'Active Employee' : 'Inactive / Suspended'}</span>
+                    <span>{active ? 'Active Staff' : 'Inactive / Suspended'}</span>
                   </button>
                 </div>
               </div>
@@ -357,23 +394,24 @@ export const EmployeeFormModal = ({ employee, onClose, onSuccess }) => {
 
             {/* Access Role Selection Cards */}
             <div>
-              <label className="form-label" style={{ fontSize: '11.5px', fontWeight: '800', color: '#475569', textTransform: 'uppercase', marginBottom: '8px' }}>
+              <label className="form-label" style={{ fontSize: '11.5px', fontWeight: '800', color: '#475569', letterSpacing: '0.03em', textTransform: 'uppercase', marginBottom: '8px' }}>
                 <span>Showroom Access Role</span>
               </label>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                 {/* Option 1: Sales Staff */}
                 <div
                   onClick={() => setRole('employee')}
                   style={{
-                    padding: '12px',
-                    borderRadius: '10px',
+                    padding: '14px',
+                    borderRadius: '12px',
                     border: role === 'employee' ? '2px solid #2563EB' : '1px solid #E2E8F0',
                     background: role === 'employee' ? '#EFF6FF' : '#FFFFFF',
                     cursor: 'pointer',
                     display: 'flex',
                     flexDirection: 'column',
                     gap: '4px',
+                    transition: 'all 0.2s ease',
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -382,8 +420,8 @@ export const EmployeeFormModal = ({ employee, onClose, onSuccess }) => {
                     </span>
                     {role === 'employee' && <Check size={14} color="#2563EB" strokeWidth={3} />}
                   </div>
-                  <span style={{ fontSize: '11px', color: '#64748B' }}>
-                    Records leads, quotes, follow-ups, and daily walk-ins.
+                  <span style={{ fontSize: '11px', color: '#64748B', lineHeight: '1.4' }}>
+                    Records leads, quotes, follow-ups, and customer visits.
                   </span>
                 </div>
 
@@ -391,14 +429,15 @@ export const EmployeeFormModal = ({ employee, onClose, onSuccess }) => {
                 <div
                   onClick={() => setRole('owner')}
                   style={{
-                    padding: '12px',
-                    borderRadius: '10px',
+                    padding: '14px',
+                    borderRadius: '12px',
                     border: role === 'owner' ? '2px solid #7C3AED' : '1px solid #E2E8F0',
                     background: role === 'owner' ? '#F5F3FF' : '#FFFFFF',
                     cursor: 'pointer',
                     display: 'flex',
                     flexDirection: 'column',
                     gap: '4px',
+                    transition: 'all 0.2s ease',
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -407,8 +446,8 @@ export const EmployeeFormModal = ({ employee, onClose, onSuccess }) => {
                     </span>
                     {role === 'owner' && <Check size={14} color="#7C3AED" strokeWidth={3} />}
                   </div>
-                  <span style={{ fontSize: '11px', color: '#64748B' }}>
-                    Executive overview, all employee filtering & settings.
+                  <span style={{ fontSize: '11px', color: '#64748B', lineHeight: '1.4' }}>
+                    Full showroom management, team filter & analytics.
                   </span>
                 </div>
               </div>
@@ -431,7 +470,7 @@ export const EmployeeFormModal = ({ employee, onClose, onSuccess }) => {
               type="button"
               onClick={onClose}
               className="btn btn-secondary"
-              style={{ padding: '9px 18px', fontSize: '13px', borderRadius: '8px' }}
+              style={{ padding: '9px 18px', fontSize: '13px', borderRadius: '10px' }}
             >
               Cancel
             </button>
@@ -443,14 +482,15 @@ export const EmployeeFormModal = ({ employee, onClose, onSuccess }) => {
                 padding: '9px 22px',
                 fontSize: '13px',
                 fontWeight: '800',
-                borderRadius: '8px',
+                borderRadius: '10px',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '6px',
+                boxShadow: '0 4px 12px rgba(37, 99, 235, 0.25)',
               }}
             >
               <Check size={15} />
-              <span>{saving ? 'Saving...' : isEdit ? 'Save Changes' : 'Create Staff Login'}</span>
+              <span>{saving ? 'Saving...' : isEdit ? 'Save Changes' : 'Create Staff Member'}</span>
             </button>
           </div>
         </form>
