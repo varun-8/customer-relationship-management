@@ -26,6 +26,7 @@ import { PROFILES, ProfileSelectorModal } from './src/components/profile/Profile
 import { MobileFollowupSheet } from './src/components/followups/MobileFollowupSheet';
 import { MobileFollowupLogModal } from './src/components/followups/MobileFollowupLogModal';
 import { MobileLostSaleModal } from './src/components/lost-sales/MobileLostSaleModal';
+import { WhatsAppTemplateModal } from './src/components/WhatsAppTemplateModal';
 
 const CONFETTI_COLORS = ['#10B981', '#3B82F6', '#F59E0B', '#EC4899', '#8B5CF6', '#F97316', '#EAB308', '#06B6D4'];
 const CONFETTI_PIECES = Array.from({ length: 26 }).map((_, i) => ({
@@ -342,6 +343,7 @@ export default function App() {
   // Celebration Animation Modal State
   const [showOrderCelebration, setShowOrderCelebration] = useState(false);
   const [celebrationData, setCelebrationData] = useState(null);
+  const [whatsAppModalCustomer, setWhatsAppModalCustomer] = useState(null);
 
   // Server IP Settings Modal
   const [showSettingsModal, setShowSettingsModal] = useState(false);
@@ -461,6 +463,11 @@ export default function App() {
   };
 
   const openWhatsApp = (phoneOrCustomer, customerName = '', requirement = '', extraInfo = {}) => {
+    if (typeof phoneOrCustomer === 'object' && phoneOrCustomer !== null) {
+      setWhatsAppModalCustomer(phoneOrCustomer);
+      return;
+    }
+
     let phone = '';
     let name = '';
     let req = '';
@@ -1748,6 +1755,14 @@ export default function App() {
         }}
       />
 
+      {/* WhatsApp Smart Message Templates Picker */}
+      <WhatsAppTemplateModal
+        visible={Boolean(whatsAppModalCustomer)}
+        customer={whatsAppModalCustomer}
+        branding={branding}
+        onClose={() => setWhatsAppModalCustomer(null)}
+      />
+
       {/* Floating Modern Glassmorphic Bottom Navigation Bar */}
       {activeScreen !== 'detail' && activeScreen !== 'add' && (
         <View style={styles.bottomNavContainer}>
@@ -1792,6 +1807,23 @@ export default function App() {
             <Text style={[styles.bottomNavLabel, activeScreen === 'followups' && styles.bottomNavLabelActiveFollowup]}>
               Follow-ups
             </Text>
+          </TouchableOpacity>
+
+          {/* Quick Add Lead Center Button */}
+          <TouchableOpacity
+            style={styles.bottomNavItem}
+            onPress={() => {
+              setFormData({});
+              setErrors({});
+              setFormSection('contact');
+              setActiveScreen('add');
+            }}
+            activeOpacity={0.75}
+          >
+            <View style={[styles.bottomNavIconBox, { backgroundColor: '#EFF6FF', borderColor: '#BFDBFE' }]}>
+              <Text style={{ fontSize: 18, color: '#2563EB', fontWeight: '900' }}>➕</Text>
+            </View>
+            <Text style={[styles.bottomNavLabel, { color: '#2563EB', fontWeight: '800' }]}>+ Add Lead</Text>
           </TouchableOpacity>
 
           <TouchableOpacity

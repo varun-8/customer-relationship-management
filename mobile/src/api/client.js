@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Default host set to local network IP for physical devices, with fallback to emulator/localhost
-const DEFAULT_HOST = 'http://10.169.195.176:5000/api';
+const DEFAULT_HOST = 'http://10.169.195.222:5000/api';
 const HOST_STORAGE_KEY = 'vasantham_api_host_url';
 const SCHEMA_CACHE_KEY = 'vasantham_cached_form_schema';
 const TOKEN_KEY = 'vasantham_mobile_jwt';
@@ -141,7 +141,7 @@ export const FALLBACK_SCHEMA = {
 export const apiClient = {
   async getApiBase() {
     const custom = await AsyncStorage.getItem(HOST_STORAGE_KEY);
-    if (custom && (custom.includes('10.169.195.237') || custom.includes('10.169.195.152') || custom.includes('192.168.1.5'))) {
+    if (custom && (custom.includes('10.169.195.176') || custom.includes('10.169.195.237') || custom.includes('10.169.195.152') || custom.includes('192.168.1.5'))) {
       await AsyncStorage.removeItem(HOST_STORAGE_KEY);
       return DEFAULT_HOST;
     }
