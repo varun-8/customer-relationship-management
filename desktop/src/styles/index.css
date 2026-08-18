@@ -728,12 +728,12 @@ h6 {
    DAILY KPI HUB & ANALYTICS STYLES
    ========================================================================== */
 /* ==========================================================================
-   DAILY KPI PERFORMANCE INTELLIGENCE HUB (AUTOMATIC & INSIGHTFUL)
+   DAILY KPI PERFORMANCE INTELLIGENCE HUB (MINIMALIST & MODERN)
    ========================================================================== */
 .kpi-view-container {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 18px;
   width: 100%;
 }
 
@@ -748,14 +748,14 @@ h6 {
   justify-content: space-between;
   gap: 12px;
   flex-wrap: wrap;
-  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.03);
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.02);
 }
 
 .kpi-toolbar-left-group,
 .kpi-toolbar-right-group {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   flex-wrap: wrap;
 }
 
@@ -763,18 +763,18 @@ h6 {
   display: flex;
   align-items: center;
   background: #F8FAFC;
-  border: 1.5px solid #E2E8F0;
+  border: 1px solid #E2E8F0;
   border-radius: 10px;
   padding: 2px;
 }
 
 .kpi-stepper-btn {
-  width: 32px;
-  height: 32px;
+  width: 30px;
+  height: 30px;
   border-radius: 8px;
   border: none;
   background: transparent;
-  color: #475569;
+  color: #64748B;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -783,8 +783,9 @@ h6 {
 }
 
 .kpi-stepper-btn:hover {
-  background: #E2E8F0;
+  background: #FFFFFF;
   color: #0F172A;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
 .kpi-stepper-display {
@@ -809,7 +810,7 @@ h6 {
 .kpi-stepper-text {
   font-size: 13px;
   font-weight: 700;
-  color: #475569;
+  color: #334155;
 }
 
 .kpi-today-tag {
@@ -818,8 +819,8 @@ h6 {
   color: #059669;
   background: #ECFDF5;
   border: 1px solid #A7F3D0;
-  padding: 2px 6px;
-  border-radius: 4px;
+  padding: 2px 7px;
+  border-radius: 6px;
   letter-spacing: 0.04em;
 }
 
@@ -830,15 +831,17 @@ h6 {
 }
 
 .kpi-filter-label {
-  font-size: 12px;
-  font-weight: 700;
+  font-size: 11.5px;
+  font-weight: 800;
   color: #64748B;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
 }
 
-/* Executive Stats Grid */
-.kpi-stats-grid {
+/* Executive Modern Minimalist Scorecard Grid */
+.kpi-scorecard-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
   gap: 14px;
 }
 
@@ -847,22 +850,22 @@ h6 {
   border-radius: 14px;
   border: 1px solid #E2E8F0;
   padding: 16px 18px;
-  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.03);
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.02);
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  gap: 8px;
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .kpi-stat-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.06);
+  box-shadow: 0 8px 20px -4px rgba(15, 23, 42, 0.06);
 }
 
-.kpi-stat-card-emerald { border-left: 4px solid #059669; }
-.kpi-stat-card-blue { border-left: 4px solid #2563EB; }
-.kpi-stat-card-purple { border-left: 4px solid #7C3AED; }
-.kpi-stat-card-amber { border-left: 4px solid #D97706; }
+.kpi-stat-card-highlight {
+  border-color: #A7F3D0;
+  background: linear-gradient(180deg, #FFFFFF 0%, #F0FDF4 100%);
+}
 
 .kpi-stat-header {
   display: flex;
@@ -871,10 +874,10 @@ h6 {
 }
 
 .kpi-stat-title {
-  font-size: 10.5px;
+  font-size: 11px;
   font-weight: 800;
   color: #64748B;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
 }
 
@@ -888,19 +891,46 @@ h6 {
 }
 
 .kpi-stat-value {
-  font-size: 22px;
+  font-size: 24px;
   font-weight: 900;
   color: #0F172A;
   letter-spacing: -0.02em;
-  margin-top: 2px;
+  line-height: 1.2;
+}
+
+.kpi-stat-unit {
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748B;
+  margin-left: 6px;
+  letter-spacing: normal;
 }
 
 .kpi-stat-footer {
   font-size: 11.5px;
   color: #64748B;
-  border-top: 1px solid #F8FAFC;
+  border-top: 1px solid #F1F5F9;
   padding-top: 8px;
   margin-top: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.kpi-pill-sub {
+  font-size: 11px;
+  color: #64748B;
+  font-weight: 600;
+}
+
+.kpi-minimal-badge {
+  font-size: 10.5px;
+  font-weight: 800;
+  color: #2563EB;
+  background: #EFF6FF;
+  border: 1px solid #BFDBFE;
+  padding: 2px 7px;
+  border-radius: 6px;
 }
 
 /* Monthly Calendar Strip */
@@ -908,29 +938,29 @@ h6 {
   background: #FFFFFF;
   border: 1px solid #E2E8F0;
   border-radius: 14px;
-  padding: 14px 18px;
   box-shadow: 0 1px 3px rgba(15, 23, 42, 0.02);
+  overflow: hidden;
 }
 
 .kpi-calendar-strip-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 10px;
+  background: #F8FAFC;
+  border-bottom: 1px solid #F1F5F9;
 }
 
 .kpi-calendar-strip-scroll {
   display: flex;
   gap: 8px;
   overflow-x: auto;
-  padding-bottom: 4px;
   scrollbar-width: thin;
 }
 
 .kpi-calendar-pill {
-  flex: 0 0 72px;
+  flex: 0 0 74px;
   background: #F8FAFC;
-  border: 1.5px solid #E2E8F0;
+  border: 1px solid #E2E8F0;
   border-radius: 10px;
   padding: 8px 6px;
   display: flex;
@@ -1005,7 +1035,7 @@ h6 {
   border: 1px solid #E2E8F0;
   border-radius: 14px;
   overflow: hidden;
-  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.03);
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.02);
 }
 
 .kpi-table-header {
@@ -1020,7 +1050,7 @@ h6 {
   color: #059669;
   background: #ECFDF5;
   border: 1px solid #A7F3D0;
-  padding: 2px 7px;
+  padding: 2px 8px;
   border-radius: 10px;
 }
 
@@ -1098,7 +1128,7 @@ h6 {
   margin-top: 4px;
 }
 
-/* Staff Leaderboard Card */
+/* Modern Minimalist Staff Leaderboard Card */
 .kpi-leaderboard-card {
   background: #FFFFFF;
   border: 1px solid #E2E8F0;
@@ -1112,32 +1142,54 @@ h6 {
   align-items: center;
   justify-content: space-between;
   margin-bottom: 12px;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 .kpi-leaderboard-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 12px;
 }
 
 .kpi-leaderboard-item {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 10px 14px;
-  border-radius: 10px;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 12px;
   background: #F8FAFC;
   border: 1px solid #E2E8F0;
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+
+.kpi-leaderboard-item:hover {
+  background: #FFFFFF;
+  border-color: #CBD5E1;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
 }
 
 .kpi-leaderboard-rank {
-  width: 26px;
-  height: 26px;
-  border-radius: 50%;
-  background: #EFF6FF;
-  color: #2563EB;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
   font-size: 12px;
+  font-weight: 900;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border: 1px solid;
+}
+
+.kpi-staff-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%);
+  color: #1E40AF;
   font-weight: 800;
+  font-size: 13px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1153,10 +1205,13 @@ h6 {
   font-size: 13px;
   font-weight: 800;
   color: #0F172A;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .kpi-leaderboard-sub {
-  font-size: 11px;
+  font-size: 11.5px;
   color: #64748B;
   margin-top: 1px;
 }
@@ -1169,17 +1224,32 @@ h6 {
 }
 
 /* ==========================================================================
-   LOST SALES & COMPETITOR INTELLIGENCE STYLES
+   LOST SALES & COMPETITOR INTELLIGENCE STYLES (MODERN MINIMALIST)
    ========================================================================== */
-.lost-stat-card-red { border-left: 4px solid #DC2626; }
-.lost-stat-card-orange { border-left: 4px solid #EA580C; }
-.lost-stat-card-amber { border-left: 4px solid #D97706; }
-.lost-stat-card-blue { border-left: 4px solid #2563EB; }
+.lost-stat-card-red {
+  border-color: #FECDD3;
+  background: linear-gradient(180deg, #FFFFFF 0%, #FFF1F2 100%);
+}
+
+.lost-stat-card-orange {
+  border-color: #FED7AA;
+  background: linear-gradient(180deg, #FFFFFF 0%, #FFF7ED 100%);
+}
+
+.lost-stat-card-amber {
+  border-color: #FDE68A;
+  background: linear-gradient(180deg, #FFFFFF 0%, #FFFBEB 100%);
+}
+
+.lost-stat-card-blue {
+  border-color: #BFDBFE;
+  background: linear-gradient(180deg, #FFFFFF 0%, #EFF6FF 100%);
+}
 
 .lost-charts-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 14px;
+  gap: 16px;
 }
 
 .lost-panel-card {
@@ -1197,7 +1267,7 @@ h6 {
   align-items: center;
   justify-content: space-between;
   margin-bottom: 12px;
-  padding-bottom: 8px;
+  padding-bottom: 10px;
   border-bottom: 1px solid #F1F5F9;
 }
 
@@ -1216,7 +1286,7 @@ h6 {
 .lost-reason-item {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 5px;
 }
 
 .lost-reason-label-row {
@@ -1248,7 +1318,7 @@ h6 {
 .lost-bar-fill {
   height: 100%;
   border-radius: 3px;
-  transition: width 0.3s ease;
+  transition: width 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .lost-competitors-list {
@@ -1261,20 +1331,26 @@ h6 {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 8px 10px;
+  padding: 8px 12px;
   background: #F8FAFC;
   border: 1px solid #E2E8F0;
-  border-radius: 8px;
+  border-radius: 10px;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.lost-competitor-item:hover {
+  background: #FFFFFF;
+  border-color: #CBD5E1;
 }
 
 .lost-comp-rank {
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
   background: #FEE2E2;
   color: #DC2626;
   font-size: 11px;
-  font-weight: 800;
+  font-weight: 900;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1284,7 +1360,7 @@ h6 {
 .lost-product-leakage-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 8px;
+  gap: 10px;
 }
 
 .lost-prod-impact-card {
@@ -1297,29 +1373,35 @@ h6 {
 }
 
 .lost-pill-filter {
-  padding: 4px 10px;
-  border-radius: 16px;
-  background: #F1F5F9;
+  padding: 5px 12px;
+  border-radius: 8px;
+  background: #F8FAFC;
   border: 1px solid #E2E8F0;
   color: #475569;
-  font-size: 11.5px;
+  font-size: 12px;
   font-weight: 700;
   cursor: pointer;
   transition: all 0.15s ease;
 }
 
+.lost-pill-filter:hover {
+  background: #EFF6FF;
+  color: #2563EB;
+  border-color: #BFDBFE;
+}
+
 .lost-pill-filter-active {
-  background: #0F172A;
-  border-color: #0F172A;
-  color: #FFFFFF;
+  background: #0F172A !important;
+  border-color: #0F172A !important;
+  color: #FFFFFF !important;
 }
 
 .lost-prod-tag {
   display: inline-block;
   padding: 2px 7px;
   background: #F1F5F9;
-  border: 1px solid #CBD5E1;
-  border-radius: 4px;
+  border: 1px solid #E2E8F0;
+  border-radius: 5px;
   font-size: 11px;
   font-weight: 700;
   color: #334155;
@@ -1327,7 +1409,7 @@ h6 {
 
 .lost-reason-pill {
   display: inline-block;
-  padding: 3px 8px;
+  padding: 3px 9px;
   border-radius: 6px;
   background: #FEF2F2;
   color: #991B1B;
@@ -1337,7 +1419,7 @@ h6 {
 }
 
 .lost-competitor-tag {
-  font-size: 12px;
+  font-size: 12.5px;
   font-weight: 700;
   color: #0F172A;
 }
@@ -1347,8 +1429,9 @@ h6 {
   font-weight: 800;
   color: #DC2626;
   background: #FEE2E2;
-  padding: 2px 6px;
-  border-radius: 4px;
+  border: 1px solid #FECDD3;
+  padding: 2px 7px;
+  border-radius: 5px;
 }
 
 /* Modal Styles */

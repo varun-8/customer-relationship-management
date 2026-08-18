@@ -595,257 +595,88 @@ export const CustomerDetailModal = ({ customer: initialCustomer, onClose, onEdit
               ) : null}
             </div>
 
-            {/* RIGHT COLUMN: ⚡ Quick Follow-up Action & Stage Update Hub */}
+            {/* RIGHT COLUMN: 💰 Commercial & Timeline Overview */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              {/* Card: ⚡ Quick Follow-up Action Card */}
+              {/* Card 1: 💰 Quotation & Deal Stage Summary */}
               <div
                 style={{
                   background: '#FFFFFF',
                   borderRadius: '14px',
-                  border: '1.5px solid #93C5FD',
-                  boxShadow: '0 4px 20px -2px rgba(37, 99, 235, 0.14)',
-                  padding: '20px',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '16px',
+                  border: '1px solid var(--border-default)',
+                  boxShadow: 'var(--shadow-xs)',
+                  overflow: 'hidden',
                 }}
               >
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <div style={{ width: '34px', height: '34px', borderRadius: '8px', background: '#EFF6FF', color: '#2563EB', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <Zap size={18} />
-                    </div>
-                    <div>
-                      <h4 style={{ fontSize: '15px', fontWeight: '800', color: 'var(--text-primary)', margin: 0 }}>
-                        Log Follow-up & Stage
-                      </h4>
-                      <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: '2px 0 0' }}>
-                        1-Click update status, discussion notes & next date.
-                      </p>
-                    </div>
-                  </div>
-
-                  <span style={{ fontSize: '12px', fontWeight: '800', color: '#1E40AF', background: '#DBEAFE', padding: '4px 10px', borderRadius: '6px', border: '1px solid #BFDBFE' }}>
-                    #{data.followUpCount || 0} → Auto #{((Number(data.followUpCount) || 0) + 1)}
-                  </span>
-                </div>
-
-                {savedSuccess && (
-                  <div
-                    style={{
-                      padding: '10px 14px',
-                      borderRadius: '8px',
-                      background: '#ECFDF5',
-                      border: '1px solid #A7F3D0',
-                      color: '#047857',
-                      fontSize: '13px',
-                      fontWeight: '700',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '8px',
-                    }}
-                  >
-                    <CheckCircle2 size={16} />
-                    <span>Follow-up logged successfully & count updated!</span>
-                  </div>
-                )}
-
-                {/* Pipeline Stage Selection Pills */}
-                <div>
-                  <label style={{ display: 'block', fontSize: '11.5px', fontWeight: '800', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '8px' }}>
-                    Select Pipeline Stage:
-                  </label>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                    {[
-                      { name: 'Quotation', color: '#2563EB' },
-                      { name: 'Negotiation', color: '#D97706' },
-                      { name: 'Order Confirmed', color: '#059669', icon: '🎉' },
-                      { name: 'Follow-up', color: '#3B82F6' },
-                      { name: 'Newly Contacted', color: '#6366F1' },
-                      { name: 'Walk-in', color: '#0284C7' },
-                      { name: 'Lost', color: '#475569' },
-                      { name: 'Future Requirement', color: '#8B5CF6' },
-                    ].map((st) => {
-                      const isSelected = followUpStatus === st.name;
-                      return (
-                        <button
-                          key={st.name}
-                          type="button"
-                          onClick={() => setFollowUpStatus(st.name)}
-                          style={{
-                            padding: '6px 12px',
-                            borderRadius: '8px',
-                            border: isSelected ? `2px solid ${st.color}` : '1px solid var(--border-default)',
-                            background: isSelected ? st.color : '#FFFFFF',
-                            color: isSelected ? '#FFFFFF' : 'var(--text-primary)',
-                            fontWeight: isSelected ? '800' : '600',
-                            fontSize: '12px',
-                            cursor: 'pointer',
-                            transition: 'all 0.15s ease',
-                            boxShadow: isSelected ? `0 2px 8px ${st.color}44` : 'none',
-                          }}
-                        >
-                          {st.icon ? `${st.icon} ` : ''}{st.name}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* Next Scheduled Follow-up Date */}
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
-                    <label style={{ fontSize: '11.5px', fontWeight: '800', color: 'var(--text-muted)', textTransform: 'uppercase' }}>
-                      Next Scheduled Follow-up:
-                    </label>
-                    <div style={{ display: 'flex', gap: '4px' }}>
-                      {[
-                        { label: '+2 Days', days: 2 },
-                        { label: '+3 Days', days: 3 },
-                        { label: '+1 Week', days: 7 },
-                        { label: '+2 Weeks', days: 14 },
-                      ].map((item) => (
-                        <button
-                          key={item.label}
-                          type="button"
-                          onClick={() => {
-                            const target = new Date(Date.now() + item.days * 86400000);
-                            setFollowUpNextDate(target.toISOString().split('T')[0]);
-                          }}
-                          style={{
-                            fontSize: '11px',
-                            fontWeight: '700',
-                            padding: '3px 7px',
-                            borderRadius: '5px',
-                            border: '1px solid #DBEAFE',
-                            background: '#EFF6FF',
-                            color: '#2563EB',
-                            cursor: 'pointer',
-                          }}
-                        >
-                          {item.label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                  <input
-                    type="date"
-                    value={followUpNextDate}
-                    onChange={(e) => setFollowUpNextDate(e.target.value)}
-                    style={{
-                      width: '100%',
-                      height: '40px',
-                      borderRadius: '8px',
-                      border: '1px solid var(--border-default)',
-                      padding: '0 12px',
-                      fontSize: '13px',
-                      color: 'var(--text-primary)',
-                      outline: 'none',
-                    }}
-                  />
-                </div>
-
-                {/* Discussion Notes Input */}
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
-                    <label style={{ fontSize: '11.5px', fontWeight: '800', color: 'var(--text-muted)', textTransform: 'uppercase' }}>
-                      Discussion Notes / Call Summary:
-                    </label>
-                  </div>
-                  <textarea
-                    value={followUpReason}
-                    onChange={(e) => setFollowUpReason(e.target.value)}
-                    placeholder="Enter notes from call/meeting (e.g. Client agreed on pricing, visiting showroom tomorrow for billing)..."
-                    rows={3}
-                    style={{
-                      width: '100%',
-                      borderRadius: '8px',
-                      border: '1px solid var(--border-default)',
-                      padding: '10px 12px',
-                      fontSize: '13px',
-                      outline: 'none',
-                      fontFamily: 'inherit',
-                      resize: 'vertical',
-                      lineHeight: 1.4,
-                    }}
-                  />
-
-                  {/* Quick Tag Snippets */}
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px', marginTop: '6px' }}>
-                    {QUICK_NOTE_SNIPPETS.map((snip, idx) => (
-                      <button
-                        key={idx}
-                        type="button"
-                        onClick={() => setFollowUpReason((prev) => (prev ? `${prev} • ${snip}` : snip))}
-                        style={{
-                          fontSize: '11px',
-                          padding: '3px 8px',
-                          borderRadius: '12px',
-                          border: '1px solid #E2E8F0',
-                          background: '#F8FAFC',
-                          color: '#475569',
-                          cursor: 'pointer',
-                        }}
-                      >
-                        + {snip}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Final Booking / Order Value (if Order Confirmed) */}
-                {followUpStatus === 'Order Confirmed' && (
-                  <div style={{ padding: '12px', background: '#ECFDF5', borderRadius: '8px', border: '1px solid #A7F3D0' }}>
-                    <label style={{ display: 'block', fontSize: '11.5px', fontWeight: '800', color: '#15803D', textTransform: 'uppercase', marginBottom: '4px' }}>
-                      🎉 Final Booking / Order Value (₹):
-                    </label>
-                    <input
-                      type="number"
-                      value={followUpOrderValue}
-                      onChange={(e) => setFollowUpOrderValue(e.target.value)}
-                      placeholder="e.g. 250000"
-                      style={{
-                        width: '100%',
-                        height: '38px',
-                        borderRadius: '6px',
-                        border: '1.5px solid #059669',
-                        padding: '0 10px',
-                        fontSize: '14px',
-                        fontWeight: '800',
-                        color: '#065F46',
-                        outline: 'none',
-                      }}
-                    />
-                  </div>
-                )}
-
-                {/* Primary Submit Button */}
-                <button
-                  type="button"
-                  onClick={handleLogFollowUp}
-                  disabled={submittingFollowUp}
-                  className="btn btn-primary"
+                <div
                   style={{
-                    padding: '12px 20px',
-                    fontSize: '13.5px',
-                    borderRadius: '10px',
+                    padding: '12px 18px',
+                    background: '#F8FAFC',
+                    borderBottom: '1px solid var(--border-default)',
                     display: 'flex',
                     alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '8px',
-                    fontWeight: '800',
-                    boxShadow: '0 4px 12px rgba(37, 99, 235, 0.3)',
+                    justifyContent: 'space-between',
                   }}
                 >
-                  <Zap size={16} />
-                  <span>
-                    {submittingFollowUp
-                      ? 'Saving Follow-up to MongoDB...'
-                      : savedSuccess
-                      ? '✓ Follow-up Saved & Synced!'
-                      : `Log Follow-up (#${((Number(data.followUpCount) || 0) + 1)}) & Save Stage`}
-                  </span>
-                </button>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div style={{ width: '28px', height: '28px', borderRadius: '6px', background: '#EFF6FF', color: '#2563EB', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <IndianRupee size={15} />
+                    </div>
+                    <h3 style={{ fontSize: '13px', fontWeight: '800', color: 'var(--text-primary)', margin: 0, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                      Commercial & Deal Summary
+                    </h3>
+                  </div>
+                </div>
+
+                <div style={{ padding: '6px 18px', display: 'flex', flexDirection: 'column' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '11px 0', borderBottom: '1px solid #F1F5F9' }}>
+                    <span style={{ fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600' }}>Pipeline Status</span>
+                    <span
+                      style={{
+                        padding: '4px 10px',
+                        borderRadius: '6px',
+                        fontSize: '12px',
+                        fontWeight: '800',
+                        background: '#EFF6FF',
+                        color: '#2563EB',
+                        border: '1px solid #BFDBFE',
+                      }}
+                    >
+                      {data.status || 'Active Lead'}
+                    </span>
+                  </div>
+
+                  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '11px 0', borderBottom: '1px solid #F1F5F9' }}>
+                    <span style={{ fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600' }}>Quotation Shared</span>
+                    <span style={{ fontSize: '14px', fontWeight: '900', color: '#0F172A' }}>
+                      ₹{Number(data.quotationValue || 0).toLocaleString('en-IN')}
+                    </span>
+                  </div>
+
+                  {data.orderValue ? (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '11px 0', borderBottom: '1px solid #F1F5F9' }}>
+                      <span style={{ fontSize: '13px', color: '#059669', fontWeight: '700' }}>Confirmed Order Value</span>
+                      <span style={{ fontSize: '14.5px', fontWeight: '900', color: '#059669' }}>
+                        ₹{Number(data.orderValue).toLocaleString('en-IN')}
+                      </span>
+                    </div>
+                  ) : null}
+
+                  {data.quotationDate ? (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', padding: '11px 0', borderBottom: '1px solid #F1F5F9' }}>
+                      <span style={{ fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600' }}>Quotation Date</span>
+                      <span style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text-primary)' }}>
+                        {data.quotationDate}
+                      </span>
+                    </div>
+                  ) : null}
+
+                  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '11px 0' }}>
+                    <span style={{ fontSize: '13px', color: 'var(--text-muted)', fontWeight: '600' }}>Total Interactions</span>
+                    <span style={{ fontSize: '13px', fontWeight: '800', color: '#2563EB' }}>
+                      {data.followUpCount || 0} calls/meetings
+                    </span>
+                  </div>
+                </div>
               </div>
 
               {/* Card: Latest Interaction Timeline Summary */}

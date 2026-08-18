@@ -168,13 +168,14 @@ export const CustomerFormModal = ({ customer, onClose, onSuccess }) => {
 
     try {
       if (isEdit) {
-        const res = await updateCustomer(customer._id, formData, notes);
-        if (res.success) {
+        const customerIdToUpdate = customer?._id || customer?.customerId || customer?.id;
+        const res = await updateCustomer(customerIdToUpdate, formData, notes);
+        if (res && res.success) {
           onSuccess && onSuccess(res.customer);
           onClose();
         } else {
-          setGeneralError(res.message || 'Failed to update customer');
-          if (res.errors) setErrors(res.errors);
+          setGeneralError(res?.message || 'Failed to update customer');
+          if (res?.errors) setErrors(res.errors);
         }
       } else {
         const res = await createCustomer(formData, notes);
@@ -199,29 +200,59 @@ export const CustomerFormModal = ({ customer, onClose, onSuccess }) => {
     return activeFields.filter((f) => fieldNames.includes(f.name));
   };
 
-  const predefinedNames = FIELD_SECTIONS.flatMap((s) => s.fieldNames);
+  const activeSections = isEdit
+    ? [
+        {
+          id: 'contact',
+          title: '1. Contact & Lead Profile',
+          shortTitle: 'Contact Profile',
+          icon: User,
+          fieldNames: ['customerId', 'entryDate', 'customerName', 'phone', 'location', 'leadSource', 'salesperson', 'customerType'],
+          description: 'Client personal details, contact number, location, and showroom sales assignment.',
+        },
+        {
+          id: 'requirements',
+          title: '2. Project & Material Specifications',
+          shortTitle: 'Material Specs',
+          icon: Layers,
+          fieldNames: ['houseStage', 'requirement', 'approxQuantity', 'tileBudget', 'sanitaryRequirement', 'adhesiveRequirement'],
+          description: 'Flooring stage, tile area, sanitary ware, and adhesive requirements.',
+        },
+        {
+          id: 'quotation',
+          title: '3. Commercial & Quotation Value',
+          shortTitle: 'Quotation & Value',
+          icon: IndianRupee,
+          fieldNames: ['quotationValue', 'quotationDate', 'orderValue', 'crossSell'],
+          description: 'Shared quotation price, quotation date, confirmed order value, and cross-sell items.',
+        },
+      ]
+    : FIELD_SECTIONS;
+
+  const predefinedNames = activeSections.flatMap((s) => s.fieldNames);
   const extraFields = activeFields.filter((f) => !predefinedNames.includes(f.name));
 
-  const currentSectionIndex = FIELD_SECTIONS.findIndex((s) => s.id === activeTab);
-  const currentSection = FIELD_SECTIONS[currentSectionIndex] || FIELD_SECTIONS[0];
+  const currentSectionIndex = activeSections.findIndex((s) => s.id === activeTab);
+  const currentSection = activeSections[currentSectionIndex] || activeSections[0];
 
   return (
     <div className="modal-backdrop" onClick={onClose} style={{ zIndex: 110 }}>
       <div
         className="modal-card"
         style={{
-          maxWidth: '920px',
+          maxWidth: '940px',
           width: '95%',
           maxHeight: '94vh',
           display: 'flex',
           flexDirection: 'column',
           borderRadius: '16px',
           overflow: 'hidden',
-          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+          boxShadow: '0 25px 50px -12px rgba(15, 23, 42, 0.35)',
+          background: '#FFFFFF',
         }}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Modal Header */}
+        {/* Modern Header */}
         <div
           style={{
             background: 'linear-gradient(135deg, #0F172A 0%, #1E293B 100%)',
@@ -239,12 +270,12 @@ export const CustomerFormModal = ({ customer, onClose, onSuccess }) => {
                 width: '46px',
                 height: '46px',
                 borderRadius: '12px',
-                background: isEdit ? 'linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%)' : 'linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)',
+                background: isEdit ? 'linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)' : 'linear-gradient(135deg, #059669 0%, #047857 100%)',
                 color: '#FFFFFF',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                boxShadow: '0 8px 16px rgba(37, 99, 235, 0.35)',
+                boxShadow: isEdit ? '0 8px 16px rgba(37, 99, 235, 0.35)' : '0 8px 16px rgba(5, 150, 105, 0.35)',
               }}
             >
               {isEdit ? <Edit3 size={22} /> : <UserPlus size={22} />}
@@ -252,7 +283,7 @@ export const CustomerFormModal = ({ customer, onClose, onSuccess }) => {
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <h2 style={{ fontSize: '18px', fontWeight: '800', margin: 0, letterSpacing: '-0.01em' }}>
-                  {isEdit ? `Edit Customer Profile: ${customer.customerId}` : 'Register New Showroom Customer'}
+                  {isEdit ? `Edit Customer Profile` : 'Register New Showroom Customer'}
                 </h2>
                 <span
                   style={{
@@ -265,7 +296,7 @@ export const CustomerFormModal = ({ customer, onClose, onSuccess }) => {
                     fontFamily: 'monospace',
                     fontSize: '12px',
                     fontWeight: '700',
-                    color: '#60A5FA',
+                    color: '#93C5FD',
                   }}
                 >
                   <Hash size={11} />
@@ -274,22 +305,32 @@ export const CustomerFormModal = ({ customer, onClose, onSuccess }) => {
               </div>
               <p style={{ fontSize: '12.5px', color: '#94A3B8', margin: '3px 0 0' }}>
                 {isEdit
-                  ? 'Update customer details dynamically in MongoDB Atlas.'
+                  ? 'Update customer details, material specs, and quotation dynamically.'
                   : 'Quickly record client requirements, tile budgets, and follow-up timeline.'}
               </p>
             </div>
           </div>
 
           <button
+            type="button"
             onClick={onClose}
-            className="btn-icon"
-            style={{ color: '#94A3B8', background: 'rgba(255, 255, 255, 0.08)', borderRadius: '8px', padding: '6px' }}
+            style={{
+              color: '#94A3B8',
+              background: 'rgba(255, 255, 255, 0.08)',
+              border: 'none',
+              borderRadius: '8px',
+              padding: '6px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
           >
             <X size={18} />
           </button>
         </div>
 
-        {/* Section Step Chips & Progress Bar */}
+        {/* Section Step Chips & Progress Line */}
         <div style={{ background: '#FFFFFF', borderBottom: '1px solid var(--border-default)' }}>
           {/* Progress Line */}
           <div style={{ height: '3px', background: '#F1F5F9', width: '100%' }}>
@@ -297,15 +338,15 @@ export const CustomerFormModal = ({ customer, onClose, onSuccess }) => {
               style={{
                 height: '100%',
                 background: '#2563EB',
-                width: activeTab === 'all' ? '100%' : `${((currentSectionIndex + 1) / FIELD_SECTIONS.length) * 100}%`,
+                width: activeTab === 'all' ? '100%' : `${((currentSectionIndex + 1) / activeSections.length) * 100}%`,
                 transition: 'width 0.3s ease',
               }}
             />
           </div>
 
           {/* Tab Buttons */}
-          <div style={{ display: 'flex', gap: '6px', padding: '12px 28px', overflowX: 'auto' }}>
-            {FIELD_SECTIONS.map((sec, idx) => {
+          <div style={{ display: 'flex', gap: '8px', padding: '12px 28px', overflowX: 'auto' }}>
+            {activeSections.map((sec, idx) => {
               const Icon = sec.icon;
               const isSelected = activeTab === sec.id;
               const secFields = getFieldsForSection(sec.fieldNames);
@@ -320,20 +361,20 @@ export const CustomerFormModal = ({ customer, onClose, onSuccess }) => {
                   style={{
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '7px',
-                    padding: '8px 14px',
+                    gap: '8px',
+                    padding: '8px 16px',
                     borderRadius: '8px',
-                    background: isSelected ? '#2563EB' : isCompleted ? '#F0FDF4' : '#F8FAFC',
-                    color: isSelected ? '#FFFFFF' : isCompleted ? '#15803D' : '#475569',
-                    border: `1.5px solid ${isSelected ? '#1D4ED8' : isCompleted ? '#BBF7D0' : '#E2E8F0'}`,
+                    background: isSelected ? '#EFF6FF' : isCompleted ? '#F0FDF4' : '#F8FAFC',
+                    color: isSelected ? '#2563EB' : isCompleted ? '#15803D' : '#475569',
+                    border: `1.5px solid ${isSelected ? '#93C5FD' : isCompleted ? '#BBF7D0' : '#E2E8F0'}`,
                     fontSize: '12.5px',
-                    fontWeight: isSelected ? '700' : '600',
+                    fontWeight: isSelected ? '800' : '600',
                     cursor: 'pointer',
                     transition: 'all 0.15s ease',
                     whiteSpace: 'nowrap',
                   }}
                 >
-                  <Icon size={14} color={isSelected ? '#FFFFFF' : isCompleted ? '#16A34A' : '#64748B'} />
+                  <Icon size={14} color={isSelected ? '#2563EB' : isCompleted ? '#16A34A' : '#64748B'} />
                   <span>{sec.shortTitle}</span>
                   {hasError ? (
                     <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#EF4444' }} />
@@ -351,19 +392,19 @@ export const CustomerFormModal = ({ customer, onClose, onSuccess }) => {
                 display: 'flex',
                 alignItems: 'center',
                 gap: '6px',
-                padding: '8px 14px',
+                padding: '8px 16px',
                 borderRadius: '8px',
-                background: activeTab === 'all' ? '#2563EB' : '#F8FAFC',
-                color: activeTab === 'all' ? '#FFFFFF' : '#475569',
-                border: `1.5px solid ${activeTab === 'all' ? '#1D4ED8' : '#E2E8F0'}`,
+                background: activeTab === 'all' ? '#EFF6FF' : '#F8FAFC',
+                color: activeTab === 'all' ? '#2563EB' : '#475569',
+                border: `1.5px solid ${activeTab === 'all' ? '#93C5FD' : '#E2E8F0'}`,
                 fontSize: '12.5px',
-                fontWeight: activeTab === 'all' ? '700' : '600',
+                fontWeight: activeTab === 'all' ? '800' : '600',
                 cursor: 'pointer',
                 whiteSpace: 'nowrap',
               }}
             >
               <LayoutGrid size={14} />
-              <span>View All 23 Fields</span>
+              <span>View All Fields</span>
             </button>
           </div>
         </div>
@@ -397,30 +438,30 @@ export const CustomerFormModal = ({ customer, onClose, onSuccess }) => {
               <div
                 style={{
                   background: '#FFFFFF',
-                  borderRadius: '12px',
-                  border: '1px solid var(--border-default)',
-                  boxShadow: 'var(--shadow-xs)',
-                  padding: '20px 22px',
+                  borderRadius: '14px',
+                  border: '1px solid #E2E8F0',
+                  boxShadow: '0 1px 3px rgba(15, 23, 42, 0.03)',
+                  padding: '22px 24px',
                 }}
               >
                 {/* Active Section Banner */}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: '14px', marginBottom: '16px', borderBottom: '1px solid #F1F5F9' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: '14px', marginBottom: '18px', borderBottom: '1px solid #F1F5F9' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: '#EFF6FF', color: '#2563EB', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <div style={{ width: '34px', height: '34px', borderRadius: '8px', background: '#EFF6FF', color: '#2563EB', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       <currentSection.icon size={17} />
                     </div>
                     <div>
-                      <h3 style={{ fontSize: '15px', fontWeight: '800', color: 'var(--text-primary)', margin: 0 }}>
+                      <h3 style={{ fontSize: '14.5px', fontWeight: '800', color: '#0F172A', margin: 0 }}>
                         {currentSection.title}
                       </h3>
-                      <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: '2px 0 0' }}>
+                      <p style={{ fontSize: '12px', color: '#64748B', margin: '2px 0 0' }}>
                         {currentSection.description}
                       </p>
                     </div>
                   </div>
 
-                  <span style={{ fontSize: '12px', fontWeight: '700', color: '#2563EB', background: '#EFF6FF', padding: '4px 10px', borderRadius: '6px' }}>
-                    Step {currentSectionIndex + 1} of {FIELD_SECTIONS.length}
+                  <span style={{ fontSize: '11.5px', fontWeight: '800', color: '#2563EB', background: '#EFF6FF', padding: '3px 9px', borderRadius: '6px' }}>
+                    Step {currentSectionIndex + 1} of {activeSections.length}
                   </span>
                 </div>
 
@@ -485,7 +526,7 @@ export const CustomerFormModal = ({ customer, onClose, onSuccess }) => {
                 )}
 
                 {/* 2-Column Responsive Form Fields */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', gap: '16px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: '16px 20px' }}>
                   {getFieldsForSection(currentSection.fieldNames).map((field) => (
                     <DynamicFieldInput
                       key={field.id}
@@ -500,7 +541,7 @@ export const CustomerFormModal = ({ customer, onClose, onSuccess }) => {
             ) : (
               /* If "All Fields" Active: Render Grouped Sections */
               <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                {FIELD_SECTIONS.map((sec) => {
+                {activeSections.map((sec) => {
                   const secFields = getFieldsForSection(sec.fieldNames);
                   if (secFields.length === 0) return null;
                   const Icon = sec.icon;
@@ -510,20 +551,20 @@ export const CustomerFormModal = ({ customer, onClose, onSuccess }) => {
                       key={sec.id}
                       style={{
                         background: '#FFFFFF',
-                        borderRadius: '12px',
-                        border: '1px solid var(--border-default)',
-                        boxShadow: 'var(--shadow-xs)',
-                        padding: '18px 20px',
+                        borderRadius: '14px',
+                        border: '1px solid #E2E8F0',
+                        boxShadow: '0 1px 3px rgba(15, 23, 42, 0.03)',
+                        padding: '20px 22px',
                       }}
                     >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', paddingBottom: '10px', marginBottom: '14px', borderBottom: '1px solid #F1F5F9' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', paddingBottom: '10px', marginBottom: '16px', borderBottom: '1px solid #F1F5F9' }}>
                         <Icon size={16} color="#2563EB" />
-                        <h3 style={{ fontSize: '14px', fontWeight: '800', color: 'var(--text-primary)', margin: 0 }}>
+                        <h3 style={{ fontSize: '14px', fontWeight: '800', color: '#0F172A', margin: 0 }}>
                           {sec.title}
                         </h3>
                       </div>
 
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', gap: '14px' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: '16px 20px' }}>
                         {secFields.map((field) => (
                           <DynamicFieldInput
                             key={field.id}
@@ -542,11 +583,11 @@ export const CustomerFormModal = ({ customer, onClose, onSuccess }) => {
 
             {/* Extra custom fields if any */}
             {extraFields.length > 0 && (
-              <div style={{ marginTop: '18px', background: '#FFFFFF', borderRadius: '12px', border: '1px solid var(--border-default)', padding: '18px 20px' }}>
-                <h4 style={{ fontSize: '13.5px', fontWeight: '800', color: 'var(--text-primary)', marginBottom: '12px' }}>
+              <div style={{ marginTop: '18px', background: '#FFFFFF', borderRadius: '14px', border: '1px solid #E2E8F0', padding: '20px 22px' }}>
+                <h4 style={{ fontSize: '13.5px', fontWeight: '800', color: '#0F172A', marginBottom: '14px' }}>
                   Additional Showroom Fields
                 </h4>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', gap: '14px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: '16px 20px' }}>
                   {extraFields.map((field) => (
                     <DynamicFieldInput
                       key={field.id}
@@ -562,7 +603,7 @@ export const CustomerFormModal = ({ customer, onClose, onSuccess }) => {
 
             {/* General Internal Remarks */}
             {(activeTab === 'followup' || activeTab === 'all') && (
-              <div style={{ marginTop: '16px', background: '#FFFFFF', borderRadius: '12px', border: '1px solid var(--border-default)', padding: '18px 20px' }}>
+              <div style={{ marginTop: '16px', background: '#FFFFFF', borderRadius: '14px', border: '1px solid #E2E8F0', padding: '20px 22px' }}>
                 <label className="form-label" style={{ marginBottom: '6px' }}>
                   Internal Showroom Remarks & Special Delivery Notes:
                 </label>
@@ -595,11 +636,11 @@ export const CustomerFormModal = ({ customer, onClose, onSuccess }) => {
               <button
                 type="button"
                 onClick={() => {
-                  const idx = FIELD_SECTIONS.findIndex((s) => s.id === activeTab);
-                  if (idx > 0) setActiveTab(FIELD_SECTIONS[idx - 1].id);
+                  const idx = activeSections.findIndex((s) => s.id === activeTab);
+                  if (idx > 0) setActiveTab(activeSections[idx - 1].id);
                 }}
                 className="btn btn-secondary"
-                style={{ padding: '8px 16px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px' }}
+                style={{ padding: '8px 16px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px', borderRadius: '8px' }}
               >
                 <ChevronLeft size={16} />
                 <span>Previous Section</span>
@@ -613,23 +654,23 @@ export const CustomerFormModal = ({ customer, onClose, onSuccess }) => {
               onClick={onClose}
               className="btn btn-secondary"
               disabled={submitting}
-              style={{ padding: '8px 16px', fontSize: '13px' }}
+              style={{ padding: '8px 16px', fontSize: '13px', borderRadius: '8px' }}
             >
               Cancel
             </button>
 
             {/* Next Section or Final Submit */}
-            {activeTab !== 'followup' && activeTab !== 'all' ? (
+            {currentSectionIndex < activeSections.length - 1 && activeTab !== 'all' ? (
               <button
                 type="button"
                 onClick={() => {
-                  const idx = FIELD_SECTIONS.findIndex((s) => s.id === activeTab);
-                  if (idx < FIELD_SECTIONS.length - 1) setActiveTab(FIELD_SECTIONS[idx + 1].id);
+                  const idx = activeSections.findIndex((s) => s.id === activeTab);
+                  if (idx < activeSections.length - 1) setActiveTab(activeSections[idx + 1].id);
                 }}
                 className="btn btn-primary"
-                style={{ padding: '8px 18px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px' }}
+                style={{ padding: '8px 18px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px', borderRadius: '8px', fontWeight: '700' }}
               >
-                <span>Next: {FIELD_SECTIONS[currentSectionIndex + 1]?.shortTitle}</span>
+                <span>Next: {activeSections[currentSectionIndex + 1]?.shortTitle}</span>
                 <ChevronRight size={16} />
               </button>
             ) : (
@@ -638,15 +679,15 @@ export const CustomerFormModal = ({ customer, onClose, onSuccess }) => {
                 form="customer-form-modal"
                 className="btn btn-primary"
                 disabled={submitting}
-                style={{ padding: '8px 22px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px', fontWeight: '800' }}
+                style={{ padding: '8px 22px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px', fontWeight: '800', borderRadius: '8px' }}
               >
                 <Check size={16} />
                 <span>
                   {submitting
-                    ? 'Saving to MongoDB Atlas...'
+                    ? 'Saving Profile...'
                     : isEdit
                     ? 'Save Customer Profile'
-                    : '✓ Register Customer (23 Fields)'}
+                    : '✓ Register Customer Profile'}
                 </span>
               </button>
             )}

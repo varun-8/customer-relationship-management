@@ -86,6 +86,7 @@ exports.createLostSale = async (req, res) => {
         const query = customerRef ? { _id: customerRef } : { customerId };
         const customer = await Customer.findOne(query);
         if (customer) {
+          customer.status = 'Lost';
           const currentData = customer.data instanceof Map ? Object.fromEntries(customer.data) : (customer.data || {});
           currentData.status = 'Lost';
           currentData.lostReason = lostReason.trim();
@@ -94,6 +95,7 @@ exports.createLostSale = async (req, res) => {
           currentData.lastReason = `Lost Deal to ${competitor || 'competitor'}: ${lostReason.trim()}`;
 
           customer.data = currentData;
+          customer.markModified('data');
           await customer.save();
         }
       } catch (err) {

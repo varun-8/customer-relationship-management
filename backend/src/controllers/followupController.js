@@ -85,7 +85,8 @@ exports.getFollowupsList = async (req, res) => {
       const c = extractCustomerData(doc);
 
       // Skip closed or lost deals from active follow-up queue
-      if (c.status === 'Order Confirmed' || c.status === 'Lost') return;
+      const statusLower = (c.status || '').toLowerCase();
+      if (c.status === 'Order Confirmed' || statusLower.includes('lost')) return;
 
       const qVal = c.quotationValue || 0;
       totalPipelineValue += qVal;

@@ -35,6 +35,7 @@ export const DailyKpiView = () => {
   const [selectedDay, setSelectedDay] = useState(todayStr);
   const [dayData, setDayData] = useState(null);
   const [dayLoading, setDayLoading] = useState(false);
+  const [calendarExpanded, setCalendarExpanded] = useState(false);
 
   // Overall data
   const [summaryData, setSummaryData] = useState(null);
@@ -143,7 +144,7 @@ export const DailyKpiView = () => {
 
   const summary = summaryData?.summary || {};
   const today = summaryData?.today || {};
-  const leaderboard = summaryData?.staffLeaderboard || [];
+  const monthlyLeaderboard = summaryData?.staffLeaderboard || [];
 
   // Day specific variables
   const dayKpi = dayData?.kpi || {};
@@ -158,12 +159,56 @@ export const DailyKpiView = () => {
     year: 'numeric',
   });
 
+  // Calculate Sales Staff Performance based on today's / selected day's live customer metrics
+  const todayStaffPerformance = useMemo(() => {
+    const staffMap = {};
+    const DEFAULT_STAFF = ['Karthik Raja', 'Senthil Kumar', 'Priya Dharshini', 'Manoj Kumar'];
+    
+    DEFAULT_STAFF.forEach((name) => {
+      staffMap[name] = {
+        staffName: name,
+        visits: 0,
+        quotes: 0,
+        ordersCount: 0,
+        salesValue: 0,
+      };
+    });
+
+    dayCustomers.forEach((c) => {
+      const staff = c.salesperson || 'Showroom Staff';
+      if (!staffMap[staff]) {
+        staffMap[staff] = {
+          staffName: staff,
+          visits: 0,
+          quotes: 0,
+          ordersCount: 0,
+          salesValue: 0,
+        };
+      }
+      staffMap[staff].visits += 1;
+      if (c.status === 'Quotation' || c.status === 'Negotiation' || Number(c.quotationValue) > 0) {
+        staffMap[staff].quotes += 1;
+      }
+      if (c.status === 'Order Confirmed') {
+        staffMap[staff].ordersCount += 1;
+        staffMap[staff].salesValue += (Number(c.orderValue) || Number(c.quotationValue) || 0);
+      }
+    });
+
+    return Object.values(staffMap)
+      .map((s) => ({
+        ...s,
+        conversionRate: s.visits > 0 ? Number(((s.ordersCount / s.visits) * 100).toFixed(1)) : 0,
+      }))
+      .sort((a, b) => b.salesValue - a.salesValue || b.ordersCount - a.ordersCount || b.visits - a.visits);
+  }, [dayCustomers]);
+
   return (
     <div className="kpi-view-container">
-      {/* 1. Clutter-Free Header & Date Navigation Bar */}
+      {/* 1. Ultra-Clean Minimalist Header Toolbar */}
       <div className="kpi-header-toolbar">
         <div className="kpi-toolbar-left-group">
-          {/* Day Navigator */}
+          {/* Day Stepper Navigator */}
           <div className="kpi-day-stepper">
             <button
               type="button"
@@ -175,7 +220,7 @@ export const DailyKpiView = () => {
             </button>
 
             <div className="kpi-stepper-display">
-              <CalendarDays size={16} color="#0F766E" />
+              <CalendarDays size={16} className="text-primary" />
               <input
                 type="date"
                 className="kpi-date-input-stepper"
@@ -201,23 +246,23 @@ export const DailyKpiView = () => {
               type="button"
               className="btn btn-secondary btn-sm"
               onClick={() => setSelectedDay(todayStr)}
-              style={{ fontSize: '12px', padding: '6px 12px' }}
+              style={{ fontSize: '12px', padding: '6px 14px', borderRadius: '8px' }}
             >
-              Jump to Today
+              Today
             </button>
           )}
         </div>
 
-        {/* Right Filter Controls */}
+        {/* Right Filter & Action Controls */}
         <div className="kpi-toolbar-right-group">
           {/* Staff Filter */}
           <div className="kpi-filter-box">
-            <span className="kpi-filter-label">Staff:</span>
+            <span className="kpi-filter-label">Rep:</span>
             <select
               className="form-select form-select-sm"
               value={staffFilter}
               onChange={(e) => setStaffFilter(e.target.value)}
-              style={{ minWidth: '135px' }}
+              style={{ minWidth: '135px', borderRadius: '8px', fontSize: '12.5px' }}
             >
               <option value="all">All Sales Staff</option>
               <option value="Karthik Raja">Karthik Raja</option>
@@ -235,6 +280,7 @@ export const DailyKpiView = () => {
               className="form-input form-input-sm"
               value={selectedMonth}
               onChange={(e) => setSelectedMonth(e.target.value)}
+              style={{ borderRadius: '8px', fontSize: '12.5px' }}
             />
           </div>
 
@@ -242,7 +288,8 @@ export const DailyKpiView = () => {
             type="button"
             className="btn btn-outline btn-sm"
             onClick={() => { fetchKpiData(); fetchDayPerformance(selectedDay); }}
-            title="Refresh live CRM calculations"
+            title="Refresh Live Metrics"
+            style={{ borderRadius: '8px', padding: '6px 10px' }}
           >
             <RefreshCw size={13} className={loading || dayLoading ? 'spin' : ''} />
           </button>
@@ -251,7 +298,8 @@ export const DailyKpiView = () => {
             type="button"
             className="btn btn-outline btn-sm"
             onClick={handleExportCSV}
-            title="Export Monthly KPI CSV"
+            title="Export Monthly KPI Report"
+            style={{ borderRadius: '8px', padding: '6px 12px', gap: '6px' }}
           >
             <Download size={13} />
             <span>Export CSV</span>
@@ -259,168 +307,245 @@ export const DailyKpiView = () => {
         </div>
       </div>
 
-      {/* 2. Insightful Performance Cards for the Selected Day */}
-      <div className="kpi-stats-grid">
-        {/* Card A: Day's Revenue */}
-        <div className="kpi-stat-card kpi-stat-card-emerald">
+      {/* 2. Modern Minimalist Metric Scorecard Grid */}
+      <div className="kpi-scorecard-grid">
+        {/* Footfall / Inquiries */}
+        <div className="kpi-stat-card">
           <div className="kpi-stat-header">
-            <span className="kpi-stat-title">DAY'S SALES REVENUE</span>
+            <span className="kpi-stat-title">Footfall & Inquiries</span>
+            <div className="kpi-stat-icon-bubble" style={{ background: '#EFF6FF', color: '#2563EB' }}>
+              <Users size={16} />
+            </div>
+          </div>
+          <div className="kpi-stat-value">
+            {dayKpi.walkins?.visits ?? 0}
+            <span className="kpi-stat-unit">walk-ins</span>
+          </div>
+          <div className="kpi-stat-footer">
+            <span className="kpi-pill-sub">{isToday ? "Today's showroom inquiries" : `Inquiries on ${selectedDay}`}</span>
+          </div>
+        </div>
+
+        {/* Quotations Given */}
+        <div className="kpi-stat-card">
+          <div className="kpi-stat-header">
+            <span className="kpi-stat-title">Quotations Shared</span>
+            <div className="kpi-stat-icon-bubble" style={{ background: '#F5F3FF', color: '#7C3AED' }}>
+              <Receipt size={16} />
+            </div>
+          </div>
+          <div className="kpi-stat-value">
+            {dayKpi.walkins?.quotes ?? 0}
+            <span className="kpi-stat-unit">quotes ({dayKpi.quoteRate || 0}%)</span>
+          </div>
+          <div className="kpi-stat-footer">
+            <span className="kpi-pill-sub">Formal price quotes presented</span>
+          </div>
+        </div>
+
+        {/* Closed Orders & Revenue (Highlight Card) */}
+        <div className="kpi-stat-card kpi-stat-card-highlight">
+          <div className="kpi-stat-header">
+            <span className="kpi-stat-title" style={{ color: '#047857' }}>Closed Revenue & Bills</span>
             <div className="kpi-stat-icon-bubble" style={{ background: '#ECFDF5', color: '#059669' }}>
-              <IndianRupee size={18} />
+              <IndianRupee size={16} />
             </div>
           </div>
           <div className="kpi-stat-value" style={{ color: '#059669' }}>
             ₹{(dayKpi.salesValue || 0).toLocaleString('en-IN')}
           </div>
-          <div className="kpi-stat-footer" style={{ display: 'flex', justifyContent: 'space-between' }}>
-            <span>
-              {dayComp.salesGrowthPercent >= 0 ? (
-                <span style={{ color: '#059669', fontWeight: '700', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
-                  <ArrowUpRight size={14} /> +{dayComp.salesGrowthPercent}% vs prev day
-                </span>
-              ) : (
-                <span style={{ color: '#E11D48', fontWeight: '700', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
-                  <ArrowDownRight size={14} /> {dayComp.salesGrowthPercent}% vs prev day
-                </span>
-              )}
-            </span>
-            <span style={{ color: '#64748B' }}>
-              Month: <strong>₹{(summary.totalSalesValue || 0).toLocaleString('en-IN')}</strong>
-            </span>
-          </div>
-        </div>
-
-        {/* Card B: Funnel & Conversion */}
-        <div className="kpi-stat-card kpi-stat-card-blue">
-          <div className="kpi-stat-header">
-            <span className="kpi-stat-title">SHOWROOM FUNNEL & CONVERSION</span>
-            <div className="kpi-stat-icon-bubble" style={{ background: '#EFF6FF', color: '#2563EB' }}>
-              <Users size={18} />
-            </div>
-          </div>
-          <div className="kpi-stat-value" style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
-            <span style={{ color: '#2563EB' }}>{dayKpi.conversionRate || 0}%</span>
-            <span style={{ fontSize: '13px', fontWeight: '600', color: '#64748B' }}>
-              ({dayKpi.walkins?.orders || 0} orders from {dayKpi.walkins?.visits || 0} visits)
-            </span>
-          </div>
           <div className="kpi-stat-footer">
-            <span>Quotes Given: <strong>{dayKpi.walkins?.quotes || 0}</strong> ({dayKpi.quoteRate || 0}% quote rate)</span>
+            <span style={{ color: '#047857', fontWeight: '800' }}>
+              🎉 {dayKpi.ordersCount || 0} {dayKpi.ordersCount === 1 ? 'deal' : 'deals'} ({dayKpi.conversionRate || 0}% conv.)
+            </span>
           </div>
         </div>
 
-        {/* Card C: Orders Closed & Follow-ups */}
-        <div className="kpi-stat-card kpi-stat-card-purple">
+        {/* Follow-ups Completed */}
+        <div className="kpi-stat-card">
           <div className="kpi-stat-header">
-            <span className="kpi-stat-title">DEALS CLOSED & FOLLOW-UPS</span>
-            <div className="kpi-stat-icon-bubble" style={{ background: '#FAF5FF', color: '#7C3AED' }}>
-              <Receipt size={18} />
+            <span className="kpi-stat-title">Follow-ups Logged</span>
+            <div className="kpi-stat-icon-bubble" style={{ background: '#F0F9FF', color: '#0284C7' }}>
+              <PhoneCall size={16} />
             </div>
           </div>
           <div className="kpi-stat-value">
-            {dayKpi.ordersCount || 0} <span style={{ fontSize: '14px', fontWeight: '600', color: '#64748B' }}>Bills Invoiced</span>
+            {dayKpi.followUpsCount || 0}
+            <span className="kpi-stat-unit">calls</span>
           </div>
           <div className="kpi-stat-footer">
-            <span>Follow-up Calls/Chats: <strong>{dayKpi.followUpsCount || 0}</strong> completed</span>
+            <span className="kpi-pill-sub">Active pipeline touchpoints</span>
           </div>
         </div>
 
-        {/* Card D: Strategic Attachments */}
-        <div className="kpi-stat-card kpi-stat-card-amber">
+        {/* Cross-Sell & VIP Outreach */}
+        <div className="kpi-stat-card">
           <div className="kpi-stat-header">
-            <span className="kpi-stat-title">SPECIAL CLIENTS & CROSS-SELL</span>
+            <span className="kpi-stat-title">Cross-Sell & VIPs</span>
             <div className="kpi-stat-icon-bubble" style={{ background: '#FFFBEB', color: '#D97706' }}>
-              <Layers size={18} />
+              <Layers size={16} />
             </div>
           </div>
-          <div className="kpi-stat-value" style={{ fontSize: '18px', fontWeight: '800' }}>
+          <div className="kpi-stat-value" style={{ fontSize: '17px', fontWeight: '800' }}>
             {dayKpi.crossSell ? (
               <span style={{ color: '#059669' }}>
-                ✓ Cross-Sell ({(dayKpi.crossSellItems || []).length || 1} items)
+                ✓ Cross-Sell ({(dayKpi.crossSellItems || []).length || 1})
               </span>
             ) : (
-              <span style={{ color: '#64748B' }}>No Cross-sell today</span>
+              <span style={{ color: '#64748B' }}>Standard Deals</span>
             )}
           </div>
-          <div className="kpi-stat-footer" style={{ display: 'flex', gap: '12px' }}>
-            <span>Repeat Clients: <strong>{dayKpi.oldCustomers ? `✓ ${dayKpi.oldCustomersCount || 1}` : '✕ None'}</strong></span>
+          <div className="kpi-stat-footer" style={{ display: 'flex', gap: '8px', fontSize: '11.5px' }}>
+            <span>Repeat: <strong>{dayKpi.oldCustomers ? '✓ Yes' : '—'}</strong></span>
             <span>•</span>
-            <span>Engineers: <strong>{dayKpi.engineerCalls ? `✓ ${dayKpi.engineerCallsCount || 1}` : '✕ None'}</strong></span>
+            <span>Engineers: <strong>{dayKpi.engineerCalls ? '✓ Yes' : '—'}</strong></span>
           </div>
         </div>
       </div>
 
-      {/* 3. Interactive Monthly Calendar Timeline (Click Any Day to View) */}
+      {/* 3. Sleek Collapsible Monthly Performance Timeline */}
       <div className="kpi-calendar-strip-card">
-        <div className="kpi-calendar-strip-header">
+        <div
+          className="kpi-calendar-strip-header"
+          style={{ cursor: 'pointer', userSelect: 'none', padding: '12px 16px' }}
+          onClick={() => setCalendarExpanded(!calendarExpanded)}
+        >
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <TrendingUp size={16} color="#2563EB" />
-            <span style={{ fontWeight: '800', fontSize: '13.5px', color: '#0F172A' }}>
+            <span style={{ fontWeight: '800', fontSize: '13px', color: '#0F172A' }}>
               Monthly Performance Calendar ({selectedMonth})
             </span>
+            <span className="kpi-minimal-badge">
+              {calendarExpanded ? 'Active' : 'Click to View Days'}
+            </span>
           </div>
-          <span style={{ fontSize: '11.5px', color: '#64748B' }}>
-            Click any day to inspect its full revenue and customer deals
-          </span>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ fontSize: '11.5px', color: '#64748B' }}>
+              {calendarExpanded ? 'Hide Days' : 'Expand 31-day overview'}
+            </span>
+            <button
+              type="button"
+              className="btn btn-outline btn-xs"
+              style={{ padding: '3px 8px', fontSize: '11px', borderRadius: '6px' }}
+              onClick={(e) => {
+                e.stopPropagation();
+                setCalendarExpanded(!calendarExpanded);
+              }}
+            >
+              {calendarExpanded ? '⌃' : '⌄'}
+            </button>
+          </div>
         </div>
 
-        <div className="kpi-calendar-strip-scroll">
-          {dailyTrends.map((t) => {
-            const isSelected = t.date === selectedDay;
-            const isCurrentDay = t.date === todayStr;
+        {calendarExpanded && (
+          <div className="kpi-calendar-strip-scroll" style={{ padding: '10px 16px 14px' }}>
+            {dailyTrends.map((t) => {
+              const isSelected = t.date === selectedDay;
+              const isCurrentDay = t.date === todayStr;
 
-            return (
-              <button
-                key={t.date}
-                type="button"
-                className={`kpi-calendar-pill ${isSelected ? 'kpi-calendar-pill-selected' : ''} ${t.hasActivity ? 'kpi-calendar-pill-active' : ''}`}
-                onClick={() => setSelectedDay(t.date)}
-              >
-                <div className="kpi-pill-day-header">
-                  <span className="kpi-pill-day-wk">{t.dayOfWeek}</span>
-                  {isCurrentDay && <span className="kpi-pill-today-dot" />}
-                </div>
-
-                <div className="kpi-pill-day-num">{t.dayNumber}</div>
-
-                <div className="kpi-pill-sales">
-                  {t.salesValue > 0 ? `₹${Math.round(t.salesValue / 1000)}k` : '—'}
-                </div>
-
-                {t.ordersCount > 0 && (
-                  <div className="kpi-pill-orders-badge">
-                    {t.ordersCount} {t.ordersCount === 1 ? 'bill' : 'bills'}
+              return (
+                <button
+                  key={t.date}
+                  type="button"
+                  className={`kpi-calendar-pill ${isSelected ? 'kpi-calendar-pill-selected' : ''} ${t.hasActivity ? 'kpi-calendar-pill-active' : ''}`}
+                  onClick={() => setSelectedDay(t.date)}
+                >
+                  <div className="kpi-pill-day-header">
+                    <span className="kpi-pill-day-wk">{t.dayOfWeek}</span>
+                    {isCurrentDay && <span className="kpi-pill-today-dot" />}
                   </div>
-                )}
-              </button>
-            );
-          })}
-        </div>
+
+                  <div className="kpi-pill-day-num">{t.dayNumber}</div>
+
+                  <div className="kpi-pill-sales">
+                    {t.salesValue > 0 ? `₹${Math.round(t.salesValue / 1000)}k` : '—'}
+                  </div>
+
+                  {t.ordersCount > 0 && (
+                    <div className="kpi-pill-orders-badge">
+                      {t.ordersCount} {t.ordersCount === 1 ? 'deal' : 'deals'}
+                    </div>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        )}
       </div>
 
-      {/* 4. CRM Customer Activity Table for the Selected Date */}
+      {/* 4. Sales Staff Performance Leaderboard (Ranked for Selected Day) */}
+      {todayStaffPerformance.length > 0 && (
+        <div className="kpi-leaderboard-card">
+          <div className="kpi-leaderboard-header">
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Award size={16} color="#D97706" />
+              <span style={{ fontWeight: '800', fontSize: '13.5px', color: '#0F172A' }}>
+                Sales Staff Performance ({formattedDayTitle})
+              </span>
+              {isToday && (
+                <span className="badge" style={{ fontSize: '10.5px', background: '#ECFDF5', color: '#047857', border: '1px solid #A7F3D0', fontWeight: '800' }}>
+                  LIVE TODAY
+                </span>
+              )}
+            </div>
+            <span style={{ fontSize: '12px', color: '#64748B' }}>
+              Ranked by closed volume & customer conversions
+            </span>
+          </div>
+
+          <div className="kpi-leaderboard-grid">
+            {todayStaffPerformance.map((s, idx) => {
+              const rankColor = idx === 0 ? '#F59E0B' : idx === 1 ? '#94A3B8' : idx === 2 ? '#B45309' : '#64748B';
+              const initial = (s.staffName || 'S').charAt(0).toUpperCase();
+
+              return (
+                <div key={s.staffName} className="kpi-leaderboard-item">
+                  <div className="kpi-leaderboard-rank" style={{ background: `${rankColor}15`, color: rankColor, borderColor: `${rankColor}40` }}>
+                    #{idx + 1}
+                  </div>
+                  <div className="kpi-staff-avatar">
+                    {initial}
+                  </div>
+                  <div className="kpi-leaderboard-info">
+                    <div className="kpi-leaderboard-name">{s.staffName}</div>
+                    <div className="kpi-leaderboard-sub">
+                      {s.ordersCount} {s.ordersCount === 1 ? 'deal' : 'deals'} closed • {s.conversionRate}% conv.
+                    </div>
+                  </div>
+                  <div className="kpi-leaderboard-revenue">
+                    ₹{s.salesValue.toLocaleString('en-IN')}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* 5. Minimalist Customer Activity Table for the Selected Date */}
       <div className="kpi-table-card">
         <div className="kpi-table-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <FileCheck size={16} color="#059669" />
-            <span style={{ fontWeight: '800', fontSize: '14px', color: '#0F172A' }}>
-              Customer Activity on {formattedDayTitle}
+            <span style={{ fontWeight: '800', fontSize: '13.5px', color: '#0F172A' }}>
+              Customer Transactions on {formattedDayTitle}
             </span>
             <span className="kpi-count-badge">{dayCustomers.length} records</span>
           </div>
           <span style={{ fontSize: '11.5px', color: '#64748B' }}>
-            Live records automatically linked to this day's KPI
+            Automatic CRM day log
           </span>
         </div>
 
         {dayCustomers.length === 0 ? (
-          <div className="kpi-empty-state" style={{ padding: '36px 20px' }}>
+          <div className="kpi-empty-state">
             <div style={{ fontSize: '32px', marginBottom: '6px' }}>📅</div>
-            <div className="kpi-empty-title" style={{ fontSize: '15px' }}>
-              No customer transactions recorded on {formattedDayTitle}
+            <div className="kpi-empty-title">
+              No transactions recorded on {formattedDayTitle}
             </div>
-            <div className="kpi-empty-sub" style={{ fontSize: '12.5px', marginTop: '4px' }}>
-              Any customer created, quoted, or billed on this date automatically populates here.
+            <div className="kpi-empty-sub">
+              Leads registered, quoted, or billed on this date automatically appear here.
             </div>
           </div>
         ) : (
@@ -432,9 +557,9 @@ export const DailyKpiView = () => {
                   <th>Customer Name & Contact</th>
                   <th>Customer Type</th>
                   <th>Lead Source</th>
-                  <th>Status Stage</th>
-                  <th>Deal / Quotation Value</th>
-                  <th>Requirements & Cross-Sell</th>
+                  <th>Pipeline Status</th>
+                  <th>Quotation / Order Value</th>
+                  <th>Material Specifications</th>
                   <th>Salesperson</th>
                 </tr>
               </thead>
@@ -452,7 +577,7 @@ export const DailyKpiView = () => {
 
                       {/* Customer Name */}
                       <td>
-                        <div style={{ fontWeight: '800', color: '#0F172A', fontSize: '13.5px' }}>
+                        <div style={{ fontWeight: '800', color: '#0F172A', fontSize: '13px' }}>
                           {c.customerName}
                         </div>
                         {c.phone ? (
@@ -470,7 +595,7 @@ export const DailyKpiView = () => {
                       </td>
 
                       {/* Lead Source */}
-                      <td style={{ color: '#475569', fontWeight: '600', fontSize: '12.5px' }}>
+                      <td style={{ color: '#475569', fontWeight: '600', fontSize: '12px' }}>
                         {c.leadSource || 'Walk-in'}
                       </td>
 
@@ -484,7 +609,7 @@ export const DailyKpiView = () => {
                       </td>
 
                       {/* Quotation / Order Value */}
-                      <td style={{ fontWeight: '900', fontSize: '13.5px', color: isClosed ? '#059669' : '#0F172A' }}>
+                      <td style={{ fontWeight: '800', fontSize: '13px', color: isClosed ? '#059669' : '#0F172A' }}>
                         ₹{(c.orderValue || c.quotationValue || 0).toLocaleString('en-IN')}
                       </td>
 
@@ -513,42 +638,6 @@ export const DailyKpiView = () => {
           </div>
         )}
       </div>
-
-      {/* 5. Monthly Staff Performance Comparison Leaderboard */}
-      {leaderboard.length > 0 && (
-        <div className="kpi-leaderboard-card">
-          <div className="kpi-leaderboard-header">
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Award size={17} color="#D97706" />
-              <span style={{ fontWeight: '800', fontSize: '13.5px', color: '#0F172A' }}>
-                Sales Staff Performance ({selectedMonth})
-              </span>
-            </div>
-            <span style={{ fontSize: '12px', color: '#64748B' }}>
-              Automatically ranked by total closed revenue
-            </span>
-          </div>
-
-          <div className="kpi-leaderboard-grid">
-            {leaderboard.map((s, idx) => (
-              <div key={s.staffName} className="kpi-leaderboard-item">
-                <div className="kpi-leaderboard-rank">
-                  #{idx + 1}
-                </div>
-                <div className="kpi-leaderboard-info">
-                  <div className="kpi-leaderboard-name">{s.staffName}</div>
-                  <div className="kpi-leaderboard-sub">
-                    {s.ordersCount} {s.ordersCount === 1 ? 'bill' : 'bills'} closed • {s.conversionRate}% conversion ({s.walkinOrders}/{s.visits} visits)
-                  </div>
-                </div>
-                <div className="kpi-leaderboard-revenue">
-                  ₹{s.salesValue.toLocaleString('en-IN')}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   );
 };

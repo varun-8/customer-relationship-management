@@ -160,40 +160,40 @@ export const LostSalesView = () => {
   return (
     <div className="kpi-view-container lost-sales-container">
       {/* 1. Executive Intelligence Stat Cards */}
-      <div className="kpi-stats-grid">
+      <div className="kpi-scorecard-grid">
         {/* Card 1: Total Lost Revenue */}
         <div className="kpi-stat-card lost-stat-card-red">
           <div className="kpi-stat-header">
-            <span className="kpi-stat-title">TOTAL LOST REVENUE ({selectedMonth})</span>
+            <span className="kpi-stat-title">Total Lost Revenue ({selectedMonth})</span>
             <div className="kpi-stat-icon-bubble" style={{ background: '#FEE2E2', color: '#DC2626' }}>
-              <IndianRupee size={18} />
+              <IndianRupee size={16} />
             </div>
           </div>
           <div className="kpi-stat-value" style={{ color: '#DC2626' }}>
             ₹{(analytics?.totalLostValue || 0).toLocaleString('en-IN')}
           </div>
-          <div className="kpi-stat-footer" style={{ display: 'flex', justifyContent: 'space-between' }}>
-            <span>Lost Deals: <strong>{analytics?.totalLostDeals || 0} quotations</strong></span>
-            <span>Avg: <strong>₹{(analytics?.avgLostDealValue || 0).toLocaleString('en-IN')}</strong></span>
+          <div className="kpi-stat-footer">
+            <span className="kpi-pill-sub">Lost Deals: <strong>{analytics?.totalLostDeals || 0} quotes</strong></span>
+            <span className="kpi-pill-sub">Avg: <strong>₹{(analytics?.avgLostDealValue || 0).toLocaleString('en-IN')}</strong></span>
           </div>
         </div>
 
         {/* Card 2: Top Winning Competitor */}
         <div className="kpi-stat-card lost-stat-card-orange">
           <div className="kpi-stat-header">
-            <span className="kpi-stat-title">TOP COMPETING SHOWROOM</span>
+            <span className="kpi-stat-title">Top Competing Showroom</span>
             <div className="kpi-stat-icon-bubble" style={{ background: '#FFEDD5', color: '#EA580C' }}>
-              <Building2 size={18} />
+              <Building2 size={16} />
             </div>
           </div>
-          <div className="kpi-stat-value" style={{ fontSize: '20px', color: '#0F172A' }}>
-            {topCompetitor ? topCompetitor.competitor : 'No Data Yet'}
+          <div className="kpi-stat-value" style={{ fontSize: '18px', color: '#0F172A', lineHeight: 1.3 }}>
+            {topCompetitor ? topCompetitor.competitor : 'No Competitor Losses'}
           </div>
           <div className="kpi-stat-footer">
             {topCompetitor ? (
-              <span>Captured <strong>₹{topCompetitor.totalValue.toLocaleString('en-IN')}</strong> ({topCompetitor.count} deals)</span>
+              <span className="kpi-pill-sub">Captured <strong>₹{topCompetitor.totalValue.toLocaleString('en-IN')}</strong> ({topCompetitor.count} deals)</span>
             ) : (
-              <span>No competitor losses logged this month</span>
+              <span className="kpi-pill-sub">Zero competitor losses recorded</span>
             )}
           </div>
         </div>
@@ -201,19 +201,19 @@ export const LostSalesView = () => {
         {/* Card 3: Primary Root Cause */}
         <div className="kpi-stat-card lost-stat-card-amber">
           <div className="kpi-stat-header">
-            <span className="kpi-stat-title">PRIMARY ROOT CAUSE</span>
+            <span className="kpi-stat-title">Primary Root Cause</span>
             <div className="kpi-stat-icon-bubble" style={{ background: '#FEF3C7', color: '#D97706' }}>
-              <AlertTriangle size={18} />
+              <AlertTriangle size={16} />
             </div>
           </div>
-          <div className="kpi-stat-value" style={{ fontSize: '17px', color: '#B45309', lineHeight: 1.3 }}>
-            {topReason ? topReason.reason : 'No Data Yet'}
+          <div className="kpi-stat-value" style={{ fontSize: '16px', color: '#B45309', lineHeight: 1.3 }}>
+            {topReason ? topReason.reason : 'No Data Available'}
           </div>
           <div className="kpi-stat-footer">
             {topReason ? (
-              <span>Represents <strong>{topReason.percentage}%</strong> of all lost deals</span>
+              <span className="kpi-pill-sub">Accounts for <strong>{topReason.percentage}%</strong> of lost inquiries</span>
             ) : (
-              <span>Add lost reasons to see distribution</span>
+              <span className="kpi-pill-sub">Record reasons to see distribution</span>
             )}
           </div>
         </div>
@@ -221,16 +221,16 @@ export const LostSalesView = () => {
         {/* Card 4: Price Gap Analysis */}
         <div className="kpi-stat-card lost-stat-card-blue">
           <div className="kpi-stat-header">
-            <span className="kpi-stat-title">AVERAGE PRICING GAP</span>
+            <span className="kpi-stat-title">Average Pricing Gap</span>
             <div className="kpi-stat-icon-bubble" style={{ background: '#EFF6FF', color: '#2563EB' }}>
-              <TrendingDown size={18} />
+              <TrendingDown size={16} />
             </div>
           </div>
           <div className="kpi-stat-value" style={{ color: '#2563EB' }}>
             ₹{(analytics?.averagePriceDifference || 0).toLocaleString('en-IN')}
           </div>
           <div className="kpi-stat-footer">
-            <span>Average competitor discount vs our quote</span>
+            <span className="kpi-pill-sub">Competitor discount vs showroom quote</span>
           </div>
         </div>
       </div>
@@ -329,7 +329,7 @@ export const LostSalesView = () => {
                 placeholder="Search by customer, competitor, reason..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                style={{ width: '220px', paddingLeft: '28px' }}
+                style={{ width: '220px', paddingLeft: '28px', borderRadius: '8px', fontSize: '12.5px' }}
               />
               <Search
                 size={13}
@@ -341,6 +341,7 @@ export const LostSalesView = () => {
                 type="button"
                 className="btn btn-outline btn-sm"
                 onClick={() => { setSearch(''); fetchData(); }}
+                style={{ borderRadius: '8px', padding: '5px 8px' }}
               >
                 ✕
               </button>
@@ -370,6 +371,7 @@ export const LostSalesView = () => {
               className="form-select form-select-sm"
               value={staffFilter}
               onChange={(e) => setStaffFilter(e.target.value)}
+              style={{ minWidth: '135px', borderRadius: '8px', fontSize: '12.5px' }}
             >
               <option value="all">All Sales Staff</option>
               <option value="Karthik Raja">Karthik Raja</option>
@@ -387,6 +389,7 @@ export const LostSalesView = () => {
               className="form-input form-input-sm"
               value={selectedMonth}
               onChange={(e) => setSelectedMonth(e.target.value)}
+              style={{ borderRadius: '8px', fontSize: '12.5px' }}
             />
           </div>
 
@@ -395,6 +398,7 @@ export const LostSalesView = () => {
             className="btn btn-outline btn-sm"
             onClick={fetchData}
             title="Refresh records"
+            style={{ borderRadius: '8px', padding: '6px 10px' }}
           >
             <RefreshCw size={13} className={loading ? 'spin' : ''} />
           </button>
@@ -404,6 +408,7 @@ export const LostSalesView = () => {
             className="btn btn-outline btn-sm"
             onClick={handleExportCSV}
             title="Export CSV"
+            style={{ borderRadius: '8px', padding: '6px 12px', gap: '6px' }}
           >
             <Download size={13} />
             <span>CSV</span>
@@ -416,7 +421,7 @@ export const LostSalesView = () => {
               setEditingRecord(null);
               setShowModal(true);
             }}
-            style={{ backgroundColor: '#DC2626', borderColor: '#DC2626', display: 'flex', alignItems: 'center', gap: '5px' }}
+            style={{ backgroundColor: '#DC2626', borderColor: '#DC2626', display: 'flex', alignItems: 'center', gap: '5px', borderRadius: '8px', fontWeight: '800' }}
           >
             <Plus size={14} />
             <span>Record Lost Sale</span>
@@ -429,7 +434,7 @@ export const LostSalesView = () => {
         <div className="kpi-table-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <FileX size={16} color="#DC2626" />
-            <span style={{ fontWeight: '800', fontSize: '14px', color: '#0F172A' }}>
+            <span style={{ fontWeight: '800', fontSize: '13.5px', color: '#0F172A' }}>
               Lost Sales Intelligence Ledger ({lostSales.length} records)
             </span>
           </div>
@@ -449,7 +454,7 @@ export const LostSalesView = () => {
               type="button"
               className="btn btn-primary btn-sm"
               onClick={() => setShowModal(true)}
-              style={{ marginTop: '14px', backgroundColor: '#DC2626', borderColor: '#DC2626' }}
+              style={{ marginTop: '14px', backgroundColor: '#DC2626', borderColor: '#DC2626', borderRadius: '8px' }}
             >
               + Record Lost Sale
             </button>
@@ -474,6 +479,7 @@ export const LostSalesView = () => {
               <tbody>
                 {lostSales.map((s) => {
                   const isWinBack = s.status === 'win_back';
+                  const initial = (s.customerName || 'C').charAt(0).toUpperCase();
 
                   return (
                     <tr key={s._id}>
@@ -484,21 +490,28 @@ export const LostSalesView = () => {
 
                       {/* Customer */}
                       <td>
-                        <div style={{ fontWeight: '800', color: '#0F172A', fontSize: '13px' }}>
-                          {s.customerName}
-                        </div>
-                        <div style={{ fontSize: '11px', color: '#64748B', display: 'flex', gap: '6px' }}>
-                          {s.customerId && (
-                            <span style={{ color: '#2563EB', fontWeight: '700', fontFamily: 'monospace' }}>
-                              #{s.customerId}
-                            </span>
-                          )}
-                          {s.phone && <span>📞 {s.phone}</span>}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: '#FEE2E2', color: '#DC2626', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: '800' }}>
+                            {initial}
+                          </div>
+                          <div>
+                            <div style={{ fontWeight: '800', color: '#0F172A', fontSize: '13px' }}>
+                              {s.customerName}
+                            </div>
+                            <div style={{ fontSize: '11px', color: '#64748B', display: 'flex', gap: '6px' }}>
+                              {s.customerId && (
+                                <span style={{ color: '#2563EB', fontWeight: '700', fontFamily: 'monospace' }}>
+                                  #{s.customerId}
+                                </span>
+                              )}
+                              {s.phone && <span>📞 {s.phone}</span>}
+                            </div>
+                          </div>
                         </div>
                       </td>
 
                       {/* Quote Value */}
-                      <td style={{ fontWeight: '900', color: '#DC2626', fontSize: '13.5px', whiteSpace: 'nowrap' }}>
+                      <td style={{ fontWeight: '800', color: '#DC2626', fontSize: '13.5px', whiteSpace: 'nowrap' }}>
                         ₹{(s.quoteValue || 0).toLocaleString('en-IN')}
                       </td>
 
@@ -514,7 +527,7 @@ export const LostSalesView = () => {
                       </td>
 
                       {/* Salesperson */}
-                      <td style={{ fontWeight: '600', color: '#334155', whiteSpace: 'nowrap' }}>
+                      <td style={{ fontWeight: '600', color: '#334155', whiteSpace: 'nowrap', fontSize: '12.5px' }}>
                         {s.salesperson}
                       </td>
 
@@ -564,7 +577,7 @@ export const LostSalesView = () => {
                             <button
                               type="button"
                               className="btn btn-outline btn-sm"
-                              style={{ fontSize: '11px', padding: '3px 7px', color: '#059669', borderColor: '#A7F3D0' }}
+                              style={{ fontSize: '11px', padding: '4px 8px', color: '#059669', borderColor: '#A7F3D0', borderRadius: '6px' }}
                               title="Reopen deal as Win-Back opportunity"
                               onClick={() => setReopeningRecord(s)}
                             >

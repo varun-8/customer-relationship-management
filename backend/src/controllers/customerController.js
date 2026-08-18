@@ -174,10 +174,24 @@ const updateCustomer = async (req, res) => {
 
     const customerData = req.sanitizedCustomerData || req.body.data || {};
 
-    // Preserve existing data keys that might not be in the current form, then merge new data
-    const mergedData = new Map([...customer.data, ...Object.entries(customerData)]);
+    // Safely extract existing data regardless of whether it is a Mongoose Map, standard Map, or plain JS object
+    let existingData = {};
+    if (customer.data) {
+      if (customer.data instanceof Map) {
+        existingData = Object.fromEntries(customer.data);
+      } else if (typeof customer.data.toObject === 'function') {
+        existingData = customer.data.toObject();
+      } else if (typeof customer.data === 'object') {
+        existingData = { ...customer.data };
+      }
+    }
+
+    // Merge existing data with new updated fields
+    const mergedData = { ...existingData, ...customerData };
 
     customer.data = mergedData;
+    customer.markModified('data');
+
     if (req.body.notes !== undefined) customer.notes = req.body.notes;
     if (req.body.status) customer.status = req.body.status;
 
@@ -196,6 +210,7 @@ const updateCustomer = async (req, res) => {
       data: customer,
     });
   } catch (error) {
+    console.error('Error updating customer:', error);
     res.status(500).json({ success: false, message: error.message });
   }
 };

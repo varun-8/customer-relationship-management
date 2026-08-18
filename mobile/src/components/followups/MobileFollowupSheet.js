@@ -95,8 +95,6 @@ export function MobileFollowupSheet({
   onTabChange,
   temperatureFilter,
   onTemperatureChange,
-  ownerStaffFilter,
-  onOwnerStaffChange,
   currentProfile,
   onLogActivity,
   onRecordLost,
@@ -234,29 +232,6 @@ export function MobileFollowupSheet({
               </TouchableOpacity>
             );
           })}
-
-          {/* Owner Staff Switcher */}
-          {currentProfile?.role === 'owner' && (
-            <>
-              <View style={styles.filterDivider} />
-              {STAFF_MEMBERS.map((staff) => {
-                const isSel = ownerStaffFilter === staff;
-                return (
-                  <TouchableOpacity
-                    key={staff}
-                    style={[styles.filterPillStaff, isSel && styles.filterPillStaffActive]}
-                    onPress={() => onOwnerStaffChange(staff)}
-                    activeOpacity={0.75}
-                  >
-                    <Text style={{ fontSize: 11 }}>👤</Text>
-                    <Text style={[styles.filterPillStaffText, isSel && styles.filterPillStaffTextActive]}>
-                      {staff === 'all' ? 'All Reps' : staff.split(' ')[0]}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </>
-          )}
         </ScrollView>
       </View>
 
@@ -509,12 +484,49 @@ export function MobileFollowupSheet({
               </View>
 
               {/* Follow-up Notes & Discussion Context */}
-              {selectedDetailItem?.notes ? (
-                <View style={styles.detailNotesCard}>
-                  <Text style={styles.detailSectionHeading}>💬 Last Discussion Notes</Text>
-                  <Text style={styles.detailNotesText}>"{selectedDetailItem.notes}"</Text>
+              <View style={styles.detailNotesCard}>
+                <View style={styles.detailNotesHeaderRow}>
+                  <Text style={styles.detailSectionHeading}>💬 Last Discussion & Notes</Text>
+                  {selectedDetailItem?.followUpCount ? (
+                    <View style={styles.detailNotesCountBadge}>
+                      <Text style={styles.detailNotesCountText}>
+                        Interaction #{selectedDetailItem.followUpCount}
+                      </Text>
+                    </View>
+                  ) : null}
                 </View>
-              ) : null}
+
+                {selectedDetailItem?.notes && selectedDetailItem.notes.trim() !== '' ? (
+                  <View style={styles.detailNotesBubble}>
+                    <Text style={styles.detailNotesText}>
+                      "{selectedDetailItem.notes.trim()}"
+                    </Text>
+                  </View>
+                ) : (
+                  <View style={styles.detailNotesEmptyBubble}>
+                    <Text style={styles.detailNotesEmptyText}>
+                      No discussion notes logged yet. Use "Log Follow-up Call" below to record key points.
+                    </Text>
+                  </View>
+                )}
+
+                {selectedDetailItem?.lastReason && selectedDetailItem.lastReason.trim() !== '' ? (
+                  <View style={styles.detailReasonRow}>
+                    <Text style={styles.detailReasonLabel}>🎯 Objective:</Text>
+                    <Text style={styles.detailReasonValue} numberOfLines={2}>
+                      {selectedDetailItem.lastReason.trim()}
+                    </Text>
+                  </View>
+                ) : null}
+
+                {selectedDetailItem?.lastFollowUp ? (
+                  <View style={styles.detailLastDateRow}>
+                    <Text style={styles.detailLastDateText}>
+                      🕒 Last Interaction: {selectedDetailItem.lastFollowUp}
+                    </Text>
+                  </View>
+                ) : null}
+              </View>
             </ScrollView>
 
             {/* Action Buttons Hub (EXCLUSIVELY PRESENT IN DETAIL VIEW) */}
@@ -532,7 +544,7 @@ export function MobileFollowupSheet({
 
                   <TouchableOpacity
                     style={styles.detailWaBtn}
-                    onPress={() => openWhatsApp(selectedDetailItem.phone, selectedDetailItem.customerName, detailReqText)}
+                    onPress={() => openWhatsApp(selectedDetailItem)}
                     activeOpacity={0.75}
                   >
                     <Text style={styles.detailWaBtnText}>💬 WhatsApp Chat</Text>
@@ -583,11 +595,11 @@ const styles = StyleSheet.create({
   segmentContainer: {
     flexDirection: 'row',
     marginHorizontal: 14,
-    marginTop: 8,
-    marginBottom: 6,
-    padding: 3.5,
+    marginTop: 10,
+    marginBottom: 8,
+    padding: 4,
     backgroundColor: '#F1F5F9',
-    borderRadius: 12,
+    borderRadius: 14,
     gap: 4,
   },
   segmentBtn: {
@@ -595,8 +607,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 7,
-    borderRadius: 9,
+    paddingVertical: 7.5,
+    borderRadius: 10,
     gap: 4,
   },
   segmentBtnActive: {
@@ -661,19 +673,19 @@ const styles = StyleSheet.create({
   // Search & Filter Toolbar
   filterToolbar: {
     paddingHorizontal: 14,
-    paddingVertical: 8,
+    paddingVertical: 9,
     backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
     borderBottomColor: '#F1F5F9',
-    gap: 7,
+    gap: 8,
   },
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#F8FAFC',
-    borderRadius: 10,
-    paddingHorizontal: 10,
-    paddingVertical: Platform.OS === 'ios' ? 7 : 4,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: Platform.OS === 'ios' ? 8 : 5,
     borderWidth: 1,
     borderColor: '#E2E8F0',
   },
@@ -696,16 +708,22 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
     borderColor: '#E2E8F0',
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.02,
+    shadowRadius: 2,
+    elevation: 1,
   },
   filterPillActive: {
     backgroundColor: '#0F172A',
     borderColor: '#0F172A',
+    shadowOpacity: 0.12,
   },
   filterPillText: {
     fontSize: 11,
@@ -720,9 +738,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 16,
+    paddingHorizontal: 11,
+    paddingVertical: 6,
+    borderRadius: 20,
     backgroundColor: '#F8FAFC',
     borderWidth: 1,
     borderColor: '#E2E8F0',
@@ -778,20 +796,20 @@ const styles = StyleSheet.create({
     maxWidth: 260,
     lineHeight: 17,
   },
-  // Clean Minimalist Follow-up Card
+  // High-Modern Follow-up Record Card
   card: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 14,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: '#E2E8F0',
     marginHorizontal: 14,
     marginTop: 8,
-    paddingVertical: 12,
-    paddingHorizontal: 14,
+    paddingVertical: 13,
+    paddingHorizontal: 15,
     shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: 1.5 },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.04,
-    shadowRadius: 4,
+    shadowRadius: 5,
     elevation: 2,
   },
   cardHeader: {
@@ -812,14 +830,14 @@ const styles = StyleSheet.create({
     fontWeight: '900',
   },
   customerName: {
-    fontSize: 14.5,
+    fontSize: 15,
     fontWeight: '800',
     color: '#0F172A',
     letterSpacing: -0.2,
   },
   idBadge: {
     backgroundColor: '#F8FAFC',
-    paddingHorizontal: 5,
+    paddingHorizontal: 5.5,
     paddingVertical: 1.5,
     borderRadius: 4,
     borderWidth: 1,
@@ -828,7 +846,7 @@ const styles = StyleSheet.create({
   idBadgeText: {
     fontSize: 9.5,
     fontWeight: '800',
-    color: '#2563EB',
+    color: '#475569',
     fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
   },
   metaType: {
@@ -848,15 +866,15 @@ const styles = StyleSheet.create({
   urgencyBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 8,
-    paddingVertical: 3.5,
-    borderRadius: 6,
+    paddingHorizontal: 8.5,
+    paddingVertical: 4,
+    borderRadius: 20,
     borderWidth: 1,
-    gap: 4,
+    gap: 4.5,
   },
   urgencyDot: {
-    width: 5.5,
-    height: 5.5,
+    width: 6,
+    height: 6,
     borderRadius: 3,
   },
   urgencyLabel: {
@@ -867,20 +885,20 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: 8,
-    paddingTop: 8,
+    marginTop: 10,
+    paddingTop: 9,
     borderTopWidth: 1,
-    borderTopColor: '#F8FAFC',
+    borderTopColor: '#F1F5F9',
   },
   footerValuationText: {
-    fontSize: 12.5,
-    fontWeight: '800',
+    fontSize: 13.5,
+    fontWeight: '900',
     color: '#059669',
   },
   tempPill: {
-    paddingHorizontal: 6,
-    paddingVertical: 2.5,
-    borderRadius: 5,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: 6,
     borderWidth: 1,
   },
   tempHot: {
@@ -903,12 +921,13 @@ const styles = StyleSheet.create({
   tapToViewText: {
     fontSize: 11,
     color: '#64748B',
-    fontWeight: '600',
+    fontWeight: '700',
   },
   chevronIcon: {
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: '700',
     color: '#94A3B8',
+    marginLeft: 2,
   },
 
   // Detailed Modal Styles
@@ -1007,19 +1026,92 @@ const styles = StyleSheet.create({
     color: '#059669',
   },
   detailNotesCard: {
-    backgroundColor: '#FFFBEB',
+    backgroundColor: '#FFFDF5',
     borderWidth: 1,
     borderColor: '#FDE68A',
-    borderRadius: 12,
-    padding: 12,
+    borderRadius: 14,
+    padding: 13,
     marginBottom: 10,
   },
-  detailNotesText: {
-    fontSize: 12.5,
+  detailNotesHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 6,
+  },
+  detailNotesCountBadge: {
+    backgroundColor: '#FEF3C7',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#FDE68A',
+  },
+  detailNotesCountText: {
+    fontSize: 10,
+    fontWeight: '800',
     color: '#92400E',
-    fontStyle: 'italic',
-    lineHeight: 18,
+  },
+  detailNotesBubble: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#FEF3C7',
+    borderLeftWidth: 3.5,
+    borderLeftColor: '#F59E0B',
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
     marginTop: 2,
+  },
+  detailNotesText: {
+    fontSize: 13,
+    color: '#78350F',
+    fontStyle: 'italic',
+    lineHeight: 19,
+    fontWeight: '500',
+  },
+  detailNotesEmptyBubble: {
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    marginTop: 2,
+  },
+  detailNotesEmptyText: {
+    fontSize: 11.5,
+    color: '#64748B',
+    fontStyle: 'italic',
+    lineHeight: 16,
+  },
+  detailReasonRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 8,
+    gap: 6,
+  },
+  detailReasonLabel: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#92400E',
+  },
+  detailReasonValue: {
+    fontSize: 11.5,
+    fontWeight: '700',
+    color: '#1E293B',
+    flex: 1,
+  },
+  detailLastDateRow: {
+    marginTop: 6,
+    paddingTop: 6,
+    borderTopWidth: 1,
+    borderTopColor: '#FEF3C7',
+  },
+  detailLastDateText: {
+    fontSize: 10.5,
+    color: '#B45309',
+    fontWeight: '700',
   },
   detailActionHub: {
     paddingTop: 10,

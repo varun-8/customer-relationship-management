@@ -97,6 +97,7 @@ export function MobileLostSaleModal({
     try {
       const payload = {
         customerId: customer.customerId || undefined,
+        customerRef: customer._id || customer.id || undefined,
         customerName: customerName.trim(),
         phone: phone.trim() || undefined,
         quoteValue: Number(quoteValue) || 0,
@@ -111,8 +112,24 @@ export function MobileLostSaleModal({
       };
 
       const res = await apiClient.createLostSale(payload);
+      
+      // Also ensure customer status is directly set to Lost
+      const custIdToUpdate = customer._id || customer.customerId || customer.id;
+      if (custIdToUpdate) {
+        try {
+          await apiClient.updateCustomer(custIdToUpdate, {
+            status: 'Lost',
+            lostReason,
+            lostCompetitor: finalCompetitor || 'Unknown Dealer',
+            lastReason: `Lost Deal to ${finalCompetitor || 'competitor'}: ${lostReason}`,
+          });
+        } catch (updateErr) {
+          console.warn('Customer status update to Lost warning:', updateErr.message);
+        }
+      }
+
       if (res.success) {
-        Alert.alert('✓ Lost Sale Logged', 'Competitor pricing analysis and deal loss recorded!');
+        Alert.alert('✓ Lost Sale Logged', 'Competitor pricing analysis and deal loss recorded. The record has been moved from the active queue.');
         if (onSaved) onSaved();
         onClose();
       } else {

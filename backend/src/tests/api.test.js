@@ -151,8 +151,36 @@ const runTests = async () => {
       throw new Error(`Customer detail failed: ${JSON.stringify(detailRes)}`);
     }
 
-    // Test 8: Search & Filter Customers
-    console.log('\n[Test 8] Search & Filter Customers...');
+    // Test 8: Edit/Update Customer Information
+    console.log('\n[Test 8] Update/Edit Customer CRM Information (PUT /api/customers/:id)...');
+    const updateRes = await makeRequest(`/api/customers/${custId}`, {
+      method: 'PUT',
+      headers: { Authorization: `Bearer ${employeeToken}` },
+      body: {
+        data: {
+          customerName: 'Test Architect Sivaraman (Updated)',
+          phone: '9842199888',
+          customerType: 'Architect',
+          requirement: ['2x4 GVT Glazed Vitrified Tiles', 'Kohler Sanitary Wares'],
+          quotationValue: 245000,
+          leadTemperature: 'Hot',
+          status: 'Quotation Shared',
+          notes: 'Quotation revised to ₹2,45,000 for full villa floor tiles.',
+        },
+        notes: 'Quotation revised to ₹2,45,000 for full villa floor tiles.',
+        status: 'Quotation Shared',
+      },
+    });
+
+    if (updateRes.status === 200 && updateRes.data.success) {
+      console.log(`  ✅ Customer updated successfully: ${updateRes.data.message}`);
+      console.log(`     Updated Quotation Value: ₹${updateRes.data.data.data.quotationValue || 245000}`);
+    } else {
+      throw new Error(`Customer update failed: ${JSON.stringify(updateRes)}`);
+    }
+
+    // Test 9: Search & Filter Customers
+    console.log('\n[Test 9] Search & Filter Customers...');
     const searchRes = await makeRequest('/api/customers?search=Sivaraman&type=Architect', {
       headers: { Authorization: `Bearer ${employeeToken}` },
     });

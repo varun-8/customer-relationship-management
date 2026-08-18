@@ -410,16 +410,21 @@ export default function App() {
   const loadFollowups = useCallback(async (
     tab = followupTab,
     temp = followupTempFilter,
-    staff = (currentProfile.role === 'employee' ? currentProfile.name : ownerStaffFilter)
+    staff = (currentProfile.role === 'employee' ? currentProfile.name : 'all')
   ) => {
     setLoadingFollowups(true);
     try {
       const params = { tab };
       if (temp !== 'all') params.temperature = temp;
-      if (staff !== 'all') params.salesperson = staff;
+      if (staff && staff !== 'all') params.salesperson = staff;
       const res = await apiClient.getFollowupsList(params);
       if (res && res.success) {
-        setFollowups(res.data || []);
+        // Ensure lost sales are hidden from the active follow-up queue
+        const activeList = (res.data || []).filter((f) => {
+          const s = (f.status || '').toLowerCase();
+          return !s.includes('lost');
+        });
+        setFollowups(activeList);
         if (res.counts) setFollowupCounts(res.counts);
       }
     } catch (e) {
@@ -427,7 +432,7 @@ export default function App() {
     } finally {
       setLoadingFollowups(false);
     }
-  }, [followupTab, followupTempFilter, currentProfile, ownerStaffFilter]);
+  }, [followupTab, followupTempFilter, currentProfile]);
 
   const initData = useCallback(async () => {
     setLoading(true);
@@ -439,10 +444,10 @@ export default function App() {
     initData();
   }, [initData]);
 
-  // When profile or owner filter changes, re-fetch followups
+  // When profile changes, re-fetch followups
   useEffect(() => {
     loadFollowups();
-  }, [currentProfile, ownerStaffFilter]);
+  }, [currentProfile]);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -455,7 +460,52 @@ export default function App() {
     setActiveScreen('detail');
   };
 
-  const openWhatsApp = (phone, customerName = '', requirement = '') => {
+  const openWhatsApp = (phoneOrCustomer, customerName = '', requirement = '', extraInfo = {}) => {
+    let phone = '';
+    let name = '';
+    let req = '';
+    let customerId = '';
+    let approxQuantity = '';
+    let quotationValue = '';
+    let tileBudget = '';
+    let sanitaryRequirement = '';
+    let adhesiveRequirement = '';
+    let salesperson = '';
+    let nextFollowUp = '';
+    let status = '';
+
+    if (typeof phoneOrCustomer === 'object' && phoneOrCustomer !== null) {
+      const c = phoneOrCustomer;
+      const d = c.data instanceof Map ? Object.fromEntries(c.data) : (c.data || c);
+      phone = d.phone || c.phone || '';
+      name = d.customerName || c.customerName || '';
+      customerId = d.customerId || c.customerId || '';
+      req = d.requirement || c.requirement || '';
+      approxQuantity = d.approxQuantity || c.approxQuantity || '';
+      quotationValue = d.quotationValue || c.quotationValue || '';
+      tileBudget = d.tileBudget || c.tileBudget || '';
+      sanitaryRequirement = d.sanitaryRequirement || c.sanitaryRequirement || '';
+      adhesiveRequirement = d.adhesiveRequirement || c.adhesiveRequirement || '';
+      salesperson = d.salesperson || c.salesperson || currentProfile?.name || '';
+      nextFollowUp = d.nextFollowUp || c.nextFollowUp || '';
+      status = d.status || c.status || '';
+    } else {
+      phone = phoneOrCustomer || '';
+      name = customerName || '';
+      req = requirement || '';
+      if (typeof extraInfo === 'object' && extraInfo !== null) {
+        customerId = extraInfo.customerId || '';
+        approxQuantity = extraInfo.approxQuantity || '';
+        quotationValue = extraInfo.quotationValue || '';
+        tileBudget = extraInfo.tileBudget || '';
+        sanitaryRequirement = extraInfo.sanitaryRequirement || '';
+        adhesiveRequirement = extraInfo.adhesiveRequirement || '';
+        salesperson = extraInfo.salesperson || currentProfile?.name || '';
+        nextFollowUp = extraInfo.nextFollowUp || '';
+        status = extraInfo.status || '';
+      }
+    }
+
     if (!phone) {
       Alert.alert('No Phone Number', 'This customer record does not have a phone number.');
       return;
@@ -466,10 +516,53 @@ export default function App() {
       return;
     }
     const formattedPhone = cleanPhone.length === 10 ? `91${cleanPhone}` : cleanPhone;
-    const greetingName = customerName ? ` ${customerName}` : '';
-    const brandTitle = branding.appShortName || branding.appName || 'Vasantham CRM';
-    const textMsg = `Hello${greetingName}, greetings from ${brandTitle}! Regarding your requirement for ${requirement || 'Tiles & Sanitary Wares'}...`;
 
+    const brandName = branding.appName || branding.appShortName || 'BuildCRM Showroom';
+    const brandTagline = branding.tagline || 'Excellence in Tiles & Sanitary Solutions';
+
+    // Construct professional, structured showroom business message
+    const lines = [
+      `🏛️ *${brandName}*`,
+      `✨ _${brandTagline}_`,
+      '',
+      `Dear *${name || 'Valued Customer'}*${customerId ? ` (Ref: #${customerId})` : ''},`,
+      '',
+      `Thank you for connecting with *${brandName}*! Here is the summary of your project & inquiry details:`,
+      '',
+    ];
+
+    if (req) {
+      lines.push(`📌 *Tile Requirements:* ${req}${approxQuantity ? ` (${approxQuantity} sq.ft)` : ''}`);
+    }
+    if (sanitaryRequirement) {
+      lines.push(`🚿 *Sanitary Ware:* ${sanitaryRequirement}`);
+    }
+    if (adhesiveRequirement) {
+      lines.push(`🧱 *Adhesives & Grouts:* ${adhesiveRequirement}`);
+    }
+    if (quotationValue && Number(quotationValue) > 0) {
+      lines.push(`💰 *Quotation Shared:* ₹${Number(quotationValue).toLocaleString('en-IN')}`);
+    } else if (tileBudget && Number(tileBudget) > 0) {
+      lines.push(`💵 *Estimated Budget:* ₹${Number(tileBudget).toLocaleString('en-IN')}`);
+    }
+    if (status) {
+      lines.push(`🏷️ *Current Stage:* ${status}`);
+    }
+    if (nextFollowUp) {
+      lines.push(`📅 *Next Follow-up / Appointment:* ${nextFollowUp}`);
+    }
+    if (salesperson) {
+      lines.push(`👨‍💼 *Dedicated Sales Representative:* ${salesperson}`);
+    }
+
+    lines.push('');
+    lines.push(`We invite you to experience our live showroom displays and premium mockups.`);
+    lines.push(`Please feel free to reply directly here for samples, catalogue links, or pricing inquiries.`);
+    lines.push('');
+    lines.push(`Warm regards,`);
+    lines.push(`*${brandName} Team*`);
+
+    const textMsg = lines.join('\n');
     const waUrl = `https://wa.me/${formattedPhone}?text=${encodeURIComponent(textMsg)}`;
     Linking.openURL(waUrl).catch(() => {
       Linking.openURL(`https://api.whatsapp.com/send?phone=${formattedPhone}&text=${encodeURIComponent(textMsg)}`);
@@ -640,22 +733,38 @@ export default function App() {
 
   const activeFields = (formSchema?.fields || []).filter((f) => f.active);
 
-  // Filter customers by type and profile assignment
+  // Filter customers by employee (for Owner) or type (for Employee), lost leads hidden
   const filteredCustomers = customers.filter((c) => {
     const d = c.data instanceof Map ? Object.fromEntries(c.data) : (c.data || {});
-    if (typeFilter !== 'all' && d.customerType !== typeFilter) return false;
+    
+    // Hide lost leads from active mobile list
+    const status = (d.status || c.status || '').toLowerCase();
+    if (status.includes('lost')) return false;
+
+    // For Owner: Filter based on the selected employee/salesperson
+    if (currentProfile.role === 'owner') {
+      if (ownerStaffFilter !== 'all') {
+        return (d.salesperson || '').toLowerCase().includes(ownerStaffFilter.toLowerCase());
+      }
+      return true;
+    }
+
+    // For Employee: Filter by assigned leads and customer type
     if (currentProfile.role === 'employee') {
-      return (d.salesperson || '').toLowerCase().includes(currentProfile.name.toLowerCase());
+      const isAssigned = (d.salesperson || '').toLowerCase().includes(currentProfile.name.toLowerCase());
+      if (!isAssigned) return false;
+      if (typeFilter !== 'all' && d.customerType !== typeFilter) return false;
+      return true;
     }
-    if (ownerStaffFilter !== 'all') {
-      return (d.salesperson || '').toLowerCase().includes(ownerStaffFilter.toLowerCase());
-    }
+
     return true;
   });
 
-  // Calculate Metrics
+  // Calculate Metrics from active non-lost pipeline
   const totalPipeline = customers.reduce((acc, c) => {
     const d = c.data instanceof Map ? Object.fromEntries(c.data) : (c.data || {});
+    const s = (d.status || c.status || '').toLowerCase();
+    if (s.includes('lost')) return acc;
     return acc + (Number(d.quotationValue) || Number(d.tileBudget) || 0);
   }, 0);
 
@@ -724,10 +833,17 @@ export default function App() {
               </Text>
             )}
           </View>
-          <View style={{ justifyContent: 'center' }}>
-            <Text style={styles.headerBrandTitle} numberOfLines={1}>
-              {(branding.appShortName || branding.appName || 'BuildCRM').toUpperCase()}
-            </Text>
+          <View style={{ justifyContent: 'center', flexShrink: 1 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+              <Text style={styles.headerBrandTitle} numberOfLines={1}>
+                {(branding.appShortName || branding.appName || 'BuildCRM').toUpperCase()}
+              </Text>
+              {branding.tagline ? (
+                <Text style={styles.headerBrandTagline} numberOfLines={1}>
+                  • {branding.tagline}
+                </Text>
+              ) : null}
+            </View>
             <View style={styles.headerStatusRow}>
               <View style={[styles.onlineStatusPill, { backgroundColor: isOnline ? '#ECFDF5' : '#FFFBEB', borderColor: isOnline ? '#A7F3D0' : '#FDE68A' }]}>
                 <View style={[styles.onlineDot, { backgroundColor: isOnline ? '#10B981' : '#F59E0B' }]} />
@@ -877,106 +993,85 @@ export default function App() {
                   </Text>
                 </View>
               </View>
-
-              {/* Quick Staff Rep Allocation Ticker */}
-              <View style={styles.ownerRepTickerRow}>
-                <Text style={styles.ownerTickerTitle}>REP WORKLOAD:</Text>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 5 }}>
-                  {['Karthik Raja', 'Senthil Kumar', 'Priya Dharshini', 'Manoj Kumar'].map((staff) => {
-                    const count = customers.filter((c) => {
-                      const d = c.data instanceof Map ? Object.fromEntries(c.data) : (c.data || {});
-                      return (d.salesperson || '').toLowerCase().includes(staff.toLowerCase());
-                    }).length;
-                    const isSelected = ownerStaffFilter === staff;
-
-                    return (
-                      <TouchableOpacity
-                        key={staff}
-                        onPress={() => setOwnerStaffFilter(isSelected ? 'all' : staff)}
-                        style={[styles.ownerMiniStaffPill, isSelected && styles.ownerMiniStaffPillActive]}
-                        activeOpacity={0.7}
-                      >
-                        <Text style={[styles.ownerMiniStaffText, isSelected && styles.ownerMiniStaffTextActive]}>
-                          {staff.split(' ')[0]}: <Text style={{ fontWeight: '900' }}>{count}</Text>
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </ScrollView>
-              </View>
             </View>
           )}
 
           {/* Professional Theme-Cohesive Filter Bar */}
           <View style={styles.filterDockContainer}>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterScrollContent}>
-              {/* Customer Segment Filter Capsules */}
-              {['all', 'Building Owner', 'Architect', 'Mason'].map((type) => {
-                const isSelected = typeFilter === type;
-                const count = type === 'all'
-                  ? (ownerStaffFilter === 'all' ? customers.length : filteredCustomers.length)
-                  : customers.filter((c) => {
-                      const d = c.data instanceof Map ? Object.fromEntries(c.data) : (c.data || {});
-                      const matchesStaff = ownerStaffFilter === 'all' || (d.salesperson || '').toLowerCase().includes(ownerStaffFilter.toLowerCase());
-                      return d.customerType === type && matchesStaff;
-                    }).length;
+              {currentProfile.role === 'owner' ? (
+                // Owner View: Filter based on Employee
+                ['all', 'Karthik Raja', 'Senthil Kumar', 'Priya Dharshini', 'Manoj Kumar'].map((staff) => {
+                  const isSelected = ownerStaffFilter === staff;
+                  const count = staff === 'all'
+                    ? customers.filter((c) => {
+                        const d = c.data instanceof Map ? Object.fromEntries(c.data) : (c.data || {});
+                        const s = (d.status || c.status || '').toLowerCase();
+                        return !s.includes('lost');
+                      }).length
+                    : customers.filter((c) => {
+                        const d = c.data instanceof Map ? Object.fromEntries(c.data) : (c.data || {});
+                        const s = (d.status || c.status || '').toLowerCase();
+                        return !s.includes('lost') && (d.salesperson || '').toLowerCase().includes(staff.toLowerCase());
+                      }).length;
 
-                const label = type === 'all' ? 'All Leads' : type === 'Building Owner' ? 'Building Owner' : type;
-                const icon = type === 'all' ? '🏷️' : type === 'Building Owner' ? '🏢' : type === 'Architect' ? '📐' : '🧱';
+                  const label = staff === 'all' ? 'All Staff' : staff;
+                  const icon = staff === 'all' ? '👥' : '👤';
 
-                return (
-                  <TouchableOpacity
-                    key={type}
-                    onPress={() => setTypeFilter(type)}
-                    style={[styles.filterCapsule, isSelected && styles.filterCapsuleActive]}
-                    activeOpacity={0.75}
-                  >
-                    <Text style={{ fontSize: 12 }}>{icon}</Text>
-                    <Text style={[styles.filterCapsuleText, isSelected && styles.filterCapsuleTextActive]}>
-                      {label}
-                    </Text>
-                    <View style={[styles.filterCountBadge, isSelected && styles.filterCountBadgeActive]}>
-                      <Text style={[styles.filterCountBadgeText, isSelected && styles.filterCountBadgeTextActive]}>
-                        {count}
+                  return (
+                    <TouchableOpacity
+                      key={staff}
+                      onPress={() => setOwnerStaffFilter(staff)}
+                      style={[styles.filterCapsule, isSelected && styles.filterCapsuleActive]}
+                      activeOpacity={0.75}
+                    >
+                      <Text style={{ fontSize: 12 }}>{icon}</Text>
+                      <Text style={[styles.filterCapsuleText, isSelected && styles.filterCapsuleTextActive]}>
+                        {label}
                       </Text>
-                    </View>
-                  </TouchableOpacity>
-                );
-              })}
-
-              {/* Showroom Owner Staff Filter Divider & Chips */}
-              {currentProfile.role === 'owner' && (
-                <>
-                  <View style={styles.filterDividerVertical} />
-                  {['all', 'Karthik Raja', 'Senthil Kumar', 'Priya Dharshini', 'Manoj Kumar'].map((staff) => {
-                    const isSelected = ownerStaffFilter === staff;
-                    const staffCount = staff === 'all'
-                      ? customers.length
-                      : customers.filter((c) => {
-                          const d = c.data instanceof Map ? Object.fromEntries(c.data) : (c.data || {});
-                          return (d.salesperson || '').toLowerCase().includes(staff.toLowerCase());
-                        }).length;
-
-                    return (
-                      <TouchableOpacity
-                        key={staff}
-                        onPress={() => setOwnerStaffFilter(staff)}
-                        style={[styles.filterCapsuleStaff, isSelected && styles.filterCapsuleStaffActive]}
-                        activeOpacity={0.75}
-                      >
-                        <Text style={{ fontSize: 11 }}>👤</Text>
-                        <Text style={[styles.filterCapsuleStaffText, isSelected && styles.filterCapsuleStaffTextActive]}>
-                          {staff === 'all' ? 'All Reps' : staff.split(' ')[0]}
+                      <View style={[styles.filterCountBadge, isSelected && styles.filterCountBadgeActive]}>
+                        <Text style={[styles.filterCountBadgeText, isSelected && styles.filterCountBadgeTextActive]}>
+                          {count}
                         </Text>
-                        <View style={[styles.filterStaffCountBadge, isSelected && styles.filterStaffCountBadgeActive]}>
-                          <Text style={[styles.filterStaffCountBadgeText, isSelected && styles.filterStaffCountBadgeTextActive]}>
-                            {staffCount}
-                          </Text>
-                        </View>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </>
+                      </View>
+                    </TouchableOpacity>
+                  );
+                })
+              ) : (
+                // Employee View: Filter based on Customer Type
+                ['all', 'Building Owner', 'Architect', 'Mason'].map((type) => {
+                  const isSelected = typeFilter === type;
+                  const count = type === 'all'
+                    ? filteredCustomers.length
+                    : customers.filter((c) => {
+                        const d = c.data instanceof Map ? Object.fromEntries(c.data) : (c.data || {});
+                        const s = (d.status || c.status || '').toLowerCase();
+                        if (s.includes('lost')) return false;
+                        return d.customerType === type && (d.salesperson || '').toLowerCase().includes(currentProfile.name.toLowerCase());
+                      }).length;
+
+                  const label = type === 'all' ? 'All My Leads' : type === 'Building Owner' ? 'Building Owner' : type;
+                  const icon = type === 'all' ? '🏷️' : type === 'Building Owner' ? '🏢' : type === 'Architect' ? '📐' : '🧱';
+
+                  return (
+                    <TouchableOpacity
+                      key={type}
+                      onPress={() => setTypeFilter(type)}
+                      style={[styles.filterCapsule, isSelected && styles.filterCapsuleActive]}
+                      activeOpacity={0.75}
+                    >
+                      <Text style={{ fontSize: 12 }}>{icon}</Text>
+                      <Text style={[styles.filterCapsuleText, isSelected && styles.filterCapsuleTextActive]}>
+                        {label}
+                      </Text>
+                      <View style={[styles.filterCountBadge, isSelected && styles.filterCountBadgeActive]}>
+                        <Text style={[styles.filterCountBadgeText, isSelected && styles.filterCountBadgeTextActive]}>
+                          {count}
+                        </Text>
+                      </View>
+                    </TouchableOpacity>
+                  );
+                })
               )}
             </ScrollView>
           </View>
@@ -1080,11 +1175,6 @@ export default function App() {
           onTemperatureChange={(temp) => {
             setFollowupTempFilter(temp);
             loadFollowups(followupTab, temp);
-          }}
-          ownerStaffFilter={ownerStaffFilter}
-          onOwnerStaffChange={(staff) => {
-            setOwnerStaffFilter(staff);
-            loadFollowups(followupTab, followupTempFilter, staff);
           }}
           currentProfile={currentProfile}
           onLogActivity={(item) => setLoggingFollowupItem(item)}
@@ -1313,7 +1403,7 @@ export default function App() {
 
                       <TouchableOpacity
                         style={styles.detailActionBtnWhatsApp}
-                        onPress={() => openWhatsApp(data.phone, data.customerName, data.requirement)}
+                        onPress={() => openWhatsApp(data)}
                         activeOpacity={0.8}
                       >
                         <Text style={styles.detailActionBtnWhatsAppText}>💬 WhatsApp Chat</Text>
@@ -1778,6 +1868,13 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     fontSize: 15,
     letterSpacing: 0.3,
+  },
+  headerBrandTagline: {
+    color: '#64748B',
+    fontWeight: '600',
+    fontSize: 10.5,
+    fontStyle: 'italic',
+    maxWidth: 130,
   },
   headerStatusRow: {
     flexDirection: 'row',

@@ -216,6 +216,13 @@ const validateCustomerData = async (req, res, next) => {
       });
     }
 
+    // Preserve any custom or non-form dynamic fields passed in data
+    for (const key of Object.keys(data)) {
+      if (!(key in sanitizedData) && data[key] !== undefined) {
+        sanitizedData[key] = data[key];
+      }
+    }
+
     // Attach validated and sanitized data and active form version to request
     req.sanitizedCustomerData = sanitizedData;
     req.activeFormVersion = activeForm.version;
