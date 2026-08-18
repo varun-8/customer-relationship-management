@@ -115,15 +115,14 @@ export const SettingsView = ({ initialTab = 'branding' }) => {
   };
 
   const tabs = [
-    { id: 'branding', label: '🎨 App Name & Logo Branding', icon: Palette },
-    { id: 'builder', label: '🛠️ CRM Form Schema (23 Fields)', icon: Layers },
+    { id: 'branding', label: '🎨 Showroom Branding & Theme', icon: Palette },
     { id: 'sequence', label: '🔢 Customer ID Sequence', icon: Hash },
-    { id: 'versions', label: '📜 Version History', icon: Clock },
+    { id: 'builder', label: '🛠️ CRM Form Schema Fields', icon: Layers },
   ];
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-      {/* Settings Tab Navigation Bar */}
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', maxWidth: '1000px', margin: '0 auto' }}>
+      {/* Modern Minimalist Tab Dock */}
       <div
         style={{
           display: 'flex',
@@ -132,8 +131,8 @@ export const SettingsView = ({ initialTab = 'branding' }) => {
           background: '#FFFFFF',
           padding: '6px',
           borderRadius: '12px',
-          border: '1px solid var(--border-default)',
-          boxShadow: 'var(--shadow-xs)',
+          border: '1px solid #E2E8F0',
+          boxShadow: '0 1px 3px rgba(15, 23, 42, 0.03)',
           width: 'fit-content',
           flexWrap: 'wrap',
         }}
@@ -153,8 +152,8 @@ export const SettingsView = ({ initialTab = 'branding' }) => {
                 borderRadius: '8px',
                 border: 'none',
                 background: isActive ? '#2563EB' : 'transparent',
-                color: isActive ? '#FFFFFF' : 'var(--text-secondary)',
-                fontWeight: isActive ? '700' : '600',
+                color: isActive ? '#FFFFFF' : '#475569',
+                fontWeight: isActive ? '800' : '600',
                 fontSize: '13px',
                 cursor: 'pointer',
                 transition: 'all 0.15s ease',
@@ -166,34 +165,33 @@ export const SettingsView = ({ initialTab = 'branding' }) => {
         })}
       </div>
 
-      {/* Tab 1: Branding & Identity Editor */}
+      {/* Tab 1: Showroom Branding & Theme */}
       {activeSettingsTab === 'branding' && (
         <div
           style={{
             background: '#FFFFFF',
             borderRadius: '16px',
-            border: '1px solid var(--border-default)',
-            boxShadow: 'var(--shadow-xs)',
+            border: '1px solid #E2E8F0',
+            boxShadow: '0 1px 3px rgba(15, 23, 42, 0.03)',
             padding: '28px',
-            maxWidth: '920px',
             display: 'flex',
             flexDirection: 'column',
             gap: '24px',
           }}
         >
           {/* Header */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border-default)', paddingBottom: '16px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #F1F5F9', paddingBottom: '16px' }}>
             <div>
-              <h2 style={{ fontSize: '20px', fontWeight: '800', color: 'var(--text-primary)', margin: 0 }}>
-                App Name & Showroom Logo Branding
+              <h2 style={{ fontSize: '18px', fontWeight: '800', color: '#0F172A', margin: 0 }}>
+                Showroom Brand Name & Visual Theme
               </h2>
-              <p style={{ fontSize: '13px', color: 'var(--text-muted)', margin: '4px 0 0' }}>
-                Customize your showroom software name, upload your custom logo, or choose from brand icons. Updates sync across desktop and mobile devices.
+              <p style={{ fontSize: '12.5px', color: '#64748B', margin: '4px 0 0' }}>
+                Customize your showroom software name, upload your custom logo, or choose from brand icons. Updates sync instantly across desktop and mobile devices.
               </p>
             </div>
 
             {savedSuccess && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#059669', background: '#ECFDF5', border: '1px solid #A7F3D0', padding: '6px 14px', borderRadius: '8px', fontWeight: '700', fontSize: '13px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#059669', background: '#ECFDF5', border: '1px solid #A7F3D0', padding: '6px 14px', borderRadius: '8px', fontWeight: '800', fontSize: '12.5px' }}>
                 <Check size={16} />
                 <span>Saved & Synced Live!</span>
               </div>
@@ -221,7 +219,7 @@ export const SettingsView = ({ initialTab = 'branding' }) => {
             }}
           >
             <div>
-              <div style={{ fontSize: '11px', color: '#94A3B8', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '10px' }}>
+              <div style={{ fontSize: '11px', color: '#94A3B8', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '10px' }}>
                 Live Software Branding Preview
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
@@ -260,11 +258,11 @@ export const SettingsView = ({ initialTab = 'branding' }) => {
             </div>
 
             <div style={{ display: 'flex', gap: '8px' }}>
-              <div style={{ padding: '8px 14px', borderRadius: '8px', background: 'rgba(255, 255, 255, 0.08)', color: '#CBD5E1', fontSize: '12.5px', display: 'flex', alignItems: 'center', gap: '6px', border: '1px solid rgba(255,255,255,0.1)' }}>
+              <div style={{ padding: '8px 14px', borderRadius: '8px', background: 'rgba(255, 255, 255, 0.08)', color: '#CBD5E1', fontSize: '12px', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '6px', border: '1px solid rgba(255,255,255,0.1)' }}>
                 <Monitor size={14} color="#60A5FA" />
                 <span>Desktop App</span>
               </div>
-              <div style={{ padding: '8px 14px', borderRadius: '8px', background: 'rgba(255, 255, 255, 0.08)', color: '#CBD5E1', fontSize: '12.5px', display: 'flex', alignItems: 'center', gap: '6px', border: '1px solid rgba(255,255,255,0.1)' }}>
+              <div style={{ padding: '8px 14px', borderRadius: '8px', background: 'rgba(255, 255, 255, 0.08)', color: '#CBD5E1', fontSize: '12px', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '6px', border: '1px solid rgba(255,255,255,0.1)' }}>
                 <Smartphone size={14} color="#34D399" />
                 <span>Mobile App</span>
               </div>
@@ -276,30 +274,30 @@ export const SettingsView = ({ initialTab = 'branding' }) => {
             style={{
               padding: '20px',
               borderRadius: '12px',
-              border: '1.5px solid #BFDBFE',
+              border: '1px solid #E2E8F0',
               background: '#F8FAFC',
               display: 'flex',
               flexDirection: 'column',
               gap: '16px',
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: '#EFF6FF', color: '#2563EB', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <ImageIcon size={18} />
                 </div>
                 <div>
-                  <h3 style={{ fontSize: '15px', fontWeight: '800', color: 'var(--text-primary)', margin: 0 }}>
+                  <h3 style={{ fontSize: '14.5px', fontWeight: '800', color: '#0F172A', margin: 0 }}>
                     Showroom Logo & Icon Selection
                   </h3>
-                  <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: '2px 0 0' }}>
-                    Choose whether to upload your showroom logo image or pick a modern vector icon.
+                  <p style={{ fontSize: '12px', color: '#64748B', margin: '2px 0 0' }}>
+                    Upload your showroom logo image or select from preset vector icons.
                   </p>
                 </div>
               </div>
 
               {/* Mode Toggle Chips */}
-              <div style={{ display: 'flex', gap: '6px', background: '#FFFFFF', padding: '4px', borderRadius: '8px', border: '1px solid var(--border-default)' }}>
+              <div style={{ display: 'flex', gap: '6px', background: '#FFFFFF', padding: '4px', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
                 <button
                   type="button"
                   onClick={() => setLogoType('image')}
@@ -308,9 +306,9 @@ export const SettingsView = ({ initialTab = 'branding' }) => {
                     borderRadius: '6px',
                     border: 'none',
                     background: logoType === 'image' ? '#2563EB' : 'transparent',
-                    color: logoType === 'image' ? '#FFFFFF' : 'var(--text-secondary)',
-                    fontWeight: logoType === 'image' ? '700' : '600',
-                    fontSize: '12.5px',
+                    color: logoType === 'image' ? '#FFFFFF' : '#64748B',
+                    fontWeight: logoType === 'image' ? '800' : '600',
+                    fontSize: '12px',
                     cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
@@ -318,7 +316,7 @@ export const SettingsView = ({ initialTab = 'branding' }) => {
                   }}
                 >
                   <Upload size={14} />
-                  <span>Upload Custom Image</span>
+                  <span>Upload Image</span>
                 </button>
 
                 <button
@@ -329,9 +327,9 @@ export const SettingsView = ({ initialTab = 'branding' }) => {
                     borderRadius: '6px',
                     border: 'none',
                     background: logoType === 'icon' ? '#2563EB' : 'transparent',
-                    color: logoType === 'icon' ? '#FFFFFF' : 'var(--text-secondary)',
-                    fontWeight: logoType === 'icon' ? '700' : '600',
-                    fontSize: '12.5px',
+                    color: logoType === 'icon' ? '#FFFFFF' : '#64748B',
+                    fontWeight: logoType === 'icon' ? '800' : '600',
+                    fontSize: '12px',
                     cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
@@ -339,7 +337,7 @@ export const SettingsView = ({ initialTab = 'branding' }) => {
                   }}
                 >
                   <Sparkles size={14} />
-                  <span>Preset Vector Icons</span>
+                  <span>Vector Icons</span>
                 </button>
               </div>
             </div>
@@ -362,7 +360,7 @@ export const SettingsView = ({ initialTab = 'branding' }) => {
                         padding: '12px',
                         background: '#F8FAFC',
                         borderRadius: '10px',
-                        border: '1px solid var(--border-default)',
+                        border: '1px solid #E2E8F0',
                         display: 'inline-flex',
                       }}
                     >
@@ -378,11 +376,12 @@ export const SettingsView = ({ initialTab = 'branding' }) => {
                         className="btn btn-primary"
                         style={{
                           padding: '8px 16px',
-                          fontSize: '13px',
+                          fontSize: '12.5px',
                           cursor: 'pointer',
                           display: 'inline-flex',
                           alignItems: 'center',
                           gap: '6px',
+                          borderRadius: '8px',
                         }}
                       >
                         <Upload size={14} />
@@ -399,14 +398,15 @@ export const SettingsView = ({ initialTab = 'branding' }) => {
                         className="btn btn-danger"
                         style={{
                           padding: '8px 16px',
-                          fontSize: '13px',
+                          fontSize: '12.5px',
                           display: 'inline-flex',
                           alignItems: 'center',
                           gap: '6px',
+                          borderRadius: '8px',
                         }}
                       >
                         <Trash2 size={14} />
-                        <span>Remove Logo</span>
+                        <span>Remove</span>
                       </button>
                     </div>
                   </div>
@@ -415,10 +415,10 @@ export const SettingsView = ({ initialTab = 'branding' }) => {
                     <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: '#EFF6FF', color: '#2563EB', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 10px' }}>
                       <Upload size={24} />
                     </div>
-                    <div style={{ fontSize: '15px', fontWeight: '800', color: 'var(--text-primary)' }}>
+                    <div style={{ fontSize: '15px', fontWeight: '800', color: '#0F172A' }}>
                       Upload Showroom PNG, SVG, or JPG Logo
                     </div>
-                    <p style={{ fontSize: '12.5px', color: 'var(--text-muted)', margin: '4px 0 16px' }}>
+                    <p style={{ fontSize: '12px', color: '#64748B', margin: '4px 0 16px' }}>
                       Recommended: Transparent background PNG or SVG (Max 3MB).
                     </p>
 
@@ -431,7 +431,8 @@ export const SettingsView = ({ initialTab = 'branding' }) => {
                         display: 'inline-flex',
                         alignItems: 'center',
                         gap: '6px',
-                        fontWeight: '700',
+                        fontWeight: '800',
+                        borderRadius: '8px',
                       }}
                     >
                       <Upload size={15} />
@@ -444,7 +445,7 @@ export const SettingsView = ({ initialTab = 'branding' }) => {
             ) : (
               /* Option B: Vector Brand Icon Selection Grid */
               <div>
-                <div style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '8px' }}>
+                <div style={{ fontSize: '11.5px', fontWeight: '800', color: '#64748B', textTransform: 'uppercase', marginBottom: '8px' }}>
                   Select Showroom Brand Icon:
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '10px' }}>
@@ -459,9 +460,9 @@ export const SettingsView = ({ initialTab = 'branding' }) => {
                         style={{
                           padding: '14px 10px',
                           borderRadius: '10px',
-                          border: isSelected ? '2px solid #2563EB' : '1px solid var(--border-default)',
+                          border: isSelected ? '2px solid #2563EB' : '1px solid #E2E8F0',
                           background: isSelected ? '#EFF6FF' : '#FFFFFF',
-                          color: isSelected ? '#2563EB' : 'var(--text-primary)',
+                          color: isSelected ? '#2563EB' : '#0F172A',
                           display: 'flex',
                           flexDirection: 'column',
                           alignItems: 'center',
@@ -486,7 +487,7 @@ export const SettingsView = ({ initialTab = 'branding' }) => {
           {/* Section 2: App Name & Titles */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
             <div className="form-group">
-              <label className="form-label">
+              <label className="form-label" style={{ fontSize: '11.5px', fontWeight: '800', color: '#475569', textTransform: 'uppercase' }}>
                 <span>Software Full Name</span>
                 <span className="required-star">*</span>
               </label>
@@ -496,12 +497,13 @@ export const SettingsView = ({ initialTab = 'branding' }) => {
                 value={appName}
                 onChange={(e) => setAppName(e.target.value)}
                 placeholder="e.g. Vasantham Tiles & Sanitary Wares"
+                style={{ borderRadius: '8px' }}
               />
-              <span className="form-help">Displayed on report headers, mobile login, and customer PDFs.</span>
+              <span className="form-help" style={{ fontSize: '11.5px', color: '#64748B', marginTop: '4px' }}>Displayed on report headers, mobile login, and customer WhatsApp summaries.</span>
             </div>
 
             <div className="form-group">
-              <label className="form-label">
+              <label className="form-label" style={{ fontSize: '11.5px', fontWeight: '800', color: '#475569', textTransform: 'uppercase' }}>
                 <span>Sidebar Short Title</span>
               </label>
               <input
@@ -510,13 +512,14 @@ export const SettingsView = ({ initialTab = 'branding' }) => {
                 value={appShortName}
                 onChange={(e) => setAppShortName(e.target.value)}
                 placeholder="e.g. Vasantham CRM"
+                style={{ borderRadius: '8px' }}
               />
-              <span className="form-help">Compact title shown on the desktop sidebar and mobile header.</span>
+              <span className="form-help" style={{ fontSize: '11.5px', color: '#64748B', marginTop: '4px' }}>Compact title shown on the desktop sidebar and mobile header.</span>
             </div>
           </div>
 
           <div className="form-group">
-            <label className="form-label">
+            <label className="form-label" style={{ fontSize: '11.5px', fontWeight: '800', color: '#475569', textTransform: 'uppercase' }}>
               <span>Showroom Tagline / Subtitle</span>
             </label>
             <input
@@ -525,13 +528,14 @@ export const SettingsView = ({ initialTab = 'branding' }) => {
               value={tagline}
               onChange={(e) => setTagline(e.target.value)}
               placeholder="e.g. Tiles, Sanitary Wares, CP Fittings & Adhesives"
+              style={{ borderRadius: '8px' }}
             />
           </div>
 
           {/* Section 3: Theme Accent Color */}
           <div>
-            <label className="form-label" style={{ marginBottom: '8px' }}>
-              <span>Theme Accent Color</span>
+            <label className="form-label" style={{ fontSize: '11.5px', fontWeight: '800', color: '#475569', textTransform: 'uppercase', marginBottom: '8px' }}>
+              <span>Theme Accent Color Palette</span>
             </label>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
               {PRESET_COLORS.map((c) => {
@@ -547,12 +551,12 @@ export const SettingsView = ({ initialTab = 'branding' }) => {
                       gap: '8px',
                       padding: '8px 14px',
                       borderRadius: '8px',
-                      border: isSelected ? `2px solid ${c.hex}` : '1px solid var(--border-default)',
+                      border: isSelected ? `2px solid ${c.hex}` : '1px solid #E2E8F0',
                       background: isSelected ? '#EFF6FF' : '#FFFFFF',
                       cursor: 'pointer',
                       fontSize: '12.5px',
-                      fontWeight: isSelected ? '700' : '500',
-                      color: 'var(--text-primary)',
+                      fontWeight: isSelected ? '800' : '600',
+                      color: '#0F172A',
                     }}
                   >
                     <span
@@ -579,7 +583,7 @@ export const SettingsView = ({ initialTab = 'branding' }) => {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
-              borderTop: '1px solid var(--border-default)',
+              borderTop: '1px solid #F1F5F9',
               paddingTop: '20px',
               marginTop: '8px',
             }}
@@ -588,7 +592,7 @@ export const SettingsView = ({ initialTab = 'branding' }) => {
               type="button"
               onClick={handleResetDefaults}
               className="btn btn-secondary"
-              style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px' }}
+              style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', borderRadius: '8px' }}
             >
               <RotateCcw size={14} />
               <span>Reset to Defaults</span>
@@ -606,23 +610,21 @@ export const SettingsView = ({ initialTab = 'branding' }) => {
                 display: 'flex',
                 alignItems: 'center',
                 gap: '8px',
+                borderRadius: '8px',
               }}
             >
               <Save size={16} />
-              <span>{saving ? 'Saving & Syncing...' : '✓ Save Branding & Sync to Mobile App'}</span>
+              <span>{saving ? 'Saving & Syncing...' : '✓ Save Branding & Sync to Mobile'}</span>
             </button>
           </div>
         </div>
       )}
 
-      {/* Tab 2: Form Schema Builder */}
-      {activeSettingsTab === 'builder' && <FormBuilderView />}
-
-      {/* Tab 3: Sequence Config */}
+      {/* Tab 2: Sequence Generator */}
       {activeSettingsTab === 'sequence' && <SequenceConfigModal />}
 
-      {/* Tab 4: Version History */}
-      {activeSettingsTab === 'versions' && <FormVersionHistoryModal />}
+      {/* Tab 3: CRM Form Schema Builder */}
+      {activeSettingsTab === 'builder' && <FormBuilderView />}
     </div>
   );
 };

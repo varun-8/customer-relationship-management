@@ -1,7 +1,7 @@
 import React from 'react';
-import { Plus, ChevronDown } from 'lucide-react';
+import { Plus } from 'lucide-react';
 
-export const Header = ({ title, subtitle, onAddCustomer }) => {
+export const Header = ({ title, subtitle, onAddCustomer, showAddCustomer = false }) => {
   return (
     <header className="app-header">
       <div className="page-header-intro">
@@ -11,26 +11,27 @@ export const Header = ({ title, subtitle, onAddCustomer }) => {
         </p>
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-        <button
-          onClick={onAddCustomer}
-          className="btn btn-primary"
-          style={{
-            padding: '10px 18px',
-            fontSize: '13.5px',
-            fontWeight: '700',
-            borderRadius: '8px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-          }}
-        >
-          <Plus size={16} />
-          <span>Add New Customer</span>
-          <div style={{ width: '1px', height: '16px', backgroundColor: 'rgba(255,255,255,0.3)', margin: '0 2px' }} />
-          <ChevronDown size={14} />
-        </button>
-      </div>
+      {showAddCustomer && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <button
+            type="button"
+            onClick={onAddCustomer}
+            className="btn btn-primary"
+            style={{
+              padding: '9px 18px',
+              fontSize: '13px',
+              fontWeight: '800',
+              borderRadius: '8px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+            }}
+          >
+            <Plus size={16} />
+            <span>Add New Customer</span>
+          </button>
+        </div>
+      )}
     </header>
   );
 };

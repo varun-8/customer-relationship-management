@@ -99,6 +99,7 @@ const MainAppContent = () => {
           title={headerInfo.title}
           subtitle={headerInfo.subtitle}
           onAddCustomer={() => setShowAddCustomerModal(true)}
+          showAddCustomer={activeTab === 'customers'}
         />
 
         <div className="app-content">

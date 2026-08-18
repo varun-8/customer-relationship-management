@@ -369,14 +369,21 @@ export const DynamicFieldInput = ({ field, value, onChange, error }) => {
   };
 
   return (
-    <div className="form-group" style={{ marginBottom: '14px' }}>
-      <label className="form-label">
-        <span>{label}</span>
-        {required && <span className="required-star">*</span>}
-      </label>
+    <div className="form-group" style={{ marginBottom: '16px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+        <label className="form-label" style={{ margin: 0, fontSize: '11.5px', fontWeight: '800', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+          <span>{label}</span>
+          {required && <span style={{ color: '#E11D48', fontWeight: '900', marginLeft: '4px' }}>*</span>}
+        </label>
+        {required && (
+          <span style={{ fontSize: '10px', fontWeight: '700', color: '#94A3B8' }}>
+            REQUIRED
+          </span>
+        )}
+      </div>
       {renderInput()}
-      {description && <span className="form-help">{description}</span>}
-      {error && <span className="form-error">⚠️ {error}</span>}
+      {description && <span className="form-help" style={{ fontSize: '11.5px', color: '#64748B', marginTop: '4px', display: 'block' }}>{description}</span>}
+      {error && <span className="form-error" style={{ fontSize: '12px', color: '#E11D48', fontWeight: '700', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}>⚠️ {error}</span>}
     </div>
   );
 };
