@@ -382,4 +382,48 @@ export const apiClient = {
       return { success: false, message: `Connection error: ${e.message}` };
     }
   },
+
+  // Lost Sales Tracking
+  async createLostSale(lostSaleData) {
+    try {
+      const base = await this.getApiBase();
+      const headers = await this.getHeaders();
+      const res = await fetch(`${base}/lost-sales`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(lostSaleData),
+      });
+      return await res.json();
+    } catch (e) {
+      return { success: false, message: `Connection error: ${e.message}` };
+    }
+  },
+
+  async getLostSalesList(params = {}) {
+    try {
+      const base = await this.getApiBase();
+      const headers = await this.getHeaders();
+      const query = new URLSearchParams(params).toString();
+      const res = await fetch(`${base}/lost-sales${query ? `?${query}` : ''}`, {
+        headers,
+      });
+      return await res.json();
+    } catch (e) {
+      return { success: false, message: `Connection error: ${e.message}` };
+    }
+  },
+
+  async getLostSalesAnalytics(params = {}) {
+    try {
+      const base = await this.getApiBase();
+      const headers = await this.getHeaders();
+      const query = new URLSearchParams(params).toString();
+      const res = await fetch(`${base}/lost-sales/analytics${query ? `?${query}` : ''}`, {
+        headers,
+      });
+      return await res.json();
+    } catch (e) {
+      return { success: false, message: `Connection error: ${e.message}` };
+    }
+  },
 };

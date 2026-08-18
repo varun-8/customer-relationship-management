@@ -355,4 +355,122 @@ export const api = {
     if (!res.ok) throw new Error(data.message || 'Failed to delete KPI record');
     return data;
   },
+
+  // Lost Sales Tracking & Competitor Intelligence
+  async createLostSale(lostSaleData) {
+    const headers = await getAuthHeaders();
+    const res = await fetch(`${API_BASE}/lost-sales`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(lostSaleData),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || 'Failed to record lost sale');
+    return data;
+  },
+
+  async getLostSalesList(params = {}) {
+    const headers = await getAuthHeaders();
+    const query = new URLSearchParams(params).toString();
+    const res = await fetch(`${API_BASE}/lost-sales${query ? `?${query}` : ''}`, {
+      headers,
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || 'Failed to fetch lost sales list');
+    return data;
+  },
+
+  async getLostSalesAnalytics(params = {}) {
+    const headers = await getAuthHeaders();
+    const query = new URLSearchParams(params).toString();
+    const res = await fetch(`${API_BASE}/lost-sales/analytics${query ? `?${query}` : ''}`, {
+      headers,
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || 'Failed to fetch lost sales analytics');
+    return data;
+  },
+
+  async updateLostSale(id, updates) {
+    const headers = await getAuthHeaders();
+    const res = await fetch(`${API_BASE}/lost-sales/${id}`, {
+      method: 'PUT',
+      headers,
+      body: JSON.stringify(updates),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || 'Failed to update lost sale record');
+    return data;
+  },
+
+  async reopenLostSale(id, winBackNotes = '') {
+    const headers = await getAuthHeaders();
+    const res = await fetch(`${API_BASE}/lost-sales/${id}/reopen`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ winBackNotes }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || 'Failed to reopen deal');
+    return data;
+  },
+
+  async deleteLostSale(id) {
+    const headers = await getAuthHeaders();
+    const res = await fetch(`${API_BASE}/lost-sales/${id}`, {
+      method: 'DELETE',
+      headers,
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || 'Failed to delete lost sale record');
+    return data;
+  },
+
+  // Executive Dashboard
+  async getDashboardMetrics(params = {}) {
+    const headers = await getAuthHeaders();
+    const query = new URLSearchParams(params).toString();
+    const res = await fetch(`${API_BASE}/dashboard/metrics${query ? `?${query}` : ''}`, {
+      headers,
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || 'Failed to fetch dashboard metrics');
+    return data;
+  },
+
+  async updateSalesTargets(targetData) {
+    const headers = await getAuthHeaders();
+    const res = await fetch(`${API_BASE}/dashboard/targets`, {
+      method: 'PUT',
+      headers,
+      body: JSON.stringify(targetData),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || 'Failed to update sales targets');
+    return data;
+  },
+
+  // Follow-up Sheet & Lead Nurturing Hub
+  async getFollowupsList(params = {}) {
+    const headers = await getAuthHeaders();
+    const query = new URLSearchParams(params).toString();
+    const res = await fetch(`${API_BASE}/followups${query ? `?${query}` : ''}`, {
+      headers,
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || 'Failed to fetch follow-ups list');
+    return data;
+  },
+
+  async logFollowupActivity(id, activityData) {
+    const headers = await getAuthHeaders();
+    const res = await fetch(`${API_BASE}/followups/${id}/log`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(activityData),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || 'Failed to log follow-up activity');
+    return data;
+  },
 };

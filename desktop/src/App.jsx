@@ -16,9 +16,12 @@ import { BrandingSettingsModal } from './components/settings/BrandingSettingsMod
 import { SettingsView } from './components/settings/SettingsView';
 import { MobileSimulatorModal } from './components/mobile-simulator/MobileSimulatorModal';
 import { DailyKpiView } from './components/kpi/DailyKpiView';
+import { LostSalesView } from './components/lost-sales/LostSalesView';
+import { ExecutiveDashboardView } from './components/dashboard/ExecutiveDashboardView';
+import { FollowupSheetView } from './components/followups/FollowupSheetView';
 
 const MainAppContent = () => {
-  const [activeTab, setActiveTab] = useState('customers');
+  const [activeTab, setActiveTab] = useState('dashboard');
   const [showMobileSimulator, setShowMobileSimulator] = useState(false);
   const [showBrandingModal, setShowBrandingModal] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState(null);
@@ -30,6 +33,11 @@ const MainAppContent = () => {
 
   const getHeaderInfo = () => {
     switch (activeTab) {
+      case 'dashboard':
+        return {
+          title: 'Executive Dashboard',
+          subtitle: 'Live showroom revenue, conversion funnel, and salesperson quota tracking',
+        };
       case 'customers':
         return {
           title: 'Customers',
@@ -39,6 +47,16 @@ const MainAppContent = () => {
         return {
           title: 'Daily KPI Performance Hub',
           subtitle: 'Track showroom footfall, quotation funnel, follow-ups, and daily sales value',
+        };
+      case 'followups':
+        return {
+          title: 'Follow-up Sheet & Lead Nurturing',
+          subtitle: 'Today, upcoming 7 days & overdue calling schedule with Hot/Warm priority tracking',
+        };
+      case 'lost':
+        return {
+          title: 'Lost Sales & Competitor Intelligence',
+          subtitle: 'Analyze lost deal root causes, competitor pricing gaps, and product leakage',
         };
       case 'settings':
         return {
@@ -61,7 +79,7 @@ const MainAppContent = () => {
           subtitle: 'Published form version logs and changelog audits',
         };
       default:
-        return { title: 'Customers', subtitle: 'Manage and track all customer interactions' };
+        return { title: 'Dashboard', subtitle: 'Live showroom revenue and conversion tracking' };
     }
   };
 
@@ -85,6 +103,8 @@ const MainAppContent = () => {
 
         <div className="app-content">
           <div className="workspace-section">
+            {activeTab === 'dashboard' && <ExecutiveDashboardView />}
+
             {activeTab === 'customers' && (
               <CustomerListTable
                 onAddCustomer={() => setShowAddCustomerModal(true)}
@@ -94,6 +114,10 @@ const MainAppContent = () => {
             )}
 
             {activeTab === 'kpi' && <DailyKpiView />}
+            {activeTab === 'followups' && (
+              <FollowupSheetView onEditCustomer={(customer) => setEditingCustomer(customer)} />
+            )}
+            {activeTab === 'lost' && <LostSalesView />}
 
             {(activeTab === 'settings' || activeTab === 'builder') && <SettingsView />}
             {activeTab === 'sequence' && <SequenceConfigModal />}

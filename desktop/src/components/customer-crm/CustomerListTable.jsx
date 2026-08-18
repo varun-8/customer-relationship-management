@@ -19,11 +19,14 @@ import {
   Plus,
   Copy,
   Check,
+  FileX,
 } from 'lucide-react';
 import { useCustomer } from '../../context/CustomerContext';
 import { ColumnSettingsModal } from './ColumnSettingsModal';
+import { LostSaleModal } from '../lost-sales/LostSaleModal';
 
 export const CustomerListTable = ({ onAddCustomer, onEditCustomer, onViewCustomer }) => {
+  const [markingLostCustomer, setMarkingLostCustomer] = useState(null);
   const {
     customers,
     pagination,
@@ -735,13 +738,31 @@ export const CustomerListTable = ({ onAddCustomer, onEditCustomer, onViewCustome
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
+                            setMarkingLostCustomer({
+                              customerId: c.customerId,
+                              customerName: data.customerName,
+                              phone: data.phone,
+                              quotationValue: data.quotationValue || data.orderValue || data.tileBudget,
+                              salesperson: data.salesperson,
+                              requirement: data.requirement,
+                            });
+                          }}
+                          className="btn-icon"
+                          title="Record Lost Sale & Competitor Analysis"
+                          style={{ color: '#DC2626', padding: '4px' }}
+                        >
+                          <FileX size={15} />
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
                             if (confirm(`Delete customer ${c.customerId}?`)) {
                               deleteCustomer(c._id);
                             }
                           }}
                           className="btn-icon"
                           title="Delete Customer"
-                          style={{ color: '#DC2626', padding: '4px' }}
+                          style={{ color: '#64748B', padding: '4px' }}
                         >
                           <Trash2 size={15} />
                         </button>
@@ -856,6 +877,19 @@ export const CustomerListTable = ({ onAddCustomer, onEditCustomer, onViewCustome
           visibleColumnKeys={['customerId', 'customerName', 'phone', 'customerType', 'houseStage', 'status', 'quotationValue', 'nextFollowUp', 'salesperson']}
           setVisibleColumnKeys={() => {}}
           onClose={() => setShowColumnModal(false)}
+        />
+      )}
+
+      {/* Lost Sale Recording Modal */}
+      {markingLostCustomer && (
+        <LostSaleModal
+          customer={markingLostCustomer}
+          onClose={() => setMarkingLostCustomer(null)}
+          onSaved={() => {
+            setMarkingLostCustomer(null);
+            // Refresh customer list
+            if (pagination?.fetchCustomers) pagination.fetchCustomers();
+          }}
         />
       )}
     </div>

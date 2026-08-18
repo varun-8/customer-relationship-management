@@ -6,6 +6,9 @@ const customerRoutes = require('./routes/customerRoutes');
 const sequenceRoutes = require('./routes/sequenceRoutes');
 const brandingRoutes = require('./routes/brandingRoutes');
 const kpiRoutes = require('./routes/kpiRoutes');
+const lostSaleRoutes = require('./routes/lostSaleRoutes');
+const dashboardRoutes = require('./routes/dashboardRoutes');
+const followupRoutes = require('./routes/followupRoutes');
 
 const app = express();
 
@@ -43,6 +46,9 @@ app.use('/api/customers', customerRoutes);
 app.use('/api/sequence', sequenceRoutes);
 app.use('/api/branding', brandingRoutes);
 app.use('/api/kpi', kpiRoutes);
+app.use('/api/lost-sales', lostSaleRoutes);
+app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/followups', followupRoutes);
 
 // 404 Handler
 app.use((req, res) => {
