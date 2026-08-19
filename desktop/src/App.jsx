@@ -1,5 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Plus } from 'lucide-react';
+import { ErrorBoundary } from './components/common/ErrorBoundary';
+import { ToastProvider, useToast } from './context/ToastContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { CustomerProvider, useCustomer } from './context/CustomerContext';
 import { FormBuilderProvider } from './context/FormBuilderContext';
@@ -20,8 +22,10 @@ import { LostSalesView } from './components/lost-sales/LostSalesView';
 import { ExecutiveDashboardView } from './components/dashboard/ExecutiveDashboardView';
 import { FollowupSheetView } from './components/followups/FollowupSheetView';
 import { EmployeeManagementView } from './components/employees/EmployeeManagementView';
+import { api } from './services/api';
 
 const MainAppContent = () => {
+  const toast = useToast();
   const [activeTab, setActiveTab] = useState('dashboard');
   const [showMobileSimulator, setShowMobileSimulator] = useState(false);
   const [showBrandingModal, setShowBrandingModal] = useState(false);
@@ -29,8 +33,50 @@ const MainAppContent = () => {
   const [viewingCustomer, setViewingCustomer] = useState(null);
   const [showAddCustomerModal, setShowAddCustomerModal] = useState(false);
 
+  // Server health monitoring
+  const [isOnline, setIsOnline] = useState(true);
+  const [isCheckingServer, setIsCheckingServer] = useState(false);
+
   const { isOwner } = useAuth();
   const { deleteCustomer } = useCustomer();
+
+  // Periodic and on-demand server connectivity check
+  const verifyServerConnection = useCallback(async (manual = false) => {
+    if (manual) setIsCheckingServer(true);
+    try {
+      const health = await api.checkHealth();
+      if (health.online) {
+        if (!isOnline) {
+          toast.success('Connected to CRM backend server & MongoDB Atlas', 'Back Online');
+        }
+        setIsOnline(true);
+      } else {
+        if (isOnline) {
+          toast.warning('Cannot reach CRM server. Check your local backend.', 'Server Offline');
+        }
+        setIsOnline(false);
+      }
+    } catch (e) {
+      if (isOnline) {
+        toast.warning('Server unreachable. Running with local cache.', 'Server Offline');
+      }
+      setIsOnline(false);
+    } finally {
+      if (manual) setIsCheckingServer(false);
+    }
+  }, [isOnline, toast]);
+
+  useEffect(() => {
+    // Check initial health
+    verifyServerConnection(false);
+
+    // Watchdog ping every 20 seconds
+    const interval = setInterval(() => {
+      verifyServerConnection(false);
+    }, 20000);
+
+    return () => clearInterval(interval);
+  }, [verifyServerConnection]);
 
   const getHeaderInfo = () => {
     switch (activeTab) {
@@ -98,14 +144,16 @@ const MainAppContent = () => {
         setActiveTab={setActiveTab}
         onOpenMobileSimulator={() => setShowMobileSimulator(true)}
         onOpenBrandingModal={() => setShowBrandingModal(true)}
+        onAddCustomer={() => setShowAddCustomerModal(true)}
       />
 
       <main className="app-main">
         <Header
           title={headerInfo.title}
           subtitle={headerInfo.subtitle}
-          onAddCustomer={() => setShowAddCustomerModal(true)}
-          showAddCustomer={activeTab === 'customers'}
+          isOnline={isOnline}
+          isChecking={isCheckingServer}
+          onRetryConnection={() => verifyServerConnection(true)}
         />
 
         <div className="app-content">
@@ -126,8 +174,9 @@ const MainAppContent = () => {
             )}
             {activeTab === 'lost' && <LostSalesView />}
             {activeTab === 'employees' && <EmployeeManagementView />}
+            {activeTab === 'builder' && <FormBuilderView />}
 
-            {(activeTab === 'settings' || activeTab === 'builder') && <SettingsView />}
+            {activeTab === 'settings' && <SettingsView />}
             {activeTab === 'sequence' && <SequenceConfigModal />}
             {activeTab === 'versions' && <FormVersionHistoryModal />}
           </div>
@@ -173,14 +222,18 @@ const MainAppContent = () => {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <BrandingProvider>
-        <CustomerProvider>
-          <FormBuilderProvider>
-            <MainAppContent />
-          </FormBuilderProvider>
-        </CustomerProvider>
-      </BrandingProvider>
-    </AuthProvider>
+    <ErrorBoundary>
+      <ToastProvider>
+        <AuthProvider>
+          <BrandingProvider>
+            <CustomerProvider>
+              <FormBuilderProvider>
+                <MainAppContent />
+              </FormBuilderProvider>
+            </CustomerProvider>
+          </BrandingProvider>
+        </AuthProvider>
+      </ToastProvider>
+    </ErrorBoundary>
   );
 }

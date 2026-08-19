@@ -1,7 +1,7 @@
-const API_BASE = '/api';
+const API_BASE = import.meta.env.VITE_API_URL || '/api';
 
-const getAuthHeaders = async () => {
-  let token = localStorage.getItem('vasantham_crm_token');
+const getAuthHeaders = async (forceRefresh = false) => {
+  let token = forceRefresh ? null : localStorage.getItem('vasantham_crm_token');
   if (!token) {
     try {
       const res = await fetch(`${API_BASE}/auth/login`, {
@@ -24,140 +24,153 @@ const getAuthHeaders = async () => {
   };
 };
 
+/**
+ * Resilient Central Request Handler with Timeout, Network Error Translation & Structured Errors
+ */
+const request = async (endpoint, options = {}) => {
+  const url = `${API_BASE}${endpoint}`;
+  const timeoutMs = options.timeout || 12000;
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    const authHeaders = options.skipAuth ? { 'Content-Type': 'application/json' } : await getAuthHeaders();
+    const finalHeaders = {
+      ...authHeaders,
+      ...(options.headers || {}),
+    };
+
+    const res = await fetch(url, {
+      ...options,
+      headers: finalHeaders,
+      signal: controller.signal,
+    });
+    clearTimeout(timeoutId);
+
+    // Auto-refresh token if 401 Unauthorized
+    if (res.status === 401 && !options._retried && !options.skipAuth) {
+      localStorage.removeItem('vasantham_crm_token');
+      await getAuthHeaders(true);
+      return request(endpoint, { ...options, _retried: true });
+    }
+
+    let data;
+    const contentType = res.headers.get('content-type') || '';
+    if (contentType.includes('application/json')) {
+      data = await res.json();
+    } else {
+      const text = await res.text();
+      data = { success: res.ok, message: text };
+    }
+
+    if (!res.ok) {
+      const errMsg = data?.message || `Request failed with status ${res.status}`;
+      const err = new Error(errMsg);
+      err.status = res.status;
+      err.data = data;
+      err.errors = data?.errors;
+      throw err;
+    }
+
+    return data;
+  } catch (error) {
+    clearTimeout(timeoutId);
+    if (error.name === 'AbortError') {
+      const timeoutErr = new Error(`Request timed out after ${timeoutMs / 1000}s. Server response delayed.`);
+      timeoutErr.isTimeout = true;
+      throw timeoutErr;
+    }
+    if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
+      const netErr = new Error(`Cannot reach CRM backend server (${API_BASE}). Please ensure the server is active.`);
+      netErr.isNetworkError = true;
+      throw netErr;
+    }
+    throw error;
+  }
+};
+
 export const api = {
+  // Health Diagnostic
+  async checkHealth() {
+    try {
+      const data = await request('/health', { timeout: 4000, skipAuth: true });
+      return { online: true, data };
+    } catch (e) {
+      return { online: false, message: e.message };
+    }
+  },
+
   // Auth
   async login(email, password) {
-    const res = await fetch(`${API_BASE}/auth/login`, {
+    return request('/auth/login', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password }),
+      skipAuth: true,
     });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.message || 'Login failed');
-    return data;
   },
 
   async getMe() {
-    const headers = await getAuthHeaders();
-    const res = await fetch(`${API_BASE}/auth/me`, {
-      headers,
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.message || 'Failed to fetch user');
-    return data;
+    return request('/auth/me');
   },
 
   // Form Builder
   async getActiveForm() {
-    const headers = await getAuthHeaders();
-    const res = await fetch(`${API_BASE}/customer-form`, {
-      headers,
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.message || 'Failed to fetch active form');
-    return data;
+    return request('/customer-form');
   },
 
   async getDraftForm() {
-    const headers = await getAuthHeaders();
-    const res = await fetch(`${API_BASE}/customer-form/draft`, {
-      headers,
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.message || 'Failed to fetch draft form');
-    return data;
+    return request('/customer-form/draft');
   },
 
   async saveDraftForm(fields, name) {
-    const headers = await getAuthHeaders();
-    const res = await fetch(`${API_BASE}/customer-form/draft`, {
+    return request('/customer-form/draft', {
       method: 'POST',
-      headers,
       body: JSON.stringify({ fields, name }),
     });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.message || 'Failed to save draft form');
-    return data;
   },
 
   async deleteDraftForm() {
-    const headers = await getAuthHeaders();
-    const res = await fetch(`${API_BASE}/customer-form/draft`, {
+    return request('/customer-form/draft', {
       method: 'DELETE',
-      headers,
     });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.message || 'Failed to delete draft form');
-    return data;
   },
 
   async publishForm(changelog = '') {
-    const headers = await getAuthHeaders();
-    const res = await fetch(`${API_BASE}/customer-form/publish`, {
+    return request('/customer-form/publish', {
       method: 'POST',
-      headers,
       body: JSON.stringify({ changelog }),
     });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.message || 'Failed to publish form');
-    return data;
   },
 
   async addField(fieldData) {
-    const headers = await getAuthHeaders();
-    const res = await fetch(`${API_BASE}/customer-form/fields`, {
+    return request('/customer-form/fields', {
       method: 'POST',
-      headers,
       body: JSON.stringify(fieldData),
     });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.message || 'Failed to add field');
-    return data;
   },
 
   async updateField(fieldId, fieldData) {
-    const headers = await getAuthHeaders();
-    const res = await fetch(`${API_BASE}/customer-form/fields/${fieldId}`, {
+    return request(`/customer-form/fields/${fieldId}`, {
       method: 'PUT',
-      headers,
       body: JSON.stringify(fieldData),
     });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.message || 'Failed to update field');
-    return data;
   },
 
   async deleteField(fieldId) {
-    const headers = await getAuthHeaders();
-    const res = await fetch(`${API_BASE}/customer-form/fields/${fieldId}`, {
+    return request(`/customer-form/fields/${fieldId}`, {
       method: 'DELETE',
-      headers,
     });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.message || 'Failed to delete field');
-    return data;
   },
 
   async reorderFields(fieldIds) {
-    const headers = await getAuthHeaders();
-    const res = await fetch(`${API_BASE}/customer-form/reorder`, {
+    return request('/customer-form/reorder', {
       method: 'PUT',
-      headers,
       body: JSON.stringify({ fieldIds }),
     });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.message || 'Failed to reorder fields');
-    return data;
   },
 
   async getFormVersions() {
-    const headers = await getAuthHeaders();
-    const res = await fetch(`${API_BASE}/customer-form/versions`, {
-      headers,
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.message || 'Failed to fetch form versions');
-    return data;
+    return request('/customer-form/versions');
   },
 
   // Customers
@@ -169,365 +182,207 @@ export const api = {
       }
     });
     const query = new URLSearchParams(cleanParams).toString();
-    const headers = await getAuthHeaders();
-    const res = await fetch(`${API_BASE}/customers${query ? `?${query}` : ''}`, {
-      headers,
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.message || 'Failed to fetch customers');
-    return data;
+    return request(`/customers${query ? `?${query}` : ''}`);
   },
 
   async getCustomerById(id) {
-    const headers = await getAuthHeaders();
-    const res = await fetch(`${API_BASE}/customers/${id}`, {
-      headers,
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.message || 'Failed to fetch customer');
-    return data;
+    return request(`/customers/${id}`);
   },
 
   async createCustomer(customerData, notes = '') {
-    const headers = await getAuthHeaders();
-    const res = await fetch(`${API_BASE}/customers`, {
+    return request('/customers', {
       method: 'POST',
-      headers,
       body: JSON.stringify({ data: customerData, notes }),
     });
-    const data = await res.json();
-    if (!res.ok) {
-      const err = new Error(data.message || 'Failed to create customer');
-      err.errors = data.errors;
-      throw err;
-    }
-    return data;
   },
 
   async updateCustomer(id, customerData, notes = '', status) {
-    const headers = await getAuthHeaders();
-    const res = await fetch(`${API_BASE}/customers/${id}`, {
+    return request(`/customers/${id}`, {
       method: 'PUT',
-      headers,
       body: JSON.stringify({ data: customerData, notes, status }),
     });
-    const data = await res.json();
-    if (!res.ok) {
-      const err = new Error(data.message || 'Failed to update customer');
-      err.errors = data.errors;
-      throw err;
-    }
-    return data;
   },
 
   async deleteCustomer(id) {
-    const headers = await getAuthHeaders();
-    const res = await fetch(`${API_BASE}/customers/${id}`, {
+    return request(`/customers/${id}`, {
       method: 'DELETE',
-      headers,
     });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.message || 'Failed to delete customer');
-    return data;
   },
 
   async lookupCustomerByPhone(phone) {
     const cleanPhone = String(phone).replace(/[^0-9]/g, '');
-    const headers = await getAuthHeaders();
-    const res = await fetch(`${API_BASE}/customers/lookup-phone/${cleanPhone}`, {
-      headers,
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.message || 'Lookup failed');
-    return data;
+    return request(`/customers/lookup-phone/${cleanPhone}`);
   },
 
   // Sequence Config
   async getSequenceConfig() {
-    const headers = await getAuthHeaders();
-    const res = await fetch(`${API_BASE}/sequence/customer-id`, {
-      headers,
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.message || 'Failed to fetch sequence settings');
-    return data;
+    return request('/sequence/customer-id');
   },
 
   async updateSequenceConfig(config) {
-    const headers = await getAuthHeaders();
-    const res = await fetch(`${API_BASE}/sequence/customer-id`, {
+    return request('/sequence/customer-id', {
       method: 'PUT',
-      headers,
       body: JSON.stringify(config),
     });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.message || 'Failed to update sequence settings');
-    return data;
   },
 
-  // Branding & Identity
+  // Branding
   async getBranding() {
-    const headers = await getAuthHeaders();
-    const res = await fetch(`${API_BASE}/branding`, {
-      headers,
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.message || 'Failed to fetch branding');
-    return data;
+    return request('/branding');
   },
 
   async updateBranding(brandingData) {
-    const headers = await getAuthHeaders();
-    const res = await fetch(`${API_BASE}/branding`, {
+    return request('/branding', {
       method: 'PUT',
-      headers,
       body: JSON.stringify(brandingData),
     });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.message || 'Failed to update branding');
-    return data;
   },
 
-  // Daily KPI Tracking
+  // Daily KPI
+  async getDailyKPI(date, salesperson) {
+    const params = new URLSearchParams();
+    if (date) params.append('date', date);
+    if (salesperson) params.append('salesperson', salesperson);
+    return request(`/kpi?${params.toString()}`);
+  },
+
   async createOrUpdateKPI(kpiData) {
-    const headers = await getAuthHeaders();
-    const res = await fetch(`${API_BASE}/kpi`, {
+    return request('/kpi', {
       method: 'POST',
-      headers,
       body: JSON.stringify(kpiData),
     });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.message || 'Failed to save Daily KPI');
-    return data;
-  },
-
-  async getKPIList(params = {}) {
-    const headers = await getAuthHeaders();
-    const query = new URLSearchParams(params).toString();
-    const res = await fetch(`${API_BASE}/kpi${query ? `?${query}` : ''}`, {
-      headers,
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.message || 'Failed to fetch Daily KPI records');
-    return data;
   },
 
   async getKPISummary(params = {}) {
-    const headers = await getAuthHeaders();
-    const query = new URLSearchParams(params).toString();
-    const res = await fetch(`${API_BASE}/kpi/summary${query ? `?${query}` : ''}`, {
-      headers,
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.message || 'Failed to fetch KPI summary analytics');
-    return data;
-  },
-
-  async getKPIAutoFill(params = {}) {
-    const headers = await getAuthHeaders();
-    const query = new URLSearchParams(params).toString();
-    const res = await fetch(`${API_BASE}/kpi/auto-fill${query ? `?${query}` : ''}`, {
-      headers,
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.message || 'Failed to auto-calculate CRM metrics');
-    return data;
+    const query = typeof params === 'string' ? `period=${params}` : new URLSearchParams(params).toString();
+    return request(`/kpi/summary${query ? `?${query}` : ''}`);
   },
 
   async getDayPerformance(params = {}) {
-    const headers = await getAuthHeaders();
     const query = new URLSearchParams(params).toString();
-    const res = await fetch(`${API_BASE}/kpi/day-performance${query ? `?${query}` : ''}`, {
-      headers,
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.message || 'Failed to fetch day performance breakdown');
-    return data;
+    return request(`/kpi/day-performance${query ? `?${query}` : ''}`);
   },
 
   async getDailyTrends(params = {}) {
-    const headers = await getAuthHeaders();
     const query = new URLSearchParams(params).toString();
-    const res = await fetch(`${API_BASE}/kpi/daily-trends${query ? `?${query}` : ''}`, {
-      headers,
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.message || 'Failed to fetch daily trends matrix');
-    return data;
+    return request(`/kpi/daily-trends${query ? `?${query}` : ''}`);
   },
 
-  async deleteKPI(id) {
-    const headers = await getAuthHeaders();
-    const res = await fetch(`${API_BASE}/kpi/${id}`, {
-      method: 'DELETE',
-      headers,
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.message || 'Failed to delete KPI record');
-    return data;
+  async getKPIAutoFill(params = {}) {
+    const query = new URLSearchParams(params).toString();
+    return request(`/kpi/auto-fill${query ? `?${query}` : ''}`);
   },
 
-  // Lost Sales Tracking & Competitor Intelligence
-  async createLostSale(lostSaleData) {
-    const headers = await getAuthHeaders();
-    const res = await fetch(`${API_BASE}/lost-sales`, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify(lostSaleData),
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.message || 'Failed to record lost sale');
-    return data;
+  // Lost Sales
+  async getLostSales(params = {}) {
+    const query = new URLSearchParams(params).toString();
+    return request(`/lost-sales${query ? `?${query}` : ''}`);
   },
 
   async getLostSalesList(params = {}) {
-    const headers = await getAuthHeaders();
     const query = new URLSearchParams(params).toString();
-    const res = await fetch(`${API_BASE}/lost-sales${query ? `?${query}` : ''}`, {
-      headers,
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.message || 'Failed to fetch lost sales list');
-    return data;
+    return request(`/lost-sales${query ? `?${query}` : ''}`);
   },
 
-  async getLostSalesAnalytics(params = {}) {
-    const headers = await getAuthHeaders();
-    const query = new URLSearchParams(params).toString();
-    const res = await fetch(`${API_BASE}/lost-sales/analytics${query ? `?${query}` : ''}`, {
-      headers,
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.message || 'Failed to fetch lost sales analytics');
-    return data;
-  },
-
-  async updateLostSale(id, updates) {
-    const headers = await getAuthHeaders();
-    const res = await fetch(`${API_BASE}/lost-sales/${id}`, {
-      method: 'PUT',
-      headers,
-      body: JSON.stringify(updates),
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.message || 'Failed to update lost sale record');
-    return data;
-  },
-
-  async reopenLostSale(id, winBackNotes = '') {
-    const headers = await getAuthHeaders();
-    const res = await fetch(`${API_BASE}/lost-sales/${id}/reopen`, {
+  async createLostSale(lostSaleData) {
+    return request('/lost-sales', {
       method: 'POST',
-      headers,
-      body: JSON.stringify({ winBackNotes }),
+      body: JSON.stringify(lostSaleData),
     });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.message || 'Failed to reopen deal');
-    return data;
+  },
+
+  async updateLostSale(id, lostSaleData) {
+    return request(`/lost-sales/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(lostSaleData),
+    });
   },
 
   async deleteLostSale(id) {
-    const headers = await getAuthHeaders();
-    const res = await fetch(`${API_BASE}/lost-sales/${id}`, {
+    return request(`/lost-sales/${id}`, {
       method: 'DELETE',
-      headers,
     });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.message || 'Failed to delete lost sale record');
-    return data;
   },
 
-  // Executive Dashboard
-  async getDashboardMetrics(params = {}) {
-    const headers = await getAuthHeaders();
-    const query = new URLSearchParams(params).toString();
-    const res = await fetch(`${API_BASE}/dashboard/metrics${query ? `?${query}` : ''}`, {
-      headers,
+  async reopenLostSale(id, winBackNotes = '') {
+    return request(`/lost-sales/${id}/reopen`, {
+      method: 'POST',
+      body: JSON.stringify({ winBackNotes }),
     });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.message || 'Failed to fetch dashboard metrics');
-    return data;
+  },
+
+  async getLostSalesAnalytics(params = {}) {
+    const query = new URLSearchParams(params).toString();
+    return request(`/lost-sales/analytics${query ? `?${query}` : ''}`);
+  },
+
+  // Dashboard
+  async getExecutiveDashboard(params = {}) {
+    const query = new URLSearchParams(params).toString();
+    return request(`/dashboard/metrics${query ? `?${query}` : ''}`);
+  },
+
+  async getDashboardMetrics(params = {}) {
+    const query = new URLSearchParams(params).toString();
+    return request(`/dashboard/metrics${query ? `?${query}` : ''}`);
   },
 
   async updateSalesTargets(targetData) {
-    const headers = await getAuthHeaders();
-    const res = await fetch(`${API_BASE}/dashboard/targets`, {
+    return request('/dashboard/targets', {
       method: 'PUT',
-      headers,
       body: JSON.stringify(targetData),
     });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.message || 'Failed to update sales targets');
-    return data;
   },
 
-  // Follow-up Sheet & Lead Nurturing Hub
+  // Followups
   async getFollowupsList(params = {}) {
-    const headers = await getAuthHeaders();
-    const query = new URLSearchParams(params).toString();
-    const res = await fetch(`${API_BASE}/followups${query ? `?${query}` : ''}`, {
-      headers,
+    const cleanParams = {};
+    Object.entries(params).forEach(([k, v]) => {
+      if (v !== undefined && v !== null && v !== '' && v !== 'all') {
+        cleanParams[k] = v;
+      }
     });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.message || 'Failed to fetch follow-ups list');
-    return data;
+    const query = new URLSearchParams(cleanParams).toString();
+    return request(`/followups${query ? `?${query}` : ''}`);
   },
 
   async logFollowupActivity(id, activityData) {
-    const headers = await getAuthHeaders();
-    const res = await fetch(`${API_BASE}/followups/${id}/log`, {
+    return request(`/followups/${id}/log`, {
       method: 'POST',
-      headers,
       body: JSON.stringify(activityData),
     });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.message || 'Failed to log follow-up activity');
-    return data;
   },
 
-  // Showroom Staff & Employee Management
+  // Users & Staff Management
   async getUsers() {
-    const headers = await getAuthHeaders();
-    const res = await fetch(`${API_BASE}/users`, {
-      headers,
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.message || 'Failed to fetch employees');
-    return data;
+    return request('/users');
   },
 
   async createUser(userData) {
-    const headers = await getAuthHeaders();
-    const res = await fetch(`${API_BASE}/users`, {
+    return request('/users', {
       method: 'POST',
-      headers,
       body: JSON.stringify(userData),
     });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.message || 'Failed to create employee');
-    return data;
   },
 
   async updateUser(id, userData) {
-    const headers = await getAuthHeaders();
-    const res = await fetch(`${API_BASE}/users/${id}`, {
+    return request(`/users/${id}`, {
       method: 'PUT',
-      headers,
       body: JSON.stringify(userData),
     });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.message || 'Failed to update employee');
-    return data;
   },
 
   async deleteUser(id) {
-    const headers = await getAuthHeaders();
-    const res = await fetch(`${API_BASE}/users/${id}`, {
+    return request(`/users/${id}`, {
       method: 'DELETE',
-      headers,
     });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.message || 'Failed to delete employee');
-    return data;
+  },
+
+  // Developer Database Wipe
+  async wipeAllData(devKey) {
+    return request('/settings/wipe-data', {
+      method: 'POST',
+      body: JSON.stringify({ devKey }),
+    });
   },
 };

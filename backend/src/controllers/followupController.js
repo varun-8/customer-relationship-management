@@ -145,20 +145,30 @@ exports.getFollowupsList = async (req, res) => {
 
     // Apply Salesperson Filter
     if (salesperson && salesperson !== 'all') {
-      filtered = filtered.filter((f) => f.salesperson === salesperson);
+      const target = salesperson.trim().toLowerCase();
+      filtered = filtered.filter((f) => {
+        const staff = (f.salesperson || '').trim().toLowerCase();
+        return staff === target || staff.includes(target) || target.includes(staff);
+      });
     }
 
     // Apply Search Query
     if (search && search.trim()) {
       const q = search.trim().toLowerCase();
-      filtered = filtered.filter(
-        (f) =>
-          f.customerName.toLowerCase().includes(q) ||
-          f.phone.includes(q) ||
-          (f.customerId && f.customerId.toLowerCase().includes(q)) ||
-          f.requirement.toLowerCase().includes(q) ||
-          (f.lastReason && f.lastReason.toLowerCase().includes(q))
-      );
+      filtered = filtered.filter((f) => {
+        const name = String(f.customerName || '').toLowerCase();
+        const phone = String(f.phone || '');
+        const id = String(f.customerId || '').toLowerCase();
+        const reqStr = Array.isArray(f.requirement) ? f.requirement.join(' ').toLowerCase() : String(f.requirement || '').toLowerCase();
+        const reason = String(f.lastReason || '').toLowerCase();
+        return (
+          name.includes(q) ||
+          phone.includes(q) ||
+          id.includes(q) ||
+          reqStr.includes(q) ||
+          reason.includes(q)
+        );
+      });
     }
 
     // Sort: Overdue sorted by most overdue first; Today sorted by quotation value; Upcoming sorted by nearest date
@@ -234,6 +244,7 @@ exports.logFollowupActivity = async (req, res) => {
     currentData.notes = currentData.notes ? `${currentData.notes}\n${newNote}` : newNote;
 
     customer.data = currentData;
+    customer.markModified('data');
     await customer.save();
 
     res.status(200).json({

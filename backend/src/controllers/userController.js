@@ -1,4 +1,11 @@
 const User = require('../models/User');
+const Customer = require('../models/Customer');
+let LostSale;
+try {
+  LostSale = require('../models/LostSale');
+} catch (e) {
+  // Model may be dynamic
+}
 const bcrypt = require('bcryptjs');
 
 const DEFAULT_SHOWROOM_STAFF = [
@@ -110,7 +117,10 @@ const updateUser = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Employee record not found' });
     }
 
-    if (name) user.name = name.trim();
+    const oldName = user.name;
+    const newName = name ? name.trim() : oldName;
+
+    if (name) user.name = newName;
     if (email) {
       const normalizedEmail = email.trim().toLowerCase();
       if (normalizedEmail !== user.email) {
@@ -134,6 +144,24 @@ const updateUser = async (req, res) => {
 
     await user.save();
 
+    // If staff name changed, cascade update assigned leads in background
+    if (newName !== oldName) {
+      try {
+        await Customer.updateMany(
+          { 'data.salesperson': oldName },
+          { $set: { 'data.salesperson': newName } }
+        );
+        if (LostSale) {
+          await LostSale.updateMany(
+            { salesperson: oldName },
+            { $set: { salesperson: newName } }
+          );
+        }
+      } catch (cascadeErr) {
+        console.warn('Lead salesperson cascade update warning:', cascadeErr.message);
+      }
+    }
+
     const userObj = user.toObject();
     delete userObj.password;
 
@@ -149,7 +177,7 @@ const updateUser = async (req, res) => {
 };
 
 /**
- * @desc Delete or deactivate employee
+ * @desc Delete employee and automatically reassign all active leads to Showroom Owner
  * @route DELETE /api/users/:id
  */
 const deleteUser = async (req, res) => {
@@ -166,14 +194,46 @@ const deleteUser = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Cannot delete the primary showroom owner account' });
     }
 
+    const deletedUserName = user.name;
+
+    // 1. Locate Showroom Owner for automatic lead reassignment
+    let owner = await User.findOne({ role: 'owner' }).lean();
+    if (!owner) {
+      owner = await User.findOne({ email: 'owner@vasantham.com' }).lean();
+    }
+    const reassignedToName = owner ? owner.name : 'Showroom Owner';
+
+    // 2. Automatically reassign all active leads from deleted employee to Showroom Owner
+    const custUpdateResult = await Customer.updateMany(
+      { 'data.salesperson': deletedUserName },
+      { $set: { 'data.salesperson': reassignedToName, 'updatedBy.name': 'System (Reassigned on Deletion)' } }
+    );
+
+    // 3. Reassign any records in LostSale collection
+    if (LostSale) {
+      try {
+        await LostSale.updateMany(
+          { salesperson: deletedUserName },
+          { $set: { salesperson: reassignedToName } }
+        );
+      } catch (lostErr) {
+        console.warn('LostSale reassignment warning:', lostErr.message);
+      }
+    }
+
+    // 4. Delete the employee record
     await User.findByIdAndDelete(id);
+
+    const reassignedCount = custUpdateResult.modifiedCount || custUpdateResult.nModified || 0;
 
     res.json({
       success: true,
-      message: `Employee "${user.name}" removed successfully`,
+      message: `Employee "${deletedUserName}" removed successfully. ${reassignedCount} lead(s) automatically reassigned to ${reassignedToName}.`,
+      reassignedCount,
+      reassignedTo: reassignedToName,
     });
   } catch (error) {
-    console.error('Error deleting user:', error);
+    console.error('Error deleting user and reassigning leads:', error);
     res.status(500).json({ success: false, message: error.message || 'Failed to delete employee' });
   }
 };

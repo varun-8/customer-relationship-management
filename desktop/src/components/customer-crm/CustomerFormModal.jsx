@@ -153,7 +153,20 @@ export const CustomerFormModal = ({ customer, onClose, onSuccess }) => {
     });
 
     setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+
+    if (Object.keys(newErrors).length > 0) {
+      // Automatically switch to the first section with an error
+      for (const sec of FIELD_SECTIONS) {
+        const secFields = getFieldsForSection(sec.fieldNames);
+        if (secFields.some((f) => newErrors[f.name])) {
+          setActiveTab(sec.id);
+          break;
+        }
+      }
+      return false;
+    }
+
+    return true;
   };
 
   const handleSubmit = async (e) => {

@@ -145,120 +145,365 @@ h6 {
   overflow: hidden;
 }
 
-/* Dark Navy Sidebar */
+/* ==========================================================================
+   Modern Desktop Sidebar (Collapsible, Categorized, Obsidian Glass Theme)
+   ========================================================================== */
+
 .app-sidebar {
-  width: 220px;
-  min-width: 220px;
-  background-color: var(--sidebar-bg);
-  border-right: 1px solid var(--sidebar-border);
+  width: 260px;
+  min-width: 260px;
+  background: linear-gradient(180deg, #090E1A 0%, #0F172A 100%);
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
   display: flex;
   flex-direction: column;
   height: 100vh;
   z-index: 40;
+  box-shadow: 4px 0 24px rgba(0, 0, 0, 0.25);
+  position: relative;
+  user-select: none;
+}
+
+.app-sidebar-collapsed {
+  width: 76px !important;
+  min-width: 76px !important;
+}
+
+/* 1. Brand Header */
+.sidebar-brand-wrapper {
+  padding: 18px 16px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  gap: 8px;
 }
 
 .sidebar-brand {
-  padding: 22px 18px 18px;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
+  cursor: pointer;
+  min-width: 0;
+  flex: 1;
+  border-radius: 10px;
+  padding: 4px;
+  transition: all 0.2s ease;
+}
+
+.sidebar-brand:hover {
+  background: rgba(255, 255, 255, 0.04);
 }
 
 .sidebar-brand-logo {
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
-  background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%);
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4);
+  overflow: hidden;
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.sidebar-brand:hover .sidebar-brand-logo {
+  transform: scale(1.05);
+}
+
+.sidebar-brand-text-block {
+  min-width: 0;
+  flex: 1;
 }
 
 .sidebar-brand-title {
-  font-size: 16.5px;
+  font-size: 15.5px;
   font-weight: 800;
   color: #FFFFFF;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.sidebar-nav {
+.sidebar-brand-tagline {
+  font-size: 11px;
+  color: #94A3B8;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 2px;
+  font-weight: 500;
+}
+
+.sidebar-collapse-toggle {
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.05);
+  color: #94A3B8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.sidebar-collapse-toggle:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #FFFFFF;
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+/* 2. Quick Lead Action Button */
+.sidebar-action-container {
+  padding: 12px 14px 4px;
+}
+
+.sidebar-action-btn {
+  width: 100%;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(59, 130, 246, 0.4);
+  background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%);
+  color: #FFFFFF;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35);
+  transition: all 0.2s ease;
+}
+
+.sidebar-action-btn:hover {
+  background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%);
+  box-shadow: 0 6px 18px rgba(37, 99, 235, 0.5);
+  transform: translateY(-1px);
+}
+
+.app-sidebar-collapsed .sidebar-action-btn {
+  padding: 10px 0;
+}
+
+/* 3. Navigation Scroll Area */
+.sidebar-scroll-area {
   flex: 1;
-  padding: 10px 12px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 12px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.sidebar-scroll-area::-webkit-scrollbar {
+  width: 4px;
+}
+
+.sidebar-scroll-area::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+}
+
+.sidebar-nav-group {
   display: flex;
   flex-direction: column;
   gap: 4px;
 }
 
-.sidebar-nav-link {
+.sidebar-group-heading {
+  font-size: 10px;
+  font-weight: 800;
+  color: #64748B;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 6px 12px 2px;
+}
+
+.sidebar-nav-list {
   display: flex;
-  align-items: center;
-  gap: 11px;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.sidebar-nav-item {
   width: 100%;
-  padding: 9px 12px;
-  border-radius: 8px;
-  background: transparent;
-  border: none;
-  color: var(--sidebar-text);
-  font-weight: 500;
-  font-size: 13.5px;
-  cursor: pointer;
-  transition: all 0.15s ease;
-  text-align: left;
-}
-
-.sidebar-nav-link:hover {
-  background-color: var(--sidebar-hover-bg);
-  color: #FFFFFF;
-}
-
-.sidebar-nav-link-active {
-  background-color: var(--sidebar-active-bg) !important;
-  color: #FFFFFF !important;
-  font-weight: 600 !important;
-  box-shadow: 0 3px 10px rgba(37, 99, 235, 0.35);
-}
-
-.sidebar-footer {
-  padding: 14px 14px 16px;
-  border-top: 1px solid var(--sidebar-border);
-  background-color: rgba(11, 17, 32, 0.95);
-}
-
-.sidebar-user-card {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 8px 10px;
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  gap: 12px;
+  padding: 9px 12px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: #94A3B8;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+  text-align: left;
+  position: relative;
 }
 
-.sidebar-user-avatar {
-  width: 30px;
-  height: 30px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%);
-  color: #FFFFFF;
-  font-weight: 700;
-  font-size: 11.5px;
+.sidebar-nav-item:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: #F8FAFC;
+  transform: translateX(2px);
+}
+
+.app-sidebar-collapsed .sidebar-nav-item {
+  justify-content: center;
+  padding: 10px 0;
+}
+
+.app-sidebar-collapsed .sidebar-nav-item:hover {
+  transform: none;
+}
+
+.sidebar-nav-item-indicator {
+  position: absolute;
+  left: 0;
+  top: 6px;
+  bottom: 6px;
+  width: 3.5px;
+  border-radius: 0 4px 4px 0;
+  background: transparent;
+  transition: all 0.2s ease;
+}
+
+.sidebar-nav-icon-box {
   display: flex;
   align-items: center;
   justify-content: center;
-  overflow: hidden;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  flex-shrink: 0;
 }
 
-.sidebar-user-name {
+.sidebar-nav-item-label {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sidebar-nav-badge {
+  padding: 2px 7px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+/* Active State */
+.sidebar-nav-item-active {
+  background: linear-gradient(90deg, rgba(37, 99, 235, 0.25) 0%, rgba(37, 99, 235, 0.08) 100%) !important;
+  color: #FFFFFF !important;
+  border-color: rgba(59, 130, 246, 0.3) !important;
+  box-shadow: 0 2px 10px rgba(37, 99, 235, 0.2);
+}
+
+.sidebar-nav-item-active .sidebar-nav-item-indicator {
+  background: #3B82F6;
+  box-shadow: 0 0 8px #3B82F6;
+}
+
+.sidebar-nav-item-active .sidebar-nav-icon-box {
+  color: #60A5FA;
+}
+
+/* Tool Pill */
+.sidebar-tool-pill {
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  padding: 1px 6px;
+  border-radius: 6px;
+  background: rgba(56, 189, 248, 0.15);
+  color: #38BDF8;
+  border: 1px solid rgba(56, 189, 248, 0.3);
+}
+
+/* 4. Desktop Sidebar Footer: Profile Card */
+.sidebar-footer-wrapper {
+  padding: 14px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(9, 14, 26, 0.8);
+}
+
+.sidebar-profile-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  transition: all 0.2s ease;
+}
+
+.sidebar-profile-card-collapsed {
+  justify-content: center;
+  padding: 6px 0;
+}
+
+.sidebar-avatar-circle {
+  width: 34px;
+  height: 34px;
+  min-width: 34px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #2563EB 0%, #7C3AED 100%);
+  color: #FFFFFF;
+  font-weight: 800;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+.sidebar-profile-meta {
+  flex: 1;
+  min-width: 0;
+}
+
+.sidebar-profile-name {
   font-size: 12.5px;
   font-weight: 700;
-  color: #FFFFFF;
+  color: #F8FAFC;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.sidebar-user-role {
-  font-size: 11px;
-  color: var(--sidebar-text);
+.sidebar-profile-role {
+  font-size: 10.5px;
+  color: #94A3B8;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 1px;
+}
+
+.sidebar-logout-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: #64748B;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.sidebar-logout-btn:hover {
+  background: rgba(239, 68, 68, 0.15);
+  color: #F87171;
 }
 
 /* App Main & Header */

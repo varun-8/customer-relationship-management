@@ -16,8 +16,10 @@ import {
   UserPlus,
 } from 'lucide-react';
 import { api } from '../../services/api';
+import { useToast } from '../../context/ToastContext';
 
 export const EmployeeFormModal = ({ employee, onClose, onSuccess }) => {
+  const toast = useToast();
   const isEdit = Boolean(employee && employee._id);
 
   const [name, setName] = useState('');
@@ -98,12 +100,18 @@ export const EmployeeFormModal = ({ employee, onClose, onSuccess }) => {
       }
 
       if (res && res.success) {
+        toast.success(
+          isEdit ? `Staff profile for "${payload.name}" updated successfully.` : `New staff member "${payload.name}" registered.`,
+          isEdit ? 'Profile Saved' : 'Staff Added'
+        );
         onSuccess(res.data);
       } else {
         setError(res?.message || 'Failed to save employee record.');
+        toast.error(res?.message || 'Failed to save employee record.', 'Save Error');
       }
     } catch (err) {
       setError(err.message || 'Error processing request');
+      toast.error(err.message || 'Error processing request', 'Save Error');
     } finally {
       setSaving(false);
     }

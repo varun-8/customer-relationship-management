@@ -1,7 +1,15 @@
 import React from 'react';
-import { Plus } from 'lucide-react';
+import { Plus, RefreshCw, Wifi, WifiOff, Cloud } from 'lucide-react';
 
-export const Header = ({ title, subtitle, onAddCustomer, showAddCustomer = false }) => {
+export const Header = ({
+  title,
+  subtitle,
+  onAddCustomer,
+  showAddCustomer = false,
+  isOnline = true,
+  isChecking = false,
+  onRetryConnection,
+}) => {
   return (
     <header className="app-header">
       <div className="page-header-intro">
@@ -11,8 +19,79 @@ export const Header = ({ title, subtitle, onAddCustomer, showAddCustomer = false
         </p>
       </div>
 
-      {showAddCustomer && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        {/* Live Cloud Connection Status Badge */}
+        {isOnline ? (
+          <div
+            title="Connected to Node.js & MongoDB Atlas backend"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              backgroundColor: '#ECFDF5',
+              border: '1px solid #A7F3D0',
+              padding: '6px 12px',
+              borderRadius: '20px',
+              fontSize: '12px',
+              fontWeight: '700',
+              color: '#047857',
+            }}
+          >
+            <span
+              style={{
+                width: '7px',
+                height: '7px',
+                borderRadius: '50%',
+                backgroundColor: '#10B981',
+                boxShadow: '0 0 6px rgba(16, 185, 129, 0.6)',
+              }}
+            />
+            <span>Cloud Live</span>
+          </div>
+        ) : (
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              backgroundColor: '#FEF2F2',
+              border: '1px solid #FECDD3',
+              padding: '5px 12px',
+              borderRadius: '20px',
+              fontSize: '12px',
+              fontWeight: '700',
+              color: '#B91C1C',
+            }}
+          >
+            <WifiOff size={14} color="#EF4444" />
+            <span>Server Offline</span>
+            {onRetryConnection && (
+              <button
+                type="button"
+                onClick={onRetryConnection}
+                disabled={isChecking}
+                style={{
+                  background: '#FEE2E2',
+                  border: '1px solid #FCA5A5',
+                  color: '#991B1B',
+                  borderRadius: '12px',
+                  padding: '2px 8px',
+                  fontSize: '11px',
+                  fontWeight: '800',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '3px',
+                }}
+              >
+                <RefreshCw size={10} className={isChecking ? 'spin-animation' : ''} />
+                <span>{isChecking ? 'Checking...' : 'Reconnect'}</span>
+              </button>
+            )}
+          </div>
+        )}
+
+        {showAddCustomer && (
           <button
             type="button"
             onClick={onAddCustomer}
@@ -30,8 +109,8 @@ export const Header = ({ title, subtitle, onAddCustomer, showAddCustomer = false
             <Plus size={16} />
             <span>Add New Customer</span>
           </button>
-        </div>
-      )}
+        )}
+      </div>
     </header>
   );
 };

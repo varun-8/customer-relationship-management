@@ -17,9 +17,12 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { api } from '../../services/api';
+import { useToast } from '../../context/ToastContext';
 import { EmployeeFormModal } from './EmployeeFormModal';
+import { ConnectionErrorState } from '../common/ConnectionErrorState';
 
 export const EmployeeManagementView = () => {
+  const toast = useToast();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -28,7 +31,6 @@ export const EmployeeManagementView = () => {
 
   const [showModal, setShowModal] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState(null);
-  const [toastMessage, setToastMessage] = useState('');
 
   const fetchUsers = async () => {
     setLoading(true);
@@ -38,11 +40,15 @@ export const EmployeeManagementView = () => {
       if (res && res.success) {
         setUsers(res.data || []);
       } else {
-        setError(res?.message || 'Failed to load employees');
+        const msg = res?.message || 'Failed to load employees';
+        setError(msg);
+        if (users.length > 0) toast.warning(msg, 'Staff Directory');
       }
     } catch (err) {
-      console.error('Error fetching users:', err);
-      setError(err.message || 'Error connecting to backend');
+      console.warn('Error fetching users:', err.message);
+      const msg = err.message || 'Error connecting to backend';
+      setError(msg);
+      if (users.length > 0) toast.warning(msg, 'Connection Issue');
     } finally {
       setLoading(false);
     }
@@ -52,30 +58,25 @@ export const EmployeeManagementView = () => {
     fetchUsers();
   }, []);
 
-  const showToast = (msg) => {
-    setToastMessage(msg);
-    setTimeout(() => setToastMessage(''), 3500);
-  };
-
   const handleToggleStatus = async (user) => {
     try {
       const updatedActive = !user.active;
       const res = await api.updateUser(user._id, { active: updatedActive });
       if (res && res.success) {
         setUsers((prev) => prev.map((u) => (u._id === user._id ? { ...u, active: updatedActive } : u)));
-        showToast(`Staff "${user.name}" status updated to ${updatedActive ? 'Active' : 'Inactive'}`);
+        toast.success(`Staff "${user.name}" status updated to ${updatedActive ? 'Active' : 'Inactive'}`, 'Status Updated');
       }
     } catch (err) {
-      alert(err.message || 'Failed to update status');
+      toast.error(err.message || 'Failed to update status', 'Update Error');
     }
   };
 
   const handleDeleteUser = async (user) => {
-    if (user.email === 'owner@vasantham.com') {
-      alert('Cannot delete the primary showroom owner account.');
+    if (user.email === 'owner@vasantham.com' || user.role === 'owner') {
+      toast.warning('Cannot delete the primary showroom owner account.', 'Action Blocked');
       return;
     }
-    if (!window.confirm(`Are you sure you want to remove staff member "${user.name}"?`)) {
+    if (!window.confirm(`Are you sure you want to remove staff member "${user.name}"?\n\nAll active leads and follow-ups assigned to ${user.name} will automatically be transferred to the Showroom Owner.`)) {
       return;
     }
 
@@ -83,10 +84,10 @@ export const EmployeeManagementView = () => {
       const res = await api.deleteUser(user._id);
       if (res && res.success) {
         setUsers((prev) => prev.filter((u) => u._id !== user._id));
-        showToast(`Staff "${user.name}" removed successfully`);
+        toast.info(res.message || `Staff "${user.name}" removed and leads reassigned to Showroom Owner.`, 'Staff Removed');
       }
     } catch (err) {
-      alert(err.message || 'Failed to delete user');
+      toast.error(err.message || 'Failed to delete user', 'Delete Error');
     }
   };
 
@@ -112,32 +113,6 @@ export const EmployeeManagementView = () => {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', animation: 'tabFadeInUp 0.3s ease' }}>
-      {/* Toast Notification */}
-      {toastMessage && (
-        <div
-          style={{
-            position: 'fixed',
-            bottom: '24px',
-            right: '24px',
-            background: '#0F172A',
-            color: '#FFFFFF',
-            padding: '12px 20px',
-            borderRadius: '12px',
-            boxShadow: '0 12px 30px rgba(0,0,0,0.25)',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '10px',
-            zIndex: 9999,
-            fontSize: '13px',
-            fontWeight: '700',
-            animation: 'tabFadeInUp 0.25s ease',
-          }}
-        >
-          <CheckCircle size={16} color="#10B981" />
-          <span>{toastMessage}</span>
-        </div>
-      )}
-
       {/* 1. Scorecard Metric Row */}
       <div
         style={{
@@ -379,22 +354,33 @@ export const EmployeeManagementView = () => {
           </span>
         </div>
 
-        {error && (
-          <div style={{ padding: '16px 20px', background: '#FEF2F2', color: '#DC2626', fontSize: '13px', fontWeight: '700' }}>
-            ⚠️ {error}
+        {error && users.length === 0 ? (
+          <div style={{ padding: '24px' }}>
+            <ConnectionErrorState
+              title="Unable to Load Staff Directory"
+              message={error}
+              onRetry={fetchUsers}
+              isRetrying={loading}
+            />
           </div>
-        )}
+        ) : null}
 
         {loading ? (
           <div style={{ padding: '40px', textAlign: 'center', color: '#64748B' }}>
             <RefreshCw size={24} className="spin" style={{ margin: '0 auto 8px' }} />
             <div>Loading showroom employees...</div>
           </div>
-        ) : filteredUsers.length === 0 ? (
+        ) : users.length === 0 ? (
           <div style={{ padding: '48px 20px', textAlign: 'center', color: '#64748B' }}>
             <div style={{ fontSize: '36px', marginBottom: '8px' }}>👥</div>
             <div style={{ fontSize: '15px', fontWeight: '800', color: '#0F172A' }}>No staff records found</div>
-            <div style={{ fontSize: '12.5px', marginTop: '4px' }}>Click "Add Employee / Mobile Login" to register showroom staff.</div>
+            <div style={{ fontSize: '12.5px', marginTop: '4px' }}>Click "Add Staff Member" to register showroom staff.</div>
+          </div>
+        ) : filteredUsers.length === 0 ? (
+          <div style={{ padding: '48px 20px', textAlign: 'center', color: '#64748B' }}>
+            <Users size={32} style={{ margin: '0 auto 8px', color: '#94A3B8' }} />
+            <div style={{ fontWeight: '700', fontSize: '14px' }}>No staff found matching filter</div>
+            <div style={{ fontSize: '12px', marginTop: '4px' }}>Try changing the search query or role filter.</div>
           </div>
         ) : (
           <div className="table-responsive">

@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import { api } from '../../services/api';
 import { SalesTargetModal } from './SalesTargetModal';
+import { ConnectionErrorState } from '../common/ConnectionErrorState';
 
 export const ExecutiveDashboardView = () => {
   const todayStr = new Date().toISOString().split('T')[0];
@@ -158,8 +159,18 @@ export const ExecutiveDashboardView = () => {
         </div>
       </div>
 
-      {/* 2. Top Executive KPI Grid (11 Dimensions strictly from handwritten notes) */}
-      <div className="dash-kpi-grid">
+      {/* Connection Error Banner / Card */}
+      {error && !metrics ? (
+        <ConnectionErrorState
+          title="Unable to Load Dashboard Metrics"
+          message={error}
+          onRetry={fetchDashboardData}
+          isRetrying={loading}
+        />
+      ) : (
+        <>
+          {/* 2. Top Executive KPI Grid (11 Dimensions strictly from handwritten notes) */}
+          <div className="dash-kpi-grid">
         {/* HERO CARD: 1. Sales Target, 2. Actual Sales, 3. Achievement */}
         <div className="dash-hero-target-card">
           <div className="dash-hero-header">
@@ -496,6 +507,8 @@ export const ExecutiveDashboardView = () => {
           )}
         </div>
       </div>
+        </>
+      )}
 
       {/* Target Config Modal */}
       {showTargetModal && (

@@ -1,0 +1,24 @@
+{
+  "name": "vasantham-crm",
+  "version": "1.0.0",
+  "description": "Vasantham Tiles & Sanitary Wares — Customer CRM Workspace",
+  "private": true,
+  "scripts": {
+    "dev": "npm --prefix desktop run dev",
+    "dev:desktop": "npm --prefix desktop run dev",
+    "dev:browser": "concurrently -k -n \"BACKEND,DESKTOP\" -c \"bgBlue.bold,bgMagenta.bold\" \"npm --prefix backend run dev\" \"npm --prefix desktop run dev:frontend\"",
+    "dev:backend": "npm --prefix backend run dev",
+    "dev:frontend": "npm --prefix desktop run dev:frontend",
+    "dev:tauri": "concurrently -k -n \"BACKEND,TAURI\" -c \"bgBlue.bold,bgCyan.bold\" \"npm --prefix backend run dev\" \"npm --prefix desktop run dev:tauri\"",
+    "dev:mobile": "npm --prefix mobile start",
+    "dev:all": "concurrently -k -n \"BACKEND,DESKTOP,MOBILE\" -c \"bgBlue.bold,bgMagenta.bold,bgGreen.bold\" \"npm --prefix backend run dev\" \"npm --prefix desktop run dev:frontend\" \"npm --prefix mobile start\"",
+    "start": "npm run dev",
+    "seed": "npm --prefix backend run seed",
+    "test": "npm --prefix backend test",
+    "build:desktop": "npm --prefix desktop run build",
+    "install:all": "npm install && npm --prefix backend install && npm --prefix desktop install && npm --prefix mobile install"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

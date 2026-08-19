@@ -28,7 +28,13 @@ import {
   ShieldCheck,
   Server,
   RefreshCw,
+  AlertTriangle,
+  Key,
+  Lock,
+  Eye,
+  EyeOff,
 } from 'lucide-react';
+import { api } from '../../services/api';
 import { useBranding, BRAND_ICONS } from '../../context/BrandingContext';
 import { useCustomer } from '../../context/CustomerContext';
 import { FormBuilderView } from '../form-builder/FormBuilderView';
@@ -75,6 +81,44 @@ export const SettingsView = ({ initialTab = 'branding' }) => {
     'Hello {customerName}!\n\nThank you for visiting *{appName}*.\nHere is your requested quotation of *₹{quoteValue}* for {products}.\n\nTagline: {tagline}\nFeel free to reach us at {phone}. Have a great day!'
   );
   const [businessSavedSuccess, setBusinessSavedSuccess] = useState(false);
+
+  // Developer Key Database Wipe State
+  const [devKeyInput, setDevKeyInput] = useState('');
+  const [showDevKey, setShowDevKey] = useState(false);
+  const [wipingData, setWipingData] = useState(false);
+  const [wipeError, setWipeError] = useState('');
+  const [wipeSuccess, setWipeSuccess] = useState('');
+  const [showWipeConfirm, setShowWipeConfirm] = useState(false);
+
+  const handleWipeDatabase = async () => {
+    if (!devKeyInput.trim()) {
+      setWipeError('Please enter the Developer Key configured in backend .env');
+      return;
+    }
+
+    setWipingData(true);
+    setWipeError('');
+    setWipeSuccess('');
+
+    try {
+      const res = await api.wipeAllData(devKeyInput.trim());
+      if (res && res.success) {
+        setWipeSuccess(res.message || 'Database wiped successfully!');
+        setDevKeyInput('');
+        setShowWipeConfirm(false);
+        // Refresh browser / context after brief pause
+        setTimeout(() => {
+          window.location.reload();
+        }, 1500);
+      } else {
+        setWipeError(res?.message || 'Failed to wipe database.');
+      }
+    } catch (e) {
+      setWipeError(e.message || 'Verification failed. Incorrect DEV_KEY.');
+    } finally {
+      setWipingData(false);
+    }
+  };
 
   const handleImageUpload = (e) => {
     const file = e.target.files?.[0];
@@ -964,6 +1008,169 @@ export const SettingsView = ({ initialTab = 'branding' }) => {
             <span style={{ fontSize: '12px', fontWeight: '800', color: '#059669', background: '#ECFDF5', padding: '4px 10px', borderRadius: '6px', border: '1px solid #A7F3D0' }}>
               ● 100% HEALTHY
             </span>
+          </div>
+
+          {/* Developer Danger Zone: Data Wipe */}
+          <div
+            style={{
+              padding: '20px',
+              borderRadius: '12px',
+              border: '1.5px solid #FECDD3',
+              background: '#FFF5F5',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '14px',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+                <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: '#FEE2E2', color: '#DC2626', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <AlertTriangle size={22} />
+                </div>
+                <div>
+                  <div style={{ fontWeight: '800', fontSize: '14.5px', color: '#991B1B' }}>
+                    Developer Danger Zone: Reset & Wipe All CRM Data
+                  </div>
+                  <div style={{ fontSize: '12px', color: '#7F1D1D', marginTop: '2px', lineHeight: '1.4' }}>
+                    Permanently delete all registered customer leads, dynamic form responses, follow-up call history, daily KPI shifts, and lost sales records. Resets sequence counter back to 0. Requires the <code>DEV_KEY</code> defined in your <code>backend/.env</code> file.
+                  </div>
+                </div>
+              </div>
+
+              <span style={{ fontSize: '11.5px', fontWeight: '800', color: '#DC2626', background: '#FEE2E2', padding: '4px 10px', borderRadius: '6px', border: '1px solid #FECDD3' }}>
+                DESTRUCTIVE ACTION
+              </span>
+            </div>
+
+            {/* Input & Action Bar */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', marginTop: '4px' }}>
+              <div style={{ position: 'relative', flex: '1', minWidth: '240px', maxWidth: '380px' }}>
+                <div style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#94A3B8' }}>
+                  <Key size={15} />
+                </div>
+                <input
+                  type={showDevKey ? 'text' : 'password'}
+                  placeholder="Enter DEV_KEY from backend .env..."
+                  value={devKeyInput}
+                  onChange={(e) => setDevKeyInput(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '8px 36px 8px 32px',
+                    borderRadius: '8px',
+                    border: '1.5px solid #FCA5A5',
+                    background: '#FFFFFF',
+                    fontSize: '12.5px',
+                    color: '#0F172A',
+                    outline: 'none',
+                    fontWeight: '600',
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowDevKey(!showDevKey)}
+                  style={{
+                    position: 'absolute',
+                    right: '8px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    color: '#94A3B8',
+                    padding: '2px',
+                  }}
+                  title={showDevKey ? 'Hide key' : 'Show key'}
+                >
+                  {showDevKey ? <EyeOff size={15} /> : <Eye size={15} />}
+                </button>
+              </div>
+
+              {!showWipeConfirm ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!devKeyInput.trim()) {
+                      setWipeError('Please enter DEV_KEY from backend .env first.');
+                      return;
+                    }
+                    setWipeError('');
+                    setShowWipeConfirm(true);
+                  }}
+                  className="btn"
+                  style={{
+                    background: '#DC2626',
+                    color: '#FFFFFF',
+                    borderRadius: '8px',
+                    fontSize: '12.5px',
+                    fontWeight: '800',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '8px 16px',
+                    border: 'none',
+                    cursor: 'pointer',
+                  }}
+                >
+                  <Trash2 size={15} />
+                  <span>Wipe All Data</span>
+                </button>
+              ) : (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <button
+                    type="button"
+                    onClick={handleWipeDatabase}
+                    disabled={wipingData}
+                    className="btn"
+                    style={{
+                      background: '#991B1B',
+                      color: '#FFFFFF',
+                      borderRadius: '8px',
+                      fontSize: '12.5px',
+                      fontWeight: '800',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      padding: '8px 16px',
+                      border: 'none',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <Trash2 size={15} />
+                    <span>{wipingData ? 'Wiping Database...' : 'Confirm Wipe Database'}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setShowWipeConfirm(false)}
+                    className="btn btn-outline"
+                    style={{
+                      borderRadius: '8px',
+                      fontSize: '12.5px',
+                      fontWeight: '700',
+                      padding: '8px 14px',
+                      background: '#FFFFFF',
+                      borderColor: '#E2E8F0',
+                    }}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {wipeError ? (
+              <div style={{ color: '#DC2626', fontSize: '12px', fontWeight: '700', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                <AlertTriangle size={14} />
+                <span>{wipeError}</span>
+              </div>
+            ) : null}
+
+            {wipeSuccess ? (
+              <div style={{ color: '#059669', fontSize: '12px', fontWeight: '700', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                <CheckCircle size={14} />
+                <span>{wipeSuccess} Reloading CRM...</span>
+              </div>
+            ) : null}
           </div>
         </div>
       )}

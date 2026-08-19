@@ -97,18 +97,19 @@ export function MobileFollowupSheet({
   onLogActivity,
   onRecordLost,
   openWhatsApp,
+  isOnline = true,
 }) {
   const [localSearch, setLocalSearch] = useState('');
   const [selectedDetailItem, setSelectedDetailItem] = useState(null);
 
   // Filter followups based on search text
   const displayedFollowups = useMemo(() => {
-    if (!localSearch.trim()) return followups;
+    if (!localSearch.trim()) return followups || [];
     const q = localSearch.toLowerCase().trim();
-    return followups.filter((f) => {
-      const name = (f.customerName || '').toLowerCase();
-      const phone = (f.phone || '').toLowerCase();
-      const id = (f.customerId || '').toLowerCase();
+    return (followups || []).filter((f) => {
+      const name = String(f.customerName || '').toLowerCase();
+      const phone = String(f.phone || '').toLowerCase();
+      const id = String(f.customerId || '').toLowerCase();
       const req = (typeof f.requirement === 'string' ? f.requirement : Array.isArray(f.requirement) ? f.requirement.join(' ') : '').toLowerCase();
       return name.includes(q) || phone.includes(q) || id.includes(q) || req.includes(q);
     });
@@ -124,6 +125,25 @@ export function MobileFollowupSheet({
 
   return (
     <View style={styles.container}>
+      {/* Offline Status & Cloud Reconnect Banner */}
+      {!isOnline && (
+        <View style={styles.offlineBanner}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1 }}>
+            <View style={styles.offlineDot} />
+            <Text style={styles.offlineBannerText}>
+              Offline Mode • Showing {displayedFollowups.length} local leads
+            </Text>
+          </View>
+          <TouchableOpacity
+            style={styles.offlineRetryBtn}
+            onPress={onRefresh}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.offlineRetryBtnText}>Sync Now</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
       {/* 1. iOS-Grade Segmented Time-Horizon Dock */}
       <View style={styles.segmentContainer}>
         <TouchableOpacity
@@ -233,20 +253,21 @@ export function MobileFollowupSheet({
         </ScrollView>
       </View>
 
-      {/* 3. Follow-up Cards List (Clean, Uncluttered & Minimalist) */}
-      {loading ? (
+      {/* 3. Follow-up Cards List (Rock Solid Stale-While-Revalidate FlatList) */}
+      {loading && (!displayedFollowups || displayedFollowups.length === 0) ? (
         <View style={styles.loadingBox}>
           <ActivityIndicator size="small" color="#2563EB" />
           <Text style={styles.loadingText}>Fetching follow-up schedule...</Text>
         </View>
       ) : (
         <FlatList
-          data={displayedFollowups}
-          keyExtractor={(item) => item._id || item.customerId || String(Math.random())}
+          data={displayedFollowups || []}
+          keyExtractor={(item, index) => item._id || item.customerId || `fu_${item.phone}_${index}`}
+          extraData={{ activeTab, temperatureFilter, refreshing }}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ paddingBottom: 95, paddingTop: 4 }}
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#2563EB" />
+            <RefreshControl refreshing={refreshing || (loading && displayedFollowups.length > 0)} onRefresh={onRefresh} tintColor="#2563EB" />
           }
           ListEmptyComponent={
             <View style={styles.emptyBox}>
@@ -1183,5 +1204,52 @@ const styles = StyleSheet.create({
     fontSize: 12.5,
     fontWeight: '800',
     color: '#DC2626',
+  },
+  offlineBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#FFFBEB',
+    borderBottomWidth: 1,
+    borderBottomColor: '#FDE68A',
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+  },
+  offlineDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#D97706',
+  },
+  offlineBannerText: {
+    fontSize: 11.5,
+    fontWeight: '700',
+    color: '#92400E',
+  },
+  offlineRetryBtn: {
+    backgroundColor: '#FDE68A',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  offlineRetryBtnText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#78350F',
+  },
+  inlineSyncingBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 4,
+    backgroundColor: '#EFF6FF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#DBEAFE',
+  },
+  inlineSyncingText: {
+    fontSize: 11,
+    color: '#2563EB',
+    fontWeight: '600',
   },
 });

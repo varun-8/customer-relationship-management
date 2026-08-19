@@ -238,7 +238,36 @@ const runTests = async () => {
       throw new Error(`Delete draft failed: ${JSON.stringify(deleteDraftRes)}`);
     }
 
-    console.log('\n✨ ALL 11 BACKEND AUTOMATED TESTS PASSED SUCCESSFULLY! ✨\n');
+    // Test 12: Developer Wipe Security (Wrong Dev Key -> 403 Forbidden)
+    console.log('\n[Test 12] Developer Wipe Security (Invalid Dev Key rejection)...');
+    const invalidWipeRes = await makeRequest('/api/settings/wipe-data', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${ownerToken}` },
+      body: { devKey: 'wrong_unauthorized_key' },
+    });
+
+    if (invalidWipeRes.status === 403 && !invalidWipeRes.data.success) {
+      console.log('  ✅ Security verified: Invalid devKey correctly rejected with 403 Forbidden');
+    } else {
+      throw new Error(`Security test failed: ${JSON.stringify(invalidWipeRes)}`);
+    }
+
+    // Test 13: Developer Wipe Execution (Valid Dev Key -> 200 OK & Data Wipe)
+    console.log('\n[Test 13] Developer Wipe Execution (Valid Dev Key)...');
+    const validWipeRes = await makeRequest('/api/settings/wipe-data', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${ownerToken}` },
+      body: { devKey: process.env.DEV_KEY || 'vasantham_dev_secret_wipe_key_2026' },
+    });
+
+    if (validWipeRes.status === 200 && validWipeRes.data.success) {
+      console.log(`  ✅ Database wipe successful: ${validWipeRes.data.message}`);
+      console.log(`     Summary: ${JSON.stringify(validWipeRes.data.summary)}`);
+    } else {
+      throw new Error(`Valid wipe failed: ${JSON.stringify(validWipeRes)}`);
+    }
+
+    console.log('\n✨ ALL 13 BACKEND AUTOMATED TESTS PASSED SUCCESSFULLY! ✨\n');
   } catch (err) {
     console.error('\n❌ Test failure:', err.message);
     process.exitCode = 1;

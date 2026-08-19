@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 import { api } from '../../services/api';
 import { LostSaleModal } from './LostSaleModal';
+import { ConnectionErrorState } from '../common/ConnectionErrorState';
 
 export const LostSalesView = () => {
   const todayStr = new Date().toISOString().split('T')[0];
@@ -613,7 +614,16 @@ export const LostSalesView = () => {
           </span>
         </div>
 
-        {lostSales.length === 0 ? (
+        {error && lostSales.length === 0 ? (
+          <div style={{ padding: '24px' }}>
+            <ConnectionErrorState
+              title="Unable to Load Lost Sales Intelligence"
+              message={error}
+              onRetry={fetchData}
+              isRetrying={loading}
+            />
+          </div>
+        ) : lostSales.length === 0 ? (
           <div style={{ padding: '48px 24px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
             <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: '#FEF2F2', color: '#DC2626', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <FileX size={24} />

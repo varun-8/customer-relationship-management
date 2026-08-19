@@ -1,9 +1,11 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { api } from '../services/api';
+import { useToast } from './ToastContext';
 
 const CustomerContext = createContext(null);
 
 export const CustomerProvider = ({ children }) => {
+  const toast = useToast();
   const [activeForm, setActiveForm] = useState(null);
   const [customers, setCustomers] = useState([]);
   const [pagination, setPagination] = useState({ total: 0, page: 1, limit: 10, pages: 1 });
@@ -17,6 +19,7 @@ export const CustomerProvider = ({ children }) => {
   const [loading, setLoading] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [sequenceConfig, setSequenceConfig] = useState(null);
+  const [fetchError, setFetchError] = useState(null);
 
   // Load Active Form Schema
   const fetchActiveForm = useCallback(async () => {
@@ -26,7 +29,7 @@ export const CustomerProvider = ({ children }) => {
         setActiveForm(res.data);
       }
     } catch (err) {
-      console.error('Error fetching active form schema:', err);
+      console.warn('Error fetching active form schema:', err.message);
     }
   }, []);
 
@@ -38,13 +41,14 @@ export const CustomerProvider = ({ children }) => {
         setSequenceConfig(res.data);
       }
     } catch (err) {
-      console.error('Error fetching sequence config:', err);
+      console.warn('Error fetching sequence config:', err.message);
     }
   }, []);
 
   // Load Customers
   const fetchCustomers = useCallback(async () => {
     setLoading(true);
+    setFetchError(null);
     try {
       const res = await api.getCustomers({
         page: pagination.page,
@@ -65,7 +69,8 @@ export const CustomerProvider = ({ children }) => {
         }
       }
     } catch (err) {
-      console.error('Error fetching customer list:', err);
+      console.warn('Error fetching customer list:', err.message);
+      setFetchError(err.message);
     } finally {
       setLoading(false);
     }
@@ -84,27 +89,47 @@ export const CustomerProvider = ({ children }) => {
     try {
       const res = await api.createCustomer(data, notes);
       if (res.success) {
+        toast.success(
+          `Customer ${res.data?.customerId || ''} registered successfully!`,
+          'Lead Saved'
+        );
         await fetchCustomers();
         await fetchSequenceConfig();
         return { success: true, customer: res.data };
       }
+      toast.error(res.message || 'Could not save customer', 'Registration Failed');
+      return { success: false, message: res.message };
     } catch (err) {
-      return { success: false, message: err.message, errors: err.errors };
+      const msg = err.errors?.length
+        ? err.errors.map((e) => e.msg || e.message).join(', ')
+        : err.message || 'Failed to create customer';
+      toast.error(msg, 'Registration Failed');
+      return { success: false, message: msg, errors: err.errors };
     }
   };
 
-  const updateCustomer = async (id, data, notes = '', status) => {
+  const updateCustomer = async (id, data, notes = '', statusVal) => {
     try {
-      const res = await api.updateCustomer(id, data, notes, status);
+      const res = await api.updateCustomer(id, data, notes, statusVal);
       if (res.success) {
+        toast.success(
+          `Customer details updated successfully.`,
+          'Changes Saved'
+        );
         await fetchCustomers();
         if (selectedCustomer && selectedCustomer._id === id) {
           setSelectedCustomer(res.data);
         }
         return { success: true, customer: res.data };
       }
+      toast.error(res.message || 'Could not update customer', 'Update Failed');
+      return { success: false, message: res.message };
     } catch (err) {
-      return { success: false, message: err.message, errors: err.errors };
+      const msg = err.errors?.length
+        ? err.errors.map((e) => e.msg || e.message).join(', ')
+        : err.message || 'Failed to update customer';
+      toast.error(msg, 'Update Failed');
+      return { success: false, message: msg, errors: err.errors };
     }
   };
 
@@ -112,13 +137,17 @@ export const CustomerProvider = ({ children }) => {
     try {
       const res = await api.deleteCustomer(id);
       if (res.success) {
+        toast.info('Customer lead permanently deleted', 'Deleted');
         await fetchCustomers();
         if (selectedCustomer && selectedCustomer._id === id) {
           setSelectedCustomer(null);
         }
         return { success: true };
       }
+      toast.error(res.message || 'Could not delete customer', 'Delete Failed');
+      return { success: false, message: res.message };
     } catch (err) {
+      toast.error(err.message || 'Failed to delete customer', 'Delete Failed');
       return { success: false, message: err.message };
     }
   };
@@ -128,10 +157,13 @@ export const CustomerProvider = ({ children }) => {
       const res = await api.updateSequenceConfig(newConfig);
       if (res && res.success) {
         setSequenceConfig(res.data);
+        toast.success('Sequential Customer ID format saved.', 'Sequence Updated');
         return { success: true, data: res.data };
       }
+      toast.error(res?.message || 'Failed to update sequence', 'Sequence Error');
       return { success: false, message: res?.message || 'Failed to update sequence' };
     } catch (err) {
+      toast.error(err.message || 'Network error updating sequence', 'Sequence Error');
       return { success: false, message: err.message || 'Network error updating sequence' };
     }
   };
@@ -158,6 +190,7 @@ export const CustomerProvider = ({ children }) => {
         sortOrder,
         setSortOrder,
         loading,
+        fetchError,
         selectedCustomer,
         setSelectedCustomer,
         sequenceConfig,

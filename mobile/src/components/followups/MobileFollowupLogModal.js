@@ -74,15 +74,33 @@ export function MobileFollowupLogModal({
         statusUpdate: outcome === 'Order Confirmed / Ready for Billing' ? 'Order Confirmed' : undefined,
       });
 
-      if (res.success) {
-        Alert.alert('✓ Activity Logged', `Follow-up updated for ${followUp.customerName}!`);
+      if (res && res.success) {
+        if (res.offline) {
+          Alert.alert('⚡ Saved in Offline Mode', `Follow-up for ${followUp.customerName} saved locally! It will automatically sync when connection is restored.`);
+        } else {
+          Alert.alert('✓ Activity Logged', `Follow-up updated for ${followUp.customerName}!`);
+        }
         if (onSaved) onSaved();
         onClose();
       } else {
-        Alert.alert('Error', res.message || 'Failed to log follow-up');
+        Alert.alert(
+          '📡 Connection Issue',
+          res?.message || 'Could not save follow-up to the server. Please check your network connection.',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Try Again', onPress: handleSubmit },
+          ]
+        );
       }
     } catch (e) {
-      Alert.alert('Connection Error', e.message);
+      Alert.alert(
+        '📡 Network Error',
+        `Connection failed: ${e.message}. Your entries have been preserved.`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Try Again', onPress: handleSubmit },
+        ]
+      );
     } finally {
       setSubmitting(false);
     }

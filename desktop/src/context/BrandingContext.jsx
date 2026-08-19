@@ -12,6 +12,7 @@ import {
   Hexagon,
 } from 'lucide-react';
 import { api } from '../services/api';
+import { useToast } from './ToastContext';
 
 const BrandingContext = createContext(null);
 
@@ -29,6 +30,7 @@ export const BRAND_ICONS = {
 };
 
 export const BrandingProvider = ({ children }) => {
+  const toast = useToast();
   const [branding, setBranding] = useState({
     appName: 'BuildCRM',
     appShortName: 'BuildCRM',
@@ -62,9 +64,13 @@ export const BrandingProvider = ({ children }) => {
       const res = await api.updateBranding(updatedData);
       if (res.success && res.data) {
         setBranding(res.data);
+        toast.success('Showroom branding and logo updated successfully.', 'Branding Saved');
         return { success: true, data: res.data };
       }
+      toast.error(res?.message || 'Failed to update branding', 'Branding Error');
+      return { success: false, message: res?.message };
     } catch (e) {
+      toast.error(e.message || 'Error updating branding', 'Branding Error');
       return { success: false, message: e.message };
     }
   };

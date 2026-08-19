@@ -10,28 +10,44 @@ Includes:
 
 ## Quick Start Guide
 
-### 1. Backend Setup & Seeder
+### 1. Unified Desktop Mode (Native Desktop Window + Backend)
+To launch the desktop application in a **Native Desktop Window** (`.exe` / WebView view) with the backend API automatically running in parallel:
 ```bash
-cd backend
+# From workspace root:
 npm install
-npm run seed     # Seeds default Owner, Employee, Sequence (VAS-000001) & Form Schema v1
-npm start        # Runs on http://localhost:5000
-```
+npm run dev          # Automatically starts Backend (port 5000) & opens Native Desktop Window
 
-### 2. Desktop Application (React + Tauri 2)
-```bash
+# Or from desktop directory:
 cd desktop
 npm install
-npm run dev      # Runs on http://localhost:5173
-# For Tauri 2 desktop native build:
-# npm run tauri dev
+npm run dev          # Starts Backend & opens Native Desktop Window
 ```
 
-### 3. Mobile Application (React Native Showroom App)
+### 2. Alternative Execution Modes
+- **Browser Mode** (runs backend & opens in standard web browser):
+  ```bash
+  npm run dev:browser
+  ```
+- **Tauri Native Mode** (Tauri 2 build if Rust/Cargo is installed):
+  ```bash
+  npm run dev:tauri
+  ```
+
+### 3. Database Seeding & Testing
 ```bash
+npm run seed         # Seeds default Owner, Employee, Sequence (VAS-000001) & Form Schema v1
+npm test             # Runs Backend integration and validation test suite
+```
+
+### 4. Mobile Application (React Native Showroom App)
+```bash
+# From workspace root:
+npm run dev:mobile
+
+# Or from mobile directory:
 cd mobile
 npm install
-npm start        # Runs Expo development server
+npm start            # Runs Expo development server
 ```
 
 ---

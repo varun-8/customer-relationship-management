@@ -128,15 +128,29 @@ export function MobileLostSaleModal({
         }
       }
 
-      if (res.success) {
+      if (res && res.success) {
         Alert.alert('✓ Lost Sale Logged', 'Competitor pricing analysis and deal loss recorded. The record has been moved from the active queue.');
         if (onSaved) onSaved();
         onClose();
       } else {
-        Alert.alert('Error', res.message || 'Failed to record lost sale');
+        Alert.alert(
+          '📡 Connection Issue',
+          res?.message || 'Could not save lost sale report. Please check your network connection.',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Try Again', onPress: handleSubmit },
+          ]
+        );
       }
     } catch (e) {
-      Alert.alert('Connection Error', e.message);
+      Alert.alert(
+        '📡 Network Error',
+        `Connection failed: ${e.message}. Your entries have been preserved.`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Try Again', onPress: handleSubmit },
+        ]
+      );
     } finally {
       setSubmitting(false);
     }

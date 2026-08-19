@@ -132,7 +132,10 @@ export const DynamicFieldRenderer = ({ field, value, onChange, error }) => {
               placeholderTextColor={colors.textLight}
               keyboardType="numeric"
               value={value !== undefined && value !== null ? String(value) : ''}
-              onChangeText={(text) => handleChange(text === '' ? '' : Number(text))}
+              onChangeText={(text) => {
+                const clean = String(text).replace(/[^0-9.]/g, '');
+                handleChange(clean === '' ? '' : Number(clean));
+              }}
             />
           </View>
         );
@@ -149,7 +152,10 @@ export const DynamicFieldRenderer = ({ field, value, onChange, error }) => {
               placeholderTextColor={colors.textLight}
               keyboardType="numeric"
               value={value !== undefined && value !== null ? String(value) : ''}
-              onChangeText={(text) => handleChange(text === '' ? '' : Number(text))}
+              onChangeText={(text) => {
+                const clean = String(text).replace(/[^0-9.]/g, '');
+                handleChange(clean === '' ? '' : Number(clean));
+              }}
             />
           </View>
         );
@@ -165,8 +171,12 @@ export const DynamicFieldRenderer = ({ field, value, onChange, error }) => {
               placeholder={placeholder || '98765 43210'}
               placeholderTextColor={colors.textLight}
               keyboardType="phone-pad"
+              maxLength={14}
               value={value !== undefined && value !== null ? String(value) : ''}
-              onChangeText={handleChange}
+              onChangeText={(text) => {
+                const clean = String(text).replace(/[^0-9\s-]/g, '');
+                handleChange(clean);
+              }}
             />
           </View>
         );
@@ -746,13 +756,14 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingHorizontal: 13,
     paddingVertical: 10,
+    minHeight: 44,
   },
   radioCardActive: {
-    backgroundColor: '#ECFEF8',
-    borderColor: '#0F766E',
-    shadowColor: '#0F766E',
+    backgroundColor: '#EFF6FF',
+    borderColor: '#0F172A',
+    shadowColor: '#0F172A',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
+    shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 2,
   },
@@ -762,7 +773,7 @@ const styles = StyleSheet.create({
     color: '#334155',
   },
   radioCardTextActive: {
-    color: '#0F766E',
+    color: '#0F172A',
     fontWeight: '900',
   },
   radioDotCircle: {
@@ -776,14 +787,14 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
   },
   radioDotCircleActive: {
-    borderColor: '#0F766E',
+    borderColor: '#0F172A',
     backgroundColor: '#FFFFFF',
   },
   radioDotInner: {
     width: 9,
     height: 9,
     borderRadius: 4.5,
-    backgroundColor: '#0F766E',
+    backgroundColor: '#0F172A',
   },
   // Multi-Select Grid
   multiSummaryBanner: {
@@ -816,6 +827,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingHorizontal: 13,
     paddingVertical: 10,
+    minHeight: 44,
   },
   multiSelectCardActive: {
     backgroundColor: '#EFF6FF',

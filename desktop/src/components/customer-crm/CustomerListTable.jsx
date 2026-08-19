@@ -24,6 +24,7 @@ import {
 import { useCustomer } from '../../context/CustomerContext';
 import { ColumnSettingsModal } from './ColumnSettingsModal';
 import { LostSaleModal } from '../lost-sales/LostSaleModal';
+import { ConnectionErrorState } from '../common/ConnectionErrorState';
 
 export const CustomerListTable = ({ onAddCustomer, onEditCustomer, onViewCustomer }) => {
   const [markingLostCustomer, setMarkingLostCustomer] = useState(null);
@@ -42,6 +43,8 @@ export const CustomerListTable = ({ onAddCustomer, onEditCustomer, onViewCustome
     sortOrder,
     setSortOrder,
     loading,
+    fetchError,
+    fetchCustomers,
     activeForm,
     deleteCustomer,
   } = useCustomer();
@@ -474,6 +477,16 @@ export const CustomerListTable = ({ onAddCustomer, onEditCustomer, onViewCustome
                     <div className="spin" style={{ width: '20px', height: '20px', border: '2px solid #2563EB', borderTopColor: 'transparent', borderRadius: '50%' }} />
                     <span style={{ fontWeight: '600' }}>Fetching real customer records from MongoDB Atlas...</span>
                   </div>
+                </td>
+              </tr>
+            ) : fetchError && customers.length === 0 ? (
+              <tr>
+                <td colSpan={10} style={{ padding: '30px 20px' }}>
+                  <ConnectionErrorState
+                    title="Unable to Reach CRM Server"
+                    message={fetchError}
+                    onRetry={() => fetchCustomers()}
+                  />
                 </td>
               </tr>
             ) : customers.length === 0 ? (

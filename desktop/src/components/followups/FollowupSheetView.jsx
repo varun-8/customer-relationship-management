@@ -25,6 +25,7 @@ import {
 import { api } from '../../services/api';
 import { FollowupLogModal } from './FollowupLogModal';
 import { LostSaleModal } from '../lost-sales/LostSaleModal';
+import { ConnectionErrorState } from '../common/ConnectionErrorState';
 
 export const FollowupSheetView = ({ onEditCustomer }) => {
   const [activeTab, setActiveTab] = useState('today'); // 'today', 'upcoming', 'overdue', 'all'
@@ -343,7 +344,16 @@ export const FollowupSheetView = ({ onEditCustomer }) => {
 
       {/* 4. The 7-Column Follow-up Ledger Table */}
       <div className="kpi-table-card">
-        {followups.length === 0 ? (
+        {error && followups.length === 0 ? (
+          <div style={{ padding: '24px' }}>
+            <ConnectionErrorState
+              title="Unable to Load Follow-up Schedule"
+              message={error}
+              onRetry={fetchFollowups}
+              isRetrying={loading}
+            />
+          </div>
+        ) : followups.length === 0 ? (
           <div className="kpi-empty-state">
             <div style={{ fontSize: '36px', marginBottom: '8px' }}>📞</div>
             <div className="kpi-empty-title">

@@ -28,6 +28,7 @@ import {
   UserCheck,
 } from 'lucide-react';
 import { api } from '../../services/api';
+import { ConnectionErrorState } from '../common/ConnectionErrorState';
 
 export const DailyKpiView = () => {
   const todayStr = new Date().toISOString().split('T')[0];
@@ -310,8 +311,18 @@ export const DailyKpiView = () => {
         </div>
       </div>
 
-      {/* 2. Modern Minimalist Metric Scorecard Grid */}
-      <div className="kpi-scorecard-grid">
+      {/* Connection Error Banner */}
+      {error && !summaryData ? (
+        <ConnectionErrorState
+          title="Unable to Load KPI Performance Data"
+          message={error}
+          onRetry={() => { fetchKpiData(); fetchDayPerformance(selectedDay); }}
+          isRetrying={loading}
+        />
+      ) : (
+        <>
+          {/* 2. Modern Minimalist Metric Scorecard Grid */}
+          <div className="kpi-scorecard-grid">
         {/* Footfall / Inquiries */}
         <div className="kpi-stat-card">
           <div className="kpi-stat-header">
@@ -684,6 +695,8 @@ export const DailyKpiView = () => {
           </div>
         )}
       </div>
+        </>
+      )}
     </div>
   );
 };

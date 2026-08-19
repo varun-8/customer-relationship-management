@@ -1,5 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { api } from '../services/api';
+import { useToast } from './ToastContext';
+import { useCustomer } from './CustomerContext';
 
 const FormBuilderContext = createContext(null);
 
@@ -205,6 +207,9 @@ export const DEFAULT_FIELD_TEMPLATES = {
 };
 
 export const FormBuilderProvider = ({ children }) => {
+  const toast = useToast();
+  const customerContext = useCustomer();
+  const fetchActiveForm = customerContext?.fetchActiveForm;
   const [draftForm, setDraftForm] = useState(null);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -223,7 +228,7 @@ export const FormBuilderProvider = ({ children }) => {
         setHasChanges(false);
       }
     } catch (err) {
-      console.error('Error fetching draft form:', err);
+      console.warn('Error fetching draft form:', err.message);
       setError(err.message);
     } finally {
       setLoading(false);
@@ -237,7 +242,7 @@ export const FormBuilderProvider = ({ children }) => {
         setVersions(res.data);
       }
     } catch (err) {
-      console.error('Error fetching versions:', err);
+      console.warn('Error fetching versions:', err.message);
     }
   }, []);
 
@@ -270,6 +275,7 @@ export const FormBuilderProvider = ({ children }) => {
     });
     setHasChanges(true);
     setSelectedFieldId(fieldId);
+    toast.info(`Added "${newField.label}" to draft layout.`, 'Field Added');
   };
 
   const updateField = (id, updatedAttributes) => {
@@ -298,6 +304,7 @@ export const FormBuilderProvider = ({ children }) => {
       setSelectedFieldId(null);
     }
     setHasChanges(true);
+    toast.info('Field removed from draft schema.', 'Field Removed');
   };
 
   const duplicateField = (id) => {
@@ -321,6 +328,7 @@ export const FormBuilderProvider = ({ children }) => {
       };
     });
     setHasChanges(true);
+    toast.info('Field cloned successfully.', 'Field Cloned');
   };
 
   const toggleFieldActive = (id) => {
@@ -388,9 +396,13 @@ export const FormBuilderProvider = ({ children }) => {
       if (res.success && res.data) {
         setDraftForm(res.data);
         setHasChanges(false);
+        toast.success('Form draft saved successfully!', 'Draft Saved');
         return { success: true, message: 'Draft saved successfully!' };
       }
+      toast.error(res?.message || 'Failed to save draft', 'Save Error');
+      return { success: false, message: res?.message };
     } catch (err) {
+      toast.error(err.message || 'Error saving draft', 'Save Error');
       return { success: false, message: err.message };
     } finally {
       setSaving(false);
@@ -404,9 +416,13 @@ export const FormBuilderProvider = ({ children }) => {
       if (res.success && res.data) {
         setDraftForm(res.data);
         setHasChanges(false);
+        toast.info(res.message || 'Draft discarded and reset to published version.', 'Draft Discarded');
         return { success: true, message: res.message || 'Draft discarded and reset successfully!' };
       }
+      toast.error(res?.message || 'Failed to discard draft', 'Discard Error');
+      return { success: false, message: res?.message };
     } catch (err) {
+      toast.error(err.message || 'Error discarding draft', 'Discard Error');
       return { success: false, message: err.message };
     } finally {
       setSaving(false);
@@ -425,9 +441,14 @@ export const FormBuilderProvider = ({ children }) => {
         setHasChanges(false);
         await fetchDraftForm();
         await fetchVersions();
+        if (fetchActiveForm) await fetchActiveForm();
+        toast.success(`Schema v${res.data?.version || ''} published live to mobile and desktop!`, 'Schema Published');
         return { success: true, message: res.message, data: res.data };
       }
+      toast.error(res?.message || 'Failed to publish form', 'Publish Error');
+      return { success: false, message: res?.message };
     } catch (err) {
+      toast.error(err.message || 'Error publishing form schema', 'Publish Error');
       return { success: false, message: err.message };
     } finally {
       setSaving(false);

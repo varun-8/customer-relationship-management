@@ -18,6 +18,7 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import { api } from '../../services/api';
+import { useToast } from '../../context/ToastContext';
 
 const OUTCOMES = [
   'Spoke with Customer / Positive Interest',
@@ -31,6 +32,7 @@ const OUTCOMES = [
 ];
 
 export const FollowupLogModal = ({ followUp: initialFollowUp, onClose, onSaved, onOpenLostSale }) => {
+  const toast = useToast();
   const today = new Date();
   const tomorrow = new Date(today);
   tomorrow.setDate(tomorrow.getDate() + 1);
@@ -133,11 +135,17 @@ export const FollowupLogModal = ({ followUp: initialFollowUp, onClose, onSaved, 
         statusUpdate: outcome === 'Order Confirmed / Ready for Billing' ? 'Order Confirmed' : undefined,
       });
 
+      toast.success(
+        `Follow-up call logged for ${selectedFollowUp.customerName}. Next reminder set for ${nextFollowUp}.`,
+        'Activity Logged'
+      );
+
       if (onSaved) onSaved();
       onClose();
     } catch (err) {
-      console.error('Error logging follow-up activity:', err);
+      console.warn('Error logging follow-up activity:', err.message);
       setError(err.message || 'Failed to log follow-up');
+      toast.error(err.message || 'Failed to log follow-up', 'Activity Error');
     } finally {
       setSaving(false);
     }

@@ -8,9 +8,9 @@ const startServer = async () => {
   try {
     await connectDB();
 
-    app.listen(PORT, () => {
+    app.listen(PORT, '0.0.0.0', () => {
       console.log(`=======================================================`);
-      console.log(`🚀 Vasantham CRM Backend running on port ${PORT}`);
+      console.log(`🚀 Vasantham CRM Backend running on port ${PORT} (0.0.0.0)`);
       console.log(`📡 API Base: http://localhost:${PORT}/api`);
       console.log(`=======================================================`);
     });
