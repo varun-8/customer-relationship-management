@@ -8,42 +8,13 @@ try {
 }
 const bcrypt = require('bcryptjs');
 
-const DEFAULT_SHOWROOM_STAFF = [
-  { name: 'Karthik Raja', email: 'karthik@vasantham.com', role: 'employee', phone: '9840112233' },
-  { name: 'Senthil Kumar', email: 'senthil@vasantham.com', role: 'employee', phone: '9840223344' },
-  { name: 'Priya Dharshini', email: 'priya@vasantham.com', role: 'employee', phone: '9840334455' },
-  { name: 'Manoj Kumar', email: 'manoj@vasantham.com', role: 'employee', phone: '9840445566' },
-];
-
 /**
- * @desc Get all showroom employees and owners
+ * @desc Get all showroom employees and owners from User collection
  * @route GET /api/users
  */
 const getUsers = async (req, res) => {
   try {
-    let users = await User.find({}).select('-password').sort({ role: 1, name: 1 }).lean();
-
-    // If database has 0 users, ensure standard showroom staff are seeded initially
-    if (users.length === 0) {
-      for (const staff of DEFAULT_SHOWROOM_STAFF) {
-        const exists = users.some((u) => u.email.toLowerCase() === staff.email.toLowerCase() || u.name.toLowerCase() === staff.name.toLowerCase());
-        if (!exists) {
-          try {
-            await User.create({
-              name: staff.name,
-              email: staff.email,
-              password: 'password123',
-              role: staff.role,
-              phone: staff.phone,
-              active: true,
-            });
-          } catch (seedErr) {
-            console.warn('Staff seeding note:', seedErr.message);
-          }
-        }
-      }
-      users = await User.find({}).select('-password').sort({ role: 1, name: 1 }).lean();
-    }
+    const users = await User.find({}).select('-password').sort({ role: 1, name: 1 }).lean();
 
     res.json({
       success: true,
@@ -144,7 +115,7 @@ const updateUser = async (req, res) => {
 
     await user.save();
 
-    // If staff name changed, cascade update assigned leads in background
+    // If staff name changed, cascade update assigned leads & sales targets in background
     if (newName !== oldName) {
       try {
         await Customer.updateMany(
@@ -157,6 +128,11 @@ const updateUser = async (req, res) => {
             { $set: { salesperson: newName } }
           );
         }
+        const SalesTarget = require('../models/SalesTarget');
+        await SalesTarget.updateMany(
+          { 'staffTargets.staffName': oldName },
+          { $set: { 'staffTargets.$.staffName': newName } }
+        );
       } catch (cascadeErr) {
         console.warn('Lead salesperson cascade update warning:', cascadeErr.message);
       }
@@ -221,7 +197,18 @@ const deleteUser = async (req, res) => {
       }
     }
 
-    // 4. Delete the employee record
+    // 4. Remove deleted employee from SalesTarget allocations
+    try {
+      const SalesTarget = require('../models/SalesTarget');
+      await SalesTarget.updateMany(
+        {},
+        { $pull: { staffTargets: { staffName: deletedUserName } } }
+      );
+    } catch (targetErr) {
+      console.warn('SalesTarget cleanup warning:', targetErr.message);
+    }
+
+    // 5. Delete the employee record
     await User.findByIdAndDelete(id);
 
     const reassignedCount = custUpdateResult.modifiedCount || custUpdateResult.nModified || 0;

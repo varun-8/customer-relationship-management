@@ -13,10 +13,15 @@ const salesTargetSchema = new mongoose.Schema(
       default: 2500000, // Default 25 Lakhs showroom target
       min: [0, 'Target cannot be negative'],
     },
+    enableStaffTargets: {
+      type: Boolean,
+      default: true,
+    },
     staffTargets: [
       {
         staffName: { type: String, required: true, trim: true },
         target: { type: Number, default: 500000, min: 0 },
+        disabled: { type: Boolean, default: false },
       },
     ],
     updatedBy: {

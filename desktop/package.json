@@ -10,10 +10,9 @@
     "dev:frontend": "vite",
     "dev:backend": "npm --prefix ../backend run dev",
     "dev:electron": "electron .",
-    "dev:tauri": "concurrently -k -n \"BACKEND,TAURI\" -c \"bgBlue.bold,bgCyan.bold\" \"npm --prefix ../backend run dev\" \"tauri dev\"",
     "build": "vite build",
-    "preview": "vite preview",
-    "tauri": "tauri"
+    "dist:exe": "vite build && electron-builder --win",
+    "preview": "vite preview"
   },
   "dependencies": {
     "lucide-react": "^0.383.0",
@@ -22,13 +21,30 @@
     "react-dom": "^18.3.1"
   },
   "devDependencies": {
-    "@tauri-apps/api": "^2.0.0-rc.0",
-    "@tauri-apps/cli": "^2.0.0-rc.0",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
     "@vitejs/plugin-react": "^4.3.0",
     "concurrently": "^8.2.2",
     "electron": "^30.0.9",
+    "electron-builder": "^24.13.3",
     "vite": "^5.2.11"
+  },
+  "build": {
+    "appId": "com.vasantham.crm.desktop",
+    "productName": "Vasantham CRM",
+    "copyright": "Copyright © 2026 Vasantham Tiles & Sanitary Wares",
+    "directories": {
+      "output": "dist-exe"
+    },
+    "win": {
+      "target": [
+        "nsis",
+        "portable"
+      ]
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*"
+    ]
   }
 }

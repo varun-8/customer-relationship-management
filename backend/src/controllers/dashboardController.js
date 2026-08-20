@@ -49,10 +49,9 @@ exports.getDashboardMetrics = async (req, res) => {
     const targetMonth = month || toDateString(new Date()).substring(0, 7); // 'YYYY-MM'
     const todayStr = toDateString(new Date());
 
-    // 0. Fetch live showroom sales executives from User collection
+    // 0. Fetch live active showroom users strictly from User collection (Single Source of Truth)
     const liveUsers = await User.find({ active: { $ne: false } }).select('name role').sort({ name: 1 }).lean();
-    const liveEmployees = liveUsers.filter((u) => u.role !== 'owner');
-    const liveStaffNames = liveEmployees.map((u) => u.name);
+    const liveStaffNames = liveUsers.map((u) => u.name);
 
     // 1. Fetch Sales Target config for the month
     let targetDoc = await SalesTarget.findOne({ month: targetMonth });
@@ -61,9 +60,12 @@ exports.getDashboardMetrics = async (req, res) => {
       targetDoc = {
         month: targetMonth,
         showroomTarget: 2500000,
-        staffTargets: liveStaffNames.map((name) => ({ staffName: name, target: defaultPerStaff })),
+        enableStaffTargets: true,
+        staffTargets: liveStaffNames.map((name) => ({ staffName: name, target: defaultPerStaff, disabled: false })),
       };
     }
+
+    const enableStaffTargets = targetDoc.enableStaffTargets !== false;
 
     // 2. Fetch all active customers, KPIs, and Lost Sales
     const [allCustomers, allKpis, allLostSales] = await Promise.all([
@@ -85,27 +87,21 @@ exports.getDashboardMetrics = async (req, res) => {
     const overdueFollowupList = [];
     const recentDealWins = [];
 
-    // Map for staff tracking
+    // Map for staff tracking - ONLY for users that exist in Showroom Staff User collection
     const staffMap = {};
-    (targetDoc.staffTargets || []).forEach((st) => {
-      staffMap[st.staffName] = {
-        staff: st.staffName,
-        target: st.target || (liveStaffNames.length > 0 ? Math.round(2500000 / liveStaffNames.length) : 625000),
+    liveStaffNames.forEach((name) => {
+      const savedTargetObj = (targetDoc?.staffTargets || []).find((st) => st.staffName === name);
+      const isTargetDisabled = !enableStaffTargets || (savedTargetObj && savedTargetObj.disabled === true);
+      const targetVal = isTargetDisabled ? 0 : (savedTargetObj?.target || 0);
+
+      staffMap[name] = {
+        staff: name,
+        target: targetVal,
+        targetDisabled: isTargetDisabled,
         sales: 0,
         quotes: 0,
         orders: 0,
       };
-    });
-    liveStaffNames.forEach((name) => {
-      if (!staffMap[name]) {
-        staffMap[name] = {
-          staff: name,
-          target: liveStaffNames.length > 0 ? Math.round(2500000 / liveStaffNames.length) : 625000,
-          sales: 0,
-          quotes: 0,
-          orders: 0,
-        };
-      }
     });
 
     // Merge saved KPI records if available
@@ -149,17 +145,16 @@ exports.getDashboardMetrics = async (req, res) => {
           });
         }
 
-        // Staff attribution
-        const sName = c.salesperson || 'Showroom Staff';
-        if (!staffMap[sName]) {
-          staffMap[sName] = { staff: sName, target: 500000, sales: 0, quotes: 0, orders: 0 };
-        }
-        if (c.status === 'Order Confirmed') {
-          staffMap[sName].sales += (c.orderValue || c.quotationValue || 0);
-          staffMap[sName].orders += 1;
-        }
-        if (c.status === 'Quotation' || c.status === 'Negotiation' || c.quotationValue > 0) {
-          staffMap[sName].quotes += 1;
+        // Staff attribution - attribute sales if salesperson matches an existing showroom staff user
+        const sName = c.salesperson;
+        if (sName && staffMap[sName]) {
+          if (c.status === 'Order Confirmed') {
+            staffMap[sName].sales += (c.orderValue || c.quotationValue || 0);
+            staffMap[sName].orders += 1;
+          }
+          if (c.status === 'Quotation' || c.status === 'Negotiation' || c.quotationValue > 0) {
+            staffMap[sName].quotes += 1;
+          }
         }
       }
 
@@ -222,9 +217,10 @@ exports.getDashboardMetrics = async (req, res) => {
     const quoteRate = finalWalkinsCount > 0 ? Number(((finalQuotesCount / finalWalkinsCount) * 100).toFixed(1)) : 0;
     const averageBillValue = finalOrdersCount > 0 ? Math.round(finalActualSales / finalOrdersCount) : 0;
 
-    // 4. Compile 7-Column Salesperson Performance Matrix
+    // 4. Compile Salesperson Performance Matrix
     const salespersonPerformance = Object.values(staffMap).map((s) => {
-      const staffTarget = s.target || 625000;
+      const isOff = s.targetDisabled || s.target <= 0;
+      const staffTarget = isOff ? 0 : s.target;
       const achieved = staffTarget > 0 ? Number(((s.sales / staffTarget) * 100).toFixed(1)) : 0;
       const conversion = s.quotes > 0
         ? Number(((s.orders / s.quotes) * 100).toFixed(1))
@@ -233,6 +229,7 @@ exports.getDashboardMetrics = async (req, res) => {
       return {
         staff: s.staff,
         target: staffTarget,
+        targetDisabled: isOff,
         sales: s.sales,
         achieved,
         quotes: s.quotes,
@@ -252,6 +249,7 @@ exports.getDashboardMetrics = async (req, res) => {
       data: {
         month: targetMonth,
         todayStr,
+        enableStaffTargets,
         kpi: {
           salesTarget,
           actualSales: finalActualSales,
@@ -287,7 +285,7 @@ exports.getDashboardMetrics = async (req, res) => {
  */
 exports.updateSalesTargets = async (req, res) => {
   try {
-    const { month, showroomTarget, staffTargets = [] } = req.body;
+    const { month, showroomTarget, enableStaffTargets = true, staffTargets = [] } = req.body;
     const targetMonth = month || toDateString(new Date()).substring(0, 7);
 
     if (!showroomTarget || Number(showroomTarget) < 0) {
@@ -300,9 +298,11 @@ exports.updateSalesTargets = async (req, res) => {
         $set: {
           month: targetMonth,
           showroomTarget: Number(showroomTarget),
+          enableStaffTargets: Boolean(enableStaffTargets),
           staffTargets: staffTargets.map((st) => ({
             staffName: st.staffName.trim(),
             target: Number(st.target) || 0,
+            disabled: Boolean(st.disabled),
           })),
           updatedBy: {
             userId: req.user?._id,

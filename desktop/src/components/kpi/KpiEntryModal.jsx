@@ -40,14 +40,26 @@ export const KpiEntryModal = ({ initialData, onClose, onSaved }) => {
   useEffect(() => {
     const fetchStaff = async () => {
       try {
-        const res = await api.getUsers();
-        if (res && res.success && Array.isArray(res.data)) {
-          const emps = res.data.filter((u) => u.role !== 'owner' && u.active !== false);
-          const names = emps.map((u) => u.name);
-          setStaffList(names);
-          if (!initialData?.staffName && names.length > 0) {
-            setStaffName(names[0]);
-          }
+        const [usersRes, customersRes] = await Promise.all([
+          api.getUsers(),
+          api.getCustomers(),
+        ]);
+
+        const userNames = (usersRes && usersRes.success && Array.isArray(usersRes.data))
+          ? usersRes.data.filter((u) => u.active !== false).map((u) => u.name)
+          : [];
+
+        const customerSalespeople = (customersRes && customersRes.success && Array.isArray(customersRes.data))
+          ? customersRes.data.map((c) => {
+              const d = c.data instanceof Map ? Object.fromEntries(c.data) : (c.data || {});
+              return d.salesperson;
+            }).filter(Boolean)
+          : [];
+
+        const names = Array.from(new Set([...userNames, ...customerSalespeople])).filter(Boolean);
+        setStaffList(names);
+        if (!initialData?.staffName && names.length > 0) {
+          setStaffName(names[0]);
         }
       } catch (e) {
         console.warn('Error loading staff for KPI modal:', e);

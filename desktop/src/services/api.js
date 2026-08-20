@@ -401,4 +401,16 @@ export const api = {
       method: 'DELETE',
     });
   },
+
+  // Showroom Branding & Logo Config
+  async getBranding() {
+    return request('/branding');
+  },
+
+  async updateBranding(brandingData) {
+    return request('/branding', {
+      method: 'PUT',
+      body: JSON.stringify(brandingData),
+    });
+  },
 };

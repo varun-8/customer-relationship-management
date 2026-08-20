@@ -6,26 +6,17 @@ import {
   PhoneCall,
   Receipt,
   IndianRupee,
-  ShoppingBag,
-  HardHat,
   Layers,
   Sparkles,
   TrendingUp,
   Download,
-  Filter,
   RefreshCw,
   Award,
   ChevronLeft,
   ChevronRight,
-  ChevronDown,
-  ArrowUpRight,
-  ArrowDownRight,
   CalendarDays,
   FileCheck,
   Check,
-  PieChart,
-  ArrowRight,
-  UserCheck,
 } from 'lucide-react';
 import { api } from '../../services/api';
 import { ConnectionErrorState } from '../common/ConnectionErrorState';
@@ -37,9 +28,6 @@ export const DailyKpiView = () => {
   const [selectedDay, setSelectedDay] = useState(todayStr);
   const [dayData, setDayData] = useState(null);
   const [dayLoading, setDayLoading] = useState(false);
-  const [calendarExpanded, setCalendarExpanded] = useState(false);
-  const [staffSectionExpanded, setStaffSectionExpanded] = useState(false);
-  const [expandedStaffMember, setExpandedStaffMember] = useState(null);
 
   // Overall data
   const [summaryData, setSummaryData] = useState(null);
@@ -52,18 +40,28 @@ export const DailyKpiView = () => {
   const [staffFilter, setStaffFilter] = useState('all');
   const [selectedMonth, setSelectedMonth] = useState(todayStr.substring(0, 7));
 
-  // Modals
-  const [showEntryModal, setShowEntryModal] = useState(false);
-
-  // Fetch live staff members
+  // Fetch all live showroom staff members
   useEffect(() => {
     const fetchStaff = async () => {
       try {
-        const res = await api.getUsers();
-        if (res && res.success && Array.isArray(res.data)) {
-          const emps = res.data.filter((u) => u.role !== 'owner' && u.active !== false);
-          setStaffList(emps.map((u) => u.name));
-        }
+        const [usersRes, customersRes] = await Promise.all([
+          api.getUsers(),
+          api.getCustomers(),
+        ]);
+
+        const userNames = (usersRes && usersRes.success && Array.isArray(usersRes.data))
+          ? usersRes.data.filter((u) => u.active !== false).map((u) => u.name)
+          : [];
+
+        const customerSalespeople = (customersRes && customersRes.success && Array.isArray(customersRes.data))
+          ? customersRes.data.map((c) => {
+              const d = c.data instanceof Map ? Object.fromEntries(c.data) : (c.data || {});
+              return d.salesperson;
+            }).filter(Boolean)
+          : [];
+
+        const combined = Array.from(new Set([...userNames, ...customerSalespeople])).filter(Boolean);
+        setStaffList(combined);
       } catch (e) {
         console.warn('Staff fetch error in DailyKpiView:', e);
       }
@@ -167,13 +165,10 @@ export const DailyKpiView = () => {
   };
 
   const summary = summaryData?.summary || {};
-  const today = summaryData?.today || {};
-  const monthlyLeaderboard = summaryData?.staffLeaderboard || [];
 
   // Day specific variables
   const dayKpi = dayData?.kpi || {};
   const dayCustomers = dayData?.customers || [];
-  const dayComp = dayData?.comparison || {};
 
   const isToday = selectedDay === todayStr;
   const formattedDayTitle = new Date(selectedDay).toLocaleDateString('en-IN', {
@@ -186,7 +181,7 @@ export const DailyKpiView = () => {
   // Calculate Sales Staff Performance based on today's / selected day's live customer metrics
   const todayStaffPerformance = useMemo(() => {
     const staffMap = {};
-    
+
     staffList.forEach((name) => {
       staffMap[name] = {
         staffName: name,
@@ -227,37 +222,63 @@ export const DailyKpiView = () => {
   }, [dayCustomers, staffList]);
 
   return (
-    <div className="kpi-view-container">
-      {/* 1. Ultra-Clean Minimalist Header Toolbar */}
-      <div className="kpi-header-toolbar">
-        <div className="kpi-toolbar-left-group">
-          {/* Day Stepper Navigator */}
-          <div className="kpi-day-stepper">
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+      {/* 1. Header Toolbar */}
+      <div
+        style={{
+          backgroundColor: '#FFFFFF',
+          borderRadius: '20px',
+          border: '1px solid #E2E8F0',
+          padding: '14px 20px',
+          boxShadow: '0 2px 8px rgba(0, 0, 0, 0.02)',
+          display: 'flex',
+          flexWrap: 'wrap',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '14px',
+        }}
+      >
+        {/* Day Stepper Navigator */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              backgroundColor: '#F8FAFC',
+              border: '1px solid #CBD5E1',
+              borderRadius: '12px',
+              padding: '4px 6px',
+            }}
+          >
             <button
               type="button"
-              className="kpi-stepper-btn"
               onClick={handlePrevDay}
+              style={{ background: 'none', border: 'none', color: '#475569', cursor: 'pointer', padding: '4px', display: 'flex' }}
               title="Previous Day"
             >
               <ChevronLeft size={16} />
             </button>
 
-            <div className="kpi-stepper-display">
-              <CalendarDays size={16} className="text-primary" />
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '0 8px' }}>
+              <CalendarDays size={16} color="#2563EB" />
               <input
                 type="date"
-                className="kpi-date-input-stepper"
                 value={selectedDay}
                 onChange={(e) => setSelectedDay(e.target.value)}
+                style={{ border: 'none', backgroundColor: 'transparent', fontSize: '13px', fontWeight: '800', color: '#0F172A', outline: 'none' }}
               />
-              <span className="kpi-stepper-text">{formattedDayTitle}</span>
-              {isToday && <span className="kpi-today-tag">TODAY</span>}
+              <span style={{ fontSize: '13px', fontWeight: '700', color: '#475569' }}>({formattedDayTitle})</span>
+              {isToday && (
+                <span style={{ fontSize: '10.5px', fontWeight: '800', backgroundColor: '#EFF6FF', color: '#2563EB', border: '1px solid #BFDBFE', padding: '1px 6px', borderRadius: '4px' }}>
+                  TODAY
+                </span>
+              )}
             </div>
 
             <button
               type="button"
-              className="kpi-stepper-btn"
               onClick={handleNextDay}
+              style={{ background: 'none', border: 'none', color: '#475569', cursor: 'pointer', padding: '4px', display: 'flex' }}
               title="Next Day"
             >
               <ChevronRight size={16} />
@@ -267,71 +288,58 @@ export const DailyKpiView = () => {
           {!isToday && (
             <button
               type="button"
-              className="btn btn-secondary btn-sm"
               onClick={() => setSelectedDay(todayStr)}
-              style={{ fontSize: '12px', padding: '6px 14px', borderRadius: '8px' }}
+              style={{ backgroundColor: '#F1F5F9', border: 'none', color: '#0F172A', borderRadius: '10px', padding: '6px 14px', fontSize: '12px', fontWeight: '700', cursor: 'pointer' }}
             >
-              Today
+              Jump to Today
             </button>
           )}
         </div>
 
-        {/* Right Filter & Action Controls */}
-        <div className="kpi-toolbar-right-group">
+        {/* Right Tools */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
           {/* Staff Filter */}
-          <div className="kpi-filter-box">
-            <span className="kpi-filter-label">Rep:</span>
-            <select
-              className="form-select form-select-sm"
-              value={staffFilter}
-              onChange={(e) => setStaffFilter(e.target.value)}
-              style={{ minWidth: '135px', borderRadius: '8px', fontSize: '12.5px' }}
-            >
-              <option value="all">All Sales Staff</option>
-              {staffList.map((name) => (
-                <option key={name} value={name}>
-                  {name}
-                </option>
-              ))}
-            </select>
-          </div>
+          <select
+            value={staffFilter}
+            onChange={(e) => setStaffFilter(e.target.value)}
+            style={{ padding: '6px 12px', borderRadius: '10px', border: '1px solid #CBD5E1', fontSize: '12px', color: '#0F172A', backgroundColor: '#FFFFFF', outline: 'none' }}
+          >
+            <option value="all">All Sales Staff</option>
+            {staffList.map((name) => (
+              <option key={name} value={name}>
+                {name}
+              </option>
+            ))}
+          </select>
 
           {/* Month Selector */}
-          <div className="kpi-filter-box">
-            <span className="kpi-filter-label">Month:</span>
-            <input
-              type="month"
-              className="form-input form-input-sm"
-              value={selectedMonth}
-              onChange={(e) => setSelectedMonth(e.target.value)}
-              style={{ borderRadius: '8px', fontSize: '12.5px' }}
-            />
-          </div>
+          <input
+            type="month"
+            value={selectedMonth}
+            onChange={(e) => setSelectedMonth(e.target.value)}
+            style={{ padding: '6px 12px', borderRadius: '10px', border: '1px solid #CBD5E1', fontSize: '12px', color: '#0F172A', backgroundColor: '#FFFFFF', outline: 'none' }}
+          />
 
           <button
             type="button"
-            className="btn btn-outline btn-sm"
             onClick={() => { fetchKpiData(); fetchDayPerformance(selectedDay); }}
-            title="Refresh Live Metrics"
-            style={{ borderRadius: '8px', padding: '6px 10px' }}
+            style={{ backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '10px', padding: '6px 10px', cursor: 'pointer', color: '#475569' }}
+            title="Refresh"
           >
-            <RefreshCw size={13} className={loading || dayLoading ? 'spin' : ''} />
+            <RefreshCw size={14} className={loading || dayLoading ? 'spin' : ''} />
           </button>
 
           <button
             type="button"
-            className="btn btn-outline btn-sm"
             onClick={handleExportCSV}
-            title="Export Monthly KPI Report"
-            style={{ borderRadius: '8px', padding: '6px 12px', gap: '6px' }}
+            style={{ backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '10px', padding: '6px 14px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', color: '#475569', display: 'flex', alignItems: 'center', gap: '6px' }}
           >
-            <Download size={13} />
+            <Download size={14} />
             <span>Export CSV</span>
           </button>
         </div>
       </div>
 
-      {/* Connection Error Banner */}
       {error && !summaryData ? (
         <ConnectionErrorState
           title="Unable to Load KPI Performance Data"
@@ -341,380 +349,355 @@ export const DailyKpiView = () => {
         />
       ) : (
         <>
-          {/* 2. Modern Minimalist Metric Scorecard Grid */}
-          <div className="kpi-scorecard-grid">
-        {/* Footfall / Inquiries */}
-        <div className="kpi-stat-card">
-          <div className="kpi-stat-header">
-            <span className="kpi-stat-title">Footfall & Inquiries</span>
-            <div className="kpi-stat-icon-bubble" style={{ background: '#EFF6FF', color: '#2563EB' }}>
-              <Users size={16} />
-            </div>
-          </div>
-          <div className="kpi-stat-value">
-            {dayKpi.walkins?.visits ?? 0}
-            <span className="kpi-stat-unit">walk-ins</span>
-          </div>
-          <div className="kpi-stat-footer">
-            <span className="kpi-pill-sub">{isToday ? "Today's showroom inquiries" : `Inquiries on ${selectedDay}`}</span>
-          </div>
-        </div>
-
-        {/* Quotations Given */}
-        <div className="kpi-stat-card">
-          <div className="kpi-stat-header">
-            <span className="kpi-stat-title">Quotations Shared</span>
-            <div className="kpi-stat-icon-bubble" style={{ background: '#F5F3FF', color: '#7C3AED' }}>
-              <Receipt size={16} />
-            </div>
-          </div>
-          <div className="kpi-stat-value">
-            {dayKpi.walkins?.quotes ?? 0}
-            <span className="kpi-stat-unit">quotes ({dayKpi.quoteRate || 0}%)</span>
-          </div>
-          <div className="kpi-stat-footer">
-            <span className="kpi-pill-sub">Formal price quotes presented</span>
-          </div>
-        </div>
-
-        {/* Closed Orders & Revenue (Highlight Card) */}
-        <div className="kpi-stat-card kpi-stat-card-highlight">
-          <div className="kpi-stat-header">
-            <span className="kpi-stat-title" style={{ color: '#047857' }}>Closed Revenue & Bills</span>
-            <div className="kpi-stat-icon-bubble" style={{ background: '#ECFDF5', color: '#059669' }}>
-              <IndianRupee size={16} />
-            </div>
-          </div>
-          <div className="kpi-stat-value" style={{ color: '#059669' }}>
-            ₹{(dayKpi.salesValue || 0).toLocaleString('en-IN')}
-          </div>
-          <div className="kpi-stat-footer">
-            <span style={{ color: '#047857', fontWeight: '800' }}>
-              🎉 {dayKpi.ordersCount || 0} {dayKpi.ordersCount === 1 ? 'deal' : 'deals'} ({dayKpi.conversionRate || 0}% conv.)
-            </span>
-          </div>
-        </div>
-
-        {/* Follow-ups Completed */}
-        <div className="kpi-stat-card">
-          <div className="kpi-stat-header">
-            <span className="kpi-stat-title">Follow-ups Logged</span>
-            <div className="kpi-stat-icon-bubble" style={{ background: '#F0F9FF', color: '#0284C7' }}>
-              <PhoneCall size={16} />
-            </div>
-          </div>
-          <div className="kpi-stat-value">
-            {dayKpi.followUpsCount || 0}
-            <span className="kpi-stat-unit">calls</span>
-          </div>
-          <div className="kpi-stat-footer">
-            <span className="kpi-pill-sub">Active pipeline touchpoints</span>
-          </div>
-        </div>
-
-        {/* Cross-Sell & VIP Outreach */}
-        <div className="kpi-stat-card">
-          <div className="kpi-stat-header">
-            <span className="kpi-stat-title">Cross-Sell & VIPs</span>
-            <div className="kpi-stat-icon-bubble" style={{ background: '#FFFBEB', color: '#D97706' }}>
-              <Layers size={16} />
-            </div>
-          </div>
-          <div className="kpi-stat-value" style={{ fontSize: '17px', fontWeight: '800' }}>
-            {dayKpi.crossSell ? (
-              <span style={{ color: '#059669' }}>
-                ✓ Cross-Sell ({(dayKpi.crossSellItems || []).length || 1})
-              </span>
-            ) : (
-              <span style={{ color: '#64748B' }}>Standard Deals</span>
-            )}
-          </div>
-          <div className="kpi-stat-footer" style={{ display: 'flex', gap: '8px', fontSize: '11.5px' }}>
-            <span>Repeat: <strong>{dayKpi.oldCustomers ? '✓ Yes' : '—'}</strong></span>
-            <span>•</span>
-            <span>Engineers: <strong>{dayKpi.engineerCalls ? '✓ Yes' : '—'}</strong></span>
-          </div>
-        </div>
-      </div>
-
-      {/* 3. Sleek Collapsible Monthly Performance Timeline */}
-      <div className="kpi-calendar-strip-card">
-        <div
-          className="kpi-calendar-strip-header"
-          style={{ cursor: 'pointer', userSelect: 'none', padding: '12px 16px' }}
-          onClick={() => setCalendarExpanded(!calendarExpanded)}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <TrendingUp size={16} color="#2563EB" />
-            <span style={{ fontWeight: '800', fontSize: '13px', color: '#0F172A' }}>
-              Monthly Performance Calendar ({selectedMonth})
-            </span>
-            <span className="kpi-minimal-badge">
-              {calendarExpanded ? 'Active' : 'Click to View Days'}
-            </span>
-          </div>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ fontSize: '11.5px', color: '#64748B' }}>
-              {calendarExpanded ? 'Hide Days' : 'Expand 31-day overview'}
-            </span>
-            <button
-              type="button"
-              className="btn btn-outline btn-xs"
-              style={{ padding: '3px 8px', fontSize: '11px', borderRadius: '6px' }}
-              onClick={(e) => {
-                e.stopPropagation();
-                setCalendarExpanded(!calendarExpanded);
-              }}
-            >
-              {calendarExpanded ? '⌃' : '⌄'}
-            </button>
-          </div>
-        </div>
-
-        {calendarExpanded && (
-          <div className="kpi-calendar-strip-scroll" style={{ padding: '10px 16px 14px' }}>
-            {dailyTrends.map((t) => {
-              const isSelected = t.date === selectedDay;
-              const isCurrentDay = t.date === todayStr;
-
-              return (
-                <button
-                  key={t.date}
-                  type="button"
-                  className={`kpi-calendar-pill ${isSelected ? 'kpi-calendar-pill-selected' : ''} ${t.hasActivity ? 'kpi-calendar-pill-active' : ''}`}
-                  onClick={() => setSelectedDay(t.date)}
-                >
-                  <div className="kpi-pill-day-header">
-                    <span className="kpi-pill-day-wk">{t.dayOfWeek}</span>
-                    {isCurrentDay && <span className="kpi-pill-today-dot" />}
-                  </div>
-
-                  <div className="kpi-pill-day-num">{t.dayNumber}</div>
-
-                  <div className="kpi-pill-sales">
-                    {t.salesValue > 0 ? `₹${Math.round(t.salesValue / 1000)}k` : '—'}
-                  </div>
-
-                  {t.ordersCount > 0 && (
-                    <div className="kpi-pill-orders-badge">
-                      {t.ordersCount} {t.ordersCount === 1 ? 'deal' : 'deals'}
-                    </div>
-                  )}
-                </button>
-              );
-            })}
-          </div>
-        )}
-      </div>
-
-      {/* 4. Sales Staff Performance Strip (Styled like Monthly Performance Calendar) */}
-      {todayStaffPerformance.length > 0 && (
-        <div className="kpi-calendar-strip-card">
-          <div
-            className="kpi-calendar-strip-header"
-            style={{ cursor: 'pointer', userSelect: 'none', padding: '12px 16px' }}
-            onClick={() => setStaffSectionExpanded(!staffSectionExpanded)}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Award size={16} color="#D97706" />
-              <span style={{ fontWeight: '800', fontSize: '13px', color: '#0F172A' }}>
-                Sales Staff Performance ({formattedDayTitle})
-              </span>
-              {isToday && (
-                <span className="badge" style={{ fontSize: '10px', background: '#ECFDF5', color: '#047857', border: '1px solid #A7F3D0', fontWeight: '800' }}>
-                  LIVE TODAY
+          {/* 2. Top Metric Cards (4 Cards) */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '14px' }}>
+            {/* Walk-ins */}
+            <div style={{ backgroundColor: '#FFFFFF', borderRadius: '18px', border: '1px solid #E2E8F0', padding: '16px 20px', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span style={{ fontSize: '11px', fontWeight: '800', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  SHOWROOM FOOTFALL
                 </span>
+                <div style={{ width: '34px', height: '34px', borderRadius: '10px', backgroundColor: '#EFF6FF', color: '#2563EB', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Users size={16} />
+                </div>
+              </div>
+              <div style={{ fontSize: '24px', fontWeight: '900', color: '#0F172A', marginTop: '6px' }}>
+                {dayKpi.walkins?.visits ?? 0} <span style={{ fontSize: '13px', fontWeight: '600', color: '#64748B' }}>walk-ins</span>
+              </div>
+              <div style={{ fontSize: '12px', color: '#64748B', marginTop: '4px' }}>
+                {isToday ? "Today's showroom visitors" : `Visits on ${selectedDay}`}
+              </div>
+            </div>
+
+            {/* Quotes Given */}
+            <div style={{ backgroundColor: '#FFFFFF', borderRadius: '18px', border: '1px solid #E2E8F0', padding: '16px 20px', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span style={{ fontSize: '11px', fontWeight: '800', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  QUOTATIONS SHARED
+                </span>
+                <div style={{ width: '34px', height: '34px', borderRadius: '10px', backgroundColor: '#F5F3FF', color: '#7C3AED', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Receipt size={16} />
+                </div>
+              </div>
+              <div style={{ fontSize: '24px', fontWeight: '900', color: '#7C3AED', marginTop: '6px' }}>
+                {dayKpi.walkins?.quotes ?? 0} <span style={{ fontSize: '13px', fontWeight: '600', color: '#64748B' }}>quotes ({dayKpi.quoteRate || 0}%)</span>
+              </div>
+              <div style={{ fontSize: '12px', color: '#64748B', marginTop: '4px' }}>
+                Formal price estimates created
+              </div>
+            </div>
+
+            {/* Closed Revenue */}
+            <div style={{ backgroundColor: '#ECFDF5', borderRadius: '18px', border: '1.5px solid #A7F3D0', padding: '16px 20px', boxShadow: '0 2px 8px rgba(16, 185, 129, 0.08)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span style={{ fontSize: '11px', fontWeight: '800', color: '#047857', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  CLOSED REVENUE & DEALS
+                </span>
+                <div style={{ width: '34px', height: '34px', borderRadius: '10px', backgroundColor: '#FFFFFF', color: '#059669', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 6px rgba(0,0,0,0.05)' }}>
+                  <IndianRupee size={16} />
+                </div>
+              </div>
+              <div style={{ fontSize: '22px', fontWeight: '900', color: '#059669', marginTop: '6px' }}>
+                ₹{(dayKpi.salesValue || 0).toLocaleString('en-IN')}
+              </div>
+              <div style={{ fontSize: '12px', fontWeight: '800', color: '#047857', marginTop: '4px' }}>
+                🎉 {dayKpi.ordersCount || 0} {dayKpi.ordersCount === 1 ? 'deal' : 'deals'} confirmed ({dayKpi.conversionRate || 0}% conv.)
+              </div>
+            </div>
+
+            {/* Follow-ups */}
+            <div style={{ backgroundColor: '#FFFFFF', borderRadius: '18px', border: '1px solid #E2E8F0', padding: '16px 20px', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span style={{ fontSize: '11px', fontWeight: '800', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  FOLLOW-UPS LOGGED
+                </span>
+                <div style={{ width: '34px', height: '34px', borderRadius: '10px', backgroundColor: '#F0F9FF', color: '#0284C7', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <PhoneCall size={16} />
+                </div>
+              </div>
+              <div style={{ fontSize: '24px', fontWeight: '900', color: '#0284C7', marginTop: '6px' }}>
+                {dayKpi.followUpsCount || 0} <span style={{ fontSize: '13px', fontWeight: '600', color: '#64748B' }}>calls/visits</span>
+              </div>
+              <div style={{ fontSize: '12px', color: '#64748B', marginTop: '4px' }}>
+                Active pipeline nurture
+              </div>
+            </div>
+          </div>
+
+          {/* 3. Executive Split View: Side-by-Side Leaderboard & Monthly Performance */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', alignItems: 'start' }}>
+            {/* Sales Staff Performance Leaderboard */}
+            <div style={{ backgroundColor: '#FFFFFF', borderRadius: '20px', border: '1px solid #E2E8F0', padding: '20px', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Award size={18} color="#D97706" />
+                  <span style={{ fontSize: '14px', fontWeight: '800', color: '#0F172A' }}>
+                    Sales Executive Performance
+                  </span>
+                </div>
+                <span style={{ fontSize: '11px', fontWeight: '700', backgroundColor: '#FEF3C7', color: '#B45309', padding: '2px 8px', borderRadius: '8px' }}>
+                  {formattedDayTitle}
+                </span>
+              </div>
+
+              {todayStaffPerformance.length === 0 ? (
+                <div style={{ padding: '20px', textAlign: 'center', color: '#64748B', fontSize: '13px' }}>
+                  No staff activity recorded for this date.
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  {todayStaffPerformance.map((s, idx) => {
+                    const rankBadge = idx === 0 ? '👑 #1' : idx === 1 ? '🥈 #2' : idx === 2 ? '🥉 #3' : `#${idx + 1}`;
+                    const rankBg = idx === 0 ? '#FEF3C7' : idx === 1 ? '#F1F5F9' : idx === 2 ? '#FFEDD5' : '#F1F5F9';
+                    const rankColor = idx === 0 ? '#B45309' : idx === 1 ? '#475569' : idx === 2 ? '#C2410C' : '#64748B';
+
+                    return (
+                      <div
+                        key={s.staffName}
+                        style={{
+                          backgroundColor: '#F8FAFC',
+                          borderRadius: '12px',
+                          padding: '12px 14px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          border: '1px solid #E2E8F0',
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <span style={{ fontSize: '11px', fontWeight: '800', backgroundColor: rankBg, color: rankColor, padding: '3px 8px', borderRadius: '6px' }}>
+                            {rankBadge}
+                          </span>
+                          <div>
+                            <div style={{ fontSize: '13.5px', fontWeight: '800', color: '#0F172A' }}>
+                              {s.staffName}
+                            </div>
+                            <div style={{ fontSize: '11.5px', color: '#64748B', marginTop: '1px' }}>
+                              {s.visits} visits • {s.quotes} quotes
+                            </div>
+                          </div>
+                        </div>
+
+                        <div style={{ textAlign: 'right' }}>
+                          <div style={{ fontSize: '14.5px', fontWeight: '900', color: s.salesValue > 0 ? '#059669' : '#0F172A' }}>
+                            ₹{(s.salesValue || 0).toLocaleString('en-IN')}
+                          </div>
+                          <div style={{ fontSize: '11px', fontWeight: '700', color: '#2563EB', marginTop: '1px' }}>
+                            {s.ordersCount} deals ({s.conversionRate}% conv.)
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               )}
-              <span className="kpi-minimal-badge">
-                {staffSectionExpanded ? `${todayStaffPerformance.length} Active Staff` : 'Click to View Staff'}
-              </span>
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ fontSize: '11.5px', color: '#64748B' }}>
-                {staffSectionExpanded ? 'Hide Staff Details' : 'Expand Staff Performance'}
-              </span>
-              <button
-                type="button"
-                className="btn btn-outline btn-xs"
-                style={{ padding: '3px 8px', fontSize: '11px', borderRadius: '6px' }}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setStaffSectionExpanded(!staffSectionExpanded);
-                }}
-              >
-                {staffSectionExpanded ? '⌃' : '⌄'}
-              </button>
-            </div>
-          </div>
+            {/* Monthly Day-by-Day Performance Overview */}
+            <div style={{ backgroundColor: '#FFFFFF', borderRadius: '20px', border: '1px solid #E2E8F0', padding: '20px', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <TrendingUp size={18} color="#2563EB" />
+                  <span style={{ fontSize: '14px', fontWeight: '800', color: '#0F172A' }}>
+                    Monthly Performance Days ({selectedMonth})
+                  </span>
+                </div>
+                <span style={{ fontSize: '11.5px', color: '#64748B', fontWeight: '600' }}>
+                  Select day to view
+                </span>
+              </div>
 
-          {staffSectionExpanded && (
-            <div className="kpi-calendar-strip-scroll" style={{ padding: '10px 16px 14px' }}>
-              {todayStaffPerformance.map((s, idx) => {
-                const isSelected = expandedStaffMember === s.staffName;
-                const hasOrders = s.ordersCount > 0;
-                const rankBadge = idx === 0 ? '👑 #1' : idx === 1 ? '🥈 #2' : idx === 2 ? '🥉 #3' : `#${idx + 1}`;
-                const rankColor = idx === 0 ? '#D97706' : idx === 1 ? '#475569' : idx === 2 ? '#B45309' : '#64748B';
-
-                return (
-                  <button
-                    key={s.staffName}
-                    type="button"
-                    className={`kpi-calendar-pill ${isSelected ? 'kpi-calendar-pill-selected' : ''} ${hasOrders ? 'kpi-calendar-pill-active' : ''}`}
-                    style={{
-                      minWidth: '140px',
-                      padding: '12px 14px',
-                      cursor: 'pointer',
-                      textAlign: 'center',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      gap: '4px',
-                    }}
-                    onClick={() => setExpandedStaffMember(isSelected ? null : s.staffName)}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', marginBottom: '2px' }}>
-                      <span style={{ fontSize: '10.5px', fontWeight: '800', color: rankColor, background: `${rankColor}15`, padding: '1px 6px', borderRadius: '4px' }}>
-                        {rankBadge}
-                      </span>
-                      {hasOrders && <span className="kpi-pill-today-dot" style={{ background: '#10B981' }} />}
-                    </div>
-
-                    <div style={{ fontWeight: '800', fontSize: '13px', color: '#0F172A', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '125px' }}>
-                      {s.staffName}
-                    </div>
-
-                    <div className="kpi-pill-sales" style={{ fontSize: '14px', fontWeight: '900', color: s.salesValue > 0 ? '#059669' : '#64748B' }}>
-                      {s.salesValue > 0 ? `₹${Math.round(s.salesValue / 1000)}k` : '₹0'}
-                    </div>
-
-                    <div className="kpi-pill-orders-badge" style={{ marginTop: '2px' }}>
-                      {s.ordersCount} {s.ordersCount === 1 ? 'deal' : 'deals'} • {s.conversionRate}% conv.
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* 5. Minimalist Customer Activity Table for the Selected Date */}
-      <div className="kpi-table-card">
-        <div className="kpi-table-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <FileCheck size={16} color="#059669" />
-            <span style={{ fontWeight: '800', fontSize: '13.5px', color: '#0F172A' }}>
-              Customer Transactions on {formattedDayTitle}
-            </span>
-            <span className="kpi-count-badge">{dayCustomers.length} records</span>
-          </div>
-          <span style={{ fontSize: '11.5px', color: '#64748B' }}>
-            Automatic CRM day log
-          </span>
-        </div>
-
-        {dayCustomers.length === 0 ? (
-          <div className="kpi-empty-state">
-            <div style={{ fontSize: '32px', marginBottom: '6px' }}>📅</div>
-            <div className="kpi-empty-title">
-              No transactions recorded on {formattedDayTitle}
-            </div>
-            <div className="kpi-empty-sub">
-              Leads registered, quoted, or billed on this date automatically appear here.
-            </div>
-          </div>
-        ) : (
-          <div className="table-responsive">
-            <table className="kpi-table">
-              <thead>
-                <tr>
-                  <th>Customer ID</th>
-                  <th>Customer Name & Contact</th>
-                  <th>Customer Type</th>
-                  <th>Lead Source</th>
-                  <th>Pipeline Status</th>
-                  <th>Quotation / Order Value</th>
-                  <th>Material Specifications</th>
-                  <th>Salesperson</th>
-                </tr>
-              </thead>
-              <tbody>
-                {dayCustomers.map((c) => {
-                  const isClosed = c.status === 'Order Confirmed';
-                  const isQuote = c.status === 'Quotation' || c.status === 'Negotiation';
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '6px', maxHeight: '240px', overflowY: 'auto', paddingRight: '4px' }}>
+                {dailyTrends.map((t) => {
+                  const isSelected = t.date === selectedDay;
+                  const isCurrentDay = t.date === todayStr;
 
                   return (
-                    <tr key={c._id || c.customerId}>
-                      {/* Customer ID */}
-                      <td style={{ fontWeight: '800', color: '#2563EB', fontFamily: 'monospace', fontSize: '12.5px' }}>
-                        #{c.customerId}
-                      </td>
-
-                      {/* Customer Name */}
-                      <td>
-                        <div style={{ fontWeight: '800', color: '#0F172A', fontSize: '13px' }}>
-                          {c.customerName}
-                        </div>
-                        {c.phone ? (
-                          <div style={{ fontSize: '11.5px', color: '#64748B', marginTop: '2px' }}>
-                            📞 {c.phone}
-                          </div>
-                        ) : null}
-                      </td>
-
-                      {/* Type */}
-                      <td>
-                        <span className="type-capsule" style={{ fontSize: '10.5px' }}>
-                          {c.customerType}
+                    <button
+                      key={t.date}
+                      type="button"
+                      onClick={() => setSelectedDay(t.date)}
+                      style={{
+                        padding: '8px 4px',
+                        borderRadius: '10px',
+                        border: isSelected ? '2px solid #2563EB' : t.salesValue > 0 ? '1px solid #A7F3D0' : '1px solid #E2E8F0',
+                        backgroundColor: isSelected ? '#EFF6FF' : t.salesValue > 0 ? '#ECFDF5' : isCurrentDay ? '#FEF3C7' : '#F8FAFC',
+                        color: isSelected ? '#1D4ED8' : '#0F172A',
+                        cursor: 'pointer',
+                        textAlign: 'center',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        gap: '2px',
+                      }}
+                    >
+                      <span style={{ fontSize: '10px', fontWeight: '700', color: '#64748B', textTransform: 'uppercase' }}>
+                        {t.dayOfWeek}
+                      </span>
+                      <span style={{ fontSize: '13px', fontWeight: '900' }}>
+                        {t.dayNumber}
+                      </span>
+                      {t.salesValue > 0 ? (
+                        <span style={{ fontSize: '10px', fontWeight: '800', color: '#059669' }}>
+                          ₹{Math.round(t.salesValue / 1000)}k
                         </span>
-                      </td>
-
-                      {/* Lead Source */}
-                      <td style={{ color: '#475569', fontWeight: '600', fontSize: '12px' }}>
-                        {c.leadSource || 'Walk-in'}
-                      </td>
-
-                      {/* Status */}
-                      <td>
-                        <span
-                          className={`kpi-status-badge ${isClosed ? 'kpi-status-closed' : isQuote ? 'kpi-status-quote' : 'kpi-status-lead'}`}
-                        >
-                          {isClosed ? '🎉 ' : isQuote ? '📄 ' : '💬 '}{c.status}
-                        </span>
-                      </td>
-
-                      {/* Quotation / Order Value */}
-                      <td style={{ fontWeight: '800', fontSize: '13px', color: isClosed ? '#059669' : '#0F172A' }}>
-                        ₹{(c.orderValue || c.quotationValue || 0).toLocaleString('en-IN')}
-                      </td>
-
-                      {/* Requirements & Cross-Sell */}
-                      <td>
-                        <div style={{ fontSize: '12px', color: '#334155', fontWeight: '600' }}>
-                          {c.requirement ? `🏷️ ${c.requirement}` : '—'}
-                          {c.approxQuantity ? ` (${c.approxQuantity} sq.ft)` : ''}
-                        </div>
-                        {c.crossSell ? (
-                          <div style={{ fontSize: '11px', color: '#7C3AED', fontWeight: '700', marginTop: '2px' }}>
-                            + {c.crossSell}
-                          </div>
-                        ) : null}
-                      </td>
-
-                      {/* Salesperson */}
-                      <td style={{ color: '#334155', fontWeight: '700', fontSize: '12px' }}>
-                        {c.salesperson || 'Showroom Staff'}
-                      </td>
-                    </tr>
+                      ) : (
+                        <span style={{ fontSize: '10px', color: '#94A3B8' }}>—</span>
+                      )}
+                    </button>
                   );
                 })}
-              </tbody>
-            </table>
+              </div>
+            </div>
           </div>
-        )}
-      </div>
+
+          {/* 4. Streamlined 5-Column High-Density Transaction Table */}
+          <div
+            style={{
+              backgroundColor: '#FFFFFF',
+              borderRadius: '20px',
+              border: '1px solid #E2E8F0',
+              boxShadow: '0 4px 15px rgba(0, 0, 0, 0.03)',
+              overflow: 'hidden',
+            }}
+          >
+            <div style={{ padding: '16px 20px', backgroundColor: '#F8FAFC', borderBottom: '1px solid #E2E8F0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <FileCheck size={16} color="#059669" />
+                <span style={{ fontSize: '13.5px', fontWeight: '800', color: '#0F172A' }}>
+                  Showroom Transactions on {formattedDayTitle}
+                </span>
+                <span style={{ fontSize: '11px', fontWeight: '800', backgroundColor: '#EFF6FF', color: '#2563EB', padding: '2px 8px', borderRadius: '8px' }}>
+                  {dayCustomers.length} Records
+                </span>
+              </div>
+              <span style={{ fontSize: '12px', color: '#64748B' }}>
+                Automatic live CRM day log
+              </span>
+            </div>
+
+            {dayCustomers.length === 0 ? (
+              <div style={{ padding: '60px 20px', textAlign: 'center', color: '#64748B' }}>
+                <div style={{ fontSize: '32px', marginBottom: '8px' }}>📅</div>
+                <div style={{ fontSize: '15px', fontWeight: '800', color: '#0F172A' }}>
+                  No transactions recorded on {formattedDayTitle}
+                </div>
+                <p style={{ fontSize: '12.5px', color: '#64748B', maxWidth: '360px', margin: '4px auto 0' }}>
+                  Leads registered, quoted, or confirmed on this date automatically populate here.
+                </p>
+              </div>
+            ) : (
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+                  <thead>
+                    <tr style={{ backgroundColor: '#F8FAFC', borderBottom: '1px solid #E2E8F0' }}>
+                      <th style={{ padding: '14px 18px', fontSize: '12px', fontWeight: '800', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                        1. Customer Lead
+                      </th>
+                      <th style={{ padding: '14px 18px', fontSize: '12px', fontWeight: '800', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                        2. Status & Source
+                      </th>
+                      <th style={{ padding: '14px 18px', fontSize: '12px', fontWeight: '800', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                        3. Material Specifications
+                      </th>
+                      <th style={{ padding: '14px 18px', fontSize: '12px', fontWeight: '800', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                        4. Sales Executive
+                      </th>
+                      <th style={{ padding: '14px 18px', fontSize: '12px', fontWeight: '800', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.04em', textAlign: 'right' }}>
+                        5. Deal Value
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {dayCustomers.map((c, idx) => {
+                      const isClosed = c.status === 'Order Confirmed';
+                      const isQuote = c.status === 'Quotation' || c.status === 'Negotiation';
+
+                      return (
+                        <tr
+                          key={c._id || c.customerId}
+                          style={{
+                            borderBottom: idx < dayCustomers.length - 1 ? '1px solid #F1F5F9' : 'none',
+                            backgroundColor: isClosed ? '#F0FDF4' : '#FFFFFF',
+                          }}
+                        >
+                          {/* Column 1: Customer Lead */}
+                          <td style={{ padding: '14px 18px', verticalAlign: 'middle' }}>
+                            <div style={{ fontSize: '13.5px', fontWeight: '800', color: '#0F172A' }}>
+                              {c.customerName}
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '3px' }}>
+                              <span style={{ fontSize: '11px', color: '#2563EB', fontWeight: '800', fontFamily: 'monospace', backgroundColor: '#EFF6FF', padding: '1px 6px', borderRadius: '4px' }}>
+                                #{c.customerId}
+                              </span>
+                              {c.phone && (
+                                <span style={{ fontSize: '12px', color: '#475569', fontWeight: '600' }}>
+                                  📞 {c.phone}
+                                </span>
+                              )}
+                            </div>
+                          </td>
+
+                          {/* Column 2: Status & Source */}
+                          <td style={{ padding: '14px 18px', verticalAlign: 'middle' }}>
+                            <span
+                              style={{
+                                fontSize: '11.5px',
+                                fontWeight: '800',
+                                padding: '3px 9px',
+                                borderRadius: '10px',
+                                display: 'inline-block',
+                                backgroundColor: isClosed ? '#DCFCE7' : isQuote ? '#FEF3C7' : '#EFF6FF',
+                                color: isClosed ? '#15803D' : isQuote ? '#B45309' : '#1D4ED8',
+                                border: `1px solid ${isClosed ? '#86EFAC' : isQuote ? '#FDE68A' : '#BFDBFE'}`,
+                              }}
+                            >
+                              {isClosed ? '🎉 Order Confirmed' : isQuote ? `📄 ${c.status}` : `💬 ${c.status}`}
+                            </span>
+                            <div style={{ fontSize: '11px', color: '#64748B', marginTop: '3px', fontWeight: '600' }}>
+                              Source: {c.leadSource || 'Direct Walk-in'}
+                            </div>
+                          </td>
+
+                          {/* Column 3: Material Specs */}
+                          <td style={{ padding: '14px 18px', verticalAlign: 'middle' }}>
+                            <div style={{ fontSize: '12.5px', fontWeight: '700', color: '#334155' }}>
+                              {c.requirement || 'Tiles & Sanitary'}
+                            </div>
+                            {c.approxQuantity && (
+                              <div style={{ fontSize: '11px', color: '#64748B', marginTop: '2px' }}>
+                                Quantity: {c.approxQuantity}
+                              </div>
+                            )}
+                          </td>
+
+                          {/* Column 4: Sales Executive */}
+                          <td style={{ padding: '14px 18px', verticalAlign: 'middle' }}>
+                            <div style={{ fontSize: '13px', fontWeight: '700', color: '#0F172A' }}>
+                              {c.salesperson || 'Showroom Staff'}
+                            </div>
+                            <div style={{ fontSize: '11px', color: '#64748B', marginTop: '2px' }}>
+                              {c.customerType || 'Building Owner'}
+                            </div>
+                          </td>
+
+                          {/* Column 5: Deal Value */}
+                          <td style={{ padding: '14px 18px', verticalAlign: 'middle', textAlign: 'right' }}>
+                            <div style={{ fontSize: '15px', fontWeight: '900', color: isClosed ? '#059669' : '#0F172A' }}>
+                              ₹{(c.orderValue || c.quotationValue || 0).toLocaleString('en-IN')}
+                            </div>
+                            <div style={{ fontSize: '11px', color: isClosed ? '#059669' : '#64748B', fontWeight: '600', marginTop: '2px' }}>
+                              {isClosed ? 'Billed Order' : 'Quotation Estimate'}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
         </>
       )}
     </div>

@@ -6,19 +6,12 @@ import {
   Clock,
   FileX,
   UserCheck,
-  Layers,
   Settings,
   Smartphone,
-  Palette,
   ChevronLeft,
   ChevronRight,
   LogOut,
-  Sparkles,
-  Plus,
-  Building2,
   Shield,
-  HelpCircle,
-  ExternalLink,
   QrCode,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
@@ -29,9 +22,6 @@ export const Sidebar = ({
   activeTab,
   setActiveTab,
   onOpenMobileSimulator,
-  onOpenBrandingModal,
-  onOpenPairingModal,
-  onAddCustomer,
 }) => {
   const { user, isOwner, logout } = useAuth();
   const { branding, appShortName, tagline, primaryColor, renderLogo } = useBranding();
@@ -96,12 +86,6 @@ export const Sidebar = ({
           icon: QrCode,
         },
         {
-          id: 'builder',
-          label: 'CRM Form Builder',
-          shortLabel: 'Builder',
-          icon: Layers,
-        },
-        {
           id: 'settings',
           label: 'Settings & Config',
           shortLabel: 'Settings',
@@ -134,8 +118,7 @@ export const Sidebar = ({
       <div className="sidebar-brand-wrapper">
         <div
           className="sidebar-brand"
-          onClick={onOpenBrandingModal}
-          title={isCollapsed ? appShortName || 'BuildCRM' : 'Click to customize Brand & Logo'}
+          title={appShortName || 'Vasantham CRM'}
         >
           <div
             className="sidebar-brand-logo"
@@ -153,7 +136,7 @@ export const Sidebar = ({
           {!isCollapsed && (
             <div className="sidebar-brand-text-block">
               <div className="sidebar-brand-title">
-                {appShortName || 'BuildCRM'}
+                {appShortName || 'Vasantham CRM'}
               </div>
               <div className="sidebar-brand-tagline">
                 {tagline || 'Showroom CRM Suite'}
@@ -167,28 +150,13 @@ export const Sidebar = ({
           type="button"
           className="sidebar-collapse-toggle"
           onClick={() => setIsCollapsed(!isCollapsed)}
-          title={isCollapsed ? 'Expand Sidebar (Ctrl+B)' : 'Collapse Sidebar (Ctrl+B)'}
+          title={isCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar'}
         >
           {isCollapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
         </button>
       </div>
 
-      {/* 2. Quick Lead Action Button */}
-      {onAddCustomer && (
-        <div className="sidebar-action-container">
-          <button
-            type="button"
-            className="sidebar-action-btn"
-            onClick={onAddCustomer}
-            title="Register New Customer Lead"
-          >
-            <Plus size={16} strokeWidth={2.5} />
-            {!isCollapsed && <span>New Customer</span>}
-          </button>
-        </div>
-      )}
-
-      {/* 3. Grouped Navigation Scroll Area */}
+      {/* 2. Grouped Navigation Scroll Area */}
       <div className="sidebar-scroll-area">
         {navigationGroups.map((group, gIdx) => (
           <div key={gIdx} className="sidebar-nav-group">
@@ -286,26 +254,11 @@ export const Sidebar = ({
                 </div>
               )}
             </button>
-
-            <button
-              type="button"
-              onClick={onOpenBrandingModal}
-              className="sidebar-nav-item sidebar-tool-item"
-              title={isCollapsed ? 'Customize Showroom Branding' : undefined}
-            >
-              <span className="sidebar-nav-item-indicator" />
-              <div className="sidebar-nav-icon-box">
-                <Palette size={18} color="#F472B6" strokeWidth={1.9} />
-              </div>
-              {!isCollapsed && (
-                <span className="sidebar-nav-item-label">App Branding</span>
-              )}
-            </button>
           </nav>
         </div>
       </div>
 
-      {/* 4. Desktop Sidebar Footer: Real User Identity Card */}
+      {/* 3. Desktop Sidebar Footer: Real User Identity Card */}
       <div className="sidebar-footer-wrapper">
         <div
           className={`sidebar-profile-card ${isCollapsed ? 'sidebar-profile-card-collapsed' : ''}`}

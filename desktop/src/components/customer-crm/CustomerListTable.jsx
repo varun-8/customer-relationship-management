@@ -25,6 +25,7 @@ import { useCustomer } from '../../context/CustomerContext';
 import { ColumnSettingsModal } from './ColumnSettingsModal';
 import { LostSaleModal } from '../lost-sales/LostSaleModal';
 import { ConnectionErrorState } from '../common/ConnectionErrorState';
+import { getWhatsAppUrl } from '../../utils/whatsappHelper';
 
 export const CustomerListTable = ({ onAddCustomer, onEditCustomer, onViewCustomer }) => {
   const [markingLostCustomer, setMarkingLostCustomer] = useState(null);
@@ -625,7 +626,7 @@ export const CustomerListTable = ({ onAddCustomer, onEditCustomer, onViewCustome
                             {data.phone}
                           </a>
                           <a
-                            href={`https://wa.me/${String(data.phone).replace(/[^0-9]/g, '').length === 10 ? '91' + String(data.phone).replace(/[^0-9]/g, '') : String(data.phone).replace(/[^0-9]/g, '')}?text=${encodeURIComponent(`Hello ${data.customerName || ''}, greeting from BuildCRM!`)}`}
+                            href={getWhatsAppUrl(data.phone, data)}
                             target="_blank"
                             rel="noopener noreferrer"
                             onClick={(e) => e.stopPropagation()}

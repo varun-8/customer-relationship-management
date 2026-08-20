@@ -271,7 +271,7 @@ export const EmployeeFormModal = ({ employee, onClose, onSuccess }) => {
                     setName(e.target.value);
                     setError('');
                   }}
-                  placeholder="e.g. Karthik Raja"
+                  placeholder="e.g. Sales Executive Name"
                   required
                   style={{ paddingLeft: '34px', borderRadius: '10px', background: '#F8FAFC', border: '1px solid #E2E8F0', fontSize: '13px' }}
                 />
@@ -293,7 +293,7 @@ export const EmployeeFormModal = ({ employee, onClose, onSuccess }) => {
                     setEmail(e.target.value);
                     setError('');
                   }}
-                  placeholder="e.g. karthik@vasantham.com"
+                  placeholder="e.g. staff@showroom.com"
                   required
                   style={{ paddingLeft: '34px', borderRadius: '10px', background: '#F8FAFC', border: '1px solid #E2E8F0', fontSize: '13px' }}
                 />

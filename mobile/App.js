@@ -16,7 +16,6 @@ import {
   Linking,
   Image,
   Animated,
-  Easing,
   Dimensions,
   KeyboardAvoidingView,
   AppState,

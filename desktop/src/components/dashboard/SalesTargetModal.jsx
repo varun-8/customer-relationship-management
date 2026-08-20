@@ -1,10 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { X, Target, IndianRupee, Users, Check, AlertTriangle } from 'lucide-react';
+import { X, Target, IndianRupee, Users, Check, AlertTriangle, ToggleLeft, ToggleRight } from 'lucide-react';
 import { api } from '../../services/api';
 
 export const SalesTargetModal = ({ month, currentMetrics, onClose, onSaved }) => {
   const [showroomTarget, setShowroomTarget] = useState(
     String(currentMetrics?.kpi?.salesTarget || 2500000)
+  );
+
+  const [enableStaffTargets, setEnableStaffTargets] = useState(
+    currentMetrics?.enableStaffTargets !== false
   );
 
   const [staffTargets, setStaffTargets] = useState(() => {
@@ -13,36 +17,53 @@ export const SalesTargetModal = ({ month, currentMetrics, onClose, onSaved }) =>
       return existing.map((s) => ({
         staffName: s.staff,
         target: String(s.target || 625000),
+        disabled: Boolean(s.targetDisabled),
       }));
     }
     return [];
   });
 
-  // Fetch live active showroom employees
+  // Fetch live active showroom employees dynamically
   useEffect(() => {
     const fetchLiveStaff = async () => {
       try {
-        const res = await api.getUsers();
-        if (res && res.success && Array.isArray(res.data)) {
-          const employees = res.data.filter((u) => u.role !== 'owner' && u.active !== false);
-          const existing = currentMetrics?.salespersonPerformance || [];
-          const existingMap = {};
-          existing.forEach((s) => {
-            existingMap[s.staff] = String(s.target || '');
-          });
+        const [usersRes, customersRes] = await Promise.all([
+          api.getUsers(),
+          api.getCustomers(),
+        ]);
 
-          const defaultSplit = employees.length > 0
-            ? String(Math.round((Number(showroomTarget) || 2500000) / employees.length))
-            : '625000';
+        const userStaff = (usersRes && usersRes.success && Array.isArray(usersRes.data))
+          ? usersRes.data.filter((u) => u.active !== false).map((u) => u.name)
+          : [];
 
-          const mapped = employees.map((emp) => ({
-            staffName: emp.name,
-            target: existingMap[emp.name] || defaultSplit,
-          }));
+        const customerStaff = (customersRes && customersRes.success && Array.isArray(customersRes.data))
+          ? customersRes.data.map((c) => {
+              const d = c.data instanceof Map ? Object.fromEntries(c.data) : (c.data || {});
+              return d.salesperson;
+            }).filter(Boolean)
+          : [];
 
-          if (mapped.length > 0) {
-            setStaffTargets(mapped);
-          }
+        // Unique staff list
+        const allStaffNames = Array.from(new Set([...userStaff, ...customerStaff]));
+
+        const existing = currentMetrics?.salespersonPerformance || [];
+        const existingMap = {};
+        existing.forEach((s) => {
+          existingMap[s.staff] = { target: String(s.target || ''), disabled: Boolean(s.targetDisabled) };
+        });
+
+        const defaultSplit = allStaffNames.length > 0
+          ? String(Math.round((Number(showroomTarget) || 2500000) / allStaffNames.length))
+          : '625000';
+
+        const mapped = allStaffNames.map((name) => ({
+          staffName: name,
+          target: existingMap[name]?.target || defaultSplit,
+          disabled: existingMap[name]?.disabled || false,
+        }));
+
+        if (mapped.length > 0) {
+          setStaffTargets(mapped);
         }
       } catch (err) {
         console.warn('Error fetching live showroom staff for targets:', err);
@@ -60,15 +81,25 @@ export const SalesTargetModal = ({ month, currentMetrics, onClose, onSaved }) =>
     );
   };
 
-  // Auto distribute showroom target equally among staff
-  const handleAutoDistribute = () => {
-    const total = Number(showroomTarget) || 0;
-    if (total <= 0 || staffTargets.length === 0) return;
-    const split = Math.round(total / staffTargets.length);
-    setStaffTargets((prev) => prev.map((s) => ({ ...s, target: String(split) })));
+  const handleToggleStaffDisabled = (name) => {
+    setStaffTargets((prev) =>
+      prev.map((s) => (s.staffName === name ? { ...s, disabled: !s.disabled } : s))
+    );
   };
 
-  const totalAllocated = staffTargets.reduce((acc, s) => acc + (Number(s.target) || 0), 0);
+  // Auto distribute showroom target equally among active staff
+  const handleAutoDistribute = () => {
+    const total = Number(showroomTarget) || 0;
+    const activeStaff = staffTargets.filter((s) => !s.disabled);
+    if (total <= 0 || activeStaff.length === 0) return;
+    const split = Math.round(total / activeStaff.length);
+    setStaffTargets((prev) =>
+      prev.map((s) => (s.disabled ? s : { ...s, target: String(split) }))
+    );
+  };
+
+  const activeStaffList = staffTargets.filter((s) => !s.disabled);
+  const totalAllocated = activeStaffList.reduce((acc, s) => acc + (Number(s.target) || 0), 0);
   const showroomNum = Number(showroomTarget) || 0;
   const isBalanced = totalAllocated === showroomNum;
 
@@ -86,9 +117,11 @@ export const SalesTargetModal = ({ month, currentMetrics, onClose, onSaved }) =>
       await api.updateSalesTargets({
         month,
         showroomTarget: Number(showroomTarget),
+        enableStaffTargets,
         staffTargets: staffTargets.map((s) => ({
           staffName: s.staffName,
           target: Number(s.target) || 0,
+          disabled: s.disabled,
         })),
       });
 
@@ -103,23 +136,41 @@ export const SalesTargetModal = ({ month, currentMetrics, onClose, onSaved }) =>
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content" style={{ maxWidth: '540px' }} onClick={(e) => e.stopPropagation()}>
+    <div
+      style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: 'rgba(15, 23, 42, 0.7)',
+        backdropFilter: 'blur(6px)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 9999,
+        padding: '20px',
+      }}
+      onClick={onClose}
+    >
+      <div
+        style={{
+          maxWidth: '560px',
+          width: '100%',
+          maxHeight: '90vh',
+          display: 'flex',
+          flexDirection: 'column',
+          borderRadius: '20px',
+          overflow: 'hidden',
+          backgroundColor: '#FFFFFF',
+          boxShadow: '0 20px 50px rgba(0, 0, 0, 0.3)',
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Header */}
-        <div className="modal-header">
+        <div style={{ padding: '18px 24px', backgroundColor: '#F8FAFC', borderBottom: '1px solid #E2E8F0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <div
-              style={{
-                width: '36px',
-                height: '36px',
-                borderRadius: '10px',
-                background: '#EFF6FF',
-                color: '#2563EB',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
+            <div style={{ width: '36px', height: '36px', borderRadius: '10px', backgroundColor: '#EFF6FF', color: '#2563EB', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <Target size={20} />
             </div>
             <div>
@@ -127,122 +178,176 @@ export const SalesTargetModal = ({ month, currentMetrics, onClose, onSaved }) =>
                 Configure Sales Targets ({month})
               </h3>
               <p style={{ margin: '2px 0 0', fontSize: '12px', color: '#64748B' }}>
-                Set monthly showroom revenue target and individual salesperson quotas.
+                Set monthly showroom revenue target and manage individual staff targets.
               </p>
             </div>
           </div>
-          <button type="button" className="btn-close" onClick={onClose} aria-label="Close">
+          <button type="button" onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748B', padding: '4px' }}>
             <X size={18} />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit}>
-          <div className="modal-body" style={{ padding: '20px' }}>
+        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+          <div style={{ padding: '20px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '16px' }}>
             {error && (
-              <div className="kpi-alert-danger" style={{ marginBottom: '14px' }}>
-                <AlertTriangle size={16} />
-                <span>{error}</span>
+              <div style={{ padding: '10px 14px', borderRadius: '10px', backgroundColor: '#FEF2F2', border: '1px solid #FECDD3', color: '#DC2626', fontSize: '12.5px', fontWeight: '600' }}>
+                {error}
               </div>
             )}
 
             {/* Total Showroom Target */}
-            <div className="form-group">
+            <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                <label className="form-label" style={{ fontWeight: '800', margin: 0 }}>
+                <label style={{ fontSize: '12px', fontWeight: '800', color: '#0F172A', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                   Total Showroom Monthly Target (₹) *
                 </label>
-                <button
-                  type="button"
-                  onClick={handleAutoDistribute}
-                  style={{
-                    background: '#EFF6FF',
-                    border: '1px solid #BFDBFE',
-                    color: '#2563EB',
-                    borderRadius: '6px',
-                    padding: '2px 8px',
-                    fontSize: '11px',
-                    fontWeight: '700',
-                    cursor: 'pointer',
-                  }}
-                >
-                  ⚡ Distribute Equally
-                </button>
+                {enableStaffTargets && (
+                  <button
+                    type="button"
+                    onClick={handleAutoDistribute}
+                    style={{ backgroundColor: '#EFF6FF', border: '1px solid #BFDBFE', color: '#2563EB', borderRadius: '6px', padding: '3px 8px', fontSize: '11px', fontWeight: '800', cursor: 'pointer' }}
+                  >
+                    ⚡ Distribute Equally
+                  </button>
+                )}
               </div>
 
-              <div className="input-icon-wrapper">
-                <span className="input-currency-tag">₹</span>
+              <div style={{ position: 'relative' }}>
+                <span style={{ position: 'absolute', left: '12px', top: '10px', fontSize: '16px', fontWeight: '900', color: '#059669' }}>₹</span>
                 <input
                   type="number"
-                  className="form-input form-input-with-currency"
                   placeholder="e.g. 2500000"
                   value={showroomTarget}
                   onChange={(e) => setShowroomTarget(e.target.value)}
-                  style={{ fontSize: '16px', fontWeight: '900', color: '#059669' }}
+                  style={{ width: '100%', paddingLeft: '28px', paddingRight: '14px', paddingTop: '9px', paddingBottom: '9px', borderRadius: '12px', border: '1.5px solid #CBD5E1', fontSize: '16px', fontWeight: '900', color: '#059669', outline: 'none' }}
                   required
                   min="0"
                 />
               </div>
             </div>
 
-            {/* Individual Staff Allocations */}
-            <div style={{ marginTop: '16px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                <label className="form-label" style={{ fontWeight: '800', margin: 0, textTransform: 'uppercase', fontSize: '11px', letterSpacing: '0.05em', color: '#64748B' }}>
-                  INDIVIDUAL SALESPERSON ALLOCATIONS
-                </label>
-                <span
-                  style={{
-                    fontSize: '11.5px',
-                    fontWeight: '800',
-                    color: isBalanced ? '#059669' : '#D97706',
-                  }}
-                >
-                  Allocated: ₹{totalAllocated.toLocaleString('en-IN')} / ₹{showroomNum.toLocaleString('en-IN')}
-                </span>
+            {/* Global Staff Targets Toggle Switch */}
+            <div style={{ backgroundColor: '#F8FAFC', borderRadius: '14px', border: '1px solid #E2E8F0', padding: '14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div>
+                <div style={{ fontSize: '13px', fontWeight: '800', color: '#0F172A' }}>
+                  Enable Individual Salesperson Quotas
+                </div>
+                <div style={{ fontSize: '11.5px', color: '#64748B', marginTop: '2px' }}>
+                  Turn off to disable target quotas for all sales staff
+                </div>
               </div>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                {staffTargets.map((s) => (
-                  <div
-                    key={s.staffName}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      background: '#F8FAFC',
-                      border: '1px solid #E2E8F0',
-                      borderRadius: '10px',
-                      padding: '8px 14px',
-                      gap: '12px',
-                    }}
-                  >
-                    <div style={{ fontWeight: '700', fontSize: '13px', color: '#1E293B', flex: 1 }}>
-                      {s.staffName}
-                    </div>
-                    <div style={{ width: '160px' }} className="input-icon-wrapper">
-                      <span className="input-currency-tag">₹</span>
-                      <input
-                        type="number"
-                        className="form-input form-input-with-currency"
-                        placeholder="Target"
-                        value={s.target}
-                        onChange={(e) => handleStaffTargetChange(s.staffName, e.target.value)}
-                        style={{ padding: '6px 10px 6px 26px', fontSize: '12.5px', fontWeight: '800' }}
-                        min="0"
-                      />
-                    </div>
-                  </div>
-                ))}
-              </div>
+              <button
+                type="button"
+                onClick={() => setEnableStaffTargets(!enableStaffTargets)}
+                style={{
+                  backgroundColor: enableStaffTargets ? '#2563EB' : '#94A3B8',
+                  color: '#FFFFFF',
+                  border: 'none',
+                  borderRadius: '20px',
+                  padding: '6px 14px',
+                  fontSize: '12px',
+                  fontWeight: '800',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  transition: 'background-color 0.2s ease',
+                }}
+              >
+                <span>{enableStaffTargets ? 'ON' : 'OFF'}</span>
+              </button>
             </div>
+
+            {/* Individual Staff Allocations */}
+            {enableStaffTargets && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <label style={{ fontSize: '11px', fontWeight: '800', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    INDIVIDUAL SALESPERSON ALLOCATIONS
+                  </label>
+                  <span style={{ fontSize: '11.5px', fontWeight: '800', color: isBalanced ? '#059669' : '#D97706' }}>
+                    Allocated: ₹{totalAllocated.toLocaleString('en-IN')} / ₹{showroomNum.toLocaleString('en-IN')}
+                  </span>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {staffTargets.map((s) => (
+                    <div
+                      key={s.staffName}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        backgroundColor: s.disabled ? '#F1F5F9' : '#FFFFFF',
+                        border: '1px solid #E2E8F0',
+                        borderRadius: '12px',
+                        padding: '10px 14px',
+                        gap: '12px',
+                        opacity: s.disabled ? 0.7 : 1,
+                      }}
+                    >
+                      <div style={{ fontWeight: '800', fontSize: '13px', color: '#0F172A', flex: 1 }}>
+                        {s.staffName}
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => handleToggleStaffDisabled(s.staffName)}
+                        style={{
+                          fontSize: '11px',
+                          fontWeight: '800',
+                          backgroundColor: s.disabled ? '#FEE2E2' : '#EFF6FF',
+                          color: s.disabled ? '#DC2626' : '#2563EB',
+                          border: s.disabled ? '1px solid #FECDD3' : '1px solid #BFDBFE',
+                          borderRadius: '6px',
+                          padding: '3px 8px',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        {s.disabled ? 'Target: OFF' : 'Target: ACTIVE'}
+                      </button>
+
+                      {!s.disabled && (
+                        <div style={{ width: '150px', position: 'relative' }}>
+                          <span style={{ position: 'absolute', left: '10px', top: '7px', fontSize: '12px', fontWeight: '700', color: '#64748B' }}>₹</span>
+                          <input
+                            type="number"
+                            placeholder="Target"
+                            value={s.target}
+                            onChange={(e) => handleStaffTargetChange(s.staffName, e.target.value)}
+                            style={{ width: '100%', paddingLeft: '24px', paddingRight: '8px', paddingTop: '6px', paddingBottom: '6px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '12.5px', fontWeight: '800', color: '#0F172A', outline: 'none' }}
+                            min="0"
+                          />
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
-          <div className="modal-footer" style={{ padding: '14px 20px' }}>
-            <button type="button" className="btn btn-secondary" onClick={onClose}>
+          <div style={{ padding: '14px 20px', backgroundColor: '#F8FAFC', borderTop: '1px solid #E2E8F0', display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+            <button type="button" onClick={onClose} style={{ backgroundColor: '#FFFFFF', border: '1px solid #CBD5E1', borderRadius: '10px', padding: '8px 16px', fontSize: '12.5px', fontWeight: '700', cursor: 'pointer', color: '#475569' }}>
               Cancel
             </button>
-            <button type="submit" className="btn btn-primary" disabled={saving}>
-              {saving ? 'Saving...' : '✓ Save Target Goals'}
+            <button
+              type="submit"
+              disabled={saving}
+              style={{
+                background: 'linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)',
+                color: '#FFFFFF',
+                border: 'none',
+                borderRadius: '10px',
+                padding: '8px 20px',
+                fontSize: '12.5px',
+                fontWeight: '800',
+                cursor: 'pointer',
+                boxShadow: '0 4px 12px rgba(37, 99, 235, 0.3)',
+              }}
+            >
+              {saving ? 'Saving...' : 'Save Target Configuration'}
             </button>
           </div>
         </form>

@@ -11,10 +11,8 @@ import { Header } from './components/layout/Header';
 import { CustomerListTable } from './components/customer-crm/CustomerListTable';
 import { CustomerFormModal } from './components/customer-crm/CustomerFormModal';
 import { CustomerDetailModal } from './components/customer-crm/CustomerDetailModal';
-import { FormBuilderView } from './components/form-builder/FormBuilderView';
 import { SequenceConfigModal } from './components/settings/SequenceConfigModal';
 import { FormVersionHistoryModal } from './components/settings/FormVersionHistoryModal';
-import { BrandingSettingsModal } from './components/settings/BrandingSettingsModal';
 import { SettingsView } from './components/settings/SettingsView';
 import { MobileSimulatorModal } from './components/mobile-simulator/MobileSimulatorModal';
 import { DailyKpiView } from './components/kpi/DailyKpiView';
@@ -22,7 +20,6 @@ import { LostSalesView } from './components/lost-sales/LostSalesView';
 import { ExecutiveDashboardView } from './components/dashboard/ExecutiveDashboardView';
 import { FollowupSheetView } from './components/followups/FollowupSheetView';
 import { EmployeeManagementView } from './components/employees/EmployeeManagementView';
-import { MobilePairingModal } from './components/mobile-pairing/MobilePairingModal';
 import { MobilePairingView } from './components/mobile-pairing/MobilePairingView';
 import { api } from './services/api';
 
@@ -30,8 +27,6 @@ const MainAppContent = () => {
   const toast = useToast();
   const [activeTab, setActiveTab] = useState('dashboard');
   const [showMobileSimulator, setShowMobileSimulator] = useState(false);
-  const [showBrandingModal, setShowBrandingModal] = useState(false);
-  const [showPairingModal, setShowPairingModal] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState(null);
   const [viewingCustomer, setViewingCustomer] = useState(null);
   const [showAddCustomerModal, setShowAddCustomerModal] = useState(false);
@@ -39,105 +34,54 @@ const MainAppContent = () => {
   // Server health monitoring
   const [isOnline, setIsOnline] = useState(true);
   const [isCheckingServer, setIsCheckingServer] = useState(false);
-
-  const { isOwner } = useAuth();
   const { deleteCustomer } = useCustomer();
 
-  // Periodic and on-demand server connectivity check
-  const verifyServerConnection = useCallback(async (manual = false) => {
-    if (manual) setIsCheckingServer(true);
+  const verifyServerConnection = useCallback(async (isManualRetry = false) => {
+    setIsCheckingServer(true);
     try {
-      const health = await api.checkHealth();
-      if (health.online) {
-        if (!isOnline) {
-          toast.success('Connected to CRM backend server & MongoDB Atlas', 'Back Online');
-        }
+      const res = await api.checkHealth();
+      if (res && (res.online || res.status === 'ok' || res.data?.online || res.data?.status === 'online')) {
         setIsOnline(true);
-      } else {
-        if (isOnline) {
-          toast.warning('Cannot reach CRM server. Check your local backend.', 'Server Offline');
+        if (isManualRetry) {
+          toast.success('Successfully connected to backend server!');
         }
+      } else {
         setIsOnline(false);
       }
     } catch (e) {
-      if (isOnline) {
-        toast.warning('Server unreachable. Running with local cache.', 'Server Offline');
-      }
       setIsOnline(false);
     } finally {
-      if (manual) setIsCheckingServer(false);
+      setIsCheckingServer(false);
     }
-  }, [isOnline, toast]);
+  }, [toast]);
 
   useEffect(() => {
-    // Check initial health
-    verifyServerConnection(false);
-
-    // Watchdog ping every 20 seconds
+    verifyServerConnection();
     const interval = setInterval(() => {
-      verifyServerConnection(false);
-    }, 20000);
-
+      verifyServerConnection();
+    }, 30000);
     return () => clearInterval(interval);
   }, [verifyServerConnection]);
 
   const getHeaderInfo = () => {
     switch (activeTab) {
       case 'dashboard':
-        return {
-          title: 'Executive Dashboard',
-          subtitle: 'Live showroom revenue, conversion funnel, and salesperson quota tracking',
-        };
+        return { title: 'Executive Dashboard', subtitle: 'Real-time sales revenue, conversion funnel, and team performance metrics' };
       case 'customers':
-        return {
-          title: 'Customers',
-          subtitle: 'Manage and track all customer interactions',
-        };
+        return { title: 'Customer CRM & Leads', subtitle: 'Search, filter, and manage showroom customer profiles' };
       case 'kpi':
-        return {
-          title: 'Daily KPI Performance Hub',
-          subtitle: 'Track showroom footfall, quotation funnel, follow-ups, and daily sales value',
-        };
+        return { title: 'Daily Showroom KPI', subtitle: 'Track daily visitor footfall, quotations generated, and sales targets' };
       case 'followups':
-        return {
-          title: 'Follow-up Sheet & Lead Nurturing',
-          subtitle: 'Today, upcoming 7 days & overdue calling schedule with Hot/Warm priority tracking',
-        };
+        return { title: 'Follow-up Sheet', subtitle: 'Track pending customer follow-ups and schedule call logs' };
       case 'lost':
-        return {
-          title: 'Lost Sales & Competitor Intelligence',
-          subtitle: 'Analyze lost deal root causes, competitor pricing gaps, and product leakage',
-        };
+        return { title: 'Lost Sales Intel', subtitle: 'Analyze reasons for dropped quotations and competitor insights' };
       case 'employees':
-        return {
-          title: 'Showroom Staff & Mobile Logins',
-          subtitle: 'Manage sales staff credentials, assign showroom roles, and control access',
-        };
+        return { title: 'Showroom Staff Management', subtitle: 'Manage sales executive profiles and showroom team' };
       case 'mobile-pairing':
-        return {
-          title: 'Mobile Sync & QR Pairing Center',
-          subtitle: 'Connect mobile phones to desktop CRM server, view network IP, and monitor live paired devices',
-        };
-      case 'settings':
-        return {
-          title: 'Settings & Administration',
-          subtitle: 'App branding, showroom logo, CRM form schema, and sequence configuration',
-        };
+        return { title: 'Mobile App Scanner Hub', subtitle: 'Pair mobile phones with Desktop CRM via live QR code scan' };
       case 'builder':
-        return {
-          title: 'Customer Form Builder',
-          subtitle: 'Configure dynamic schema fields and publish updates to mobile app',
-        };
-      case 'sequence':
-        return {
-          title: 'Customer ID Sequence',
-          subtitle: 'Sequential Customer ID configuration (e.g. CUS-000001)',
-        };
-      case 'versions':
-        return {
-          title: 'Schema Version History',
-          subtitle: 'Published form version logs and changelog audits',
-        };
+      case 'settings':
+        return { title: 'Settings & System Configuration', subtitle: 'Showroom branding, CRM form schema, ID sequence, and data backup' };
       default:
         return { title: 'Dashboard', subtitle: 'Live showroom revenue and conversion tracking' };
     }
@@ -151,7 +95,7 @@ const MainAppContent = () => {
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         onOpenMobileSimulator={() => setShowMobileSimulator(true)}
-        onOpenBrandingModal={() => setShowBrandingModal(true)}
+        onOpenBrandingModal={() => setActiveTab('settings')}
         onOpenPairingModal={() => setActiveTab('mobile-pairing')}
         onAddCustomer={() => setShowAddCustomerModal(true)}
       />
@@ -185,9 +129,8 @@ const MainAppContent = () => {
             {activeTab === 'lost' && <LostSalesView />}
             {activeTab === 'employees' && <EmployeeManagementView />}
             {activeTab === 'mobile-pairing' && <MobilePairingView />}
-            {activeTab === 'builder' && <FormBuilderView />}
-
-            {activeTab === 'settings' && <SettingsView onOpenPairingModal={() => setActiveTab('mobile-pairing')} />}
+            {activeTab === 'builder' && <SettingsView initialTab="builder" onOpenPairingModal={() => setActiveTab('mobile-pairing')} />}
+            {activeTab === 'settings' && <SettingsView initialTab="branding" onOpenPairingModal={() => setActiveTab('mobile-pairing')} />}
             {activeTab === 'sequence' && <SequenceConfigModal />}
             {activeTab === 'versions' && <FormVersionHistoryModal />}
           </div>
@@ -218,14 +161,6 @@ const MainAppContent = () => {
           }}
           onDelete={(id) => deleteCustomer(id)}
         />
-      )}
-
-      {showBrandingModal && (
-        <BrandingSettingsModal onClose={() => setShowBrandingModal(false)} />
-      )}
-
-      {showPairingModal && (
-        <MobilePairingModal onClose={() => setShowPairingModal(false)} />
       )}
 
       {showMobileSimulator && (

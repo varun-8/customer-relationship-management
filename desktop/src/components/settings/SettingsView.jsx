@@ -3,29 +3,15 @@ import {
   Palette,
   Layers,
   Hash,
-  Clock,
-  Sparkles,
   Upload,
   Image as ImageIcon,
   Check,
-  RotateCcw,
-  Monitor,
-  Smartphone,
-  Box,
-  Save,
-  Trash2,
-  Sliders,
-  Paintbrush,
   Building2,
   Database,
   Download,
-  MessageSquare,
   FileSpreadsheet,
-  CheckCircle,
-  FileText,
   Phone,
   MapPin,
-  ShieldCheck,
   Server,
   RefreshCw,
   AlertTriangle,
@@ -33,15 +19,22 @@ import {
   Lock,
   Eye,
   EyeOff,
-  QrCode,
+  Sparkles,
+  Save,
+  MessageSquare,
+  RotateCcw,
 } from 'lucide-react';
 import { api } from '../../services/api';
-import { useBranding, BRAND_ICONS } from '../../context/BrandingContext';
+import { useBranding } from '../../context/BrandingContext';
 import { useCustomer } from '../../context/CustomerContext';
 import { FormBuilderView } from '../form-builder/FormBuilderView';
 import { SequenceConfigModal } from './SequenceConfigModal';
-import { ActiveFormSchemaViewer } from './ActiveFormSchemaViewer';
 import { DataImportModal } from './DataImportModal';
+import {
+  getStatusTemplates,
+  saveStatusTemplates,
+  DEFAULT_STATUS_TEMPLATES,
+} from '../../utils/whatsappHelper';
 
 export const SettingsView = ({ initialTab = 'branding', onOpenPairingModal }) => {
   const [activeSettingsTab, setActiveSettingsTab] = useState(initialTab);
@@ -53,10 +46,9 @@ export const SettingsView = ({ initialTab = 'branding', onOpenPairingModal }) =>
     appName: currentAppName,
     appShortName: currentAppShortName,
     tagline: currentTagline,
-    logoType: currentLogoType,
-    logoIcon: currentLogoIcon,
     logoImage: currentLogoImage,
     primaryColor: currentPrimaryColor,
+    renderLogo,
   } = useBranding();
 
   const { customers, sequenceConfig, activeForm } = useCustomer();
@@ -65,8 +57,6 @@ export const SettingsView = ({ initialTab = 'branding', onOpenPairingModal }) =>
   const [appName, setAppName] = useState(currentAppName || 'Vasantham Tiles & Sanitary Wares');
   const [appShortName, setAppShortName] = useState(currentAppShortName || 'Vasantham CRM');
   const [tagline, setTagline] = useState(currentTagline || 'Tiles, Sanitary Wares, CP Fittings & Adhesives');
-  const [logoType, setLogoType] = useState(currentLogoType || 'icon');
-  const [logoIcon, setLogoIcon] = useState(currentLogoIcon || 'Box');
   const [logoImage, setLogoImage] = useState(currentLogoImage || '');
   const [primaryColor, setPrimaryColor] = useState(currentPrimaryColor || '#2563EB');
   const [saving, setSaving] = useState(false);
@@ -77,11 +67,11 @@ export const SettingsView = ({ initialTab = 'branding', onOpenPairingModal }) =>
   const [storeAddress, setStoreAddress] = useState('124, Bypass Road, Near Bus Stand, Madurai, Tamil Nadu - 625001');
   const [gstin, setGstin] = useState('33AAAAA0000A1Z5');
   const [storePhone, setStorePhone] = useState('9840123456');
-  const [whatsappPhone, setWhatsappPhone] = useState('9840123456');
-  const [whatsappTemplate, setWhatsappTemplate] = useState(
-    'Hello {customerName}!\n\nThank you for visiting *{appName}*.\nHere is your requested quotation of *₹{quoteValue}* for {products}.\n\nTagline: {tagline}\nFeel free to reach us at {phone}. Have a great day!'
-  );
   const [businessSavedSuccess, setBusinessSavedSuccess] = useState(false);
+
+  // Status-Specific WhatsApp Message Templates
+  const [waTemplates, setWaTemplates] = useState(() => getStatusTemplates());
+  const [activeWaStatusKey, setActiveWaStatusKey] = useState('followup');
 
   // Developer Key Database Wipe State
   const [devKeyInput, setDevKeyInput] = useState('');
@@ -107,7 +97,6 @@ export const SettingsView = ({ initialTab = 'branding', onOpenPairingModal }) =>
         setWipeSuccess(res.message || 'Database wiped successfully!');
         setDevKeyInput('');
         setShowWipeConfirm(false);
-        // Refresh browser / context after brief pause
         setTimeout(() => {
           window.location.reload();
         }, 1500);
@@ -133,7 +122,6 @@ export const SettingsView = ({ initialTab = 'branding', onOpenPairingModal }) =>
     const reader = new FileReader();
     reader.onload = (event) => {
       setLogoImage(event.target?.result || '');
-      setLogoType('image');
       setError('');
     };
     reader.readAsDataURL(file);
@@ -152,8 +140,8 @@ export const SettingsView = ({ initialTab = 'branding', onOpenPairingModal }) =>
       appName: appName.trim(),
       appShortName: (appShortName || appName).trim(),
       tagline: tagline.trim(),
-      logoType,
-      logoIcon,
+      logoType: logoImage ? 'image' : 'icon',
+      logoIcon: 'Box',
       logoImage,
       primaryColor,
     });
@@ -169,18 +157,24 @@ export const SettingsView = ({ initialTab = 'branding', onOpenPairingModal }) =>
 
   const handleSaveBusinessProfile = (e) => {
     e.preventDefault();
+    saveStatusTemplates(waTemplates);
     setBusinessSavedSuccess(true);
     setTimeout(() => setBusinessSavedSuccess(false), 3000);
   };
 
-  const handleResetDefaults = () => {
-    setAppName('Vasantham Tiles & Sanitary Wares');
-    setAppShortName('Vasantham CRM');
-    setTagline('Tiles, Sanitary Wares, CP Fittings & Adhesives');
-    setLogoType('icon');
-    setLogoIcon('Box');
-    setLogoImage('');
-    setPrimaryColor('#2563EB');
+  const handleInsertTag = (tag) => {
+    const currentText = waTemplates[activeWaStatusKey] || '';
+    setWaTemplates({
+      ...waTemplates,
+      [activeWaStatusKey]: currentText + ` ${tag} `,
+    });
+  };
+
+  const handleResetWaTemplate = () => {
+    setWaTemplates({
+      ...waTemplates,
+      [activeWaStatusKey]: DEFAULT_STATUS_TEMPLATES[activeWaStatusKey],
+    });
   };
 
   // Export Customer Data to CSV
@@ -217,165 +211,140 @@ export const SettingsView = ({ initialTab = 'branding', onOpenPairingModal }) =>
   // Export JSON Backup
   const handleExportJSONBackup = () => {
     const backupData = {
-      version: '1.0',
+      app: 'Vasantham CRM',
       exportedAt: new Date().toISOString(),
-      branding: { appName, appShortName, tagline, primaryColor },
+      branding,
       sequenceConfig,
-      customerCount: customers.length,
-      customers,
+      formSchema: activeForm,
+      whatsappTemplates: waTemplates,
+      customersCount: customers?.length || 0,
+      customers: customers || [],
     };
-    const jsonString = `data:text/json;charset=utf-8,${encodeURIComponent(JSON.stringify(backupData, null, 2))}`;
+    const jsonStr = JSON.stringify(backupData, null, 2);
+    const blob = new Blob([jsonStr], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
-    link.setAttribute('href', jsonString);
-    link.setAttribute('download', `Vasantham_CRM_Full_Backup_${new Date().toISOString().split('T')[0]}.json`);
+    link.href = url;
+    link.download = `Vasantham_CRM_Full_Backup_${new Date().toISOString().split('T')[0]}.json`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
   };
 
   const tabs = [
-    { id: 'branding', label: '🎨 Showroom Branding & Theme', icon: Palette },
-    { id: 'sequence', label: '🔢 Customer ID Sequence', icon: Hash },
-    { id: 'builder', label: '🛠️ Form Schema Fields', icon: Layers },
-    { id: 'business', label: '🏢 Showroom Profile & WhatsApp', icon: Building2 },
-    { id: 'backup', label: '💾 Database & Backup Center', icon: Database },
+    { id: 'branding', label: 'Showroom Branding', icon: Palette },
+    { id: 'builder', label: 'Form Builder', icon: Layers },
+    { id: 'sequence', label: 'ID Sequence', icon: Hash },
+    { id: 'business', label: 'Business & WhatsApp', icon: Building2 },
+    { id: 'backup', label: 'Data Backup & System', icon: Database },
   ];
 
-  const currentPrefix = sequenceConfig?.prefix || 'VAS-';
-  const nextCustomerNumber = (sequenceConfig?.currentValue || 0) + (sequenceConfig?.step || 1);
-  const nextFormattedId = `${currentPrefix}${String(nextCustomerNumber).padStart(sequenceConfig?.padding || 6, '0')}`;
+  const waStatusOptions = [
+    { key: 'followup', label: '👋 New Lead / Follow-up', color: '#2563EB', bg: '#EFF6FF' },
+    { key: 'quotation', label: '📄 Quotation Shared', color: '#0369A1', bg: '#E0F2FE' },
+    { key: 'negotiation', label: '🤝 Price Negotiation', color: '#B45309', bg: '#FEF3C7' },
+    { key: 'order_confirmed', label: '🎉 Order Confirmed', color: '#15803D', bg: '#DCFCE7' },
+    { key: 'lost', label: '🌸 Deal Lost / Re-engagement', color: '#991B1B', bg: '#FEE2E2' },
+  ];
+
+  // Dynamic next customer ID display
+  const seqVal = sequenceConfig?.currentValue || customers?.length || 10;
+  const prefix = sequenceConfig?.prefix || 'CUS-';
+  const padding = sequenceConfig?.padding || 6;
+  const nextFormattedId = `${prefix}${String(seqVal + 1).padStart(padding, '0')}`;
+
+  // Live preview message computation
+  const previewTemplate = waTemplates[activeWaStatusKey] || DEFAULT_STATUS_TEMPLATES[activeWaStatusKey];
+  const sampleRenderedMsg = previewTemplate
+    .replace(/\{customerName\}/g, 'Sivaraman Builders')
+    .replace(/\{appName\}/g, appName || 'Vasantham Tiles & Sanitary Wares')
+    .replace(/\{storePhone\}/g, storePhone || '9840123456')
+    .replace(/\{phone\}/g, storePhone || '9840123456')
+    .replace(/\{requirement\}/g, 'Italian Marble Vitrified Tiles, Kohler Sanitaryware')
+    .replace(/\{products\}/g, 'Italian Marble Vitrified Tiles, Kohler Sanitaryware')
+    .replace(/\{quoteValue\}/g, '₹2,45,000');
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', animation: 'tabFadeInUp 0.3s ease' }}>
-      {/* 1. Scorecard Metric Row */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-          gap: '12px',
-        }}
-      >
-        {/* Card 1: Showroom Brand */}
-        <div
-          className="metric-card-item"
-          style={{
-            background: '#FFFFFF',
-            borderRadius: '14px',
-            border: '1px solid #E2E8F0',
-            padding: '14px 18px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '14px',
-            boxShadow: '0 1px 3px rgba(15, 23, 42, 0.03)',
-          }}
-        >
-          <div className="metric-icon-box" style={{ width: '42px', height: '42px', borderRadius: '10px', background: '#EFF6FF', color: '#2563EB', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Palette size={20} />
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+      {/* 1. Header Overview Cards */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '14px' }}>
+        {/* Card 1: Branding */}
+        <div style={{ backgroundColor: '#FFFFFF', borderRadius: '18px', border: '1px solid #E2E8F0', padding: '16px 20px', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span style={{ fontSize: '11px', fontWeight: '800', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.04em' }}>SHOWROOM IDENTITY</span>
+            <div style={{ width: '34px', height: '34px', borderRadius: '10px', backgroundColor: '#EFF6FF', color: '#2563EB', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Palette size={16} />
+            </div>
           </div>
-          <div style={{ minWidth: 0 }}>
-            <div className="metric-value" style={{ fontSize: '16px', fontWeight: '900', color: '#0F172A', lineHeight: 1.2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-              {appShortName || 'Vasantham CRM'}
-            </div>
-            <div className="metric-label" style={{ fontSize: '11.5px', color: '#64748B', fontWeight: '700', marginTop: '2px' }}>
-              Showroom Branding & Theme
-            </div>
+          <div style={{ fontSize: '16px', fontWeight: '800', color: '#0F172A', marginTop: '6px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            {appShortName || 'Vasantham CRM'}
+          </div>
+          <div style={{ fontSize: '12px', color: '#64748B', marginTop: '2px' }}>
+            {logoImage ? 'Custom Logo Uploaded' : 'System Icon Theme'}
           </div>
         </div>
 
-        {/* Card 2: Customer ID Sequence */}
-        <div
-          className="metric-card-item"
-          style={{
-            background: '#FFFFFF',
-            borderRadius: '14px',
-            border: '1px solid #E2E8F0',
-            padding: '14px 18px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '14px',
-            boxShadow: '0 1px 3px rgba(15, 23, 42, 0.03)',
-          }}
-        >
-          <div className="metric-icon-box" style={{ width: '42px', height: '42px', borderRadius: '10px', background: '#F5F3FF', color: '#7C3AED', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Hash size={20} />
+        {/* Card 2: Next Customer ID */}
+        <div style={{ backgroundColor: '#FFFFFF', borderRadius: '18px', border: '1px solid #E2E8F0', padding: '16px 20px', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span style={{ fontSize: '11px', fontWeight: '800', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.04em' }}>NEXT CUSTOMER ID</span>
+            <div style={{ width: '34px', height: '34px', borderRadius: '10px', backgroundColor: '#F5F3FF', color: '#7C3AED', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Hash size={16} />
+            </div>
           </div>
-          <div>
-            <div className="metric-value" style={{ fontSize: '18px', fontWeight: '900', color: '#7C3AED', lineHeight: 1.1, fontFamily: 'monospace' }}>
-              {nextFormattedId}
-            </div>
-            <div className="metric-label" style={{ fontSize: '11.5px', color: '#64748B', fontWeight: '700', marginTop: '2px' }}>
-              Next Customer ID
-            </div>
+          <div style={{ fontSize: '18px', fontWeight: '900', color: '#7C3AED', marginTop: '6px', fontFamily: 'monospace' }}>
+            {nextFormattedId}
+          </div>
+          <div style={{ fontSize: '12px', color: '#64748B', marginTop: '2px' }}>
+            Auto-increment sequence
           </div>
         </div>
 
-        {/* Card 3: Form Schema Fields */}
-        <div
-          className="metric-card-item"
-          style={{
-            background: '#FFFFFF',
-            borderRadius: '14px',
-            border: '1px solid #E2E8F0',
-            padding: '14px 18px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '14px',
-            boxShadow: '0 1px 3px rgba(15, 23, 42, 0.03)',
-          }}
-        >
-          <div className="metric-icon-box" style={{ width: '42px', height: '42px', borderRadius: '10px', background: '#ECFDF5', color: '#059669', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Layers size={20} />
+        {/* Card 3: Form Schema */}
+        <div style={{ backgroundColor: '#FFFFFF', borderRadius: '18px', border: '1px solid #E2E8F0', padding: '16px 20px', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span style={{ fontSize: '11px', fontWeight: '800', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.04em' }}>FORM SCHEMA</span>
+            <div style={{ width: '34px', height: '34px', borderRadius: '10px', backgroundColor: '#ECFDF5', color: '#059669', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Layers size={16} />
+            </div>
           </div>
-          <div>
-            <div className="metric-value" style={{ fontSize: '20px', fontWeight: '900', color: '#059669', lineHeight: 1.1 }}>
-              {activeForm?.fields ? `${activeForm.fields.filter((f) => f.active).length} Active Fields` : '23 Active Fields'}
-            </div>
-            <div className="metric-label" style={{ fontSize: '11.5px', color: '#64748B', fontWeight: '700', marginTop: '2px' }}>
-              {activeForm?.name ? `${activeForm.name} (v${activeForm.version || 1})` : 'Dynamic Form Schema'}
-            </div>
+          <div style={{ fontSize: '17px', fontWeight: '900', color: '#059669', marginTop: '6px' }}>
+            {activeForm?.fields ? `${activeForm.fields.filter((f) => f.active).length} Active Fields` : '23 Active Fields'}
+          </div>
+          <div style={{ fontSize: '12px', color: '#64748B', marginTop: '2px' }}>
+            {activeForm?.name ? `${activeForm.name} (v${activeForm.version || 1})` : 'Showroom specification'}
           </div>
         </div>
 
-        {/* Card 4: MongoDB Atlas */}
-        <div
-          className="metric-card-item"
-          style={{
-            background: '#FFFFFF',
-            borderRadius: '14px',
-            border: '1px solid #E2E8F0',
-            padding: '14px 18px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '14px',
-            boxShadow: '0 1px 3px rgba(15, 23, 42, 0.03)',
-          }}
-        >
-          <div className="metric-icon-box" style={{ width: '42px', height: '42px', borderRadius: '10px', background: '#FFFBEB', color: '#D97706', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <Server size={20} />
+        {/* Card 4: Database Status */}
+        <div style={{ backgroundColor: '#FFFFFF', borderRadius: '18px', border: '1px solid #E2E8F0', padding: '16px 20px', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span style={{ fontSize: '11px', fontWeight: '800', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.04em' }}>DATABASE ENGINE</span>
+            <div style={{ width: '34px', height: '34px', borderRadius: '10px', backgroundColor: '#FEF3C7', color: '#D97706', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Server size={16} />
+            </div>
           </div>
-          <div>
-            <div className="metric-value" style={{ fontSize: '18px', fontWeight: '900', color: '#D97706', lineHeight: 1.1, display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <span>MongoDB Atlas</span>
-              <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#10B981', display: 'inline-block' }} />
-            </div>
-            <div className="metric-label" style={{ fontSize: '11.5px', color: '#64748B', fontWeight: '700', marginTop: '2px' }}>
-              24/7 Cloud Database Live
-            </div>
+          <div style={{ fontSize: '16px', fontWeight: '900', color: '#D97706', marginTop: '6px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <span>Local MongoDB</span>
+            <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#10B981', display: 'inline-block' }} />
+          </div>
+          <div style={{ fontSize: '12px', color: '#64748B', marginTop: '2px' }}>
+            127.0.0.1:27017 (Embedded)
           </div>
         </div>
       </div>
 
-      {/* 2. Unified Settings Navigation Dock */}
+      {/* 2. Navigation Tab Dock */}
       <div
         style={{
           display: 'flex',
           alignItems: 'center',
           gap: '6px',
-          background: '#FFFFFF',
+          backgroundColor: '#FFFFFF',
           padding: '6px',
-          borderRadius: '14px',
+          borderRadius: '16px',
           border: '1px solid #E2E8F0',
-          boxShadow: '0 1px 3px rgba(15, 23, 42, 0.03)',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.02)',
           flexWrap: 'wrap',
         }}
       >
@@ -391,15 +360,15 @@ export const SettingsView = ({ initialTab = 'branding', onOpenPairingModal }) =>
                 display: 'flex',
                 alignItems: 'center',
                 gap: '8px',
-                padding: '8px 16px',
-                borderRadius: '10px',
+                padding: '9px 18px',
+                borderRadius: '12px',
                 border: 'none',
-                background: isActive ? '#2563EB' : 'transparent',
-                color: isActive ? '#FFFFFF' : '#64748B',
+                backgroundColor: isActive ? '#2563EB' : 'transparent',
+                color: isActive ? '#FFFFFF' : '#475569',
                 fontWeight: isActive ? '800' : '600',
-                fontSize: '12.5px',
+                fontSize: '13px',
                 cursor: 'pointer',
-                transition: 'all 0.15s ease',
+                transition: 'all 0.2s ease',
               }}
             >
               <Icon size={15} />
@@ -409,33 +378,32 @@ export const SettingsView = ({ initialTab = 'branding', onOpenPairingModal }) =>
         })}
       </div>
 
-      {/* Tab 1: Showroom Branding & Theme */}
+      {/* TAB 1: SHOWROOM BRANDING */}
       {activeSettingsTab === 'branding' && (
         <div
           style={{
-            background: '#FFFFFF',
-            borderRadius: '16px',
+            backgroundColor: '#FFFFFF',
+            borderRadius: '20px',
             border: '1px solid #E2E8F0',
-            boxShadow: '0 1px 3px rgba(15, 23, 42, 0.03)',
+            boxShadow: '0 4px 15px rgba(0, 0, 0, 0.03)',
             padding: '24px',
             display: 'flex',
             flexDirection: 'column',
-            gap: '22px',
+            gap: '20px',
           }}
         >
-          {/* Header */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #F1F5F9', paddingBottom: '16px' }}>
             <div>
               <h2 style={{ fontSize: '17px', fontWeight: '800', color: '#0F172A', margin: 0 }}>
                 Showroom Brand Identity & Visual Theme
               </h2>
-              <p style={{ fontSize: '12px', color: '#64748B', margin: '3px 0 0' }}>
-                Customize your showroom software name, upload your custom logo, or choose from brand icons.
+              <p style={{ fontSize: '12.5px', color: '#64748B', margin: '4px 0 0' }}>
+                Configure software branding title, tagline, logo image upload, and accent styling.
               </p>
             </div>
 
             {savedSuccess && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#059669', background: '#ECFDF5', border: '1px solid #A7F3D0', padding: '6px 14px', borderRadius: '8px', fontWeight: '800', fontSize: '12.5px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#15803D', backgroundColor: '#DCFCE7', border: '1px solid #86EFAC', padding: '6px 14px', borderRadius: '10px', fontWeight: '800', fontSize: '12.5px' }}>
                 <Check size={16} />
                 <span>Saved & Synced Live!</span>
               </div>
@@ -443,7 +411,7 @@ export const SettingsView = ({ initialTab = 'branding', onOpenPairingModal }) =>
           </div>
 
           {error && (
-            <div style={{ padding: '12px 16px', borderRadius: '8px', background: '#FEF2F2', border: '1px solid #FECACA', color: '#DC2626', fontSize: '13px', fontWeight: '600' }}>
+            <div style={{ padding: '12px 16px', borderRadius: '12px', backgroundColor: '#FEF2F2', border: '1px solid #FECACA', color: '#DC2626', fontSize: '13px', fontWeight: '600' }}>
               {error}
             </div>
           )}
@@ -451,10 +419,10 @@ export const SettingsView = ({ initialTab = 'branding', onOpenPairingModal }) =>
           {/* Live Preview Card */}
           <div
             style={{
-              padding: '20px 24px',
-              borderRadius: '14px',
-              background: 'linear-gradient(135deg, #0B1120 0%, #1E293B 100%)',
-              border: '1px solid rgba(255, 255, 255, 0.1)',
+              padding: '20px',
+              borderRadius: '16px',
+              backgroundColor: '#0F172A',
+              color: '#FFFFFF',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
@@ -463,791 +431,467 @@ export const SettingsView = ({ initialTab = 'branding', onOpenPairingModal }) =>
             }}
           >
             <div>
-              <div style={{ fontSize: '11px', color: '#94A3B8', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '10px' }}>
+              <div style={{ fontSize: '11px', color: '#94A3B8', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '8px' }}>
                 Live Software Branding Preview
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
                 <div
                   style={{
-                    width: '46px',
-                    height: '46px',
-                    borderRadius: '12px',
-                    background: `linear-gradient(135deg, ${primaryColor}, #1D4ED8)`,
+                    width: '48px',
+                    height: '48px',
+                    borderRadius: '14px',
+                    background: logoImage ? '#FFFFFF' : 'linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)',
+                    color: '#FFFFFF',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     overflow: 'hidden',
-                    boxShadow: `0 4px 14px ${primaryColor}88`,
-                    border: '1.5px solid rgba(255, 255, 255, 0.2)',
+                    padding: logoImage ? '4px' : 0,
                   }}
                 >
-                  {logoType === 'image' && logoImage ? (
+                  {logoImage ? (
                     <img src={logoImage} alt="Logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
                   ) : (
-                    (() => {
-                      const IconComp = BRAND_ICONS[logoIcon]?.icon || Box;
-                      return <IconComp size={24} color="#FFFFFF" strokeWidth={2.5} />;
-                    })()
+                    renderLogo(24)
                   )}
                 </div>
                 <div>
-                  <div style={{ fontSize: '20px', fontWeight: '800', color: '#FFFFFF', letterSpacing: '-0.01em' }}>
-                    {appShortName || appName || 'Vasantham CRM'}
+                  <div style={{ fontSize: '17px', fontWeight: '800', color: '#FFFFFF' }}>
+                    {appName || 'Vasantham Tiles & Sanitary Wares'}
                   </div>
-                  <div style={{ fontSize: '12.5px', color: '#94A3B8', marginTop: '1px' }}>
+                  <div style={{ fontSize: '12px', color: '#94A3B8', marginTop: '2px' }}>
                     {tagline || 'Tiles, Sanitary Wares, CP Fittings & Adhesives'}
                   </div>
                 </div>
               </div>
             </div>
-
-            <div style={{ display: 'flex', gap: '8px' }}>
-              <div style={{ padding: '8px 14px', borderRadius: '8px', background: 'rgba(255, 255, 255, 0.08)', color: '#CBD5E1', fontSize: '12px', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '6px', border: '1px solid rgba(255,255,255,0.1)' }}>
-                <Monitor size={14} color="#60A5FA" />
-                <span>Desktop Workspace</span>
-              </div>
-              <div style={{ padding: '8px 14px', borderRadius: '8px', background: 'rgba(255, 255, 255, 0.08)', color: '#CBD5E1', fontSize: '12px', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '6px', border: '1px solid rgba(255,255,255,0.1)' }}>
-                <Smartphone size={14} color="#34D399" />
-                <span>Mobile App</span>
-              </div>
-            </div>
+            <span style={{ fontSize: '11px', fontWeight: '800', backgroundColor: 'rgba(255,255,255,0.1)', color: '#38BDF8', padding: '4px 10px', borderRadius: '8px' }}>
+              App Header & Mobile Sync Ready
+            </span>
           </div>
 
-          {/* Logo Selection Box */}
-          <div
-            style={{
-              padding: '18px',
-              borderRadius: '12px',
-              border: '1px solid #E2E8F0',
-              background: '#F8FAFC',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '14px',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: '#EFF6FF', color: '#2563EB', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <ImageIcon size={18} />
-                </div>
-                <div>
-                  <h3 style={{ fontSize: '14px', fontWeight: '800', color: '#0F172A', margin: 0 }}>
-                    Showroom Logo & Icon Selection
-                  </h3>
-                  <p style={{ fontSize: '11.5px', color: '#64748B', margin: '2px 0 0' }}>
-                    Upload your showroom logo image or select from preset vector icons.
-                  </p>
-                </div>
-              </div>
-
-              {/* Mode Toggle Chips */}
-              <div style={{ display: 'flex', gap: '6px', background: '#FFFFFF', padding: '4px', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
-                <button
-                  type="button"
-                  onClick={() => setLogoType('image')}
-                  style={{
-                    padding: '6px 14px',
-                    borderRadius: '6px',
-                    border: 'none',
-                    background: logoType === 'image' ? '#2563EB' : 'transparent',
-                    color: logoType === 'image' ? '#FFFFFF' : '#64748B',
-                    fontWeight: logoType === 'image' ? '800' : '600',
-                    fontSize: '12px',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                  }}
-                >
-                  <Upload size={14} />
-                  <span>Upload Image</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setLogoType('icon')}
-                  style={{
-                    padding: '6px 14px',
-                    borderRadius: '6px',
-                    border: 'none',
-                    background: logoType === 'icon' ? '#2563EB' : 'transparent',
-                    color: logoType === 'icon' ? '#FFFFFF' : '#64748B',
-                    fontWeight: logoType === 'icon' ? '800' : '600',
-                    fontSize: '12px',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                  }}
-                >
-                  <Sparkles size={14} />
-                  <span>Vector Icons</span>
-                </button>
-              </div>
-            </div>
-
-            {logoType === 'image' ? (
-              <div
-                style={{
-                  border: '2px dashed #93C5FD',
-                  borderRadius: '12px',
-                  padding: '20px',
-                  textAlign: 'center',
-                  background: '#FFFFFF',
-                }}
-              >
-                {logoImage ? (
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
-                    <div style={{ padding: '10px', background: '#F8FAFC', borderRadius: '10px', border: '1px solid #E2E8F0', display: 'inline-flex' }}>
-                      <img src={logoImage} alt="Uploaded Logo" style={{ height: '70px', maxWidth: '220px', objectFit: 'contain' }} />
-                    </div>
-
-                    <div style={{ display: 'flex', gap: '10px' }}>
-                      <label className="btn btn-primary btn-sm" style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px', borderRadius: '8px' }}>
-                        <Upload size={13} />
-                        <span>Upload Different Logo</span>
-                        <input type="file" accept="image/*" onChange={handleImageUpload} style={{ display: 'none' }} />
-                      </label>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setLogoImage('');
-                          setLogoType('icon');
-                        }}
-                        className="btn btn-danger btn-sm"
-                        style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', borderRadius: '8px' }}
-                      >
-                        <Trash2 size={13} />
-                        <span>Remove</span>
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <div>
-                    <div style={{ width: '42px', height: '42px', borderRadius: '10px', background: '#EFF6FF', color: '#2563EB', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 8px' }}>
-                      <Upload size={20} />
-                    </div>
-                    <div style={{ fontSize: '14px', fontWeight: '800', color: '#0F172A' }}>Upload Showroom Logo</div>
-                    <p style={{ fontSize: '11.5px', color: '#64748B', margin: '2px 0 12px' }}>Recommended: Transparent PNG (Max 3MB)</p>
-                    <label className="btn btn-primary btn-sm" style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px', fontWeight: '800', borderRadius: '8px' }}>
-                      <Upload size={14} />
-                      <span>Select Logo File</span>
-                      <input type="file" accept="image/*" onChange={handleImageUpload} style={{ display: 'none' }} />
-                    </label>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '10px' }}>
-                  {Object.entries(BRAND_ICONS).map(([key, item]) => {
-                    const Icon = item.icon;
-                    const isSelected = logoIcon === key;
-                    return (
-                      <button
-                        key={key}
-                        type="button"
-                        onClick={() => setLogoIcon(key)}
-                        style={{
-                          padding: '12px 8px',
-                          borderRadius: '10px',
-                          border: isSelected ? '2px solid #2563EB' : '1px solid #E2E8F0',
-                          background: isSelected ? '#EFF6FF' : '#FFFFFF',
-                          color: isSelected ? '#2563EB' : '#0F172A',
-                          display: 'flex',
-                          flexDirection: 'column',
-                          alignItems: 'center',
-                          gap: '6px',
-                          cursor: 'pointer',
-                          transition: 'all 0.15s ease',
-                        }}
-                      >
-                        <Icon size={22} strokeWidth={isSelected ? 2.5 : 2} />
-                        <span style={{ fontSize: '11px', fontWeight: isSelected ? '800' : '600' }}>{key}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Section 2: App Name & Titles */}
+          {/* Form Fields */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-            <div className="form-group" style={{ margin: 0 }}>
-              <label className="form-label" style={{ fontSize: '11.5px', fontWeight: '800', color: '#475569', textTransform: 'uppercase', marginBottom: '6px' }}>
-                <span>Software Full Name</span> <span className="required-star">*</span>
+            <div>
+              <label style={{ fontSize: '12px', fontWeight: '800', color: '#0F172A', display: 'block', marginBottom: '6px' }}>
+                SHOWROOM BRAND TITLE *
               </label>
               <input
                 type="text"
-                className="form-input"
                 value={appName}
                 onChange={(e) => setAppName(e.target.value)}
                 placeholder="e.g. Vasantham Tiles & Sanitary Wares"
-                style={{ borderRadius: '10px', background: '#F8FAFC', border: '1px solid #E2E8F0', fontSize: '13px' }}
+                style={{ width: '100%', padding: '10px 14px', borderRadius: '12px', border: '1.5px solid #CBD5E1', fontSize: '13px', color: '#0F172A', outline: 'none' }}
               />
             </div>
 
-            <div className="form-group" style={{ margin: 0 }}>
-              <label className="form-label" style={{ fontSize: '11.5px', fontWeight: '800', color: '#475569', textTransform: 'uppercase', marginBottom: '6px' }}>
-                <span>Sidebar Short Title</span>
+            <div>
+              <label style={{ fontSize: '12px', fontWeight: '800', color: '#0F172A', display: 'block', marginBottom: '6px' }}>
+                SHORT APP NAME (NAVBAR)
               </label>
               <input
                 type="text"
-                className="form-input"
                 value={appShortName}
                 onChange={(e) => setAppShortName(e.target.value)}
                 placeholder="e.g. Vasantham CRM"
-                style={{ borderRadius: '10px', background: '#F8FAFC', border: '1px solid #E2E8F0', fontSize: '13px' }}
+                style={{ width: '100%', padding: '10px 14px', borderRadius: '12px', border: '1.5px solid #CBD5E1', fontSize: '13px', color: '#0F172A', outline: 'none' }}
               />
+            </div>
+
+            <div style={{ gridColumn: 'span 2' }}>
+              <label style={{ fontSize: '12px', fontWeight: '800', color: '#0F172A', display: 'block', marginBottom: '6px' }}>
+                TAGLINE / SUBTITLE
+              </label>
+              <input
+                type="text"
+                value={tagline}
+                onChange={(e) => setTagline(e.target.value)}
+                placeholder="e.g. Tiles, Sanitary Wares, CP Fittings & Adhesives"
+                style={{ width: '100%', padding: '10px 14px', borderRadius: '12px', border: '1.5px solid #CBD5E1', fontSize: '13px', color: '#0F172A', outline: 'none' }}
+              />
+            </div>
+
+            {/* Logo Image Upload */}
+            <div style={{ gridColumn: 'span 2', backgroundColor: '#F8FAFC', borderRadius: '14px', border: '1px solid #E2E8F0', padding: '16px' }}>
+              <label style={{ fontSize: '12px', fontWeight: '800', color: '#0F172A', display: 'block', marginBottom: '8px' }}>
+                SHOWROOM LOGO IMAGE UPLOAD
+              </label>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
+                {logoImage && (
+                  <div style={{ width: '60px', height: '60px', borderRadius: '12px', border: '1px solid #CBD5E1', padding: '4px', backgroundColor: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <img src={logoImage} alt="Uploaded logo" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
+                  </div>
+                )}
+
+                <label
+                  style={{
+                    padding: '10px 18px',
+                    borderRadius: '10px',
+                    backgroundColor: '#FFFFFF',
+                    border: '1.5px dashed #2563EB',
+                    color: '#2563EB',
+                    fontSize: '12.5px',
+                    fontWeight: '800',
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                  }}
+                >
+                  <Upload size={15} />
+                  <span>{logoImage ? 'Change Uploaded Logo Image' : 'Upload Showroom Logo File (PNG/JPG)'}</span>
+                  <input type="file" accept="image/*" onChange={handleImageUpload} style={{ display: 'none' }} />
+                </label>
+
+                {logoImage && (
+                  <button
+                    type="button"
+                    onClick={() => setLogoImage('')}
+                    style={{ backgroundColor: '#FEF2F2', border: '1px solid #FECDD3', color: '#991B1B', padding: '8px 14px', borderRadius: '10px', fontSize: '12px', fontWeight: '700', cursor: 'pointer' }}
+                  >
+                    Remove Custom Logo
+                  </button>
+                )}
+              </div>
             </div>
           </div>
 
-          <div className="form-group" style={{ margin: 0 }}>
-            <label className="form-label" style={{ fontSize: '11.5px', fontWeight: '800', color: '#475569', textTransform: 'uppercase', marginBottom: '6px' }}>
-              <span>Showroom Tagline / Subtitle</span>
-            </label>
-            <input
-              type="text"
-              className="form-input"
-              value={tagline}
-              onChange={(e) => setTagline(e.target.value)}
-              placeholder="e.g. Tiles, Sanitary Wares, CP Fittings & Adhesives"
-              style={{ borderRadius: '10px', background: '#F8FAFC', border: '1px solid #E2E8F0', fontSize: '13px' }}
-            />
-          </div>
-
-          {/* Save Action Footer */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px solid #F1F5F9', paddingTop: '16px' }}>
-            <button type="button" onClick={handleResetDefaults} className="btn btn-secondary" style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', borderRadius: '10px' }}>
-              <RotateCcw size={14} />
-              <span>Reset Defaults</span>
-            </button>
-
-            <button type="button" onClick={handleSaveBranding} disabled={saving} className="btn btn-primary" style={{ padding: '10px 22px', fontSize: '13px', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '8px', borderRadius: '10px', boxShadow: '0 4px 12px rgba(37, 99, 235, 0.25)' }}>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '10px' }}>
+            <button
+              type="button"
+              onClick={handleSaveBranding}
+              disabled={saving}
+              style={{
+                background: 'linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)',
+                color: '#FFFFFF',
+                border: 'none',
+                borderRadius: '10px',
+                padding: '10px 24px',
+                fontSize: '13px',
+                fontWeight: '800',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                boxShadow: '0 4px 12px rgba(37, 99, 235, 0.3)',
+              }}
+            >
               <Save size={15} />
-              <span>{saving ? 'Saving...' : '✓ Save Branding & Sync'}</span>
+              <span>{saving ? 'Saving Branding...' : 'Save Branding & Theme'}</span>
             </button>
           </div>
         </div>
       )}
 
-      {/* Tab 2: Sequence Generator */}
-      {activeSettingsTab === 'sequence' && <SequenceConfigModal />}
-
-      {/* Tab 3: CRM Form Schema Builder & Live Active Form Viewer */}
+      {/* TAB 2: CRM FORM BUILDER */}
       {activeSettingsTab === 'builder' && (
-        <ActiveFormSchemaViewer activeForm={activeForm} />
+        <FormBuilderView />
       )}
 
-      {/* Tab 4: Showroom Profile & WhatsApp */}
+      {/* TAB 3: CUSTOMER ID SEQUENCE */}
+      {activeSettingsTab === 'sequence' && (
+        <div style={{ backgroundColor: '#FFFFFF', borderRadius: '20px', border: '1px solid #E2E8F0', padding: '24px', boxShadow: '0 4px 15px rgba(0,0,0,0.03)' }}>
+          <SequenceConfigModal isEmbedded={true} />
+        </div>
+      )}
+
+      {/* TAB 4: BUSINESS PROFILE & STATUS-SPECIFIC WHATSAPP TEMPLATES */}
       {activeSettingsTab === 'business' && (
-        <div
-          style={{
-            background: '#FFFFFF',
-            borderRadius: '16px',
-            border: '1px solid #E2E8F0',
-            boxShadow: '0 1px 3px rgba(15, 23, 42, 0.03)',
-            padding: '24px',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '20px',
-          }}
-        >
+        <form onSubmit={handleSaveBusinessProfile} style={{ backgroundColor: '#FFFFFF', borderRadius: '20px', border: '1px solid #E2E8F0', padding: '24px', boxShadow: '0 4px 15px rgba(0,0,0,0.03)', display: 'flex', flexDirection: 'column', gap: '20px' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #F1F5F9', paddingBottom: '16px' }}>
             <div>
               <h2 style={{ fontSize: '17px', fontWeight: '800', color: '#0F172A', margin: 0 }}>
-                Showroom Business Details & WhatsApp Templates
+                Showroom Business Profile & Customized WhatsApp Copy per Status
               </h2>
-              <p style={{ fontSize: '12px', color: '#64748B', margin: '3px 0 0' }}>
-                Configure showroom contact details, GSTIN, and default professional WhatsApp message formatting.
+              <p style={{ fontSize: '12.5px', color: '#64748B', margin: '4px 0 0' }}>
+                GST details, contact phone, and custom high-conversion WhatsApp sales templates for each lead status.
               </p>
             </div>
 
             {businessSavedSuccess && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#059669', background: '#ECFDF5', border: '1px solid #A7F3D0', padding: '6px 14px', borderRadius: '8px', fontWeight: '800', fontSize: '12.5px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#15803D', backgroundColor: '#DCFCE7', border: '1px solid #86EFAC', padding: '6px 14px', borderRadius: '10px', fontWeight: '800', fontSize: '12.5px' }}>
                 <Check size={16} />
-                <span>Profile Saved Successfully!</span>
+                <span>Saved Business & WhatsApp Templates!</span>
               </div>
             )}
           </div>
 
-          <form onSubmit={handleSaveBusinessProfile} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-              <div className="form-group" style={{ margin: 0 }}>
-                <label className="form-label" style={{ fontSize: '11.5px', fontWeight: '800', color: '#475569', textTransform: 'uppercase', marginBottom: '6px' }}>
-                  <span>Showroom Phone</span>
-                </label>
-                <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-                  <Phone size={15} style={{ position: 'absolute', left: '12px', color: '#94A3B8' }} />
-                  <input
-                    type="text"
-                    className="form-input"
-                    value={storePhone}
-                    onChange={(e) => setStorePhone(e.target.value)}
-                    style={{ paddingLeft: '34px', borderRadius: '10px', background: '#F8FAFC', border: '1px solid #E2E8F0', fontSize: '13px' }}
-                  />
-                </div>
-              </div>
-
-              <div className="form-group" style={{ margin: 0 }}>
-                <label className="form-label" style={{ fontSize: '11.5px', fontWeight: '800', color: '#475569', textTransform: 'uppercase', marginBottom: '6px' }}>
-                  <span>WhatsApp Business Number</span>
-                </label>
-                <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-                  <MessageSquare size={15} style={{ position: 'absolute', left: '12px', color: '#10B981' }} />
-                  <input
-                    type="text"
-                    className="form-input"
-                    value={whatsappPhone}
-                    onChange={(e) => setWhatsappPhone(e.target.value)}
-                    style={{ paddingLeft: '34px', borderRadius: '10px', background: '#F8FAFC', border: '1px solid #E2E8F0', fontSize: '13px' }}
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '16px' }}>
-              <div className="form-group" style={{ margin: 0 }}>
-                <label className="form-label" style={{ fontSize: '11.5px', fontWeight: '800', color: '#475569', textTransform: 'uppercase', marginBottom: '6px' }}>
-                  <span>Showroom Full Address</span>
-                </label>
-                <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-                  <MapPin size={15} style={{ position: 'absolute', left: '12px', color: '#94A3B8' }} />
-                  <input
-                    type="text"
-                    className="form-input"
-                    value={storeAddress}
-                    onChange={(e) => setStoreAddress(e.target.value)}
-                    style={{ paddingLeft: '34px', borderRadius: '10px', background: '#F8FAFC', border: '1px solid #E2E8F0', fontSize: '13px' }}
-                  />
-                </div>
-              </div>
-
-              <div className="form-group" style={{ margin: 0 }}>
-                <label className="form-label" style={{ fontSize: '11.5px', fontWeight: '800', color: '#475569', textTransform: 'uppercase', marginBottom: '6px' }}>
-                  <span>GSTIN Number</span>
-                </label>
-                <input
-                  type="text"
-                  className="form-input"
-                  value={gstin}
-                  onChange={(e) => setGstin(e.target.value)}
-                  style={{ borderRadius: '10px', background: '#F8FAFC', border: '1px solid #E2E8F0', fontSize: '13px', fontFamily: 'monospace' }}
-                />
-              </div>
-            </div>
-
-            {/* WhatsApp Template Textarea */}
-            <div className="form-group" style={{ margin: 0 }}>
-              <label className="form-label" style={{ fontSize: '11.5px', fontWeight: '800', color: '#475569', textTransform: 'uppercase', marginBottom: '6px' }}>
-                <span>Default WhatsApp Follow-up Message Template</span>
-              </label>
-              <textarea
-                className="form-input"
-                rows={4}
-                value={whatsappTemplate}
-                onChange={(e) => setWhatsappTemplate(e.target.value)}
-                style={{ borderRadius: '10px', background: '#F8FAFC', border: '1px solid #E2E8F0', fontSize: '12.5px', lineHeight: '1.5' }}
-              />
-              <span style={{ fontSize: '11.5px', color: '#64748B', marginTop: '4px' }}>
-                Available tags: <code>{'{customerName}'}</code>, <code>{'{quoteValue}'}</code>, <code>{'{appName}'}</code>, <code>{'{tagline}'}</code>, <code>{'{phone}'}</code>
-              </span>
-            </div>
-
-            <div style={{ display: 'flex', justifyContent: 'flex-end', borderTop: '1px solid #F1F5F9', paddingTop: '16px' }}>
-              <button type="submit" className="btn btn-primary" style={{ padding: '10px 22px', fontSize: '13px', fontWeight: '800', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 4px 12px rgba(37, 99, 235, 0.25)' }}>
-                <Check size={16} />
-                <span>Save Business Profile</span>
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
-
-      {/* Tab 5: Database & Backup Center */}
-      {activeSettingsTab === 'backup' && (
-        <div
-          style={{
-            background: '#FFFFFF',
-            borderRadius: '16px',
-            border: '1px solid #E2E8F0',
-            boxShadow: '0 1px 3px rgba(15, 23, 42, 0.03)',
-            padding: '24px',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '20px',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #F1F5F9', paddingBottom: '16px' }}>
+          {/* Business Info Grid */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
             <div>
-              <h2 style={{ fontSize: '17px', fontWeight: '800', color: '#0F172A', margin: 0 }}>
-                Data Backup, Exports & Cloud Diagnostics
-              </h2>
-              <p style={{ fontSize: '12px', color: '#64748B', margin: '3px 0 0' }}>
-                Export full CRM database backups to CSV or JSON formats and monitor MongoDB Atlas cloud health.
-              </p>
+              <label style={{ fontSize: '12px', fontWeight: '800', color: '#0F172A', display: 'block', marginBottom: '6px' }}>
+                SHOWROOM STORE PHONE / HELPLINE
+              </label>
+              <input
+                type="text"
+                value={storePhone}
+                onChange={(e) => setStorePhone(e.target.value)}
+                style={{ width: '100%', padding: '10px 14px', borderRadius: '12px', border: '1.5px solid #CBD5E1', fontSize: '13px', color: '#0F172A' }}
+              />
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#047857', background: '#ECFDF5', border: '1px solid #A7F3D0', padding: '6px 12px', borderRadius: '8px', fontSize: '12px', fontWeight: '800' }}>
-              <ShieldCheck size={16} color="#10B981" />
-              <span>Cloud Protected</span>
+            <div>
+              <label style={{ fontSize: '12px', fontWeight: '800', color: '#0F172A', display: 'block', marginBottom: '6px' }}>
+                SHOWROOM GSTIN NUMBER
+              </label>
+              <input
+                type="text"
+                value={gstin}
+                onChange={(e) => setGstin(e.target.value)}
+                style={{ width: '100%', padding: '10px 14px', borderRadius: '12px', border: '1.5px solid #CBD5E1', fontSize: '13px', color: '#0F172A', fontFamily: 'monospace' }}
+              />
+            </div>
+
+            <div style={{ gridColumn: 'span 2' }}>
+              <label style={{ fontSize: '12px', fontWeight: '800', color: '#0F172A', display: 'block', marginBottom: '6px' }}>
+                SHOWROOM STORE ADDRESS
+              </label>
+              <input
+                type="text"
+                value={storeAddress}
+                onChange={(e) => setStoreAddress(e.target.value)}
+                style={{ width: '100%', padding: '10px 14px', borderRadius: '12px', border: '1.5px solid #CBD5E1', fontSize: '13px', color: '#0F172A' }}
+              />
             </div>
           </div>
 
-          {/* Data Export & Import Action Grid (4 Cards) */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '14px' }}>
-            {/* Card 1: Import CSV */}
-            <div style={{ padding: '20px', borderRadius: '12px', border: '1px solid #E2E8F0', background: '#F8FAFC', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: '14px' }}>
-              <div>
-                <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: '#EFF6FF', color: '#2563EB', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '10px' }}>
-                  <Upload size={20} />
-                </div>
-                <h3 style={{ fontSize: '14.5px', fontWeight: '800', color: '#0F172A', margin: 0 }}>Import Customers (CSV)</h3>
-                <p style={{ fontSize: '12px', color: '#64748B', margin: '4px 0 0' }}>
-                  Upload customer spreadsheet from Excel or Google Sheets to bulk-add leads into CRM.
-                </p>
+          {/* Status-Driven WhatsApp Template Editor */}
+          <div style={{ backgroundColor: '#F8FAFC', borderRadius: '18px', border: '1.5px solid #CBD5E1', padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <MessageSquare size={18} color="#166534" />
+                <span style={{ fontSize: '14px', fontWeight: '800', color: '#0F172A' }}>
+                  Custom WhatsApp Sales Templates by Lead Status
+                </span>
               </div>
-
               <button
                 type="button"
-                onClick={() => setImportModalMode('csv')}
-                className="btn btn-primary"
-                style={{ borderRadius: '10px', fontSize: '12.5px', fontWeight: '800', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+                onClick={handleResetWaTemplate}
+                style={{ backgroundColor: '#FFFFFF', border: '1px solid #CBD5E1', borderRadius: '8px', padding: '4px 10px', fontSize: '11.5px', fontWeight: '700', cursor: 'pointer', color: '#475569', display: 'flex', alignItems: 'center', gap: '4px' }}
+                title="Reset selected status template to high-conversion default"
               >
-                <Upload size={14} />
-                <span>Import CSV File</span>
+                <RotateCcw size={12} />
+                <span>Reset to Default</span>
               </button>
             </div>
 
-            {/* Card 2: Restore JSON Backup */}
-            <div style={{ padding: '20px', borderRadius: '12px', border: '1px solid #E2E8F0', background: '#F8FAFC', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: '14px' }}>
-              <div>
-                <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: '#F5F3FF', color: '#7C3AED', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '10px' }}>
-                  <Database size={20} />
-                </div>
-                <h3 style={{ fontSize: '14.5px', fontWeight: '800', color: '#0F172A', margin: 0 }}>Restore CRM Backup (JSON)</h3>
-                <p style={{ fontSize: '12px', color: '#64748B', margin: '4px 0 0' }}>
-                  Restore full showroom snapshot with branding, form schema, sequence, and leads.
-                </p>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => setImportModalMode('json')}
-                className="btn btn-outline"
-                style={{ borderRadius: '10px', fontSize: '12.5px', fontWeight: '800', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', background: '#FFFFFF', color: '#7C3AED', borderColor: '#DDD6FE' }}
-              >
-                <Upload size={14} />
-                <span>Restore JSON Backup</span>
-              </button>
+            {/* Status Pills Selector */}
+            <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+              {waStatusOptions.map((opt) => {
+                const isActive = activeWaStatusKey === opt.key;
+                return (
+                  <button
+                    key={opt.key}
+                    type="button"
+                    onClick={() => setActiveWaStatusKey(opt.key)}
+                    style={{
+                      padding: '7px 14px',
+                      borderRadius: '10px',
+                      border: isActive ? `2px solid ${opt.color}` : '1px solid #CBD5E1',
+                      backgroundColor: isActive ? opt.bg : '#FFFFFF',
+                      color: isActive ? opt.color : '#475569',
+                      fontWeight: isActive ? '800' : '600',
+                      fontSize: '12px',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    {opt.label}
+                  </button>
+                );
+              })}
             </div>
 
-            {/* Card 3: Export CSV Customers */}
-            <div style={{ padding: '20px', borderRadius: '12px', border: '1px solid #E2E8F0', background: '#F8FAFC', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: '14px' }}>
-              <div>
-                <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: '#ECFDF5', color: '#059669', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '10px' }}>
-                  <FileSpreadsheet size={20} />
-                </div>
-                <h3 style={{ fontSize: '14.5px', fontWeight: '800', color: '#0F172A', margin: 0 }}>Export Customer Records (CSV)</h3>
-                <p style={{ fontSize: '12px', color: '#64748B', margin: '4px 0 0' }}>
-                  Download complete spreadsheet of all {customers.length} registered showroom leads.
-                </p>
+            {/* Insert Dynamic Tag Pills */}
+            <div>
+              <span style={{ fontSize: '11px', fontWeight: '800', color: '#64748B', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>
+                CLICK TO INSERT DYNAMIC CRM TAGS:
+              </span>
+              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                {['{customerName}', '{appName}', '{requirement}', '{quoteValue}', '{storePhone}'].map((tag) => (
+                  <button
+                    key={tag}
+                    type="button"
+                    onClick={() => handleInsertTag(tag)}
+                    style={{ fontSize: '11.5px', fontWeight: '800', fontFamily: 'monospace', backgroundColor: '#FFFFFF', border: '1px solid #2563EB', color: '#2563EB', padding: '3px 8px', borderRadius: '6px', cursor: 'pointer' }}
+                  >
+                    + {tag}
+                  </button>
+                ))}
               </div>
+            </div>
 
+            {/* Template Editor Textarea */}
+            <div>
+              <label style={{ fontSize: '12px', fontWeight: '800', color: '#0F172A', display: 'block', marginBottom: '6px' }}>
+                EDIT MESSAGE TEMPLATE FOR STATUS: <span style={{ color: '#2563EB' }}>{waStatusOptions.find(o => o.key === activeWaStatusKey)?.label}</span>
+              </label>
+              <textarea
+                rows={7}
+                value={waTemplates[activeWaStatusKey] || ''}
+                onChange={(e) => setWaTemplates({ ...waTemplates, [activeWaStatusKey]: e.target.value })}
+                style={{ width: '100%', padding: '12px', borderRadius: '12px', border: '1.5px solid #CBD5E1', fontSize: '13px', color: '#0F172A', fontFamily: 'monospace', backgroundColor: '#FFFFFF' }}
+              />
+            </div>
+
+            {/* Live Rendered Message Preview Box */}
+            <div style={{ backgroundColor: '#DCFCE7', borderRadius: '14px', border: '1px solid #86EFAC', padding: '14px 16px' }}>
+              <div style={{ fontSize: '11px', fontWeight: '800', color: '#166534', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '6px' }}>
+                💬 Live WhatsApp Message Preview (WhatsApp Render):
+              </div>
+              <div style={{ fontSize: '12.5px', color: '#14532D', whiteSpace: 'pre-wrap', lineHeight: 1.4 }}>
+                {sampleRenderedMsg}
+              </div>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '10px' }}>
+            <button
+              type="submit"
+              style={{
+                background: 'linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)',
+                color: '#FFFFFF',
+                border: 'none',
+                borderRadius: '10px',
+                padding: '10px 24px',
+                fontSize: '13px',
+                fontWeight: '800',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                boxShadow: '0 4px 12px rgba(37, 99, 235, 0.3)',
+              }}
+            >
+              <Save size={15} />
+              <span>Save Business Profile & WhatsApp Templates</span>
+            </button>
+          </div>
+        </form>
+      )}
+
+      {/* TAB 5: DATA BACKUP & SYSTEM */}
+      {activeSettingsTab === 'backup' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          {/* Backup & Export Options */}
+          <div style={{ backgroundColor: '#FFFFFF', borderRadius: '20px', border: '1px solid #E2E8F0', padding: '24px', boxShadow: '0 4px 15px rgba(0,0,0,0.03)', display: 'flex', flexDirection: 'column', gap: '18px' }}>
+            <div style={{ borderBottom: '1px solid #F1F5F9', paddingBottom: '14px' }}>
+              <h2 style={{ fontSize: '17px', fontWeight: '800', color: '#0F172A', margin: 0 }}>
+                Data Export & Database Backup
+              </h2>
+              <p style={{ fontSize: '12.5px', color: '#64748B', margin: '4px 0 0' }}>
+                Export your showroom records to CSV or create full JSON database snapshots for offline backup and migration.
+              </p>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
               <button
                 type="button"
                 onClick={handleExportCustomersCSV}
-                className="btn btn-outline"
-                style={{ borderRadius: '10px', fontSize: '12.5px', fontWeight: '800', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', background: '#FFFFFF' }}
+                style={{ padding: '16px', borderRadius: '14px', border: '1px solid #CBD5E1', backgroundColor: '#F8FAFC', textAlign: 'left', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '14px' }}
               >
-                <Download size={14} />
-                <span>Export Customers CSV</span>
-              </button>
-            </div>
-
-            {/* Card 4: Full System JSON */}
-            <div style={{ padding: '20px', borderRadius: '12px', border: '1px solid #E2E8F0', background: '#F8FAFC', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: '14px' }}>
-              <div>
-                <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: '#EFF6FF', color: '#2563EB', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '10px' }}>
-                  <Database size={20} />
+                <div style={{ width: '40px', height: '40px', borderRadius: '10px', backgroundColor: '#DCFCE7', color: '#15803D', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <FileSpreadsheet size={20} />
                 </div>
-                <h3 style={{ fontSize: '14.5px', fontWeight: '800', color: '#0F172A', margin: 0 }}>Full CRM Backup (JSON)</h3>
-                <p style={{ fontSize: '12px', color: '#64748B', margin: '4px 0 0' }}>
-                  Download full system snapshot including branding, form schema, and customer records.
-                </p>
-              </div>
+                <div>
+                  <div style={{ fontSize: '14px', fontWeight: '800', color: '#0F172A' }}>Export Customers CSV</div>
+                  <div style={{ fontSize: '12px', color: '#64748B', marginTop: '2px' }}>Download Excel spreadsheet file of customer lead database</div>
+                </div>
+              </button>
 
               <button
                 type="button"
                 onClick={handleExportJSONBackup}
-                className="btn btn-outline"
-                style={{ borderRadius: '10px', fontSize: '12.5px', fontWeight: '800', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', background: '#FFFFFF' }}
+                style={{ padding: '16px', borderRadius: '14px', border: '1px solid #CBD5E1', backgroundColor: '#F8FAFC', textAlign: 'left', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '14px' }}
               >
-                <Download size={14} />
-                <span>Download JSON Backup</span>
-              </button>
-            </div>
-          </div>
-
-          {/* Mobile App Instant QR Pairing Card */}
-          {onOpenPairingModal && (
-            <div
-              style={{
-                padding: '20px',
-                borderRadius: '14px',
-                border: '1.5px solid #BFDBFE',
-                background: 'linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                flexWrap: 'wrap',
-                gap: '16px',
-                boxShadow: '0 4px 12px rgba(37, 99, 235, 0.08)',
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                <div
-                  style={{
-                    width: '48px',
-                    height: '48px',
-                    borderRadius: '12px',
-                    background: '#2563EB',
-                    color: '#FFFFFF',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    boxShadow: '0 4px 10px rgba(37, 99, 235, 0.3)',
-                  }}
-                >
-                  <QrCode size={26} />
+                <div style={{ width: '40px', height: '40px', borderRadius: '10px', backgroundColor: '#EFF6FF', color: '#2563EB', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <Download size={20} />
                 </div>
                 <div>
-                  <div style={{ fontWeight: '800', fontSize: '15px', color: '#1E3A8A' }}>
-                    📱 Mobile Phone QR Pairing & Network Config
-                  </div>
-                  <div style={{ fontSize: '12.5px', color: '#1D4ED8', marginTop: '3px' }}>
-                    Generate dynamic Wi-Fi QR code for showroom employees to connect their mobile phones instantly.
-                  </div>
+                  <div style={{ fontSize: '14px', fontWeight: '800', color: '#0F172A' }}>Export JSON Database Snapshot</div>
+                  <div style={{ fontSize: '12px', color: '#64748B', marginTop: '2px' }}>Full database backup file including schemas and settings</div>
                 </div>
-              </div>
+              </button>
+            </div>
+
+            {/* Import Launchers */}
+            <div style={{ display: 'flex', gap: '10px', marginTop: '8px' }}>
+              <button
+                type="button"
+                onClick={() => setImportModalMode('csv')}
+                style={{ backgroundColor: '#2563EB', color: '#FFFFFF', border: 'none', borderRadius: '10px', padding: '10px 18px', fontSize: '12.5px', fontWeight: '800', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+              >
+                <Upload size={15} />
+                <span>Import Customers from CSV File</span>
+              </button>
 
               <button
                 type="button"
-                onClick={onOpenPairingModal}
-                className="btn btn-primary"
-                style={{
-                  padding: '10px 20px',
-                  borderRadius: '10px',
-                  fontWeight: '800',
-                  fontSize: '13px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  boxShadow: '0 4px 12px rgba(37, 99, 235, 0.25)',
-                }}
+                onClick={() => setImportModalMode('json')}
+                style={{ backgroundColor: '#F1F5F9', border: '1px solid #CBD5E1', color: '#475569', borderRadius: '10px', padding: '10px 18px', fontSize: '12.5px', fontWeight: '700', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
               >
-                <QrCode size={16} />
-                <span>Show Pairing QR Code</span>
+                <Upload size={15} />
+                <span>Restore JSON Backup</span>
               </button>
             </div>
-          )}
-
-          {/* Database Health Card */}
-          <div style={{ padding: '18px', borderRadius: '12px', border: '1px solid #E2E8F0', background: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: '#ECFDF5', color: '#059669', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <CheckCircle size={22} />
-              </div>
-              <div>
-                <div style={{ fontWeight: '800', fontSize: '13.5px', color: '#0F172A' }}>
-                  MongoDB Atlas Cloud Cluster: Operational
-                </div>
-                <div style={{ fontSize: '11.5px', color: '#64748B' }}>
-                  Region: AWS / Mumbai (ap-south-1) • Real-time synchronization active
-                </div>
-              </div>
-            </div>
-
-            <span style={{ fontSize: '12px', fontWeight: '800', color: '#059669', background: '#ECFDF5', padding: '4px 10px', borderRadius: '6px', border: '1px solid #A7F3D0' }}>
-              ● 100% HEALTHY
-            </span>
           </div>
 
-          {/* Developer Danger Zone: Data Wipe */}
-          <div
-            style={{
-              padding: '20px',
-              borderRadius: '12px',
-              border: '1.5px solid #FECDD3',
-              background: '#FFF5F5',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '14px',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
-              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
-                <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: '#FEE2E2', color: '#DC2626', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  <AlertTriangle size={22} />
-                </div>
-                <div>
-                  <div style={{ fontWeight: '800', fontSize: '14.5px', color: '#991B1B' }}>
-                    Developer Danger Zone: Reset & Wipe All CRM Data
-                  </div>
-                  <div style={{ fontSize: '12px', color: '#7F1D1D', marginTop: '2px', lineHeight: '1.4' }}>
-                    Permanently delete all registered customer leads, dynamic form responses, follow-up call history, daily KPI shifts, and lost sales records. Resets sequence counter back to 0. Requires the <code>DEV_KEY</code> defined in your <code>backend/.env</code> file.
-                  </div>
-                </div>
+          {/* Developer Reset Danger Zone */}
+          <div style={{ backgroundColor: '#FEF2F2', borderRadius: '20px', border: '1px solid #FECDD3', padding: '24px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <div style={{ width: '36px', height: '36px', borderRadius: '10px', backgroundColor: '#FEE2E2', color: '#DC2626', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Key size={18} />
               </div>
-
-              <span style={{ fontSize: '11.5px', fontWeight: '800', color: '#DC2626', background: '#FEE2E2', padding: '4px 10px', borderRadius: '6px', border: '1px solid #FECDD3' }}>
-                DESTRUCTIVE ACTION
-              </span>
+              <div>
+                <h3 style={{ fontSize: '15px', fontWeight: '800', color: '#991B1B', margin: 0 }}>
+                  Developer Database Reset & Purge Zone
+                </h3>
+                <p style={{ fontSize: '12px', color: '#991B1B', margin: '2px 0 0' }}>
+                  Requires developer security key configured in backend `.env` file.
+                </p>
+              </div>
             </div>
 
-            {/* Input & Action Bar */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', marginTop: '4px' }}>
-              <div style={{ position: 'relative', flex: '1', minWidth: '240px', maxWidth: '380px' }}>
-                <div style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: '#94A3B8' }}>
-                  <Key size={15} />
-                </div>
-                <input
-                  type={showDevKey ? 'text' : 'password'}
-                  placeholder="Enter DEV_KEY from backend .env..."
-                  value={devKeyInput}
-                  onChange={(e) => setDevKeyInput(e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '8px 36px 8px 32px',
-                    borderRadius: '8px',
-                    border: '1.5px solid #FCA5A5',
-                    background: '#FFFFFF',
-                    fontSize: '12.5px',
-                    color: '#0F172A',
-                    outline: 'none',
-                    fontWeight: '600',
-                  }}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowDevKey(!showDevKey)}
-                  style={{
-                    position: 'absolute',
-                    right: '8px',
-                    top: '50%',
-                    transform: 'translateY(-50%)',
-                    background: 'none',
-                    border: 'none',
-                    cursor: 'pointer',
-                    color: '#94A3B8',
-                    padding: '2px',
-                  }}
-                  title={showDevKey ? 'Hide key' : 'Show key'}
-                >
-                  {showDevKey ? <EyeOff size={15} /> : <Eye size={15} />}
-                </button>
+            {wipeSuccess && (
+              <div style={{ padding: '10px 14px', borderRadius: '10px', backgroundColor: '#DCFCE7', border: '1px solid #86EFAC', color: '#15803D', fontSize: '12.5px', fontWeight: '700' }}>
+                {wipeSuccess}
               </div>
+            )}
 
-              {!showWipeConfirm ? (
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (!devKeyInput.trim()) {
-                      setWipeError('Please enter DEV_KEY from backend .env first.');
-                      return;
-                    }
-                    setWipeError('');
-                    setShowWipeConfirm(true);
-                  }}
-                  className="btn"
-                  style={{
-                    background: '#DC2626',
-                    color: '#FFFFFF',
-                    borderRadius: '8px',
-                    fontSize: '12.5px',
-                    fontWeight: '800',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    padding: '8px 16px',
-                    border: 'none',
-                    cursor: 'pointer',
-                  }}
-                >
-                  <Trash2 size={15} />
-                  <span>Wipe All Data</span>
-                </button>
-              ) : (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <button
-                    type="button"
-                    onClick={handleWipeDatabase}
-                    disabled={wipingData}
-                    className="btn"
-                    style={{
-                      background: '#991B1B',
-                      color: '#FFFFFF',
-                      borderRadius: '8px',
-                      fontSize: '12.5px',
-                      fontWeight: '800',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '6px',
-                      padding: '8px 16px',
-                      border: 'none',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    <Trash2 size={15} />
-                    <span>{wipingData ? 'Wiping Database...' : 'Confirm Wipe Database'}</span>
-                  </button>
+            {wipeError && (
+              <div style={{ padding: '10px 14px', borderRadius: '10px', backgroundColor: '#FEE2E2', border: '1px solid #FECDD3', color: '#DC2626', fontSize: '12.5px', fontWeight: '700' }}>
+                {wipeError}
+              </div>
+            )}
 
-                  <button
-                    type="button"
-                    onClick={() => setShowWipeConfirm(false)}
-                    className="btn btn-outline"
-                    style={{
-                      borderRadius: '8px',
-                      fontSize: '12.5px',
-                      fontWeight: '700',
-                      padding: '8px 14px',
-                      background: '#FFFFFF',
-                      borderColor: '#E2E8F0',
-                    }}
-                  >
-                    Cancel
-                  </button>
-                </div>
-              )}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', maxWidth: '480px' }}>
+              <input
+                type="password"
+                placeholder="Enter DEV_KEY to authorize"
+                value={devKeyInput}
+                onChange={(e) => setDevKeyInput(e.target.value)}
+                style={{ flex: 1, padding: '9px 12px', borderRadius: '10px', border: '1px solid #FECDD3', fontSize: '13px', color: '#0F172A' }}
+              />
+              <button
+                type="button"
+                onClick={handleWipeDatabase}
+                disabled={wipingData}
+                style={{ backgroundColor: '#DC2626', color: '#FFFFFF', border: 'none', borderRadius: '10px', padding: '9px 16px', fontSize: '12.5px', fontWeight: '800', cursor: 'pointer' }}
+              >
+                {wipingData ? 'Purging...' : 'Purge Database'}
+              </button>
             </div>
-
-            {wipeError ? (
-              <div style={{ color: '#DC2626', fontSize: '12px', fontWeight: '700', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                <AlertTriangle size={14} />
-                <span>{wipeError}</span>
-              </div>
-            ) : null}
-
-            {wipeSuccess ? (
-              <div style={{ color: '#059669', fontSize: '12px', fontWeight: '700', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                <CheckCircle size={14} />
-                <span>{wipeSuccess} Reloading CRM...</span>
-              </div>
-            ) : null}
           </div>
         </div>
       )}
 
-      {/* Render Data Import Modal when triggered */}
+      {/* Import Modal */}
       {importModalMode && (
         <DataImportModal
           mode={importModalMode}
           onClose={() => setImportModalMode(null)}
+          onImportSuccess={() => window.location.reload()}
         />
       )}
     </div>
   );
 };
-
-

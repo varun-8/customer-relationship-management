@@ -2,6 +2,9 @@ require('dotenv').config({ path: require('path').resolve(__dirname, '../../.env'
 const mongoose = require('mongoose');
 const Customer = require('../models/Customer');
 const Sequence = require('../models/Sequence');
+const User = require('../models/User');
+const CustomerForm = require('../models/CustomerForm');
+const { DEFAULT_INITIAL_FIELDS } = require('../controllers/formController');
 
 const sampleCustomers = [
   {
@@ -101,116 +104,116 @@ const sampleCustomers = [
       customerId: 'CUS-000004',
       entryDate: '2026-08-08',
       customerName: 'Dr. Anitha Meenakshi',
-      phone: '9840556677',
-      location: 'Anna Nagar West',
-      leadSource: 'Referral',
-      salesperson: 'Priya Dharshini',
+      phone: '9840055443',
+      location: 'Anna Nagar, Madurai',
+      leadSource: 'Direct Walk-in',
+      salesperson: 'Karthik Raja',
       customerType: 'Building Owner',
-      houseStage: 'Foundation',
-      requirement: ['Tiles', 'Sanitary'],
-      approxQuantity: '3200 Sq.Ft',
-      tileBudget: 250000,
+      houseStage: 'Flooring',
+      requirement: ['Sanitary', 'CP Fittings'],
+      approxQuantity: '1800 Sq.Ft',
+      tileBudget: 360000,
       sanitaryRequirement: 'Yes',
       adhesiveRequirement: 'Yes',
-      quotationValue: 250000,
-      quotationDate: '2026-08-10',
-      status: 'Newly Contacted',
-      nextFollowUp: '2026-08-22',
-      lastFollowUp: '2026-08-12',
-      followUpCount: 1,
+      quotationValue: 360000,
+      quotationDate: '2026-08-09',
+      status: 'Quotation',
+      nextFollowUp: '2026-08-21',
+      lastFollowUp: '2026-08-16',
+      followUpCount: 2,
       orderValue: 0,
-      lastReason: 'Initial showroom visit and design consultation completed',
-      crossSell: ['Bath Fittings & Faucets', 'Mirror Cabinets & Vanity'],
+      lastReason: 'Selected Kohler sanitaryware setup',
+      crossSell: ['Glass Enclosures', 'Vanity Cabinets'],
     },
-    createdBy: { name: 'Priya Dharshini', role: 'employee' },
+    createdBy: { name: 'Karthik Raja', role: 'owner' },
   },
   {
     customerId: 'CUS-000005',
     formVersion: 1,
     data: {
       customerId: 'CUS-000005',
-      entryDate: '2026-08-11',
+      entryDate: '2026-08-10',
       customerName: 'Mobile Realtime Test Customer',
-      phone: '9842112233',
-      location: 'Showroom Live Entry',
-      leadSource: 'Walk-in',
-      salesperson: 'Karthik Raja',
-      customerType: 'Building Owner',
-      houseStage: 'Plastering',
-      requirement: ['Tiles', 'Sanitary', 'Adhesive'],
-      approxQuantity: '4000 Sq.Ft',
-      tileBudget: 420000,
-      sanitaryRequirement: 'Yes',
+      phone: '9894112244',
+      location: 'TVS Nagar, Madurai',
+      leadSource: 'Mobile App',
+      salesperson: 'Senthil Kumar',
+      customerType: 'Direct Client',
+      houseStage: 'Tiling',
+      requirement: ['Tiles', 'Grout'],
+      approxQuantity: '1500 Sq.Ft',
+      tileBudget: 175000,
+      sanitaryRequirement: 'No',
       adhesiveRequirement: 'Yes',
-      quotationValue: 420000,
-      quotationDate: '2026-08-12',
-      status: 'Quotation',
-      nextFollowUp: '2026-08-25',
-      lastFollowUp: '2026-08-16',
-      followUpCount: 2,
+      quotationValue: 175000,
+      quotationDate: '2026-08-10',
+      status: 'In Progress',
+      nextFollowUp: '2026-08-22',
+      lastFollowUp: '2026-08-17',
+      followUpCount: 1,
       orderValue: 0,
-      lastReason: 'Live quotation generated during walk-in demonstration',
-      crossSell: ['Grout & Epoxy', 'Kitchen Sinks'],
+      lastReason: 'Mobile QR enquiry created during site visit',
+      crossSell: ['Epoxy Grout', 'Corner Profiles'],
     },
-    createdBy: { name: 'Karthik Raja', role: 'owner' },
+    createdBy: { name: 'Senthil Kumar', role: 'employee' },
   },
   {
     customerId: 'CUS-000006',
     formVersion: 1,
     data: {
       customerId: 'CUS-000006',
-      entryDate: '2026-08-12',
+      entryDate: '2026-08-11',
       customerName: 'Vasanth Kumar (Greenfield Villa)',
-      phone: '9840123987',
-      location: 'TVS Nagar, Madurai',
-      leadSource: 'Builder',
-      salesperson: 'Priya Dharshini',
+      phone: '9840199887',
+      location: 'Othakadai',
+      leadSource: 'Architect',
+      salesperson: 'Karthik Raja',
       customerType: 'Building Owner',
-      houseStage: 'Building Completion',
-      requirement: ['Tiles', 'Sanitary', 'Adhesive', 'Clipping'],
-      approxQuantity: '6500 Sq.Ft',
-      tileBudget: 680000,
+      houseStage: 'Flooring',
+      requirement: ['Tiles', 'Sanitary'],
+      approxQuantity: '3800 Sq.Ft',
+      tileBudget: 420000,
       sanitaryRequirement: 'Yes',
       adhesiveRequirement: 'Yes',
-      quotationValue: 680000,
-      quotationDate: '2026-08-13',
-      status: 'Order Confirmed',
-      nextFollowUp: '2026-08-28',
+      quotationValue: 420000,
+      quotationDate: '2026-08-12',
+      status: 'Quotation',
+      nextFollowUp: '2026-08-22',
       lastFollowUp: '2026-08-16',
-      followUpCount: 4,
-      orderValue: 680000,
-      lastReason: 'Final payment received; delivery scheduled',
-      crossSell: ['Grout & Epoxy', 'Waterproofing Chemicals', 'Bath Fittings & Faucets'],
+      followUpCount: 2,
+      orderValue: 0,
+      lastReason: 'Comparing matte Italian vitrified tile samples',
+      crossSell: ['Submersible Pump', 'Water Tank'],
     },
-    createdBy: { name: 'Priya Dharshini', role: 'employee' },
+    createdBy: { name: 'Karthik Raja', role: 'owner' },
   },
   {
     customerId: 'CUS-000007',
     formVersion: 1,
     data: {
       customerId: 'CUS-000007',
-      entryDate: '2026-08-13',
+      entryDate: '2026-08-12',
       customerName: 'Rajesh & Associates (Architects)',
-      phone: '9789012345',
-      location: 'Mattuthavani',
+      phone: '9840011223',
+      location: 'Chokkikulam',
       leadSource: 'Architect',
       salesperson: 'Senthil Kumar',
       customerType: 'Architect',
-      houseStage: 'Brickwork',
-      requirement: ['Tiles', 'Sanitary'],
+      houseStage: 'Design Phase',
+      requirement: ['Tiles', 'Sanitary', 'Adhesive', 'Clipping'],
       approxQuantity: '8000 Sq.Ft',
-      tileBudget: 850000,
+      tileBudget: 650000,
       sanitaryRequirement: 'Yes',
       adhesiveRequirement: 'Yes',
-      quotationValue: 850000,
-      quotationDate: '2026-08-14',
-      status: 'Follow-up',
-      nextFollowUp: '2026-08-24',
+      quotationValue: 650000,
+      quotationDate: '2026-08-13',
+      status: 'Negotiation',
+      nextFollowUp: '2026-08-23',
       lastFollowUp: '2026-08-17',
-      followUpCount: 2,
+      followUpCount: 4,
       orderValue: 0,
-      lastReason: 'Awaiting client approval for vitrified tile sample mockups',
-      crossSell: ['Kitchen Sinks', 'Mirror Cabinets & Vanity'],
+      lastReason: 'Commercial showroom flooring proposal under review',
+      crossSell: ['Expansion Joint Strips'],
     },
     createdBy: { name: 'Senthil Kumar', role: 'employee' },
   },
@@ -221,26 +224,26 @@ const sampleCustomers = [
       customerId: 'CUS-000008',
       entryDate: '2026-08-14',
       customerName: 'Kannan Mason Works',
-      phone: '9843210987',
-      location: 'Othakadai',
+      phone: '9443322110',
+      location: 'Sellur',
       leadSource: 'Contractor',
       salesperson: 'Karthik Raja',
       customerType: 'Mason',
-      houseStage: 'Plastering',
-      requirement: ['Adhesive', 'Clipping'],
-      approxQuantity: '1800 Sq.Ft',
-      tileBudget: 120000,
+      houseStage: 'Tiling',
+      requirement: ['Adhesive'],
+      approxQuantity: '600 Sq.Ft',
+      tileBudget: 45000,
       sanitaryRequirement: 'No',
       adhesiveRequirement: 'Yes',
-      quotationValue: 120000,
-      quotationDate: '2026-08-15',
-      status: 'Walk-in',
-      nextFollowUp: '2026-08-26',
-      lastFollowUp: '2026-08-16',
+      quotationValue: 45000,
+      quotationDate: '2026-08-14',
+      status: 'Order Confirmed',
+      nextFollowUp: '2026-08-24',
+      lastFollowUp: '2026-08-17',
       followUpCount: 1,
-      orderValue: 0,
-      lastReason: 'Sample adhesive bags given for test application',
-      crossSell: ['Tile Spacers & Levellers'],
+      orderValue: 45000,
+      lastReason: '50 bags MYK Laticrete tile adhesive delivered',
+      crossSell: ['Notched Trowels'],
     },
     createdBy: { name: 'Karthik Raja', role: 'owner' },
   },
@@ -251,28 +254,28 @@ const sampleCustomers = [
       customerId: 'CUS-000009',
       entryDate: '2026-08-15',
       customerName: 'Kavitha Sundaram',
-      phone: '9443219876',
-      location: 'Gomathipuram',
-      leadSource: 'Existing Customer',
-      salesperson: 'Priya Dharshini',
+      phone: '9840233445',
+      location: 'SS Colony',
+      leadSource: 'Walk-in',
+      salesperson: 'Senthil Kumar',
       customerType: 'Building Owner',
-      houseStage: 'Foundation',
-      requirement: ['Tiles', 'Sanitary'],
-      approxQuantity: '4500 Sq.Ft',
-      tileBudget: 375000,
+      houseStage: 'Plastering',
+      requirement: ['Sanitary', 'CP Fittings'],
+      approxQuantity: '1600 Sq.Ft',
+      tileBudget: 195000,
       sanitaryRequirement: 'Yes',
-      adhesiveRequirement: 'Yes',
-      quotationValue: 375000,
+      adhesiveRequirement: 'No',
+      quotationValue: 195000,
       quotationDate: '2026-08-16',
-      status: 'Future Requirement',
-      nextFollowUp: '2026-08-30',
+      status: 'In Progress',
+      nextFollowUp: '2026-08-22',
       lastFollowUp: '2026-08-16',
       followUpCount: 1,
       orderValue: 0,
-      lastReason: 'House construction at basement level; follow-up late August',
-      crossSell: ['Bath Fittings & Faucets'],
+      lastReason: 'Shower panel & thermostat mixer quotation provided',
+      crossSell: ['Towel Rails & Accessories'],
     },
-    createdBy: { name: 'Priya Dharshini', role: 'employee' },
+    createdBy: { name: 'Senthil Kumar', role: 'employee' },
   },
   {
     customerId: 'CUS-000010',
@@ -307,38 +310,74 @@ const sampleCustomers = [
 ];
 
 async function seed() {
-  const uri = process.env.MONGODB_URI;
-  if (!uri) {
-    console.error('MONGODB_URI missing in .env');
-    process.exit(1);
-  }
+  const uri = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/vasantham_crm';
 
   await mongoose.connect(uri);
-  console.log('Connected to MongoDB Atlas');
+  console.log(`[Seed] Connected to database: ${uri}`);
 
-  // Clear existing and seed sample records
+  // 1. Seed Users (Owner & Employee)
+  await User.deleteMany({});
+  const owner = await User.create({
+    name: 'Vasantham Admin & Owner',
+    email: 'owner@vasantham.com',
+    password: 'admin123',
+    role: 'owner',
+    phone: '9840123456',
+  });
+
+  const employee = await User.create({
+    name: 'Karthik Raja (Showroom Executive)',
+    email: 'employee@vasantham.com',
+    password: 'employee123',
+    role: 'employee',
+    phone: '9840987654',
+  });
+  console.log(`[Seed] Seeded Users: Owner (${owner.email}) & Employee (${employee.email})`);
+
+  // 2. Seed Customer Form Schema
+  const existingForm = await CustomerForm.findOne({ status: 'published' });
+  if (!existingForm) {
+    await CustomerForm.create({
+      name: 'Vasantham 23-Field CRM Form',
+      version: 1,
+      status: 'published',
+      fields: DEFAULT_INITIAL_FIELDS,
+      createdBy: owner._id,
+      publishedBy: owner._id,
+      publishedAt: new Date(),
+      changelog: 'Official 23-field specification for Vasantham Tiles & Sanitary Wares showroom',
+    });
+    console.log(`[Seed] Seeded Published Customer CRM Form v1 with ${DEFAULT_INITIAL_FIELDS.length} fields`);
+  }
+
+  // 3. Clear existing and seed sample records
   await Customer.deleteMany({});
-  console.log('Cleared existing customer records');
+  console.log('[Seed] Cleared existing customer records');
 
   for (const item of sampleCustomers) {
     const doc = new Customer(item);
     await doc.save();
-    console.log(`Saved: ${item.customerId} - ${item.data.customerName}`);
+    console.log(`[Seed] Saved Customer: ${item.customerId} - ${item.data.customerName}`);
   }
 
-  // Update Sequence to 10
+  // 4. Update Sequence to 10
   await Sequence.findOneAndUpdate(
-    { key: 'customer' },
-    { $set: { currentValue: 10, prefix: 'CUS-', padding: 6 } },
+    { key: 'customer_id' },
+    { $set: { currentValue: 10, prefix: 'CUS-', padding: 6, step: 1 } },
     { upsert: true }
   );
-  console.log('Updated ID sequence currentValue to 10');
+  await Sequence.findOneAndUpdate(
+    { key: 'customer' },
+    { $set: { currentValue: 10, prefix: 'CUS-', padding: 6, step: 1 } },
+    { upsert: true }
+  );
+  console.log('[Seed] Updated Customer ID sequence currentValue to 10');
 
-  console.log('Seed completed successfully! 10 customer records inserted.');
+  console.log('🎉 Seed completed successfully! Users, Form Schema, and 10 customer records ready.');
   await mongoose.disconnect();
 }
 
 seed().catch((err) => {
-  console.error('Seed error:', err);
+  console.error('[Seed Error]', err);
   process.exit(1);
 });

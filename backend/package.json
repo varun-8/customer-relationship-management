@@ -7,6 +7,7 @@
     "start": "node src/server.js",
     "dev": "node --watch src/server.js",
     "seed": "node src/utils/seedData.js",
+    "seed:samples": "node src/utils/seedSamples.js",
     "test": "node src/tests/api.test.js"
   },
   "dependencies": {
