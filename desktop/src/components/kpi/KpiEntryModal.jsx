@@ -18,14 +18,6 @@ import {
 } from 'lucide-react';
 import { api } from '../../services/api';
 
-const STAFF_MEMBERS = [
-  'Karthik Raja',
-  'Senthil Kumar',
-  'Priya Dharshini',
-  'Manoj Kumar',
-  'Showroom Team',
-];
-
 const CROSS_SELL_SUGGESTIONS = [
   'Tile Adhesive',
   'Epoxy Grout',
@@ -41,7 +33,28 @@ export const KpiEntryModal = ({ initialData, onClose, onSaved }) => {
   const todayStr = new Date().toISOString().split('T')[0];
 
   const [date, setDate] = useState(initialData?.dateString || todayStr);
-  const [staffName, setStaffName] = useState(initialData?.staffName || 'Karthik Raja');
+  const [staffName, setStaffName] = useState(initialData?.staffName || '');
+  const [staffList, setStaffList] = useState([]);
+
+  // Fetch live staff
+  useEffect(() => {
+    const fetchStaff = async () => {
+      try {
+        const res = await api.getUsers();
+        if (res && res.success && Array.isArray(res.data)) {
+          const emps = res.data.filter((u) => u.role !== 'owner' && u.active !== false);
+          const names = emps.map((u) => u.name);
+          setStaffList(names);
+          if (!initialData?.staffName && names.length > 0) {
+            setStaffName(names[0]);
+          }
+        }
+      } catch (e) {
+        console.warn('Error loading staff for KPI modal:', e);
+      }
+    };
+    fetchStaff();
+  }, []);
 
   // Walk-ins Funnel
   const [visits, setVisits] = useState(initialData?.walkins?.visits ?? 0);
@@ -255,7 +268,7 @@ export const KpiEntryModal = ({ initialData, onClose, onSaved }) => {
                   onChange={(e) => setStaffName(e.target.value)}
                   required
                 >
-                  {STAFF_MEMBERS.map((s) => (
+                  {staffList.map((s) => (
                     <option key={s} value={s}>{s}</option>
                   ))}
                 </select>

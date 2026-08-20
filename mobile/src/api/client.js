@@ -5,20 +5,22 @@ import { Platform, NativeModules } from 'react-native';
 const CURRENT_LAN_IP = '10.169.195.189';
 const DEFAULT_HOST = `http://${CURRENT_LAN_IP}:5000/api`;
 const HOST_STORAGE_KEY = 'vasantham_api_host_url';
-const SCHEMA_CACHE_KEY = 'vasantham_cached_form_schema';
-const CUSTOMERS_CACHE_KEY = 'vasantham_cached_customers';
-const USERS_CACHE_KEY = 'vasantham_cached_staff_profiles';
-const FOLLOWUPS_CACHE_KEY = 'vasantham_cached_followups';
-const BRANDING_CACHE_KEY = 'vasantham_mobile_branding';
 const TOKEN_KEY = 'vasantham_mobile_jwt';
+const DEVICE_ID_STORAGE_KEY = 'vasantham_mobile_device_id';
+let cachedDeviceId = null;
 
-// Helper to format Date to 'YYYY-MM-DD'
-const toDateString = (d) => {
-  if (!d) return new Date().toISOString().split('T')[0];
-  const dateObj = typeof d === 'string' ? new Date(d) : d;
-  if (isNaN(dateObj.getTime())) return new Date().toISOString().split('T')[0];
-  return dateObj.toISOString().split('T')[0];
-};
+// Purge any legacy cached data keys on startup
+(async () => {
+  try {
+    await AsyncStorage.multiRemove([
+      'vasantham_cached_form_schema',
+      'vasantham_cached_customers',
+      'vasantham_cached_staff_profiles',
+      'vasantham_cached_followups',
+      'vasantham_mobile_branding',
+    ]);
+  } catch (e) {}
+})();
 
 // Candidate host list for automatic discovery
 const getCandidateHosts = () => {
@@ -173,162 +175,11 @@ export const FALLBACK_SCHEMA = {
   ],
 };
 
-// Helper to calculate offline followups list from local customer cache
-function computeOfflineFollowups(customersList = [], params = {}) {
-  const {
-    tab = 'today',
-    temperature = 'all',
-    salesperson = 'all',
-    search = '',
-  } = params;
-
-  const todayStr = toDateString(new Date());
-  const next7DaysDate = new Date();
-  next7DaysDate.setDate(next7DaysDate.getDate() + 7);
-  const next7DaysStr = toDateString(next7DaysDate);
-
-  const allFollowups = [];
-  let todayCount = 0;
-  let upcomingCount = 0;
-  let overdueCount = 0;
-  let hotCount = 0;
-  let totalPipelineValue = 0;
-
-  customersList.forEach((c) => {
-    const d = c.data instanceof Map ? Object.fromEntries(c.data) : (c.data || c || {});
-    
-    // Status check
-    const status = d.status || c.status || 'Newly Contacted';
-    const statusLower = status.toLowerCase();
-    if (status === 'Order Confirmed' || statusLower.includes('lost') || status === 'archived') return;
-
-    const qVal = Number(d.quotationValue) || Number(d.orderValue) || Number(d.tileBudget) || 0;
-    totalPipelineValue += qVal;
-
-    let temp = d.leadTemperature || d.temperature;
-    if (!temp) {
-      if (status === 'Negotiation' || qVal >= 100000) temp = 'Hot';
-      else if (status === 'Quotation' || status === 'Follow-up') temp = 'Warm';
-      else temp = 'Future';
-    }
-    if (temp === 'Hot') hotCount += 1;
-
-    const nextFollowUp = d.nextFollowUp || '';
-    let bucket = 'upcoming';
-    let daysDiff = 0;
-
-    if (!nextFollowUp) {
-      bucket = 'today';
-    } else if (nextFollowUp < todayStr) {
-      bucket = 'overdue';
-      const diffTime = Math.abs(new Date(todayStr) - new Date(nextFollowUp));
-      daysDiff = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    } else if (nextFollowUp === todayStr) {
-      bucket = 'today';
-      daysDiff = 0;
-    } else if (nextFollowUp > todayStr && nextFollowUp <= next7DaysStr) {
-      bucket = 'upcoming';
-      const diffTime = Math.abs(new Date(nextFollowUp) - new Date(todayStr));
-      daysDiff = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    } else {
-      bucket = 'future';
-      const diffTime = Math.abs(new Date(nextFollowUp) - new Date(todayStr));
-      daysDiff = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    }
-
-    if (bucket === 'today') todayCount += 1;
-    if (bucket === 'upcoming' || bucket === 'future') upcomingCount += 1;
-    if (bucket === 'overdue') overdueCount += 1;
-
-    allFollowups.push({
-      _id: c._id || `offline_${c.customerId || Math.random()}`,
-      customerId: c.customerId || d.customerId || 'CUS',
-      customerName: d.customerName || c.customerName || 'Customer',
-      phone: d.phone || c.phone || '',
-      customerType: d.customerType || c.customerType || 'Building Owner',
-      status,
-      salesperson: d.salesperson || c.salesperson || 'Showroom Staff',
-      requirement: d.requirement || c.requirement || 'Tiles & Sanitary',
-      approxQuantity: d.approxQuantity || c.approxQuantity || '',
-      quotationValue: qVal,
-      nextFollowUp,
-      lastFollowUp: d.lastFollowUp || '',
-      lastReason: d.lastReason || '',
-      leadTemperature: temp,
-      notes: d.notes || c.notes || '',
-      followUpCount: d.followUpCount || c.followUpCount || 1,
-      bucket,
-      daysDiff,
-    });
-  });
-
-  // Filter by Tab
-  let filtered = allFollowups;
-  if (tab === 'today') {
-    filtered = filtered.filter((f) => f.bucket === 'today');
-  } else if (tab === 'overdue') {
-    filtered = filtered.filter((f) => f.bucket === 'overdue');
-  } else if (tab === 'upcoming') {
-    filtered = filtered.filter((f) => f.bucket === 'upcoming' || f.bucket === 'future');
-  }
-
-  // Filter by Temperature
-  if (temperature && temperature !== 'all') {
-    filtered = filtered.filter((f) => f.leadTemperature === temperature);
-  }
-
-  // Filter by Salesperson
-  if (salesperson && salesperson !== 'all') {
-    const target = salesperson.trim().toLowerCase();
-    filtered = filtered.filter((f) => {
-      const staff = String(f.salesperson || '').trim().toLowerCase();
-      return staff === target || staff.includes(target) || target.includes(staff);
-    });
-  }
-
-  // Filter by Search
-  if (search && search.trim()) {
-    const q = search.trim().toLowerCase();
-    filtered = filtered.filter((f) => {
-      const name = String(f.customerName || '').toLowerCase();
-      const phone = String(f.phone || '');
-      const id = String(f.customerId || '').toLowerCase();
-      const reqStr = Array.isArray(f.requirement) ? f.requirement.join(' ').toLowerCase() : String(f.requirement || '').toLowerCase();
-      const reason = String(f.lastReason || '').toLowerCase();
-      return name.includes(q) || phone.includes(q) || id.includes(q) || reqStr.includes(q) || reason.includes(q);
-    });
-  }
-
-  // Sort
-  if (tab === 'overdue') {
-    filtered.sort((a, b) => b.daysDiff - a.daysDiff);
-  } else if (tab === 'today') {
-    filtered.sort((a, b) => (b.leadTemperature === 'Hot' ? 1 : 0) - (a.leadTemperature === 'Hot' ? 1 : 0) || b.quotationValue - a.quotationValue);
-  } else {
-    filtered.sort((a, b) => (a.nextFollowUp || '9999').localeCompare(b.nextFollowUp || '9999'));
-  }
-
-  return {
-    success: true,
-    data: filtered,
-    counts: {
-      today: todayCount,
-      upcoming: upcomingCount,
-      overdue: overdueCount,
-      hot: hotCount,
-      total: allFollowups.length,
-      totalPipelineValue,
-    },
-    offline: true,
-  };
-}
-
 export const apiClient = {
   async getApiBase() {
     if (cachedWorkingHost) return cachedWorkingHost;
 
     const custom = await AsyncStorage.getItem(HOST_STORAGE_KEY);
-    // Ignore outdated stale test IPs in storage
     if (custom && (custom.includes('10.169.195.176') || custom.includes('10.169.195.237') || custom.includes('10.169.195.152') || custom.includes('10.169.195.222'))) {
       await AsyncStorage.removeItem(HOST_STORAGE_KEY);
     } else if (custom) {
@@ -362,8 +213,27 @@ export const apiClient = {
     await AsyncStorage.removeItem(TOKEN_KEY);
   },
 
+  async getDeviceId() {
+    if (cachedDeviceId) return cachedDeviceId;
+    let id = await AsyncStorage.getItem(DEVICE_ID_STORAGE_KEY);
+    if (!id) {
+      id = 'dev_' + Math.random().toString(36).substring(2, 9) + '_' + Date.now().toString(36);
+      await AsyncStorage.setItem(DEVICE_ID_STORAGE_KEY, id);
+    }
+    cachedDeviceId = id;
+    return id;
+  },
+
+  getDeviceName() {
+    if (Platform.OS === 'ios') {
+      return `Apple iPhone (${Platform.isPad ? 'iPad' : 'iOS'})`;
+    }
+    return `Android Smartphone (${Platform.constants?.Brand || 'Device'})`;
+  },
+
   async getHeaders() {
     let token = await this.getToken();
+    const deviceId = await this.getDeviceId();
     if (!token) {
       try {
         const loginRes = await this.login('owner@vasantham.com', 'admin123');
@@ -371,14 +241,154 @@ export const apiClient = {
           token = loginRes.data.token;
           await this.setToken(token);
         }
-      } catch (e) {
-        // silent auto-auth fallback
-      }
+      } catch (e) {}
     }
     return {
       'Content-Type': 'application/json',
+      'X-Device-Id': deviceId,
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
     };
+  },
+
+  // Record live Mobile Device Heartbeat on Desktop CRM
+  async sendDeviceHeartbeat(userProfile = null, action = 'Active Session') {
+    try {
+      const base = await this.getApiBase();
+      const deviceId = await this.getDeviceId();
+      const deviceName = this.getDeviceName();
+      const headers = await this.getHeaders();
+
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 4000);
+
+      const res = await fetch(`${base}/settings/device-heartbeat`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          deviceId,
+          deviceName,
+          platform: Platform.OS || 'android',
+          appVersion: '1.0.0',
+          userProfile: userProfile ? {
+            name: userProfile.name,
+            role: userProfile.role,
+            icon: userProfile.icon,
+            email: userProfile.email || '',
+          } : null,
+          action,
+        }),
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+
+      const data = await res.json();
+      return data;
+    } catch (e) {
+      return { success: false, error: e.message };
+    }
+  },
+
+  // Parse QR code payload safely
+  parsePairingPayload(payloadStr) {
+    if (!payloadStr || typeof payloadStr !== 'string') return null;
+    const trimmed = payloadStr.trim();
+
+    // 1. Check if JSON payload from Desktop QR
+    try {
+      if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
+        const parsed = JSON.parse(trimmed);
+        if (parsed.apiBaseUrl) {
+          return parsed.apiBaseUrl;
+        }
+        if (parsed.serverIp) {
+          const port = parsed.port || 5000;
+          return `http://${parsed.serverIp}:${port}/api`;
+        }
+      }
+    } catch (e) {}
+
+    // 2. Check if direct URL
+    if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+      let cleanUrl = trimmed;
+      if (!cleanUrl.endsWith('/api') && !cleanUrl.includes('/api/')) {
+        cleanUrl = cleanUrl.replace(/\/+$/, '') + '/api';
+      }
+      return cleanUrl;
+    }
+
+    // 3. Check if IP:Port string (e.g. "192.168.1.5:5000" or "192.168.1.5")
+    const ipMatch = trimmed.match(/^(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})(?::(\d+))?$/);
+    if (ipMatch) {
+      const ip = ipMatch[1];
+      const port = ipMatch[2] || '5000';
+      return `http://${ip}:${port}/api`;
+    }
+
+    return null;
+  },
+
+  // Check if mobile app is already paired & desktop server is reachable
+  async checkIsPairedAndOnline() {
+    try {
+      const storedHost = await AsyncStorage.getItem(HOST_STORAGE_KEY);
+      if (!storedHost) {
+        return { isPaired: false, host: null, reason: 'No paired host stored' };
+      }
+
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 3000);
+
+      const cleanHost = storedHost.trim().replace(/\/+$/, '');
+      const healthUrl = cleanHost.endsWith('/api') ? `${cleanHost}/health` : `${cleanHost}/api/health`;
+
+      const res = await fetch(healthUrl, { signal: controller.signal });
+      clearTimeout(timeoutId);
+
+      if (res.ok) {
+        const data = await res.json();
+        cachedWorkingHost = cleanHost.endsWith('/api') ? cleanHost : `${cleanHost}/api`;
+        await AsyncStorage.setItem('vasantham_is_paired', 'true');
+        return { isPaired: true, host: cachedWorkingHost, data };
+      }
+    } catch (e) {}
+
+    return { isPaired: false, host: cachedWorkingHost, reason: 'Server unreachable' };
+  },
+
+  async setPairedStatus(isPaired) {
+    if (isPaired) {
+      await AsyncStorage.setItem('vasantham_is_paired', 'true');
+    } else {
+      await AsyncStorage.removeItem('vasantham_is_paired');
+    }
+  },
+
+  async getSavedAuthRole() {
+    try {
+      return await AsyncStorage.getItem('vasantham_auth_role');
+    } catch (e) {
+      return null;
+    }
+  },
+
+  async setSavedAuthRole(role) {
+    try {
+      if (role) {
+        await AsyncStorage.setItem('vasantham_auth_role', role);
+      } else {
+        await AsyncStorage.removeItem('vasantham_auth_role');
+      }
+    } catch (e) {}
+  },
+
+  async clearPairing() {
+    try {
+      cachedWorkingHost = null;
+      await AsyncStorage.removeItem(HOST_STORAGE_KEY);
+      await AsyncStorage.removeItem('vasantham_is_paired');
+      await AsyncStorage.removeItem('vasantham_auth_role');
+      await AsyncStorage.removeItem(TOKEN_KEY);
+    } catch (e) {}
   },
 
   // Test connection to backend
@@ -396,16 +406,90 @@ export const apiClient = {
           const data = await res.json();
           cachedWorkingHost = host;
           await AsyncStorage.setItem(HOST_STORAGE_KEY, host);
+          await AsyncStorage.setItem('vasantham_is_paired', 'true');
           return { success: true, host, data };
         }
-      } catch (e) {
-        // Try next candidate
-      }
+      } catch (e) {}
     }
     return { success: false, error: 'Cannot connect to backend API server. Verify backend is running.' };
   },
 
-  // Fetch active form configuration with offline fallback
+  // Auto-detect Desktop CRM Server across local subnets
+  async autoDetectServer(onProgress) {
+    // Collect seed subnet roots
+    const candidateSubnets = [];
+
+    // Check scriptURL if running on physical device via Metro
+    const scriptURL = NativeModules.SourceCode?.scriptURL;
+    if (scriptURL) {
+      const match = scriptURL.match(/https?:\/\/(\d+\.\d+\.\d+)\.\d+/);
+      if (match && match[1]) {
+        candidateSubnets.push(match[1]);
+      }
+    }
+
+    // Current default subnet
+    candidateSubnets.push(CURRENT_LAN_IP.split('.').slice(0, 3).join('.'));
+    candidateSubnets.push('192.168.1');
+    candidateSubnets.push('192.168.0');
+    candidateSubnets.push('192.168.29');
+    candidateSubnets.push('10.0.0');
+
+    const uniqueSubnets = [...new Set(candidateSubnets)];
+
+    // 1. Fast-check candidate hosts first
+    const primaryTest = await this.testConnection();
+    if (primaryTest.success) {
+      return primaryTest;
+    }
+
+    // 2. Parallel sweep across candidate subnets
+    for (const subnet of uniqueSubnets) {
+      if (onProgress) onProgress(`Scanning ${subnet}.x subnet for CRM desktop server...`);
+
+      // Build target list for this subnet (common host numbers first)
+      const priorityHosts = [1, 2, 100, 101, 102, 150, 176, 189, 200, 254];
+      const allHosts = Array.from({ length: 254 }, (_, i) => i + 1);
+      const orderedHostList = [...new Set([...priorityHosts, ...allHosts])];
+
+      // Scan in parallel batches of 25 to avoid socket exhaustion
+      const batchSize = 25;
+      for (let i = 0; i < orderedHostList.length; i += batchSize) {
+        const batch = orderedHostList.slice(i, i + batchSize);
+        const promises = batch.map((hostNum) => {
+          const targetUrl = `http://${subnet}.${hostNum}:5000/api`;
+          return new Promise(async (resolve) => {
+            try {
+              const controller = new AbortController();
+              const timeoutId = setTimeout(() => controller.abort(), 900);
+              const res = await fetch(`${targetUrl}/health`, { signal: controller.signal });
+              clearTimeout(timeoutId);
+              if (res.ok) {
+                const data = await res.json();
+                if (data && data.status === 'healthy') {
+                  resolve({ success: true, host: targetUrl, data });
+                  return;
+                }
+              }
+            } catch (e) {}
+            resolve(null);
+          });
+        });
+
+        const results = await Promise.all(promises);
+        const found = results.find((r) => r && r.success);
+        if (found) {
+          cachedWorkingHost = found.host;
+          await AsyncStorage.setItem(HOST_STORAGE_KEY, found.host);
+          return found;
+        }
+      }
+    }
+
+    return { success: false, error: 'No Desktop CRM server found on local network. Try scanning the QR code.' };
+  },
+
+  // Fetch active form configuration live from server
   async getActiveForm() {
     try {
       const base = await this.getApiBase();
@@ -419,51 +503,14 @@ export const apiClient = {
 
       const data = await res.json();
       if (data.success && data.data) {
-        await AsyncStorage.setItem(SCHEMA_CACHE_KEY, JSON.stringify(data.data));
         return data.data;
       }
-    } catch (e) {
-      // offline fallback
-    }
+    } catch (e) {}
 
-    const cached = await AsyncStorage.getItem(SCHEMA_CACHE_KEY);
-    if (cached) {
-      try {
-        return JSON.parse(cached);
-      } catch (e) {}
-    }
     return FALLBACK_SCHEMA;
   },
 
-  // Instant offline cache readers
-  async getCachedCustomers() {
-    try {
-      const cached = await AsyncStorage.getItem(CUSTOMERS_CACHE_KEY);
-      return cached ? JSON.parse(cached) : [];
-    } catch (e) {
-      return [];
-    }
-  },
-
-  async getCachedUsers() {
-    try {
-      const cached = await AsyncStorage.getItem(USERS_CACHE_KEY);
-      return cached ? JSON.parse(cached) : [];
-    } catch (e) {
-      return [];
-    }
-  },
-
-  async getCachedFollowups() {
-    try {
-      const cached = await AsyncStorage.getItem(FOLLOWUPS_CACHE_KEY);
-      return cached ? JSON.parse(cached) : null;
-    } catch (e) {
-      return null;
-    }
-  },
-
-  // Fetch customers list with Stale-While-Revalidate caching
+  // Fetch customers list LIVE from server (no local cache)
   async getCustomers(search = '') {
     try {
       const base = await this.getApiBase();
@@ -477,41 +524,15 @@ export const apiClient = {
 
       const data = await res.json();
       if (data.success && Array.isArray(data.data)) {
-        if (!search) {
-          if (data.data.length === 0) {
-            // When backend is wiped and returns 0 records, purge local AsyncStorage customer & followup caches
-            await AsyncStorage.multiRemove([CUSTOMERS_CACHE_KEY, FOLLOWUPS_CACHE_KEY]);
-          } else {
-            await AsyncStorage.setItem(CUSTOMERS_CACHE_KEY, JSON.stringify(data.data));
-          }
-        }
         return data.data;
       }
+      return [];
     } catch (e) {
-      // Fall through to offline cache
-    }
-
-    try {
-      const cached = await this.getCachedCustomers();
-      if (search && cached.length > 0) {
-        const q = search.toLowerCase();
-        return cached.filter((c) => {
-          const d = c.data instanceof Map ? Object.fromEntries(c.data) : (c.data || c || {});
-          return (
-            (c.customerId && String(c.customerId).toLowerCase().includes(q)) ||
-            (d.customerName && String(d.customerName).toLowerCase().includes(q)) ||
-            (d.phone && String(d.phone).includes(q)) ||
-            (d.location && String(d.location).toLowerCase().includes(q))
-          );
-        });
-      }
-      return cached || [];
-    } catch (cacheErr) {
       return [];
     }
   },
 
-  // Create customer
+  // Create customer LIVE on server
   async createCustomer(formData) {
     try {
       const base = await this.getApiBase();
@@ -527,38 +548,13 @@ export const apiClient = {
       });
       clearTimeout(timeoutId);
       const data = await res.json();
-      if (data.success && data.data) {
-        // Update local cache
-        const cached = await this.getCachedCustomers();
-        await AsyncStorage.setItem(CUSTOMERS_CACHE_KEY, JSON.stringify([data.data, ...cached]));
-      }
       return data;
     } catch (e) {
-      // Save locally in offline cache
-      try {
-        const newOfflineCustomer = {
-          _id: `offline_${Date.now()}`,
-          customerId: `OFFLINE-${Math.floor(1000 + Math.random() * 9000)}`,
-          data: formData,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-          isOfflineSaved: true,
-        };
-        const cached = await this.getCachedCustomers();
-        await AsyncStorage.setItem(CUSTOMERS_CACHE_KEY, JSON.stringify([newOfflineCustomer, ...cached]));
-        return {
-          success: true,
-          offline: true,
-          message: 'Saved locally in offline mode (will sync with server)',
-          data: newOfflineCustomer,
-        };
-      } catch (cacheErr) {
-        return { success: false, message: `Offline save failed: ${cacheErr.message}` };
-      }
+      return { success: false, message: `Server error: ${e.message}. Check backend connection.` };
     }
   },
 
-  // Update customer
+  // Update customer LIVE on server
   async updateCustomer(id, formData, notes = '') {
     try {
       const base = await this.getApiBase();
@@ -580,14 +576,8 @@ export const apiClient = {
     }
   },
 
-  // Fetch and cache dynamic branding & logo
+  // Fetch dynamic branding & logo LIVE from server
   async getBranding() {
-    let cachedBranding = null;
-    try {
-      const cached = await AsyncStorage.getItem(BRANDING_CACHE_KEY);
-      if (cached) cachedBranding = JSON.parse(cached);
-    } catch (e) {}
-
     try {
       const base = await this.getApiBase();
       const controller = new AbortController();
@@ -598,12 +588,9 @@ export const apiClient = {
 
       const data = await res.json();
       if (data.success && data.data) {
-        await AsyncStorage.setItem(BRANDING_CACHE_KEY, JSON.stringify(data.data));
         return data.data;
       }
     } catch (e) {}
-
-    if (cachedBranding) return cachedBranding;
 
     return {
       appName: 'Vasantham CRM',
@@ -641,7 +628,7 @@ export const apiClient = {
     }
   },
 
-  // Daily KPI Tracking
+  // Daily KPI Tracking LIVE
   async createOrUpdateKPI(kpiData) {
     try {
       const base = await this.getApiBase();
@@ -676,10 +663,20 @@ export const apiClient = {
       const base = await this.getApiBase();
       const headers = await this.getHeaders();
       const query = new URLSearchParams(params).toString();
-      const res = await fetch(`${base}/kpi/auto-fill${query ? `?${query}` : ''}`, {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 6000);
+
+      const res = await fetch(`${base}/kpi/auto-fill?${query}`, {
         headers,
+        signal: controller.signal,
       });
-      return await res.json();
+      clearTimeout(timeoutId);
+
+      const data = await res.json();
+      if (data && data.success) {
+        return data;
+      }
+      return { success: false, message: 'Could not fetch KPI' };
     } catch (e) {
       return { success: false, message: `Connection error: ${e.message}` };
     }
@@ -699,7 +696,7 @@ export const apiClient = {
     }
   },
 
-  // Lost Sales Tracking
+  // Lost Sales Tracking LIVE
   async createLostSale(lostSaleData) {
     try {
       const base = await this.getApiBase();
@@ -743,7 +740,7 @@ export const apiClient = {
     }
   },
 
-  // Follow-up Sheet with full offline scheduler fallback
+  // Follow-up Queue LIVE from server (no offline cache)
   async getFollowupsList(params = {}) {
     try {
       const base = await this.getApiBase();
@@ -760,41 +757,26 @@ export const apiClient = {
 
       const data = await res.json();
       if (data.success) {
-        if (!query || query.includes('tab=today')) {
-          await AsyncStorage.setItem(FOLLOWUPS_CACHE_KEY, JSON.stringify(data));
-        }
         return { ...data, offline: false };
       }
+      return {
+        success: true,
+        data: [],
+        counts: { today: 0, upcoming: 0, overdue: 0, hot: 0, total: 0, totalPipelineValue: 0 },
+        offline: false,
+      };
     } catch (e) {
-      // Fallback to offline calculation
+      return {
+        success: false,
+        data: [],
+        counts: { today: 0, upcoming: 0, overdue: 0, hot: 0, total: 0, totalPipelineValue: 0 },
+        offline: true,
+        message: 'Server unreachable',
+      };
     }
-
-    // Dynamic offline computation from cached leads
-    try {
-      const cachedCustomers = await this.getCachedCustomers();
-      if (Array.isArray(cachedCustomers) && cachedCustomers.length > 0) {
-        return computeOfflineFollowups(cachedCustomers, params);
-      }
-    } catch (cacheErr) {}
-
-    // Try last saved raw followups response
-    try {
-      const cached = await this.getCachedFollowups();
-      if (cached && (cached.data || cached.success)) {
-        return { ...cached, offline: true };
-      }
-    } catch (e) {}
-
-    return {
-      success: true,
-      data: [],
-      counts: { today: 0, upcoming: 0, overdue: 0, hot: 0, total: 0, totalPipelineValue: 0 },
-      offline: true,
-      message: 'Working in offline mode',
-    };
   },
 
-  // Log Follow-up Activity (with offline persistence)
+  // Log Follow-up Activity LIVE
   async logFollowupActivity(id, activityData) {
     try {
       const base = await this.getApiBase();
@@ -811,58 +793,13 @@ export const apiClient = {
       clearTimeout(timeoutId);
 
       const data = await res.json();
-      if (data.success) {
-        // Refresh local cache with updated customer
-        const cached = await this.getCachedCustomers();
-        const updated = cached.map((c) => {
-          if (c._id === id || c.customerId === id) {
-            const currentData = c.data instanceof Map ? Object.fromEntries(c.data) : (c.data || {});
-            currentData.lastFollowUp = toDateString(new Date());
-            if (activityData.nextFollowUp) currentData.nextFollowUp = toDateString(activityData.nextFollowUp);
-            if (activityData.leadTemperature) currentData.leadTemperature = activityData.leadTemperature;
-            if (activityData.statusUpdate) currentData.status = activityData.statusUpdate;
-            if (activityData.quotationValue) currentData.quotationValue = activityData.quotationValue;
-            currentData.lastReason = `[${toDateString(new Date())}] ${activityData.outcome}: ${activityData.discussionNotes}`;
-            return { ...c, data: currentData, updatedAt: new Date().toISOString() };
-          }
-          return c;
-        });
-        await AsyncStorage.setItem(CUSTOMERS_CACHE_KEY, JSON.stringify(updated));
-        return data;
-      }
+      return data;
     } catch (e) {
-      // Offline fallback update
-    }
-
-    // Persist locally in offline cache
-    try {
-      const cached = await this.getCachedCustomers();
-      const updated = cached.map((c) => {
-        if (c._id === id || c.customerId === id) {
-          const currentData = c.data instanceof Map ? Object.fromEntries(c.data) : (c.data || {});
-          currentData.lastFollowUp = toDateString(new Date());
-          if (activityData.nextFollowUp) currentData.nextFollowUp = toDateString(activityData.nextFollowUp);
-          if (activityData.leadTemperature) currentData.leadTemperature = activityData.leadTemperature;
-          if (activityData.statusUpdate) currentData.status = activityData.statusUpdate;
-          if (activityData.quotationValue) currentData.quotationValue = activityData.quotationValue;
-          currentData.lastReason = `[${toDateString(new Date())}] ${activityData.outcome}: ${activityData.discussionNotes}`;
-          return { ...c, data: currentData, updatedAt: new Date().toISOString(), isOfflineUpdated: true };
-        }
-        return c;
-      });
-      await AsyncStorage.setItem(CUSTOMERS_CACHE_KEY, JSON.stringify(updated));
-
-      return {
-        success: true,
-        offline: true,
-        message: 'Follow-up saved locally in offline mode (will sync when online)',
-      };
-    } catch (cacheErr) {
-      return { success: false, message: `Could not save offline: ${cacheErr.message}` };
+      return { success: false, message: `Server error: ${e.message}` };
     }
   },
 
-  // Lookup existing customer by mobile number
+  // Lookup existing customer by mobile number LIVE
   async lookupCustomerByPhone(phone) {
     const cleanPhone = String(phone).replace(/[^0-9]/g, '');
     if (!cleanPhone || cleanPhone.length < 10) {
@@ -887,34 +824,10 @@ export const apiClient = {
       }
     } catch (e) {}
 
-    // Check offline cache if server is unreachable
-    try {
-      const cached = await this.getCachedCustomers();
-      const matched = cached.find((c) => {
-        const d = c.data instanceof Map ? Object.fromEntries(c.data) : (c.data || {});
-        const p = String(d.phone || c.phone || '').replace(/[^0-9]/g, '');
-        return p === cleanPhone || (cleanPhone.length >= 10 && p.endsWith(cleanPhone.slice(-10)));
-      });
-      if (matched) {
-        const d = matched.data instanceof Map ? Object.fromEntries(matched.data) : (matched.data || {});
-        return {
-          success: true,
-          exists: true,
-          customer: {
-            customerId: matched.customerId,
-            customerName: d.customerName || matched.customerName,
-            salesperson: d.salesperson || matched.salesperson,
-            status: d.status || matched.status,
-            entryDate: d.entryDate || matched.entryDate,
-          },
-        };
-      }
-    } catch (cacheErr) {}
-
     return { success: true, exists: false };
   },
 
-  // Get live showroom employees & mobile logins with caching
+  // Get live showroom employees LIVE from server
   async getUsers() {
     try {
       const base = await this.getApiBase();
@@ -930,117 +843,15 @@ export const apiClient = {
 
       const data = await res.json();
       if (data.success && Array.isArray(data.data)) {
-        await AsyncStorage.setItem(USERS_CACHE_KEY, JSON.stringify(data.data));
         return data;
       }
-    } catch (e) {}
-
-    try {
-      const cached = await this.getCachedUsers();
-      if (Array.isArray(cached) && cached.length > 0) {
-        return { success: true, data: cached, offline: true };
-      }
-    } catch (cacheErr) {}
-
-    return { success: false, data: [], message: 'Offline mode' };
-  },
-
-  // Purge all offline caches (used when database is wiped or on clean reset)
-  async clearAllLocalData() {
-    try {
-      await AsyncStorage.multiRemove([
-        CUSTOMERS_CACHE_KEY,
-        FOLLOWUPS_CACHE_KEY,
-        USERS_CACHE_KEY,
-      ]);
-      return true;
+      return { success: false, data: [] };
     } catch (e) {
-      console.warn('Error clearing local data:', e);
-      return false;
+      return { success: false, data: [] };
     }
   },
 
-  // Get Today's Live Auto-Calculated Shift KPI from CRM
-  async getKPIAutoFill(params = {}) {
-    try {
-      const base = await this.getApiBase();
-      const headers = await this.getHeaders();
-      const query = new URLSearchParams(params).toString();
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 6000);
-
-      const res = await fetch(`${base}/kpi/auto-fill?${query}`, {
-        headers,
-        signal: controller.signal,
-      });
-      clearTimeout(timeoutId);
-
-      const data = await res.json();
-      if (data && data.success) {
-        return data;
-      }
-    } catch (e) {}
-
-    // Offline computation from cached customers
-    try {
-      const cached = await this.getCachedCustomers();
-      const todayStr = params.date || toDateString(new Date());
-      const staff = params.staffName;
-
-      const matched = cached.filter((c) => {
-        const d = c.data instanceof Map ? Object.fromEntries(c.data) : (c.data || {});
-        const dateMatch = (d.entryDate || toDateString(c.createdAt)) === todayStr;
-        const staffMatch = !staff || staff === 'all' || (d.salesperson || '').toLowerCase().includes(staff.toLowerCase());
-        return dateMatch && staffMatch;
-      });
-
-      let visits = matched.length;
-      let quotes = matched.filter((c) => {
-        const d = c.data instanceof Map ? Object.fromEntries(c.data) : (c.data || {});
-        return d.status === 'Quotation' || d.status === 'Negotiation' || Number(d.quotationValue) > 0;
-      }).length;
-      let orders = matched.filter((c) => {
-        const d = c.data instanceof Map ? Object.fromEntries(c.data) : (c.data || {});
-        return d.status === 'Order Confirmed';
-      }).length;
-      let salesValue = matched.reduce((acc, c) => {
-        const d = c.data instanceof Map ? Object.fromEntries(c.data) : (c.data || {});
-        if (d.status === 'Order Confirmed') {
-          return acc + (Number(d.orderValue) || Number(d.quotationValue) || 0);
-        }
-        return acc;
-      }, 0);
-
-      return {
-        success: true,
-        offline: true,
-        data: {
-          autoValues: {
-            walkins: { visits, quotes, orders },
-            followUpsCount: 0,
-            ordersCount: orders,
-            salesValue,
-            oldCustomers: matched.some((c) => {
-              const d = c.data instanceof Map ? Object.fromEntries(c.data) : (c.data || {});
-              return d.leadSource === 'Existing Customer';
-            }),
-            engineerCalls: matched.some((c) => {
-              const d = c.data instanceof Map ? Object.fromEntries(c.data) : (c.data || {});
-              return ['Engineer', 'Architect', 'Mason'].includes(d.customerType) || ['Engineer', 'Architect'].includes(d.leadSource);
-            }),
-            crossSell: matched.some((c) => {
-              const d = c.data instanceof Map ? Object.fromEntries(c.data) : (c.data || {});
-              return Boolean(d.crossSell);
-            }),
-          },
-        },
-      };
-    } catch (err) {}
-
-    return { success: false, message: 'Could not fetch KPI' };
-  },
-
-  // Save / Submit Daily Shift KPI
+  // Save / Submit Daily Shift KPI LIVE
   async submitDailyKPI(kpiData) {
     try {
       const base = await this.getApiBase();

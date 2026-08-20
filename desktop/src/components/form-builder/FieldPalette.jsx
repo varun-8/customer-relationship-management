@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Type,
   AlignLeft,
@@ -16,6 +16,8 @@ import {
   Link,
   Hash,
   Plus,
+  Search,
+  Sparkles,
 } from 'lucide-react';
 import { useFormBuilder } from '../../context/FormBuilderContext';
 
@@ -42,81 +44,162 @@ export const FIELD_DEFINITIONS = [
 
 export const FieldPalette = () => {
   const { addField } = useFormBuilder();
+  const [search, setSearch] = useState('');
 
   const categories = ['Basic Inputs', 'Date & Time', 'Selection', 'Financial & System'];
 
+  const filteredFields = FIELD_DEFINITIONS.filter((f) => {
+    if (!search.trim()) return true;
+    const q = search.toLowerCase();
+    return f.label.toLowerCase().includes(q) || f.type.toLowerCase().includes(q) || f.desc.toLowerCase().includes(q);
+  });
+
   return (
-    <div className="glass-card">
+    <div
+      style={{
+        backgroundColor: '#FFFFFF',
+        borderRadius: '20px',
+        border: '1px solid #E2E8F0',
+        padding: '20px',
+        boxShadow: '0 4px 15px rgba(0, 0, 0, 0.03)',
+      }}
+    >
       <div style={{ marginBottom: '14px' }}>
-        <h3 style={{ fontSize: '14.5px', fontWeight: '800', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <Plus size={16} color="var(--primary-700)" />
-          Field Types Palette
-        </h3>
-        <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>
-          Click any field type to add it to your customer form layout.
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <h3 style={{ fontSize: '15px', fontWeight: '800', color: '#0F172A', display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
+            <Sparkles size={16} color="#2563EB" />
+            Field Palette
+          </h3>
+          <span style={{ fontSize: '11px', fontWeight: '700', color: '#64748B', backgroundColor: '#F1F5F9', padding: '2px 8px', borderRadius: '12px' }}>
+            15 Types
+          </span>
+        </div>
+        <p style={{ fontSize: '12px', color: '#64748B', margin: '4px 0 0 0' }}>
+          Click any field to add it to your live customer form.
         </p>
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+      {/* Quick Palette Search Input */}
+      <div style={{ position: 'relative', marginBottom: '16px' }}>
+        <Search size={14} color="#94A3B8" style={{ position: 'absolute', left: '10px', top: '10px' }} />
+        <input
+          type="text"
+          placeholder="Filter field types..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          style={{
+            width: '100%',
+            paddingLeft: '32px',
+            paddingRight: '12px',
+            paddingTop: '7px',
+            paddingBottom: '7px',
+            fontSize: '12px',
+            borderRadius: '10px',
+            border: '1px solid #CBD5E1',
+            backgroundColor: '#F8FAFC',
+            outline: 'none',
+            color: '#0F172A',
+          }}
+        />
+      </div>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', maxHeight: 'calc(100vh - 280px)', overflowY: 'auto', paddingRight: '2px' }}>
         {categories.map((cat) => {
-          const fieldsInCat = FIELD_DEFINITIONS.filter((f) => f.category === cat);
+          const fieldsInCat = filteredFields.filter((f) => f.category === cat);
+          if (fieldsInCat.length === 0) return null;
 
           return (
             <div key={cat}>
-              <div style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '8px' }}>
+              <div
+                style={{
+                  fontSize: '10.5px',
+                  fontWeight: '800',
+                  color: '#475569',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.06em',
+                  marginBottom: '8px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                }}
+              >
+                <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#3B82F6' }} />
                 {cat}
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: '8px' }}>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '6px' }}>
                 {fieldsInCat.map((item) => {
                   const Icon = item.icon;
                   return (
                     <button
                       key={item.type}
+                      type="button"
                       onClick={() => addField(item.type)}
                       style={{
                         display: 'flex',
                         alignItems: 'center',
-                        gap: '8px',
-                        padding: '9px 10px',
-                        background: '#FFFFFF',
-                        border: '1px solid var(--border-default)',
-                        borderRadius: 'var(--radius-md)',
-                        color: 'var(--text-primary)',
+                        justifyContent: 'space-between',
+                        padding: '9px 12px',
+                        backgroundColor: '#F8FAFC',
+                        border: '1px solid #E2E8F0',
+                        borderRadius: '12px',
+                        color: '#0F172A',
                         cursor: 'pointer',
-                        transition: 'all 0.15s ease',
+                        transition: 'all 0.18s ease',
                         textAlign: 'left',
-                        boxShadow: 'var(--shadow-xs)',
                       }}
                       onMouseEnter={(e) => {
-                        e.currentTarget.style.borderColor = 'var(--primary-600)';
-                        e.currentTarget.style.backgroundColor = 'var(--primary-50)';
-                        e.currentTarget.style.transform = 'translateY(-1px)';
+                        e.currentTarget.style.borderColor = '#93C5FD';
+                        e.currentTarget.style.backgroundColor = '#EFF6FF';
+                        e.currentTarget.style.transform = 'translateX(2px)';
                       }}
                       onMouseLeave={(e) => {
-                        e.currentTarget.style.borderColor = 'var(--border-default)';
-                        e.currentTarget.style.backgroundColor = '#FFFFFF';
-                        e.currentTarget.style.transform = 'translateY(0)';
+                        e.currentTarget.style.borderColor = '#E2E8F0';
+                        e.currentTarget.style.backgroundColor = '#F8FAFC';
+                        e.currentTarget.style.transform = 'translateX(0)';
                       }}
                       title={item.desc}
                     >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <div
+                          style={{
+                            width: '28px',
+                            height: '28px',
+                            borderRadius: '8px',
+                            backgroundColor: '#FFFFFF',
+                            border: '1px solid #CBD5E1',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            color: '#2563EB',
+                            boxShadow: '0 1px 3px rgba(0, 0, 0, 0.04)',
+                          }}
+                        >
+                          <Icon size={15} />
+                        </div>
+                        <div>
+                          <div style={{ fontSize: '12.5px', fontWeight: '700', color: '#0F172A', lineHeight: 1.2 }}>
+                            {item.label}
+                          </div>
+                          <div style={{ fontSize: '10.5px', color: '#64748B', marginTop: '1px' }}>
+                            {item.desc.slice(0, 26)}...
+                          </div>
+                        </div>
+                      </div>
+
                       <div
                         style={{
-                          width: '26px',
-                          height: '26px',
+                          width: '22px',
+                          height: '22px',
                           borderRadius: '6px',
-                          background: 'var(--primary-50)',
+                          backgroundColor: '#DBEAFE',
+                          color: '#1D4ED8',
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
-                          color: 'var(--primary-700)',
                         }}
                       >
-                        <Icon size={14} />
-                      </div>
-                      <div>
-                        <div style={{ fontSize: '12px', fontWeight: '600', color: 'var(--text-primary)', lineHeight: 1.2 }}>
-                          {item.label}
-                        </div>
+                        <Plus size={14} />
                       </div>
                     </button>
                   );

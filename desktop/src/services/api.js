@@ -385,4 +385,20 @@ export const api = {
       body: JSON.stringify({ devKey }),
     });
   },
+
+  // Mobile App QR Pairing & Network Info
+  async getMobilePairingInfo() {
+    return request('/settings/mobile-pairing');
+  },
+
+  // Connected Mobile Devices Tracking
+  async getConnectedDevices() {
+    return request('/settings/connected-devices');
+  },
+
+  async disconnectDevice(deviceId) {
+    return request(`/settings/connected-devices/${deviceId}`, {
+      method: 'DELETE',
+    });
+  },
 };

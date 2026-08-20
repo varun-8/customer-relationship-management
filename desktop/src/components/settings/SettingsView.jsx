@@ -33,6 +33,7 @@ import {
   Lock,
   Eye,
   EyeOff,
+  QrCode,
 } from 'lucide-react';
 import { api } from '../../services/api';
 import { useBranding, BRAND_ICONS } from '../../context/BrandingContext';
@@ -42,7 +43,7 @@ import { SequenceConfigModal } from './SequenceConfigModal';
 import { ActiveFormSchemaViewer } from './ActiveFormSchemaViewer';
 import { DataImportModal } from './DataImportModal';
 
-export const SettingsView = ({ initialTab = 'branding' }) => {
+export const SettingsView = ({ initialTab = 'branding', onOpenPairingModal }) => {
   const [activeSettingsTab, setActiveSettingsTab] = useState(initialTab);
   const [importModalMode, setImportModalMode] = useState(null); // 'csv' | 'json' | null
 
@@ -988,6 +989,69 @@ export const SettingsView = ({ initialTab = 'branding' }) => {
               </button>
             </div>
           </div>
+
+          {/* Mobile App Instant QR Pairing Card */}
+          {onOpenPairingModal && (
+            <div
+              style={{
+                padding: '20px',
+                borderRadius: '14px',
+                border: '1.5px solid #BFDBFE',
+                background: 'linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: '16px',
+                boxShadow: '0 4px 12px rgba(37, 99, 235, 0.08)',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                <div
+                  style={{
+                    width: '48px',
+                    height: '48px',
+                    borderRadius: '12px',
+                    background: '#2563EB',
+                    color: '#FFFFFF',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    boxShadow: '0 4px 10px rgba(37, 99, 235, 0.3)',
+                  }}
+                >
+                  <QrCode size={26} />
+                </div>
+                <div>
+                  <div style={{ fontWeight: '800', fontSize: '15px', color: '#1E3A8A' }}>
+                    📱 Mobile Phone QR Pairing & Network Config
+                  </div>
+                  <div style={{ fontSize: '12.5px', color: '#1D4ED8', marginTop: '3px' }}>
+                    Generate dynamic Wi-Fi QR code for showroom employees to connect their mobile phones instantly.
+                  </div>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={onOpenPairingModal}
+                className="btn btn-primary"
+                style={{
+                  padding: '10px 20px',
+                  borderRadius: '10px',
+                  fontWeight: '800',
+                  fontSize: '13px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  boxShadow: '0 4px 12px rgba(37, 99, 235, 0.25)',
+                }}
+              >
+                <QrCode size={16} />
+                <span>Show Pairing QR Code</span>
+              </button>
+            </div>
+          )}
 
           {/* Database Health Card */}
           <div style={{ padding: '18px', borderRadius: '12px', border: '1px solid #E2E8F0', background: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>

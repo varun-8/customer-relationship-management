@@ -2,6 +2,7 @@ const Customer = require('../models/Customer');
 const DailyKPI = require('../models/DailyKPI');
 const LostSale = require('../models/LostSale');
 const SalesTarget = require('../models/SalesTarget');
+const User = require('../models/User');
 
 // Helper to format Date to 'YYYY-MM-DD'
 const toDateString = (d) => {
@@ -10,8 +11,6 @@ const toDateString = (d) => {
   if (isNaN(dateObj.getTime())) return new Date().toISOString().split('T')[0];
   return dateObj.toISOString().split('T')[0];
 };
-
-const DEFAULT_STAFF = ['Karthik Raja', 'Senthil Kumar', 'Priya Dharshini', 'Manoj Kumar'];
 
 /**
  * Helper: Extract Customer fields safely whether Map or Object
@@ -50,13 +49,19 @@ exports.getDashboardMetrics = async (req, res) => {
     const targetMonth = month || toDateString(new Date()).substring(0, 7); // 'YYYY-MM'
     const todayStr = toDateString(new Date());
 
+    // 0. Fetch live showroom sales executives from User collection
+    const liveUsers = await User.find({ active: { $ne: false } }).select('name role').sort({ name: 1 }).lean();
+    const liveEmployees = liveUsers.filter((u) => u.role !== 'owner');
+    const liveStaffNames = liveEmployees.map((u) => u.name);
+
     // 1. Fetch Sales Target config for the month
     let targetDoc = await SalesTarget.findOne({ month: targetMonth });
     if (!targetDoc) {
+      const defaultPerStaff = liveStaffNames.length > 0 ? Math.round(2500000 / liveStaffNames.length) : 625000;
       targetDoc = {
         month: targetMonth,
         showroomTarget: 2500000,
-        staffTargets: DEFAULT_STAFF.map((name) => ({ staffName: name, target: 625000 })),
+        staffTargets: liveStaffNames.map((name) => ({ staffName: name, target: defaultPerStaff })),
       };
     }
 
@@ -85,17 +90,17 @@ exports.getDashboardMetrics = async (req, res) => {
     (targetDoc.staffTargets || []).forEach((st) => {
       staffMap[st.staffName] = {
         staff: st.staffName,
-        target: st.target || 625000,
+        target: st.target || (liveStaffNames.length > 0 ? Math.round(2500000 / liveStaffNames.length) : 625000),
         sales: 0,
         quotes: 0,
         orders: 0,
       };
     });
-    DEFAULT_STAFF.forEach((name) => {
+    liveStaffNames.forEach((name) => {
       if (!staffMap[name]) {
         staffMap[name] = {
           staff: name,
-          target: 625000,
+          target: liveStaffNames.length > 0 ? Math.round(2500000 / liveStaffNames.length) : 625000,
           sales: 0,
           quotes: 0,
           orders: 0,

@@ -837,10 +837,13 @@ h6 {
 
 .modal-backdrop {
   position: fixed;
-  inset: 0;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
   width: 100vw;
   height: 100vh;
-  background-color: rgba(15, 23, 42, 0.8);
+  background-color: rgba(15, 23, 42, 0.75);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -857,13 +860,14 @@ h6 {
   border-radius: 16px;
   width: 100%;
   max-width: 600px;
-  max-height: 92vh;
+  max-height: 90vh;
   display: flex;
   flex-direction: column;
   box-shadow: 0 30px 80px -15px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(255, 255, 255, 0.08);
   border: none;
   animation: modalCardScaleIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
   margin: auto;
+  align-self: center;
 }
 
 .modal-header {
@@ -2280,15 +2284,21 @@ h6 {
 .modal-overlay,
 .modal-backdrop {
   position: fixed;
-  inset: 0;
-  background: rgba(15, 23, 42, 0.68);
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(15, 23, 42, 0.72);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1050;
+  z-index: 9999;
   padding: 20px;
+  margin: 0;
   animation: modalFadeIn 0.2s ease-out;
 }
 
@@ -2301,6 +2311,8 @@ h6 {
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  margin: auto;
+  align-self: center;
   animation: modalSlideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 

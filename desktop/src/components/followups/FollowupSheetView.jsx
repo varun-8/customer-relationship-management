@@ -31,6 +31,7 @@ export const FollowupSheetView = ({ onEditCustomer }) => {
   const [activeTab, setActiveTab] = useState('today'); // 'today', 'upcoming', 'overdue', 'all'
   const [temperatureFilter, setTemperatureFilter] = useState('all'); // 'Hot', 'Warm', 'Future', 'all'
   const [salespersonFilter, setSalespersonFilter] = useState('all');
+  const [staffList, setStaffList] = useState([]);
   const [search, setSearch] = useState('');
 
   const [followups, setFollowups] = useState([]);
@@ -41,6 +42,22 @@ export const FollowupSheetView = ({ onEditCustomer }) => {
   // Modals
   const [loggingFollowup, setLoggingFollowup] = useState(null);
   const [markingLostLead, setMarkingLostLead] = useState(null);
+
+  // Fetch live staff members
+  useEffect(() => {
+    const fetchStaff = async () => {
+      try {
+        const res = await api.getUsers();
+        if (res && res.success && Array.isArray(res.data)) {
+          const emps = res.data.filter((u) => u.role !== 'owner' && u.active !== false);
+          setStaffList(emps.map((u) => u.name));
+        }
+      } catch (e) {
+        console.warn('Staff fetch error in follow-up sheet:', e);
+      }
+    };
+    fetchStaff();
+  }, []);
 
   const fetchFollowups = async () => {
     setLoading(true);
@@ -271,10 +288,11 @@ export const FollowupSheetView = ({ onEditCustomer }) => {
               onChange={(e) => setSalespersonFilter(e.target.value)}
             >
               <option value="all">All Sales Staff</option>
-              <option value="Karthik Raja">Karthik Raja</option>
-              <option value="Senthil Kumar">Senthil Kumar</option>
-              <option value="Priya Dharshini">Priya Dharshini</option>
-              <option value="Manoj Kumar">Manoj Kumar</option>
+              {staffList.map((name) => (
+                <option key={name} value={name}>
+                  {name}
+                </option>
+              ))}
             </select>
           </div>
 

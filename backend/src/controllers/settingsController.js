@@ -2,6 +2,7 @@ const Customer = require('../models/Customer');
 const DailyKPI = require('../models/DailyKPI');
 const LostSale = require('../models/LostSale');
 const Sequence = require('../models/Sequence');
+const ConnectedDevice = require('../models/ConnectedDevice');
 
 /**
  * Wipe all customer data, follow-ups, KPIs, lost sales, and reset sequences.
@@ -71,6 +72,237 @@ exports.wipeDatabase = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: error.message || 'Failed to wipe database.',
+    });
+  }
+};
+
+const os = require('os');
+
+/**
+ * Get Mobile Pairing QR Code Payload & Active Local Network Interfaces
+ * @route GET /api/settings/mobile-pairing
+ */
+exports.getMobilePairingInfo = async (req, res) => {
+  try {
+    const interfaces = os.networkInterfaces();
+    const networkInterfaces = [];
+    let preferredIp = null;
+
+    for (const ifaceName of Object.keys(interfaces)) {
+      for (const iface of interfaces[ifaceName]) {
+        // Only include non-internal IPv4 addresses
+        if (iface.family === 'IPv4' && !iface.internal) {
+          const isVirtual = ifaceName.toLowerCase().includes('virtual') || 
+                            ifaceName.toLowerCase().includes('vethernet') || 
+                            ifaceName.toLowerCase().includes('loopback') ||
+                            ifaceName.toLowerCase().includes('wsl');
+          
+          networkInterfaces.push({
+            name: ifaceName,
+            ip: iface.address,
+            mac: iface.mac,
+            isVirtual,
+          });
+
+          // Prioritize Wi-Fi or physical adapters over virtual ones
+          if (!preferredIp && !isVirtual) {
+            preferredIp = iface.address;
+          } else if (
+            (ifaceName.toLowerCase().includes('wi-fi') || 
+             ifaceName.toLowerCase().includes('wireless') || 
+             ifaceName.toLowerCase().includes('wlan') || 
+             ifaceName.toLowerCase().includes('ethernet')) &&
+            !isVirtual
+          ) {
+            preferredIp = iface.address;
+          }
+        }
+      }
+    }
+
+    // Fallback to first available IP or localhost
+    const serverIp = preferredIp || (networkInterfaces.length > 0 ? networkInterfaces[0].ip : '127.0.0.1');
+    const port = Number(process.env.PORT) || 5000;
+    const apiBaseUrl = `http://${serverIp}:${port}/api`;
+
+    const pairingPayload = {
+      type: 'VASANTHAM_CRM_PAIR',
+      v: 1,
+      appName: 'Vasantham CRM',
+      serverIp,
+      port,
+      apiBaseUrl,
+      healthUrl: `http://${serverIp}:${port}/api/health`,
+      ts: Date.now(),
+    };
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        serverIp,
+        port,
+        apiBaseUrl,
+        pairingPayload,
+        pairingString: JSON.stringify(pairingPayload),
+        networkInterfaces,
+      },
+    });
+  } catch (error) {
+    console.error('Error retrieving mobile pairing info:', error);
+    return res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to retrieve pairing info',
+    });
+  }
+};
+
+/**
+ * Record or update Mobile Device Heartbeat
+ * @route POST /api/settings/device-heartbeat
+ */
+exports.recordDeviceHeartbeat = async (req, res) => {
+  try {
+    const { deviceId, deviceName, platform, appVersion, userProfile, action } = req.body;
+
+    if (!deviceId) {
+      return res.status(400).json({
+        success: false,
+        message: 'deviceId is required.',
+      });
+    }
+
+    const rawIp = req.headers['x-forwarded-for'] || req.socket?.remoteAddress || req.ip || '';
+    const cleanIp = String(rawIp).replace(/^.*:/, '').trim() || 'Local Client';
+
+    const now = new Date();
+    const updateData = {
+      deviceName: deviceName || (platform === 'ios' ? 'Apple iPhone' : 'Android Smartphone'),
+      platform: platform || 'android',
+      appVersion: appVersion || '1.0.0',
+      ipAddress: cleanIp,
+      isOnline: true,
+      lastAction: action || 'Active Session',
+      lastSeenAt: now,
+    };
+
+    if (userProfile && typeof userProfile === 'object') {
+      updateData.userProfile = {
+        name: userProfile.name || 'Showroom Staff',
+        role: userProfile.role || 'employee',
+        email: userProfile.email || '',
+        icon: userProfile.icon || (userProfile.role === 'owner' ? '👑' : '👔'),
+      };
+    }
+
+    const device = await ConnectedDevice.findOneAndUpdate(
+      { deviceId },
+      {
+        $set: updateData,
+        $setOnInsert: { pairedAt: now, deviceId },
+      },
+      { upsert: true, new: true }
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: 'Device heartbeat recorded.',
+      data: device,
+    });
+  } catch (error) {
+    console.error('Error recording device heartbeat:', error);
+    return res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to record device heartbeat',
+    });
+  }
+};
+
+/**
+ * Get all connected mobile devices with live status
+ * @route GET /api/settings/connected-devices
+ */
+exports.getConnectedDevices = async (req, res) => {
+  try {
+    const devices = await ConnectedDevice.find().sort({ lastSeenAt: -1 }).lean();
+    const now = Date.now();
+
+    const formatted = devices.map((d) => {
+      const lastSeenMs = d.lastSeenAt ? new Date(d.lastSeenAt).getTime() : 0;
+      const diffSeconds = Math.max(0, Math.floor((now - lastSeenMs) / 1000));
+
+      let status = 'offline';
+      let statusLabel = 'Offline';
+
+      if (diffSeconds < 45) {
+        status = 'active';
+        statusLabel = 'Active Now';
+      } else if (diffSeconds < 300) {
+        status = 'idle';
+        statusLabel = `Idle (${Math.floor(diffSeconds / 60)}m ago)`;
+      } else {
+        status = 'offline';
+        const mins = Math.floor(diffSeconds / 60);
+        if (mins < 60) {
+          statusLabel = `${mins}m ago`;
+        } else {
+          const hours = Math.floor(mins / 60);
+          statusLabel = `${hours}h ago`;
+        }
+      }
+
+      return {
+        ...d,
+        status,
+        statusLabel,
+        diffSeconds,
+        isOnline: status === 'active',
+      };
+    });
+
+    const activeCount = formatted.filter((d) => d.status === 'active').length;
+    const idleCount = formatted.filter((d) => d.status === 'idle').length;
+
+    return res.status(200).json({
+      success: true,
+      count: formatted.length,
+      activeCount,
+      idleCount,
+      data: formatted,
+    });
+  } catch (error) {
+    console.error('Error fetching connected devices:', error);
+    return res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to fetch connected devices',
+    });
+  }
+};
+
+/**
+ * Disconnect or remove a device session
+ * @route DELETE /api/settings/connected-devices/:deviceId
+ */
+exports.disconnectDevice = async (req, res) => {
+  try {
+    const { deviceId } = req.params;
+    const result = await ConnectedDevice.findOneAndDelete({ deviceId });
+
+    if (!result) {
+      return res.status(404).json({
+        success: false,
+        message: 'Device not found.',
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: `Device ${result.deviceName || deviceId} disconnected successfully.`,
+    });
+  } catch (error) {
+    console.error('Error disconnecting device:', error);
+    return res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to disconnect device',
     });
   }
 };

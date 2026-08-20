@@ -46,10 +46,30 @@ export const DailyKpiView = () => {
   const [dailyTrends, setDailyTrends] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [staffList, setStaffList] = useState([]);
 
   // Filters
   const [staffFilter, setStaffFilter] = useState('all');
   const [selectedMonth, setSelectedMonth] = useState(todayStr.substring(0, 7));
+
+  // Modals
+  const [showEntryModal, setShowEntryModal] = useState(false);
+
+  // Fetch live staff members
+  useEffect(() => {
+    const fetchStaff = async () => {
+      try {
+        const res = await api.getUsers();
+        if (res && res.success && Array.isArray(res.data)) {
+          const emps = res.data.filter((u) => u.role !== 'owner' && u.active !== false);
+          setStaffList(emps.map((u) => u.name));
+        }
+      } catch (e) {
+        console.warn('Staff fetch error in DailyKpiView:', e);
+      }
+    };
+    fetchStaff();
+  }, []);
 
   // Fetch Day-by-Day performance breakdown automatically from CRM
   const fetchDayPerformance = async (dateToFetch = selectedDay) => {
@@ -166,9 +186,8 @@ export const DailyKpiView = () => {
   // Calculate Sales Staff Performance based on today's / selected day's live customer metrics
   const todayStaffPerformance = useMemo(() => {
     const staffMap = {};
-    const DEFAULT_STAFF = ['Karthik Raja', 'Senthil Kumar', 'Priya Dharshini', 'Manoj Kumar'];
     
-    DEFAULT_STAFF.forEach((name) => {
+    staffList.forEach((name) => {
       staffMap[name] = {
         staffName: name,
         visits: 0,
@@ -205,7 +224,7 @@ export const DailyKpiView = () => {
         conversionRate: s.visits > 0 ? Number(((s.ordersCount / s.visits) * 100).toFixed(1)) : 0,
       }))
       .sort((a, b) => b.salesValue - a.salesValue || b.ordersCount - a.ordersCount || b.visits - a.visits);
-  }, [dayCustomers]);
+  }, [dayCustomers, staffList]);
 
   return (
     <div className="kpi-view-container">
@@ -269,10 +288,11 @@ export const DailyKpiView = () => {
               style={{ minWidth: '135px', borderRadius: '8px', fontSize: '12.5px' }}
             >
               <option value="all">All Sales Staff</option>
-              <option value="Karthik Raja">Karthik Raja</option>
-              <option value="Senthil Kumar">Senthil Kumar</option>
-              <option value="Priya Dharshini">Priya Dharshini</option>
-              <option value="Manoj Kumar">Manoj Kumar</option>
+              {staffList.map((name) => (
+                <option key={name} value={name}>
+                  {name}
+                </option>
+              ))}
             </select>
           </div>
 

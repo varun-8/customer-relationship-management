@@ -75,11 +75,7 @@ export function MobileFollowupLogModal({
       });
 
       if (res && res.success) {
-        if (res.offline) {
-          Alert.alert('⚡ Saved in Offline Mode', `Follow-up for ${followUp.customerName} saved locally! It will automatically sync when connection is restored.`);
-        } else {
-          Alert.alert('✓ Activity Logged', `Follow-up updated for ${followUp.customerName}!`);
-        }
+        Alert.alert('✓ Activity Logged', `Follow-up updated for ${followUp.customerName}!`);
         if (onSaved) onSaved();
         onClose();
       } else {

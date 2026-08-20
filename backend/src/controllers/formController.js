@@ -1,4 +1,5 @@
 const CustomerForm = require('../models/CustomerForm');
+const User = require('../models/User');
 
 // Default initial 23-field specification for Vasantham Tiles & Sanitary Wares Customer CRM
 const DEFAULT_INITIAL_FIELDS = [
@@ -26,9 +27,9 @@ const DEFAULT_INITIAL_FIELDS = [
     required: true,
     active: true,
     order: 1,
-    placeholder: '',
-    description: 'Defaults to current date',
-    defaultValue: new Date().toISOString().split('T')[0],
+    placeholder: 'YYYY-MM-DD',
+    description: 'Entry / visit date',
+    defaultValue: null,
     options: [],
     validation: {},
   },
@@ -41,8 +42,8 @@ const DEFAULT_INITIAL_FIELDS = [
     required: true,
     active: true,
     order: 2,
-    placeholder: 'Enter customer name or reference number',
-    description: "Customer's reference / contact name",
+    placeholder: 'e.g. Rajesh Kumar',
+    description: 'Customer contact name or number',
     defaultValue: '',
     options: [],
     validation: { minLength: 2, maxLength: 100 },
@@ -56,11 +57,11 @@ const DEFAULT_INITIAL_FIELDS = [
     required: true,
     active: true,
     order: 3,
-    placeholder: '9876543210',
-    description: '10-digit mobile number',
+    placeholder: '10-digit mobile number',
+    description: 'Primary customer phone number',
     defaultValue: '',
     options: [],
-    validation: { phoneFormat: '10-digit' },
+    validation: { regex: '^[0-9]{10}$' },
   },
   // 5. Location
   {
@@ -71,11 +72,11 @@ const DEFAULT_INITIAL_FIELDS = [
     required: false,
     active: true,
     order: 4,
-    placeholder: 'e.g. Madurai, Melur, Anna Nagar',
-    description: 'Customer project or residence location',
+    placeholder: 'e.g. Anna Nagar, Chennai',
+    description: 'Customer or site address / area',
     defaultValue: '',
     options: [],
-    validation: {},
+    validation: { maxLength: 200 },
   },
   // 6. Lead Source
   {
@@ -87,7 +88,7 @@ const DEFAULT_INITIAL_FIELDS = [
     active: true,
     order: 5,
     placeholder: '-- Select Lead Source --',
-    description: 'Source of the customer enquiry',
+    description: 'Walk-in, Existing Customer, Engineer, Contractor, Builder, Referral, Other',
     defaultValue: 'Walk-in',
     options: [
       { label: 'Walk-in', value: 'Walk-in', isDefault: true },
@@ -111,13 +112,8 @@ const DEFAULT_INITIAL_FIELDS = [
     order: 6,
     placeholder: '-- Select Salesperson --',
     description: 'Salesperson list loaded from showroom staff',
-    defaultValue: 'Karthik Raja',
-    options: [
-      { label: 'Karthik Raja (Showroom Executive)', value: 'Karthik Raja', isDefault: true },
-      { label: 'Senthil Kumar (Sales Manager)', value: 'Senthil Kumar', isDefault: false },
-      { label: 'Priya Dharshini (Customer Care)', value: 'Priya Dharshini', isDefault: false },
-      { label: 'Vasantham Admin & Owner', value: 'Vasantham Owner', isDefault: false },
-    ],
+    defaultValue: '',
+    options: [],
     validation: {},
   },
   // 8. Customer Type
@@ -419,9 +415,33 @@ const getActiveForm = async (req, res) => {
     // Sort fields by order
     activeForm.fields.sort((a, b) => a.order - b.order);
 
+    // Dynamically inject live active sales executives into the salesperson field options
+    const users = await User.find({ active: { $ne: false } }).select('name role').sort({ role: 1, name: 1 }).lean();
+    const liveStaffOptions = users
+      .filter((u) => u.role !== 'owner')
+      .map((u, idx) => ({
+        label: u.name,
+        value: u.name,
+        isDefault: idx === 0,
+      }));
+
+    const formObj = activeForm.toObject ? activeForm.toObject() : JSON.parse(JSON.stringify(activeForm));
+    if (liveStaffOptions.length > 0) {
+      formObj.fields = formObj.fields.map((f) => {
+        if (f.name === 'salesperson') {
+          return {
+            ...f,
+            options: liveStaffOptions,
+            defaultValue: liveStaffOptions[0]?.value || '',
+          };
+        }
+        return f;
+      });
+    }
+
     res.json({
       success: true,
-      data: activeForm,
+      data: formObj,
     });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });

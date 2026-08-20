@@ -22,6 +22,8 @@ import { LostSalesView } from './components/lost-sales/LostSalesView';
 import { ExecutiveDashboardView } from './components/dashboard/ExecutiveDashboardView';
 import { FollowupSheetView } from './components/followups/FollowupSheetView';
 import { EmployeeManagementView } from './components/employees/EmployeeManagementView';
+import { MobilePairingModal } from './components/mobile-pairing/MobilePairingModal';
+import { MobilePairingView } from './components/mobile-pairing/MobilePairingView';
 import { api } from './services/api';
 
 const MainAppContent = () => {
@@ -29,6 +31,7 @@ const MainAppContent = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [showMobileSimulator, setShowMobileSimulator] = useState(false);
   const [showBrandingModal, setShowBrandingModal] = useState(false);
+  const [showPairingModal, setShowPairingModal] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState(null);
   const [viewingCustomer, setViewingCustomer] = useState(null);
   const [showAddCustomerModal, setShowAddCustomerModal] = useState(false);
@@ -110,6 +113,11 @@ const MainAppContent = () => {
           title: 'Showroom Staff & Mobile Logins',
           subtitle: 'Manage sales staff credentials, assign showroom roles, and control access',
         };
+      case 'mobile-pairing':
+        return {
+          title: 'Mobile Sync & QR Pairing Center',
+          subtitle: 'Connect mobile phones to desktop CRM server, view network IP, and monitor live paired devices',
+        };
       case 'settings':
         return {
           title: 'Settings & Administration',
@@ -144,6 +152,7 @@ const MainAppContent = () => {
         setActiveTab={setActiveTab}
         onOpenMobileSimulator={() => setShowMobileSimulator(true)}
         onOpenBrandingModal={() => setShowBrandingModal(true)}
+        onOpenPairingModal={() => setActiveTab('mobile-pairing')}
         onAddCustomer={() => setShowAddCustomerModal(true)}
       />
 
@@ -154,6 +163,7 @@ const MainAppContent = () => {
           isOnline={isOnline}
           isChecking={isCheckingServer}
           onRetryConnection={() => verifyServerConnection(true)}
+          onOpenPairingModal={() => setActiveTab('mobile-pairing')}
         />
 
         <div className="app-content">
@@ -174,9 +184,10 @@ const MainAppContent = () => {
             )}
             {activeTab === 'lost' && <LostSalesView />}
             {activeTab === 'employees' && <EmployeeManagementView />}
+            {activeTab === 'mobile-pairing' && <MobilePairingView />}
             {activeTab === 'builder' && <FormBuilderView />}
 
-            {activeTab === 'settings' && <SettingsView />}
+            {activeTab === 'settings' && <SettingsView onOpenPairingModal={() => setActiveTab('mobile-pairing')} />}
             {activeTab === 'sequence' && <SequenceConfigModal />}
             {activeTab === 'versions' && <FormVersionHistoryModal />}
           </div>
@@ -211,6 +222,10 @@ const MainAppContent = () => {
 
       {showBrandingModal && (
         <BrandingSettingsModal onClose={() => setShowBrandingModal(false)} />
+      )}
+
+      {showPairingModal && (
+        <MobilePairingModal onClose={() => setShowPairingModal(false)} />
       )}
 
       {showMobileSimulator && (

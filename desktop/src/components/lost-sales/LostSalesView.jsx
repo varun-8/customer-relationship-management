@@ -43,12 +43,29 @@ export const LostSalesView = () => {
   const [selectedMonth, setSelectedMonth] = useState(todayStr.substring(0, 7));
   const [productFilter, setProductFilter] = useState('all');
   const [staffFilter, setStaffFilter] = useState('all');
+  const [staffList, setStaffList] = useState([]);
 
   // Modals
   const [showModal, setShowModal] = useState(false);
   const [editingRecord, setEditingRecord] = useState(null);
   const [reopeningRecord, setReopeningRecord] = useState(null);
   const [winBackNotes, setWinBackNotes] = useState('');
+
+  // Fetch live staff members
+  useEffect(() => {
+    const fetchStaff = async () => {
+      try {
+        const res = await api.getUsers();
+        if (res && res.success && Array.isArray(res.data)) {
+          const emps = res.data.filter((u) => u.role !== 'owner' && u.active !== false);
+          setStaffList(emps.map((u) => u.name));
+        }
+      } catch (e) {
+        console.warn('Error loading staff for LostSalesView:', e);
+      }
+    };
+    fetchStaff();
+  }, []);
 
   // Fetch lost sales list & analytics
   const fetchData = async () => {
@@ -495,10 +512,11 @@ export const LostSalesView = () => {
             }}
           >
             <option value="all">All Sales Staff</option>
-            <option value="Karthik Raja">Karthik Raja</option>
-            <option value="Senthil Kumar">Senthil Kumar</option>
-            <option value="Priya Dharshini">Priya Dharshini</option>
-            <option value="Manoj Kumar">Manoj Kumar</option>
+            {staffList.map((name) => (
+              <option key={name} value={name}>
+                {name}
+              </option>
+            ))}
           </select>
 
           {/* Month Selector */}

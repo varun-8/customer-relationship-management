@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   StatusBar,
   StyleSheet,
@@ -19,6 +19,7 @@ import {
   Easing,
   Dimensions,
   KeyboardAvoidingView,
+  AppState,
 } from 'react-native';
 import { colors } from './src/theme/colors';
 import { apiClient, FALLBACK_SCHEMA } from './src/api/client';
@@ -29,6 +30,10 @@ import { MobileFollowupLogModal } from './src/components/followups/MobileFollowu
 import { MobileLostSaleModal } from './src/components/lost-sales/MobileLostSaleModal';
 import { WhatsAppTemplateModal } from './src/components/WhatsAppTemplateModal';
 import { MobileShiftKpiModal } from './src/components/kpi/MobileShiftKpiModal';
+import { MobileQrScannerModal } from './src/components/pairing/MobileQrScannerModal';
+import { MobileConnectScreen } from './src/components/pairing/MobileConnectScreen';
+import { RoleSelectLoginScreen } from './src/components/auth/RoleSelectLoginScreen';
+import { CustomerPortalView } from './src/components/customer-portal/CustomerPortalView';
 
 const CONFETTI_COLORS = ['#10B981', '#3B82F6', '#F59E0B', '#EC4899', '#8B5CF6', '#F97316', '#EAB308', '#06B6D4'];
 const CONFETTI_PIECES = Array.from({ length: 26 }).map((_, i) => ({
@@ -292,7 +297,7 @@ function OrderConfirmedCelebrationModal({ visible, customer, orderValue, onClose
 
   if (!visible) return null;
 
-  const customerData = customer ? customer.data : null;
+  const customerData = customer ? (customer.data || customer) : null;
   const data = (customerData instanceof Map)
     ? Object.fromEntries(customerData)
     : (customerData || {});
@@ -429,6 +434,11 @@ function OrderConfirmedCelebrationModal({ visible, customer, orderValue, onClose
 }
 
 export default function App() {
+  // Mobile Startup Connection & Role Authentication State
+  const [isPairedState, setIsPairedState] = useState(null); // null (checking) | true | false
+  const [authRoleState, setAuthRoleState] = useState(null); // null (role select) | 'sales_executive' | 'customer'
+  const [customerUserSession, setCustomerUserSession] = useState(null);
+
   const [activeScreen, setActiveScreen] = useState('list'); // 'list' | 'followups' | 'add' | 'detail'
   const [formSection, setFormSection] = useState('contact');
   const [formSchema, setFormSchema] = useState(FALLBACK_SCHEMA);
@@ -476,6 +486,8 @@ export default function App() {
 
   // Server IP & Diagnostic Settings Modal
   const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [showQrScanner, setShowQrScanner] = useState(false);
+  const [autoDetecting, setAutoDetecting] = useState(false);
   const [serverHost, setServerHost] = useState('');
   const [connectionStatus, setConnectionStatus] = useState(null);
   const [testingConn, setTestingConn] = useState(false);
@@ -495,13 +507,89 @@ export default function App() {
   const [kpiNotes, setKpiNotes] = useState('');
   const [submittingKpi, setSubmittingKpi] = useState(false);
 
+  const searchTimeoutRef = useRef(null);
+
+  const handleSearchChange = (text) => {
+    setSearch(text);
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+    searchTimeoutRef.current = setTimeout(() => {
+      loadCustomers(text);
+    }, 250);
+  };
+
+  // Initial connection check on app startup
   useEffect(() => {
-    const loadHost = async () => {
-      const currentHost = await apiClient.getApiBase();
-      setServerHost(currentHost);
+    const checkInitialPairing = async () => {
+      try {
+        const checkRes = await apiClient.checkIsPairedAndOnline();
+        if (checkRes && checkRes.isPaired) {
+          if (checkRes.host) setServerHost(checkRes.host);
+          setIsPairedState(true);
+          const savedRole = await apiClient.getSavedAuthRole();
+          if (savedRole) {
+            setAuthRoleState(savedRole);
+          }
+        } else {
+          setIsPairedState(false);
+        }
+      } catch (e) {
+        setIsPairedState(false);
+      }
     };
-    loadHost();
+    checkInitialPairing();
   }, []);
+
+  const handleConnectedServer = async (connectedHost) => {
+    if (connectedHost) setServerHost(connectedHost);
+    setIsPairedState(true);
+    const savedRole = await apiClient.getSavedAuthRole();
+    if (savedRole) {
+      setAuthRoleState(savedRole);
+    }
+  };
+
+  const handleSelectRole = ({ role, profile, customer, data }) => {
+    setAuthRoleState(role);
+    if (role === 'sales_executive' && profile) {
+      setCurrentProfile(profile);
+    } else if (role === 'customer') {
+      setCustomerUserSession({
+        customer,
+        data,
+        name: customer?.name,
+        phone: customer?.phone,
+        customerId: customer?.customerId,
+      });
+    }
+  };
+
+  const handleDisconnectServer = async () => {
+    await apiClient.clearPairing();
+    setIsPairedState(false);
+    setAuthRoleState(null);
+    setCustomerUserSession(null);
+  };
+
+  const handleLogoutRole = async () => {
+    await apiClient.setSavedAuthRole(null);
+    setAuthRoleState(null);
+    setCustomerUserSession(null);
+  };
+
+  // Periodic Device Heartbeat Registration on Desktop Server
+  useEffect(() => {
+    apiClient.sendDeviceHeartbeat(currentProfile, 'Mobile CRM Online');
+
+    const interval = setInterval(() => {
+      if (isOnline) {
+        apiClient.sendDeviceHeartbeat(currentProfile, 'Active Session');
+      }
+    }, 20000);
+
+    return () => clearInterval(interval);
+  }, [currentProfile, isOnline]);
 
   const loadBranding = useCallback(async () => {
     try {
@@ -663,60 +751,48 @@ export default function App() {
     }
   }, []);
 
-  // Instant Offline Cache Hydration (<50ms startup time)
-  const hydrateFromCache = useCallback(async () => {
-    try {
-      const [cachedCust, cachedUsers, cachedFollow, cachedBrand] = await Promise.all([
-        apiClient.getCachedCustomers(),
-        apiClient.getCachedUsers(),
-        apiClient.getCachedFollowups(),
-        apiClient.getBranding(),
-      ]);
-
-      if (Array.isArray(cachedCust) && cachedCust.length > 0) {
-        setCustomers(cachedCust);
-      }
-      if (cachedFollow && (cachedFollow.data || cachedFollow.success)) {
-        const activeList = (cachedFollow.data || []).filter((f) => {
-          const s = (f.status || '').toLowerCase();
-          return !s.includes('lost');
-        });
-        setFollowups(activeList);
-        if (cachedFollow.counts) setFollowupCounts(cachedFollow.counts);
-      }
-      if (cachedBrand && cachedBrand.appName) {
-        setBranding(cachedBrand);
-      }
-    } catch (e) {
-      console.warn('Cache hydration note:', e.message);
-    }
-  }, []);
-
   const initData = useCallback(async (showFullLoader = false) => {
     if (showFullLoader) setLoading(true);
     try {
-      await Promise.all([
+      const results = await Promise.allSettled([
         loadBranding(),
         loadFormSchema(),
         loadStaffProfiles(),
         loadCustomers(),
         loadFollowups(),
       ]);
-      setIsOnline(true);
+      const anySuccess = results.some((r) => r.status === 'fulfilled');
+      setIsOnline(anySuccess);
     } catch (err) {
       console.warn('Background sync warning:', err.message);
+      setIsOnline(false);
     } finally {
       setLoading(false);
     }
   }, [loadBranding, loadFormSchema, loadStaffProfiles, loadCustomers, loadFollowups]);
 
   useEffect(() => {
-    // 1. Instantly display saved offline leads in 0ms
-    hydrateFromCache();
-    // 2. Revalidate once in the background on app startup
-    initData(false);
+    // 1. Fetch live data from backend server on initial app startup
+    initData(true);
+
+    // 2. Auto-sync whenever the app is opened or brought back into foreground
+    const appStateSub = AppState.addEventListener('change', (nextAppState) => {
+      if (nextAppState === 'active') {
+        initData(false);
+      }
+    });
+
+    // 3. Periodic background sync polling every 15s to capture real-time desktop updates / wipes
+    const pollInterval = setInterval(() => {
+      initData(false);
+    }, 15000);
+
+    return () => {
+      appStateSub.remove();
+      clearInterval(pollInterval);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [initData]);
 
   // When profile changes, re-fetch followups for that staff member
   const currentStaffKey = `${currentProfile?.role}_${currentProfile?.id || currentProfile?.name || 'all'}`;
@@ -728,16 +804,18 @@ export default function App() {
   const onRefresh = async () => {
     setRefreshing(true);
     try {
-      await Promise.all([
+      const results = await Promise.allSettled([
         loadBranding(),
         loadFormSchema(),
         loadStaffProfiles(),
         loadCustomers(search),
         loadFollowups(),
       ]);
-      setIsOnline(true);
+      const anySuccess = results.some((r) => r.status === 'fulfilled');
+      setIsOnline(anySuccess);
     } catch (err) {
       console.warn('Pull-to-refresh note:', err.message);
+      setIsOnline(false);
     } finally {
       setRefreshing(false);
     }
@@ -879,6 +957,56 @@ export default function App() {
         message: `Could not connect: ${res.error || 'Server unreachable'}. Verify your PC is on the same Wi-Fi.`,
       });
       setIsOnline(false);
+    }
+  };
+
+  const handleQrConnected = async (scannedUrl) => {
+    setServerHost(scannedUrl);
+    await apiClient.setApiBase(scannedUrl);
+    setIsOnline(true);
+    setConnectionStatus({ success: true, message: `Connected to Desktop Server at ${scannedUrl}!` });
+    apiClient.sendDeviceHeartbeat(currentProfile, 'Paired via QR Code');
+    Alert.alert(
+      '🎉 Paired Successfully!',
+      `Mobile CRM is now connected to your Desktop server at:\n${scannedUrl}\n\nSyncing showroom leads and schedule...`,
+      [{ text: 'Great!', style: 'default' }]
+    );
+    await initData(true);
+  };
+
+  const handleAutoDetect = async () => {
+    setAutoDetecting(true);
+    setConnectionStatus({ success: false, message: '🔍 Scanning local Wi-Fi subnets for Desktop CRM...' });
+    try {
+      const res = await apiClient.autoDetectServer((statusText) => {
+        setConnectionStatus({ success: false, message: statusText });
+      });
+      if (res.success) {
+        setServerHost(res.host);
+        setIsOnline(true);
+        setConnectionStatus({ success: true, message: `✓ Found Desktop CRM at ${res.host}!` });
+        apiClient.sendDeviceHeartbeat(currentProfile, 'Auto-Discovered & Paired');
+        Alert.alert(
+          '🎯 Desktop Server Discovered!',
+          `Automatically connected to CRM server at:\n${res.host}`,
+          [{ text: 'Sync Now', onPress: () => initData(true) }]
+        );
+        await initData(true);
+      } else {
+        setConnectionStatus({ success: false, message: res.error || 'Desktop server not found on Wi-Fi.' });
+        Alert.alert(
+          '📡 Auto-Detection Result',
+          'Could not find the Desktop server on this subnet. Please open Desktop CRM and scan the pairing QR code.',
+          [
+            { text: 'Scan QR Code', onPress: () => { setShowSettingsModal(false); setShowQrScanner(true); } },
+            { text: 'OK', style: 'cancel' },
+          ]
+        );
+      }
+    } catch (e) {
+      setConnectionStatus({ success: false, message: e.message || 'Auto-detection failed.' });
+    } finally {
+      setAutoDetecting(false);
     }
   };
 
@@ -1050,7 +1178,7 @@ export default function App() {
 
   // Filter customers by employee (for Owner) or type (for Employee), lost leads hidden
   const filteredCustomers = customers.filter((c) => {
-    const d = c.data instanceof Map ? Object.fromEntries(c.data) : (c.data || {});
+    const d = c.data instanceof Map ? Object.fromEntries(c.data) : (c.data || c);
     
     // Hide lost leads from active mobile list
     const status = (d.status || c.status || '').toLowerCase();
@@ -1077,7 +1205,7 @@ export default function App() {
 
   // Calculate Metrics from active non-lost pipeline
   const totalPipeline = customers.reduce((acc, c) => {
-    const d = c.data instanceof Map ? Object.fromEntries(c.data) : (c.data || {});
+    const d = c.data instanceof Map ? Object.fromEntries(c.data) : (c.data || c);
     const s = (d.status || c.status || '').toLowerCase();
     if (s.includes('lost')) return acc;
     return acc + (Number(d.quotationValue) || Number(d.tileBudget) || 0);
@@ -1117,6 +1245,65 @@ export default function App() {
 
   const currentSectionIndex = SECTIONS.findIndex((s) => s.id === formSection);
 
+  // 1. Loading check on app startup
+  if (isPairedState === null) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#F8FAFC' }}>
+        <ActivityIndicator size="large" color="#2563EB" />
+        <Text style={{ marginTop: 14, fontSize: 14, fontWeight: '700', color: '#475569' }}>
+          Checking Desktop Server Connection...
+        </Text>
+      </View>
+    );
+  }
+
+  // 2. If NOT paired/connected to Desktop -> Show Connect Screen
+  if (isPairedState === false) {
+    return (
+      <>
+        <MobileConnectScreen
+          onConnected={handleConnectedServer}
+          onOpenQrScanner={() => setShowQrScanner(true)}
+        />
+        <MobileQrScannerModal
+          visible={showQrScanner}
+          onClose={() => setShowQrScanner(false)}
+          onConnected={handleConnectedServer}
+        />
+      </>
+    );
+  }
+
+  // 3. If Paired but NO Role Selected -> Show Role Select / Login Gate
+  if (authRoleState === null) {
+    return (
+      <>
+        <RoleSelectLoginScreen
+          onSelectRole={handleSelectRole}
+          onDisconnectServer={handleDisconnectServer}
+          serverHost={serverHost}
+        />
+        <MobileQrScannerModal
+          visible={showQrScanner}
+          onClose={() => setShowQrScanner(false)}
+          onConnected={handleConnectedServer}
+        />
+      </>
+    );
+  }
+
+  // 4. Customer Role -> Render Customer Portal View
+  if (authRoleState === 'customer') {
+    return (
+      <CustomerPortalView
+        customerInfo={customerUserSession}
+        onLogoutRole={handleLogoutRole}
+        branding={branding}
+      />
+    );
+  }
+
+  // 5. Sales Executive Role -> Render Full CRM Application
   return (
     <View style={styles.safeArea}>
       <StatusBar
@@ -1180,6 +1367,16 @@ export default function App() {
         </View>
 
         <View style={styles.headerRight}>
+          {/* Quick QR Scanner Shortcut */}
+          <TouchableOpacity
+            style={styles.headerQrScanBtn}
+            onPress={() => setShowQrScanner(true)}
+            activeOpacity={0.7}
+            title="Scan Desktop QR Code"
+          >
+            <Text style={{ fontSize: 14 }}>📷</Text>
+          </TouchableOpacity>
+
           {/* Quick Profile Switcher Pill */}
           <TouchableOpacity
             style={styles.headerProfilePill}
@@ -1208,6 +1405,35 @@ export default function App() {
         </View>
       </View>
 
+      {/* Offline Disconnected Alert Banner */}
+      {!isOnline && (
+        <View style={styles.offlineBanner}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, gap: 6 }}>
+            <Text style={{ fontSize: 13 }}>⚠️</Text>
+            <Text style={styles.offlineBannerText} numberOfLines={1}>
+              Offline ({serverHost ? serverHost.replace('http://', '').replace('/api', '') : 'No Server'})
+            </Text>
+          </View>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <TouchableOpacity
+              style={styles.offlineBannerQrBtn}
+              onPress={() => setShowQrScanner(true)}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.offlineBannerQrBtnText}>📷 Scan QR</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.offlineBannerActionBtn}
+              onPress={() => setShowSettingsModal(true)}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.offlineBannerAction}>⚙️ Fix IP</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+
       {/* Screen: Customer List (Modern, Minimalist & High-Performance) */}
       {activeScreen === 'list' && (
         <View style={styles.screenBody}>
@@ -1220,10 +1446,7 @@ export default function App() {
                 placeholder="Search by name, phone, #ID..."
                 placeholderTextColor="#94A3B8"
                 value={search}
-                onChangeText={(text) => {
-                  setSearch(text);
-                  loadCustomers(text);
-                }}
+                onChangeText={handleSearchChange}
               />
               {search ? (
                 <TouchableOpacity
@@ -1258,7 +1481,7 @@ export default function App() {
                 </View>
                 <View style={styles.ownerStaffCountBadge}>
                   <Text style={styles.ownerStaffCountText}>
-                    {profiles.filter((p) => p.role === 'employee').length || 4} Sales Executives
+                    {profiles.filter((p) => p.role === 'employee').length} Sales Executives
                   </Text>
                 </View>
               </View>
@@ -1305,12 +1528,12 @@ export default function App() {
                   const isSelected = ownerStaffFilter === staff;
                   const count = staff === 'all'
                     ? customers.filter((c) => {
-                        const d = c.data instanceof Map ? Object.fromEntries(c.data) : (c.data || {});
+                        const d = c.data instanceof Map ? Object.fromEntries(c.data) : (c.data || c);
                         const s = (d.status || c.status || '').toLowerCase();
                         return !s.includes('lost');
                       }).length
                     : customers.filter((c) => {
-                        const d = c.data instanceof Map ? Object.fromEntries(c.data) : (c.data || {});
+                        const d = c.data instanceof Map ? Object.fromEntries(c.data) : (c.data || c);
                         const s = (d.status || c.status || '').toLowerCase();
                         return !s.includes('lost') && (d.salesperson || '').toLowerCase().includes(staff.toLowerCase());
                       }).length;
@@ -1344,7 +1567,7 @@ export default function App() {
                   const count = type === 'all'
                     ? filteredCustomers.length
                     : customers.filter((c) => {
-                        const d = c.data instanceof Map ? Object.fromEntries(c.data) : (c.data || {});
+                        const d = c.data instanceof Map ? Object.fromEntries(c.data) : (c.data || c);
                         const s = (d.status || c.status || '').toLowerCase();
                         if (s.includes('lost')) return false;
                         return d.customerType === type && (d.salesperson || '').toLowerCase().includes(currentProfile.name.toLowerCase());
@@ -1397,15 +1620,38 @@ export default function App() {
               }
               ListEmptyComponent={
                 <View style={styles.emptyContainer}>
-                  <Text style={{ fontSize: 40, marginBottom: 8 }}>📋</Text>
-                  <Text style={styles.emptyTitle}>No Customers Found</Text>
-                  <Text style={styles.emptySubtitle}>
-                    {search ? `No matches found for "${search}"` : 'Tap the elevated + button below to register a customer.'}
+                  <Text style={{ fontSize: 40, marginBottom: 8 }}>{isOnline ? '📋' : '📡'}</Text>
+                  <Text style={styles.emptyTitle}>
+                    {isOnline ? (search ? 'No Matches Found' : 'No Customers in Showroom') : 'Cannot Reach Desktop Server'}
                   </Text>
+                  <Text style={styles.emptySubtitle}>
+                    {isOnline
+                      ? (search ? `No results found for "${search}"` : 'Tap the elevated + button below to register a customer.')
+                      : `Make sure your Node.js backend is running on your PC Wi-Fi (${serverHost || 'http://10.169.195.189:5000/api'}).`}
+                  </Text>
+                  {!isOnline && (
+                    <View style={{ flexDirection: 'row', gap: 8, marginTop: 12, flexWrap: 'wrap', justifyContent: 'center' }}>
+                      <TouchableOpacity
+                        style={[styles.retryConnectionBtn, { backgroundColor: '#2563EB', borderColor: '#1D4ED8' }]}
+                        onPress={() => setShowQrScanner(true)}
+                        activeOpacity={0.8}
+                      >
+                        <Text style={[styles.retryConnectionBtnText, { color: '#FFFFFF' }]}>📷 Scan Desktop QR Code</Text>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                        style={styles.retryConnectionBtn}
+                        onPress={() => setShowSettingsModal(true)}
+                        activeOpacity={0.8}
+                      >
+                        <Text style={styles.retryConnectionBtnText}>⚙️ Server IP</Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
                 </View>
               }
               renderItem={({ item }) => {
-                const data = item.data instanceof Map ? Object.fromEntries(item.data) : (item.data || {});
+                const data = item.data instanceof Map ? Object.fromEntries(item.data) : (item.data || item);
                 const initial = (data.customerName || 'C').charAt(0).toUpperCase();
 
                 return (
@@ -1650,7 +1896,7 @@ export default function App() {
           {(() => {
             const data = selectedCustomer.data instanceof Map
               ? Object.fromEntries(selectedCustomer.data)
-              : (selectedCustomer.data || {});
+              : (selectedCustomer.data || selectedCustomer);
             const initial = (data.customerName || 'C').charAt(0).toUpperCase();
             const badgeStyle = getBadgeStyle(data.customerType);
             const statusStyle = getStatusBadgeStyle(data.status);
@@ -1890,20 +2136,67 @@ export default function App() {
           <View style={styles.modalCard}>
             <Text style={styles.modalHeading}>Backend Server Connection</Text>
             <Text style={styles.modalSubheading}>
-              Connect your phone to your host PC running Node.js and MongoDB Atlas.
+              Pair your phone with your Desktop CRM server running on the showroom Wi-Fi.
             </Text>
 
-            <View style={{ marginVertical: 14 }}>
+            {/* Option 1: Instant QR Code Scanner (Recommended) */}
+            <TouchableOpacity
+              style={styles.settingsQrCard}
+              onPress={() => {
+                setShowSettingsModal(false);
+                setShowQrScanner(true);
+              }}
+              activeOpacity={0.85}
+            >
+              <View style={styles.settingsQrIconBox}>
+                <Text style={{ fontSize: 22 }}>📷</Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.settingsQrTitle}>Scan Desktop QR Code</Text>
+                <Text style={styles.settingsQrSub}>
+                  Recommended • Instant automatic connection in 1 second
+                </Text>
+              </View>
+              <Text style={{ fontSize: 16, color: '#2563EB', fontWeight: '800' }}>→</Text>
+            </TouchableOpacity>
+
+            {/* Option 2: Auto-Detect Desktop on Wi-Fi */}
+            <TouchableOpacity
+              style={styles.settingsAutoDetectBtn}
+              onPress={handleAutoDetect}
+              disabled={autoDetecting}
+              activeOpacity={0.8}
+            >
+              {autoDetecting ? (
+                <ActivityIndicator size="small" color="#2563EB" style={{ marginRight: 6 }} />
+              ) : (
+                <Text style={{ fontSize: 14, marginRight: 6 }}>🔍</Text>
+              )}
+              <Text style={styles.settingsAutoDetectText}>
+                {autoDetecting ? 'Scanning Showroom Wi-Fi...' : 'Auto-Detect Desktop Server'}
+              </Text>
+            </TouchableOpacity>
+
+            {/* Divider */}
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginVertical: 12 }}>
+              <View style={{ flex: 1, height: 1, backgroundColor: '#E2E8F0' }} />
+              <Text style={{ marginHorizontal: 8, fontSize: 10, fontWeight: '800', color: '#94A3B8', letterSpacing: 0.5 }}>
+                OR MANUAL CONFIG
+              </Text>
+              <View style={{ flex: 1, height: 1, backgroundColor: '#E2E8F0' }} />
+            </View>
+
+            <View style={{ marginBottom: 12 }}>
               <Text style={styles.modalInputLabel}>Host Machine API URL</Text>
               <TextInput
                 style={styles.modalTextInput}
                 value={serverHost}
                 onChangeText={setServerHost}
-                placeholder="http://10.169.195.176:5000/api"
+                placeholder="http://10.169.195.189:5000/api"
                 autoCapitalize="none"
               />
               <Text style={{ fontSize: 11, color: colors.textMuted, marginTop: 4 }}>
-                Current Wi-Fi IP: http://10.169.195.176:5000/api
+                Current Server: {serverHost || 'http://10.169.195.189:5000/api'}
               </Text>
             </View>
 
@@ -1920,7 +2213,7 @@ export default function App() {
               </View>
             )}
 
-            <View style={{ flexDirection: 'row', gap: 10, marginTop: 16 }}>
+            <View style={{ flexDirection: 'row', gap: 10, marginTop: 14 }}>
               <TouchableOpacity
                 style={styles.modalCancelBtn}
                 onPress={() => setShowSettingsModal(false)}
@@ -1931,7 +2224,7 @@ export default function App() {
               <TouchableOpacity
                 style={styles.modalSaveBtn}
                 onPress={handleTestConnection}
-                disabled={testingConn}
+                disabled={testingConn || autoDetecting}
               >
                 <Text style={{ color: '#FFFFFF', fontWeight: '700' }}>
                   {testingConn ? 'Testing...' : 'Test & Save IP'}
@@ -1941,6 +2234,13 @@ export default function App() {
           </View>
         </View>
       </Modal>
+
+      {/* QR Code Scanner Viewfinder Modal */}
+      <MobileQrScannerModal
+        visible={showQrScanner}
+        onClose={() => setShowQrScanner(false)}
+        onConnected={handleQrConnected}
+      />
 
       {/* Deal Won & Order Confirmed Professional Celebration Modal */}
       <OrderConfirmedCelebrationModal
@@ -2424,6 +2724,46 @@ const styles = StyleSheet.create({
     color: '#64748B',
     marginTop: 4,
     textAlign: 'center',
+    paddingHorizontal: 20,
+    lineHeight: 18,
+  },
+  offlineBanner: {
+    backgroundColor: '#FEF2F2',
+    borderBottomWidth: 1,
+    borderBottomColor: '#FECDD3',
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  offlineBannerText: {
+    fontSize: 11.5,
+    color: '#991B1B',
+    fontWeight: '700',
+  },
+  offlineBannerAction: {
+    fontSize: 11.5,
+    color: '#DC2626',
+    fontWeight: '800',
+    marginLeft: 6,
+  },
+  retryConnectionBtn: {
+    marginTop: 14,
+    backgroundColor: '#2563EB',
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    borderRadius: 12,
+    shadowColor: '#2563EB',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  retryConnectionBtnText: {
+    color: '#FFFFFF',
+    fontSize: 12.5,
+    fontWeight: '800',
   },
   // Lead Record Card Styles matching Mockup Pixel-Perfect
   leadCard: {
@@ -3609,5 +3949,82 @@ const styles = StyleSheet.create({
     fontSize: 26,
     fontWeight: '400',
     lineHeight: 28,
+  },
+  // QR Code & Mobile Pairing Styles
+  headerQrScanBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#EFF6FF',
+    borderWidth: 1,
+    borderColor: '#BFDBFE',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  offlineBannerQrBtn: {
+    backgroundColor: '#2563EB',
+    paddingHorizontal: 8,
+    paddingVertical: 3.5,
+    borderRadius: 6,
+  },
+  offlineBannerQrBtnText: {
+    color: '#FFFFFF',
+    fontSize: 10.5,
+    fontWeight: '800',
+  },
+  offlineBannerActionBtn: {
+    paddingHorizontal: 6,
+    paddingVertical: 3.5,
+  },
+  settingsQrCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#EFF6FF',
+    borderWidth: 1.5,
+    borderColor: '#93C5FD',
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 10,
+    gap: 12,
+    shadowColor: '#2563EB',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 1,
+  },
+  settingsQrIconBox: {
+    width: 42,
+    height: 42,
+    borderRadius: 10,
+    backgroundColor: '#DBEAFE',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  settingsQrTitle: {
+    fontSize: 13.5,
+    fontWeight: '800',
+    color: '#1E3A8A',
+  },
+  settingsQrSub: {
+    fontSize: 11,
+    color: '#3B82F6',
+    marginTop: 2,
+    fontWeight: '600',
+  },
+  settingsAutoDetectBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+    borderRadius: 10,
+    paddingVertical: 9,
+    paddingHorizontal: 12,
+  },
+  settingsAutoDetectText: {
+    fontSize: 12.5,
+    fontWeight: '700',
+    color: '#334155',
   },
 });

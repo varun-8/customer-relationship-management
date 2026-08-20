@@ -42,8 +42,6 @@ const COMMON_COMPETITORS = [
   'Local Hardware Store',
 ];
 
-const STAFF_MEMBERS = ['Karthik Raja', 'Senthil Kumar', 'Priya Dharshini', 'Manoj Kumar', 'Showroom Staff'];
-
 export const LostSaleModal = ({ initialData, customer, onClose, onSaved }) => {
   const todayStr = new Date().toISOString().split('T')[0];
 
@@ -61,8 +59,30 @@ export const LostSaleModal = ({ initialData, customer, onClose, onSaved }) => {
     initialData?.products || (customer?.requirement ? (Array.isArray(customer.requirement) ? customer.requirement : [customer.requirement]) : ['Tile'])
   );
   const [salesperson, setSalesperson] = useState(
-    initialData?.salesperson || customer?.salesperson || 'Karthik Raja'
+    initialData?.salesperson || customer?.salesperson || ''
   );
+  const [staffList, setStaffList] = useState([]);
+
+  // Fetch live staff
+  useEffect(() => {
+    const fetchStaff = async () => {
+      try {
+        const res = await api.getUsers();
+        if (res && res.success && Array.isArray(res.data)) {
+          const emps = res.data.filter((u) => u.role !== 'owner' && u.active !== false);
+          const names = emps.map((u) => u.name);
+          setStaffList(names);
+          if (!salesperson && names.length > 0) {
+            setSalesperson(names[0]);
+          }
+        }
+      } catch (e) {
+        console.warn('Error loading staff in LostSaleModal:', e);
+      }
+    };
+    fetchStaff();
+  }, []);
+
   const [lostReason, setLostReason] = useState(initialData?.lostReason || 'Price Too High / Cheaper Competitor Quote');
   const [customReason, setCustomReason] = useState('');
   const [competitor, setCompetitor] = useState(initialData?.competitor || 'Supreme Tiles');
@@ -461,7 +481,7 @@ export const LostSaleModal = ({ initialData, customer, onClose, onSaved }) => {
               <div className="form-group" style={{ marginTop: '12px' }}>
                 <label className="form-label">Salesperson Handling Deal *</label>
                 <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                  {STAFF_MEMBERS.map((staff) => {
+                  {staffList.map((staff) => {
                     const isSel = salesperson === staff;
                     return (
                       <button

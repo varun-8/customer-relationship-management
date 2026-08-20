@@ -19,6 +19,7 @@ import {
   Shield,
   HelpCircle,
   ExternalLink,
+  QrCode,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useBranding } from '../../context/BrandingContext';
@@ -29,6 +30,7 @@ export const Sidebar = ({
   setActiveTab,
   onOpenMobileSimulator,
   onOpenBrandingModal,
+  onOpenPairingModal,
   onAddCustomer,
 }) => {
   const { user, isOwner, logout } = useAuth();
@@ -86,6 +88,12 @@ export const Sidebar = ({
           label: 'Showroom Staff',
           shortLabel: 'Staff',
           icon: UserCheck,
+        },
+        {
+          id: 'mobile-pairing',
+          label: 'Mobile App Scanner',
+          shortLabel: 'Mobile Scanner',
+          icon: QrCode,
         },
         {
           id: 'builder',
@@ -238,6 +246,29 @@ export const Sidebar = ({
           )}
 
           <nav className="sidebar-nav-list">
+            <button
+              type="button"
+              onClick={() => setActiveTab('mobile-pairing')}
+              className={`sidebar-nav-item sidebar-tool-item ${activeTab === 'mobile-pairing' ? 'sidebar-nav-item-active' : ''}`}
+              title={isCollapsed ? 'Pair Mobile App with QR' : undefined}
+              style={{ backgroundColor: activeTab === 'mobile-pairing' ? undefined : 'rgba(37, 99, 235, 0.08)' }}
+            >
+              <span className="sidebar-nav-item-indicator" />
+              <div className="sidebar-nav-icon-box">
+                <QrCode size={18} color={activeTab === 'mobile-pairing' ? '#FFFFFF' : '#2563EB'} strokeWidth={1.9} />
+              </div>
+              {!isCollapsed && (
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                  <span className="sidebar-nav-item-label" style={{ color: activeTab === 'mobile-pairing' ? '#FFFFFF' : '#2563EB', fontWeight: '700' }}>
+                    Pair Mobile App
+                  </span>
+                  <span className="sidebar-tool-pill" style={{ backgroundColor: '#DBEAFE', color: '#1D4ED8' }}>
+                    QR
+                  </span>
+                </div>
+              )}
+            </button>
+
             <button
               type="button"
               onClick={onOpenMobileSimulator}

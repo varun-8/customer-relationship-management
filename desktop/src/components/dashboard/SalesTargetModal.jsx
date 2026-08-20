@@ -2,8 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { X, Target, IndianRupee, Users, Check, AlertTriangle } from 'lucide-react';
 import { api } from '../../services/api';
 
-const DEFAULT_STAFF = ['Karthik Raja', 'Senthil Kumar', 'Priya Dharshini', 'Manoj Kumar'];
-
 export const SalesTargetModal = ({ month, currentMetrics, onClose, onSaved }) => {
   const [showroomTarget, setShowroomTarget] = useState(
     String(currentMetrics?.kpi?.salesTarget || 2500000)
@@ -17,11 +15,41 @@ export const SalesTargetModal = ({ month, currentMetrics, onClose, onSaved }) =>
         target: String(s.target || 625000),
       }));
     }
-    return DEFAULT_STAFF.map((name) => ({
-      staffName: name,
-      target: '625000',
-    }));
+    return [];
   });
+
+  // Fetch live active showroom employees
+  useEffect(() => {
+    const fetchLiveStaff = async () => {
+      try {
+        const res = await api.getUsers();
+        if (res && res.success && Array.isArray(res.data)) {
+          const employees = res.data.filter((u) => u.role !== 'owner' && u.active !== false);
+          const existing = currentMetrics?.salespersonPerformance || [];
+          const existingMap = {};
+          existing.forEach((s) => {
+            existingMap[s.staff] = String(s.target || '');
+          });
+
+          const defaultSplit = employees.length > 0
+            ? String(Math.round((Number(showroomTarget) || 2500000) / employees.length))
+            : '625000';
+
+          const mapped = employees.map((emp) => ({
+            staffName: emp.name,
+            target: existingMap[emp.name] || defaultSplit,
+          }));
+
+          if (mapped.length > 0) {
+            setStaffTargets(mapped);
+          }
+        }
+      } catch (err) {
+        console.warn('Error fetching live showroom staff for targets:', err);
+      }
+    };
+    fetchLiveStaff();
+  }, []);
 
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);

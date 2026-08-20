@@ -19,20 +19,27 @@ export const FieldCard = ({ field, index, total, onEdit, isDragging, onDragStart
     category: 'Custom',
   };
 
-  const getBadgeClass = (type) => {
+  const getBadgeStyle = (type) => {
     switch (type) {
-      case 'currency': return 'badge-amber';
+      case 'currency':
+        return { bg: '#FEF3C7', text: '#B45309', border: '#FDE68A' };
       case 'phone':
-      case 'email': return 'badge-blue';
+      case 'email':
+        return { bg: '#EFF6FF', text: '#1D4ED8', border: '#BFDBFE' };
       case 'select':
       case 'radio':
-      case 'multiselect': return 'badge-purple';
+      case 'multiselect':
+        return { bg: '#F5F3FF', text: '#6D28D9', border: '#DDD6FE' };
       case 'date':
       case 'datetime':
-      case 'time': return 'badge-emerald';
-      default: return 'badge-slate';
+      case 'time':
+        return { bg: '#ECFDF5', text: '#047857', border: '#A7F3D0' };
+      default:
+        return { bg: '#F1F5F9', text: '#475569', border: '#E2E8F0' };
     }
   };
+
+  const badgeStyle = getBadgeStyle(field.type);
 
   return (
     <div
@@ -40,72 +47,88 @@ export const FieldCard = ({ field, index, total, onEdit, isDragging, onDragStart
       onDragStart={(e) => onDragStart && onDragStart(e, index)}
       onDragOver={(e) => onDragOver && onDragOver(e, index)}
       onDrop={(e) => onDrop && onDrop(e, index)}
-      className="glass-card glass-card-interactive"
       style={{
         padding: '14px 18px',
         marginBottom: '10px',
-        opacity: field.active ? 1 : 0.65,
-        borderColor: isDragging ? 'var(--primary-600)' : 'var(--border-default)',
-        background: isDragging ? 'var(--primary-50)' : '#FFFFFF',
+        borderRadius: '16px',
+        border: `1.5px solid ${isDragging ? '#2563EB' : field.active ? '#E2E8F0' : '#CBD5E1'}`,
+        backgroundColor: isDragging ? '#EFF6FF' : field.active ? '#FFFFFF' : '#F8FAFC',
+        opacity: field.active ? 1 : 0.7,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
         gap: '14px',
         cursor: 'grab',
+        boxShadow: isDragging
+          ? '0 10px 25px -5px rgba(37, 99, 235, 0.25)'
+          : '0 2px 8px rgba(0, 0, 0, 0.02)',
+        transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
       }}
     >
-      {/* Left: Drag Handle, Order, and Title Info */}
+      {/* Left: Drag Handle, Step Order & Field Details */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1, minWidth: 0 }}>
         {/* Grip Handle */}
-        <div style={{ color: 'var(--text-light)', display: 'flex', alignItems: 'center' }}>
+        <div style={{ color: '#94A3B8', display: 'flex', alignItems: 'center', cursor: 'grab' }}>
           <GripVertical size={18} />
         </div>
 
         {/* Up / Down Controls */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1px' }}>
           <button
+            type="button"
             onClick={() => moveField(field.id, 'up')}
             disabled={index === 0}
-            className="btn-icon"
-            style={{ padding: '2px', opacity: index === 0 ? 0.25 : 1 }}
+            style={{
+              background: 'none',
+              border: 'none',
+              padding: '2px',
+              cursor: index === 0 ? 'default' : 'pointer',
+              color: index === 0 ? '#CBD5E1' : '#64748B',
+            }}
             title="Move field up"
           >
             <ChevronUp size={13} />
           </button>
           <button
+            type="button"
             onClick={() => moveField(field.id, 'down')}
             disabled={index === total - 1}
-            className="btn-icon"
-            style={{ padding: '2px', opacity: index === total - 1 ? 0.25 : 1 }}
+            style={{
+              background: 'none',
+              border: 'none',
+              padding: '2px',
+              cursor: index === total - 1 ? 'default' : 'pointer',
+              color: index === total - 1 ? '#CBD5E1' : '#64748B',
+            }}
             title="Move field down"
           >
             <ChevronDown size={13} />
           </button>
         </div>
 
-        {/* Order Number Badge */}
+        {/* Order Step Number Pill */}
         <div
           style={{
             width: '26px',
             height: '26px',
-            borderRadius: '6px',
-            background: 'var(--primary-50)',
-            border: '1px solid #CCFBF1',
+            borderRadius: '8px',
+            backgroundColor: '#EFF6FF',
+            border: '1px solid #BFDBFE',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             fontSize: '12px',
-            fontWeight: '700',
-            color: 'var(--primary-700)',
+            fontWeight: '800',
+            color: '#1D4ED8',
           }}
         >
           {index + 1}
         </div>
 
-        {/* Field Details */}
+        {/* Field Name & Metadata */}
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-            <span style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text-primary)' }}>
+            <span style={{ fontSize: '14.5px', fontWeight: '800', color: '#0F172A' }}>
               {field.label}
             </span>
 
@@ -115,53 +138,73 @@ export const FieldCard = ({ field, index, total, onEdit, isDragging, onDragStart
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: '2px',
-                  color: 'var(--rose-600)',
+                  color: '#E11D48',
                   fontSize: '11px',
                   fontWeight: '700',
-                  background: 'var(--rose-50)',
+                  backgroundColor: '#FFF1F2',
                   border: '1px solid #FECDD3',
-                  padding: '1px 6px',
-                  borderRadius: '4px',
+                  padding: '1px 7px',
+                  borderRadius: '6px',
                 }}
               >
                 <Asterisk size={10} /> Required
               </span>
             )}
 
-            <span className={`badge ${getBadgeClass(field.type)}`}>
+            <span
+              style={{
+                fontSize: '11px',
+                fontWeight: '700',
+                backgroundColor: badgeStyle.bg,
+                color: badgeStyle.text,
+                border: `1px solid ${badgeStyle.border}`,
+                padding: '2px 8px',
+                borderRadius: '8px',
+              }}
+            >
               {fieldDef.label || field.type}
             </span>
 
             {!field.active && (
-              <span className="badge badge-slate" style={{ color: 'var(--text-muted)' }}>
+              <span
+                style={{
+                  fontSize: '10.5px',
+                  fontWeight: '700',
+                  backgroundColor: '#F1F5F9',
+                  color: '#64748B',
+                  border: '1px solid #E2E8F0',
+                  padding: '1px 6px',
+                  borderRadius: '6px',
+                }}
+              >
                 Inactive
               </span>
             )}
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '2px' }}>
-            <span className="mono" style={{ fontSize: '11.5px', color: 'var(--text-muted)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginTop: '3px' }}>
+            <span style={{ fontSize: '11.5px', fontFamily: 'monospace', color: '#64748B', fontWeight: '600' }}>
               key: {field.name}
             </span>
-            {field.placeholder && (
-              <span style={{ fontSize: '11.5px', color: 'var(--text-secondary)' }}>
+            {field.placeholder ? (
+              <span style={{ fontSize: '11.5px', color: '#475569' }}>
                 • "{field.placeholder}"
               </span>
-            )}
-            {field.options && field.options.length > 0 && (
-              <span style={{ fontSize: '11.5px', color: 'var(--primary-700)', fontWeight: '500' }}>
-                • {field.options.length} choices
+            ) : null}
+            {field.options && field.options.length > 0 ? (
+              <span style={{ fontSize: '11.5px', color: '#2563EB', fontWeight: '700' }}>
+                • {field.options.length} options
               </span>
-            )}
+            ) : null}
           </div>
         </div>
       </div>
 
-      {/* Right: Actions */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-        {/* Active Switch */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginRight: '6px' }}>
-          <span style={{ fontSize: '11.5px', color: field.active ? 'var(--emerald-700)' : 'var(--text-muted)', fontWeight: '600' }}>
+      {/* Right Actions Toolbar */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        {/* Active Toggle Switch */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginRight: '4px' }}>
+          <span style={{ fontSize: '11.5px', color: field.active ? '#059669' : '#64748B', fontWeight: '700' }}>
             {field.active ? 'Active' : 'Disabled'}
           </span>
           <label className="toggle-switch">
@@ -176,19 +219,43 @@ export const FieldCard = ({ field, index, total, onEdit, isDragging, onDragStart
 
         {/* Configure Button */}
         <button
+          type="button"
           onClick={() => onEdit(field)}
-          className="btn btn-secondary"
-          style={{ padding: '6px 12px', fontSize: '12px', gap: '5px' }}
-          title="Configure field settings"
+          style={{
+            backgroundColor: '#EFF6FF',
+            border: '1.5px solid #BFDBFE',
+            color: '#1D4ED8',
+            borderRadius: '10px',
+            padding: '7px 14px',
+            fontSize: '12px',
+            fontWeight: '700',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            transition: 'all 0.2s ease',
+          }}
+          title="Configure field properties and options"
         >
-          <Settings2 size={13} color="var(--primary-700)" />
+          <Settings2 size={14} color="#2563EB" />
           Configure
         </button>
 
         {/* Duplicate Button */}
         <button
+          type="button"
           onClick={() => duplicateField(field.id)}
-          className="btn-icon"
+          style={{
+            backgroundColor: '#F8FAFC',
+            border: '1px solid #E2E8F0',
+            color: '#475569',
+            borderRadius: '10px',
+            padding: '7px',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
           title="Duplicate field"
         >
           <Copy size={14} />
@@ -196,9 +263,19 @@ export const FieldCard = ({ field, index, total, onEdit, isDragging, onDragStart
 
         {/* Delete Button */}
         <button
+          type="button"
           onClick={() => deleteField(field.id)}
-          className="btn-icon"
-          style={{ color: 'var(--rose-600)' }}
+          style={{
+            backgroundColor: '#FEE2E2',
+            border: '1px solid #FECDD3',
+            color: '#991B1B',
+            borderRadius: '10px',
+            padding: '7px',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
           title="Delete field"
         >
           <Trash2 size={14} />

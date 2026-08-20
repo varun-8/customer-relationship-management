@@ -1,5 +1,6 @@
-import React from 'react';
-import { Plus, RefreshCw, Wifi, WifiOff, Cloud } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Plus, RefreshCw, Wifi, WifiOff, Cloud, QrCode, Smartphone } from 'lucide-react';
+import { api } from '../../services/api';
 
 export const Header = ({
   title,
@@ -9,7 +10,29 @@ export const Header = ({
   isOnline = true,
   isChecking = false,
   onRetryConnection,
+  onOpenPairingModal,
 }) => {
+  const [activeDeviceCount, setActiveDeviceCount] = useState(0);
+
+  useEffect(() => {
+    let isMounted = true;
+    const checkDevices = async () => {
+      try {
+        const res = await api.getConnectedDevices();
+        if (res && res.success && isMounted) {
+          setActiveDeviceCount(res.activeCount || 0);
+        }
+      } catch (e) {}
+    };
+
+    checkDevices();
+    const interval = setInterval(checkDevices, 5000);
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, []);
+
   return (
     <header className="app-header">
       <div className="page-header-intro">
@@ -20,6 +43,48 @@ export const Header = ({
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        {/* Mobile App QR Pairing Shortcut with Live Connected Badge */}
+        {onOpenPairingModal && (
+          <button
+            type="button"
+            onClick={onOpenPairingModal}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              backgroundColor: activeDeviceCount > 0 ? '#F0FDF4' : '#EFF6FF',
+              border: `1px solid ${activeDeviceCount > 0 ? '#86EFAC' : '#BFDBFE'}`,
+              padding: '7px 14px',
+              borderRadius: '8px',
+              fontSize: '12px',
+              fontWeight: '700',
+              color: activeDeviceCount > 0 ? '#15803D' : '#1D4ED8',
+              cursor: 'pointer',
+              transition: 'all 0.2s ease',
+              boxShadow: activeDeviceCount > 0 ? '0 1px 4px rgba(22, 163, 74, 0.15)' : 'none',
+            }}
+            title="Show QR Code to pair employee mobile app with this desktop server"
+          >
+            <QrCode size={15} color={activeDeviceCount > 0 ? '#16A34A' : '#2563EB'} />
+            <span>Pair Mobile</span>
+            {activeDeviceCount > 0 && (
+              <span
+                style={{
+                  backgroundColor: '#16A34A',
+                  color: '#FFFFFF',
+                  fontSize: '10.5px',
+                  fontWeight: '800',
+                  padding: '1px 6px',
+                  borderRadius: '10px',
+                  marginLeft: '2px',
+                }}
+              >
+                {activeDeviceCount} Online
+              </span>
+            )}
+          </button>
+        )}
+
         {/* Live Cloud Connection Status Badge */}
         {isOnline ? (
           <div
