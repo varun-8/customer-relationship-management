@@ -32,7 +32,7 @@ const COMMON_REASONS = [
   'Other / Custom Reason',
 ];
 
-const COMMON_COMPETITORS = [
+const DEFAULT_COMPETITORS = [
   'Supreme Tiles',
   'Kajaria World',
   'Local Ceramics Mart',
@@ -44,6 +44,58 @@ const COMMON_COMPETITORS = [
 
 export const LostSaleModal = ({ initialData, customer, onClose, onSaved }) => {
   const todayStr = new Date().toISOString().split('T')[0];
+
+  // Persistent Competitors List from localStorage
+  const [competitorList, setCompetitorList] = useState(() => {
+    try {
+      const saved = localStorage.getItem('crm_saved_competitors');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (e) {
+      console.warn('Error reading saved competitors:', e);
+    }
+    return DEFAULT_COMPETITORS;
+  });
+
+  const [newCompetitorName, setNewCompetitorName] = useState('');
+  const [showAddCompetitorInput, setShowAddCompetitorInput] = useState(false);
+
+  const saveCompetitorList = (list) => {
+    setCompetitorList(list);
+    try {
+      localStorage.setItem('crm_saved_competitors', JSON.stringify(list));
+    } catch (e) {
+      console.warn('Error saving competitors:', e);
+    }
+  };
+
+  const handleAddCompetitor = (e) => {
+    e.preventDefault();
+    const trimmed = newCompetitorName.trim();
+    if (!trimmed) return;
+    if (!competitorList.includes(trimmed)) {
+      const updated = [...competitorList, trimmed];
+      saveCompetitorList(updated);
+    }
+    setCompetitor(trimmed);
+    setNewCompetitorName('');
+    setShowAddCompetitorInput(false);
+  };
+
+  const handleRemoveCompetitor = (compToRemove, e) => {
+    e.stopPropagation();
+    if (competitorList.length <= 1) {
+      alert('Must keep at least one competitor option in list.');
+      return;
+    }
+    const updated = competitorList.filter((c) => c !== compToRemove);
+    saveCompetitorList(updated);
+    if (competitor === compToRemove) {
+      setCompetitor(updated[0] || 'Unknown Dealer');
+    }
+  };
 
   const [customerName, setCustomerName] = useState(initialData?.customerName || customer?.customerName || '');
   const [phone, setPhone] = useState(initialData?.phone || customer?.phone || '');
@@ -85,8 +137,7 @@ export const LostSaleModal = ({ initialData, customer, onClose, onSaved }) => {
 
   const [lostReason, setLostReason] = useState(initialData?.lostReason || 'Price Too High / Cheaper Competitor Quote');
   const [customReason, setCustomReason] = useState('');
-  const [competitor, setCompetitor] = useState(initialData?.competitor || 'Supreme Tiles');
-  const [customCompetitor, setCustomCompetitor] = useState('');
+  const [competitor, setCompetitor] = useState(initialData?.competitor || competitorList[0] || 'Supreme Tiles');
   const [priceDifference, setPriceDifference] = useState(
     initialData?.priceDifference !== undefined ? String(initialData.priceDifference) : ''
   );
@@ -179,7 +230,6 @@ export const LostSaleModal = ({ initialData, customer, onClose, onSaved }) => {
     }
 
     const finalReason = lostReason === 'Other / Custom Reason' && customReason.trim() ? customReason.trim() : lostReason;
-    const finalCompetitor = competitor === 'Other' && customCompetitor.trim() ? customCompetitor.trim() : competitor;
 
     setSaving(true);
     try {
@@ -191,7 +241,7 @@ export const LostSaleModal = ({ initialData, customer, onClose, onSaved }) => {
         products: selectedProducts,
         salesperson: salesperson.trim(),
         lostReason: finalReason,
-        competitor: finalCompetitor || 'Unknown Dealer',
+        competitor: competitor || 'Unknown Dealer',
         priceDifference: Number(priceDifference) || 0,
         priceDiffPercentage: diffPercent,
         date,
@@ -220,33 +270,45 @@ export const LostSaleModal = ({ initialData, customer, onClose, onSaved }) => {
       onClick={onClose}
       style={{
         zIndex: 1100,
-        backgroundColor: 'rgba(15, 23, 42, 0.65)',
-        backdropFilter: 'blur(8px)',
-        WebkitBackdropFilter: 'blur(8px)',
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        width: '100vw',
+        height: '100vh',
+        backgroundColor: 'rgba(15, 23, 42, 0.85)',
+        backdropFilter: 'blur(16px)',
+        WebkitBackdropFilter: 'blur(16px)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '20px',
+        margin: 0,
       }}
     >
       <div
         className="modal-card"
         style={{
-          maxWidth: '720px',
-          width: '95%',
+          maxWidth: '740px',
+          width: '100%',
           maxHeight: '92vh',
-          borderRadius: '16px',
+          borderRadius: '24px',
           overflow: 'hidden',
           display: 'flex',
           flexDirection: 'column',
-          boxShadow: '0 25px 60px -15px rgba(15, 23, 42, 0.4)',
-          background: '#FFFFFF',
+          boxShadow: '0 25px 60px -15px rgba(0, 0, 0, 0.4)',
+          backgroundColor: '#FFFFFF',
+          margin: 'auto',
         }}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Rich Crimson Gradient Header */}
+        {/* Header */}
         <div
           style={{
             background: 'linear-gradient(135deg, #0F172A 0%, #1E293B 100%)',
-            padding: '18px 24px',
+            padding: '20px 24px',
             color: '#FFFFFF',
-            borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
@@ -255,23 +317,23 @@ export const LostSaleModal = ({ initialData, customer, onClose, onSaved }) => {
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <div
               style={{
-                width: '42px',
-                height: '42px',
-                borderRadius: '12px',
+                width: '44px',
+                height: '44px',
+                borderRadius: '14px',
                 background: 'linear-gradient(135deg, #DC2626 0%, #991B1B 100%)',
                 color: '#FFFFFF',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                boxShadow: '0 6px 14px rgba(220, 38, 38, 0.35)',
+                boxShadow: '0 6px 16px rgba(220, 38, 38, 0.35)',
               }}
             >
               <FileX size={20} />
             </div>
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '800', letterSpacing: '-0.01em', color: '#FFFFFF' }}>
-                  {initialData ? 'Edit Lost Sale Analysis' : 'Record Lost Sale & Competitor Intelligence'}
+                <h3 style={{ margin: 0, fontSize: '17px', fontWeight: '800', letterSpacing: '-0.01em', color: '#FFFFFF' }}>
+                  {initialData ? 'Edit Lost Sale Intelligence' : 'Record Lost Sale & Competitor Intelligence'}
                 </h3>
                 {customerId && (
                   <span
@@ -284,7 +346,7 @@ export const LostSaleModal = ({ initialData, customer, onClose, onSaved }) => {
                       borderRadius: '6px',
                       fontFamily: 'monospace',
                       fontSize: '11.5px',
-                      fontWeight: '700',
+                      fontWeight: '800',
                       color: '#F87171',
                     }}
                   >
@@ -294,7 +356,7 @@ export const LostSaleModal = ({ initialData, customer, onClose, onSaved }) => {
                 )}
               </div>
               <p style={{ margin: '3px 0 0', fontSize: '12px', color: '#94A3B8' }}>
-                Track competitor pricing gaps, product leakage, and root causes for lost quotations.
+                Analyze winning competitor dealers, discount gaps, and reasons for lost quotes.
               </p>
             </div>
           </div>
@@ -303,10 +365,10 @@ export const LostSaleModal = ({ initialData, customer, onClose, onSaved }) => {
             type="button"
             onClick={onClose}
             style={{
-              background: 'rgba(255, 255, 255, 0.08)',
+              backgroundColor: 'rgba(255, 255, 255, 0.1)',
               border: 'none',
-              borderRadius: '8px',
-              padding: '6px',
+              borderRadius: '10px',
+              padding: '8px',
               color: '#94A3B8',
               cursor: 'pointer',
               display: 'flex',
@@ -318,83 +380,69 @@ export const LostSaleModal = ({ initialData, customer, onClose, onSaved }) => {
           </button>
         </div>
 
-        {/* Modal Form Body with Distinct Sections */}
+        {/* Modal Form Body */}
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
-          <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <div style={{ flex: 1, overflowY: 'auto', padding: '24px', display: 'flex', flexDirection: 'column', gap: '18px', backgroundColor: '#F8FAFC' }}>
             {error && (
-              <div className="kpi-alert-danger">
+              <div style={{ padding: '12px 16px', borderRadius: '12px', backgroundColor: '#FEF2F2', border: '1px solid #FECACA', color: '#DC2626', fontSize: '13px', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <AlertTriangle size={16} />
                 <span>{error}</span>
               </div>
             )}
 
-            {/* Quick CRM Lookup Bar */}
-            {!initialData && !customer && (
-              <div style={{ position: 'relative' }}>
-                <label className="form-label" style={{ fontSize: '11px', fontWeight: '800', color: '#64748B' }}>
-                  ✨ QUICK POPULATE FROM CRM LEAD (OPTIONAL):
-                </label>
-                <div style={{ position: 'relative' }}>
+            {/* SECTION 1: CUSTOMER LEAD INFO */}
+            <div className="lost-section-box" style={{ backgroundColor: '#FFFFFF', borderRadius: '18px', border: '1px solid #E2E8F0', padding: '18px' }}>
+              <div className="lost-section-title" style={{ fontSize: '12px', fontWeight: '800', color: '#0F172A', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <User size={14} color="#2563EB" />
+                <span>1. CUSTOMER IDENTITY & QUOTATION VALUE</span>
+              </div>
+
+              {!initialData && !customer && (
+                <div style={{ position: 'relative', marginBottom: '14px' }}>
+                  <label className="form-label" style={{ fontSize: '11.5px', fontWeight: '800', color: '#64748B' }}>
+                    LINK EXISTING CRM CUSTOMER (OPTIONAL)
+                  </label>
                   <input
                     type="text"
                     className="form-input"
-                    placeholder="Search by customer name, phone, or ID (e.g. #CUS-1002)..."
+                    placeholder="Search by customer name, phone, or #ID..."
                     value={searchCrm}
                     onChange={(e) => setSearchCrm(e.target.value)}
-                    style={{ backgroundColor: '#F8FAFC', borderColor: '#CBD5E1' }}
+                    style={{ width: '100%', padding: '9px 12px', borderRadius: '10px', border: '1.5px solid #CBD5E1', fontSize: '12.5px' }}
                   />
-                  {loadingCrm && (
-                    <span style={{ position: 'absolute', right: '12px', top: '10px', fontSize: '11px', color: '#64748B' }}>
-                      Searching...
-                    </span>
+
+                  {showCrmDropdown && crmCustomers.length > 0 && (
+                    <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 10, backgroundColor: '#FFFFFF', borderRadius: '12px', border: '1px solid #E2E8F0', boxShadow: '0 10px 25px rgba(0,0,0,0.1)', marginTop: '4px', overflow: 'hidden' }}>
+                      {crmCustomers.map((cust) => {
+                        const d = cust.data instanceof Map ? Object.fromEntries(cust.data) : (cust.data || {});
+                        return (
+                          <div
+                            key={cust._id}
+                            onClick={() => handleSelectCustomer(cust)}
+                            style={{ padding: '10px 14px', borderBottom: '1px solid #F1F5F9', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
+                          >
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <span style={{ fontWeight: '800', color: '#2563EB', fontFamily: 'monospace', fontSize: '12px' }}>
+                                #{cust.customerId}
+                              </span>
+                              <span style={{ fontWeight: '700', color: '#0F172A', fontSize: '13px' }}>
+                                {d.customerName || 'Unnamed'}
+                              </span>
+                            </div>
+                            <span style={{ color: '#64748B', fontSize: '12px' }}>
+                              📞 {d.phone || 'No phone'}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
                   )}
                 </div>
-
-                {showCrmDropdown && crmCustomers.length > 0 && (
-                  <div className="lost-crm-search-dropdown">
-                    {crmCustomers.map((cust) => {
-                      const d = cust.data instanceof Map ? Object.fromEntries(cust.data) : (cust.data || {});
-                      return (
-                        <div
-                          key={cust._id || cust.customerId}
-                          className="lost-crm-search-item"
-                          onClick={() => handleSelectCustomer(cust)}
-                        >
-                          <span style={{ fontWeight: '800', color: '#2563EB', fontFamily: 'monospace' }}>
-                            #{cust.customerId}
-                          </span>
-                          <span style={{ fontWeight: '700', color: '#0F172A' }}>
-                            {d.customerName || 'Unnamed'}
-                          </span>
-                          <span style={{ color: '#64748B', fontSize: '11.5px' }}>
-                            📞 {d.phone || 'No phone'}
-                          </span>
-                          {d.quotationValue && (
-                            <span style={{ fontWeight: '800', color: '#059669', marginLeft: 'auto' }}>
-                              ₹{Number(d.quotationValue).toLocaleString('en-IN')}
-                            </span>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* SECTION 1: CUSTOMER & QUOTATION VALUE */}
-            <div className="lost-section-box">
-              <div className="lost-section-title">
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <User size={14} color="#DC2626" />
-                  <span>1. CUSTOMER & QUOTATION VALUE</span>
-                </div>
-                {customerId && <span className="lost-id-tag">#{customerId}</span>}
-              </div>
+              )}
 
               <div className="kpi-grid-2">
                 <div className="form-group">
-                  <label className="form-label">Customer Name *</label>
+                  <label className="form-label" style={{ fontSize: '12px', fontWeight: '800', color: '#0F172A' }}>Customer Name *</label>
                   <input
                     type="text"
                     className="form-input"
@@ -402,75 +450,87 @@ export const LostSaleModal = ({ initialData, customer, onClose, onSaved }) => {
                     value={customerName}
                     onChange={(e) => setCustomerName(e.target.value)}
                     required
+                    style={{ padding: '10px 14px', borderRadius: '10px', border: '1.5px solid #CBD5E1', fontWeight: '700' }}
                   />
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label">Phone Number</label>
+                  <label className="form-label" style={{ fontSize: '12px', fontWeight: '800', color: '#0F172A' }}>Phone Number</label>
                   <input
                     type="tel"
                     className="form-input"
                     placeholder="+91 98765 43210"
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
+                    style={{ padding: '10px 14px', borderRadius: '10px', border: '1.5px solid #CBD5E1' }}
                   />
                 </div>
               </div>
 
-              <div className="kpi-grid-2" style={{ marginTop: '10px' }}>
+              <div className="kpi-grid-2" style={{ marginTop: '12px' }}>
                 <div className="form-group">
-                  <label className="form-label">Quotation Value (₹) *</label>
-                  <div className="input-icon-wrapper">
-                    <span className="input-currency-tag">₹</span>
+                  <label className="form-label" style={{ fontSize: '12px', fontWeight: '800', color: '#0F172A' }}>Quotation Value (₹) *</label>
+                  <div className="input-icon-wrapper" style={{ position: 'relative' }}>
+                    <span style={{ position: 'absolute', left: '12px', top: '10px', fontWeight: '900', color: '#DC2626', fontSize: '15px' }}>₹</span>
                     <input
                       type="number"
-                      className="form-input form-input-with-currency"
+                      className="form-input"
                       placeholder="e.g. 150000"
                       value={quoteValue}
                       onChange={(e) => setQuoteValue(e.target.value)}
                       required
                       min="0"
-                      style={{ fontWeight: '900', color: '#DC2626', fontSize: '15px' }}
+                      style={{ paddingLeft: '28px', paddingRight: '12px', paddingTop: '9px', paddingBottom: '9px', borderRadius: '10px', border: '1.5px solid #CBD5E1', fontWeight: '900', color: '#DC2626', fontSize: '15px' }}
                     />
                   </div>
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label">Lost Date *</label>
+                  <label className="form-label" style={{ fontSize: '12px', fontWeight: '800', color: '#0F172A' }}>Lost Date *</label>
                   <input
                     type="date"
                     className="form-input"
                     value={date}
                     onChange={(e) => setDate(e.target.value)}
                     required
-                    style={{ fontWeight: '700' }}
+                    style={{ padding: '9px 12px', borderRadius: '10px', border: '1.5px solid #CBD5E1', fontWeight: '700' }}
                   />
                 </div>
               </div>
             </div>
 
             {/* SECTION 2: PRODUCTS & SALESPERSON */}
-            <div className="lost-section-box">
-              <div className="lost-section-title">
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <Layers size={14} color="#2563EB" />
-                  <span>2. PRODUCT CATEGORIES & SALES STAFF</span>
-                </div>
+            <div className="lost-section-box" style={{ backgroundColor: '#FFFFFF', borderRadius: '18px', border: '1px solid #E2E8F0', padding: '18px' }}>
+              <div className="lost-section-title" style={{ fontSize: '12px', fontWeight: '800', color: '#0F172A', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <Layers size={14} color="#2563EB" />
+                <span>2. PRODUCT CATEGORIES & SALES STAFF</span>
               </div>
 
               <div className="form-group">
-                <label className="form-label">Product Lines Quoted (Multi-Select) *</label>
-                <div className="lost-product-chips-grid">
+                <label className="form-label" style={{ fontSize: '12px', fontWeight: '800', color: '#0F172A', marginBottom: '8px', display: 'block' }}>Product Lines Quoted (Multi-Select) *</label>
+                <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
                   {PRODUCT_OPTIONS.map((prod) => {
                     const isSel = selectedProducts.includes(prod);
                     return (
                       <button
                         key={prod}
                         type="button"
-                        className={`lost-prod-chip ${isSel ? 'lost-prod-chip-active' : ''}`}
                         onClick={() => toggleProduct(prod)}
+                        style={{
+                          padding: '6px 14px',
+                          borderRadius: '10px',
+                          border: isSel ? '1.5px solid #2563EB' : '1px solid #E2E8F0',
+                          backgroundColor: isSel ? '#EFF6FF' : '#FFFFFF',
+                          color: isSel ? '#2563EB' : '#475569',
+                          fontWeight: isSel ? '800' : '600',
+                          fontSize: '12px',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                        }}
                       >
-                        {isSel && <Check size={14} style={{ marginRight: '4px' }} />}
+                        {isSel && <Check size={14} />}
                         <span>{prod}</span>
                       </button>
                     );
@@ -478,19 +538,28 @@ export const LostSaleModal = ({ initialData, customer, onClose, onSaved }) => {
                 </div>
               </div>
 
-              <div className="form-group" style={{ marginTop: '12px' }}>
-                <label className="form-label">Salesperson Handling Deal *</label>
-                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+              <div className="form-group" style={{ marginTop: '14px' }}>
+                <label className="form-label" style={{ fontSize: '12px', fontWeight: '800', color: '#0F172A', marginBottom: '8px', display: 'block' }}>Sales Executive Handling Deal *</label>
+                <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
                   {staffList.map((staff) => {
                     const isSel = salesperson === staff;
                     return (
                       <button
                         key={staff}
                         type="button"
-                        className={`kpi-chip-pill ${isSel ? 'kpi-chip-pill-active' : ''}`}
                         onClick={() => setSalesperson(staff)}
+                        style={{
+                          padding: '6px 14px',
+                          borderRadius: '10px',
+                          border: isSel ? '1.5px solid #059669' : '1px solid #E2E8F0',
+                          backgroundColor: isSel ? '#ECFDF5' : '#FFFFFF',
+                          color: isSel ? '#059669' : '#475569',
+                          fontWeight: isSel ? '800' : '600',
+                          fontSize: '12px',
+                          cursor: 'pointer',
+                        }}
                       >
-                        {staff}
+                        👤 {staff}
                       </button>
                     );
                   })}
@@ -498,86 +567,135 @@ export const LostSaleModal = ({ initialData, customer, onClose, onSaved }) => {
               </div>
             </div>
 
-            {/* SECTION 3: COMPETITOR & PRICING GAP */}
-            <div className="lost-section-box">
-              <div className="lost-section-title">
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <Building2 size={14} color="#EA580C" />
-                  <span>3. COMPETITOR SHOWROOM & PRICING GAP</span>
-                </div>
+            {/* SECTION 3: COMPETITOR SHOWROOM CRUD & PRICING GAP */}
+            <div className="lost-section-box" style={{ backgroundColor: '#FFFFFF', borderRadius: '18px', border: '1px solid #E2E8F0', padding: '18px' }}>
+              <div className="lost-section-title" style={{ fontSize: '12px', fontWeight: '800', color: '#0F172A', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <Building2 size={14} color="#EA580C" />
+                <span>3. COMPETITOR SHOWROOM & PRICING GAP</span>
               </div>
 
-              {/* Competitor Showroom */}
+              {/* Dynamic Competitor Selection & CRUD Chips */}
               <div className="form-group">
-                <label className="form-label">Competitor Showroom / Winning Dealer *</label>
-                <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '8px' }}>
-                  {COMMON_COMPETITORS.map((comp) => {
-                    const isSel = competitor === comp;
-                    return (
-                      <button
-                        key={comp}
-                        type="button"
-                        className={`lost-comp-chip ${isSel ? 'lost-comp-chip-active' : ''}`}
-                        onClick={() => {
-                          setCompetitor(comp);
-                          setCustomCompetitor('');
-                        }}
-                      >
-                        {comp}
-                      </button>
-                    );
-                  })}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                  <label className="form-label" style={{ fontSize: '12px', fontWeight: '800', color: '#0F172A', margin: 0 }}>
+                    Competitor Showroom / Winning Dealer *
+                  </label>
                   <button
                     type="button"
-                    className={`lost-comp-chip ${competitor === 'Other' ? 'lost-comp-chip-active' : ''}`}
-                    onClick={() => setCompetitor('Other')}
+                    onClick={() => setShowAddCompetitorInput(!showAddCompetitorInput)}
+                    style={{ fontSize: '11.5px', fontWeight: '800', color: '#2563EB', background: '#EFF6FF', border: '1px solid #DBEAFE', padding: '3px 10px', borderRadius: '8px', cursor: 'pointer' }}
                   >
-                    + Custom Competitor
+                    + Save New Competitor
                   </button>
                 </div>
 
-                {competitor === 'Other' && (
-                  <input
-                    type="text"
-                    className="form-input"
-                    placeholder="Enter competitor showroom or brand name..."
-                    value={customCompetitor}
-                    onChange={(e) => setCustomCompetitor(e.target.value)}
-                    required
-                  />
+                {/* Inline Add Competitor Input */}
+                {showAddCompetitorInput && (
+                  <div style={{ display: 'flex', gap: '8px', marginBottom: '12px', backgroundColor: '#F8FAFC', padding: '10px', borderRadius: '12px', border: '1px solid #E2E8F0' }}>
+                    <input
+                      type="text"
+                      placeholder="Enter new competitor dealer name (e.g. Royal Marble & Tiles)..."
+                      value={newCompetitorName}
+                      onChange={(e) => setNewCompetitorName(e.target.value)}
+                      style={{ flex: 1, padding: '7px 12px', borderRadius: '8px', border: '1.5px solid #CBD5E1', fontSize: '12.5px' }}
+                      autoFocus
+                    />
+                    <button
+                      type="button"
+                      onClick={handleAddCompetitor}
+                      style={{ backgroundColor: '#2563EB', color: '#FFFFFF', border: 'none', borderRadius: '8px', padding: '7px 14px', fontSize: '12px', fontWeight: '800', cursor: 'pointer' }}
+                    >
+                      Save
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowAddCompetitorInput(false)}
+                      style={{ backgroundColor: '#F1F5F9', color: '#475569', border: 'none', borderRadius: '8px', padding: '7px 12px', fontSize: '12px', fontWeight: '700', cursor: 'pointer' }}
+                    >
+                      Cancel
+                    </button>
+                  </div>
                 )}
+
+                {/* Saved Competitors Chips with Delete (x) Button */}
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '12px' }}>
+                  {competitorList.map((comp) => {
+                    const isSel = competitor === comp;
+                    return (
+                      <div
+                        key={comp}
+                        onClick={() => setCompetitor(comp)}
+                        style={{
+                          padding: '6px 12px',
+                          borderRadius: '10px',
+                          border: isSel ? '1.5px solid #EA580C' : '1px solid #E2E8F0',
+                          backgroundColor: isSel ? '#FFF7ED' : '#FFFFFF',
+                          color: isSel ? '#C2410C' : '#475569',
+                          fontWeight: isSel ? '800' : '600',
+                          fontSize: '12px',
+                          cursor: 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          transition: 'all 0.15s ease',
+                        }}
+                      >
+                        <span>🏢 {comp}</span>
+                        <button
+                          type="button"
+                          onClick={(e) => handleRemoveCompetitor(comp, e)}
+                          title="Remove saved competitor"
+                          style={{
+                            border: 'none',
+                            background: 'transparent',
+                            color: isSel ? '#C2410C' : '#94A3B8',
+                            fontSize: '13px',
+                            fontWeight: '800',
+                            cursor: 'pointer',
+                            padding: '0 2px',
+                            lineHeight: 1,
+                          }}
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
 
-              {/* Price Difference */}
-              <div className="kpi-grid-2" style={{ marginTop: '12px' }}>
+              {/* Price Difference & Calculation Card */}
+              <div className="kpi-grid-2" style={{ marginTop: '14px' }}>
                 <div className="form-group">
-                  <label className="form-label">Price Difference / Competitor Discount (₹)</label>
-                  <div className="input-icon-wrapper">
-                    <span className="input-currency-tag">₹</span>
+                  <label className="form-label" style={{ fontSize: '12px', fontWeight: '800', color: '#0F172A' }}>
+                    Price Difference / Competitor Discount (₹)
+                  </label>
+                  <div style={{ position: 'relative' }}>
+                    <span style={{ position: 'absolute', left: '12px', top: '10px', fontWeight: '900', color: '#DC2626', fontSize: '14px' }}>₹</span>
                     <input
                       type="number"
-                      className="form-input form-input-with-currency"
                       placeholder="e.g. 15000"
                       value={priceDifference}
                       onChange={(e) => setPriceDifference(e.target.value)}
                       min="0"
+                      style={{ width: '100%', paddingLeft: '28px', paddingRight: '12px', paddingTop: '8px', paddingBottom: '8px', borderRadius: '10px', border: '1.5px solid #CBD5E1', fontSize: '14px', fontWeight: '800', color: '#DC2626' }}
                     />
                   </div>
-                  <span className="kpi-field-hint">
-                    How much lower was the competitor quote?
+                  <span style={{ fontSize: '11px', color: '#64748B', marginTop: '4px', display: 'block' }}>
+                    How much lower was the competitor's quote?
                   </span>
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label">Calculated Pricing Gap</label>
-                  <div className="lost-gap-display-box">
-                    <TrendingDown size={20} color="#DC2626" />
+                  <label className="form-label" style={{ fontSize: '12px', fontWeight: '800', color: '#0F172A' }}>Pricing Gap Analysis</label>
+                  <div style={{ backgroundColor: '#FEF2F2', border: '1px solid #FECDD3', borderRadius: '12px', padding: '10px 14px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <TrendingDown size={22} color="#DC2626" />
                     <div>
                       <div style={{ fontWeight: '900', fontSize: '15px', color: '#991B1B' }}>
-                        {diffPercent > 0 ? `${diffPercent}% cheaper` : '0%'}
+                        {diffPercent > 0 ? `${diffPercent}% lower quote` : '0% price gap'}
                       </div>
-                      <div style={{ fontSize: '11px', color: '#64748B' }}>
-                        {numDiff > 0 ? `₹${numDiff.toLocaleString('en-IN')} lower price` : 'No price gap entered'}
+                      <div style={{ fontSize: '11px', color: '#7F1D1D', fontWeight: '600' }}>
+                        {numDiff > 0 ? `₹${numDiff.toLocaleString('en-IN')} competitor price discount` : 'Enter price difference above'}
                       </div>
                     </div>
                   </div>
@@ -586,21 +704,36 @@ export const LostSaleModal = ({ initialData, customer, onClose, onSaved }) => {
             </div>
 
             {/* SECTION 4: ROOT CAUSE & NOTES */}
-            <div className="lost-section-box">
-              <div className="lost-section-title">
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <Tag size={14} color="#991B1B" />
-                  <span>4. ROOT CAUSE & INTELLIGENCE NOTES</span>
-                </div>
+            <div className="lost-section-box" style={{ backgroundColor: '#FFFFFF', borderRadius: '18px', border: '1px solid #E2E8F0', padding: '18px' }}>
+              <div className="lost-section-title" style={{ fontSize: '12px', fontWeight: '800', color: '#0F172A', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <Tag size={14} color="#991B1B" />
+                <span>4. ROOT CAUSE & COMPETITOR INTEL REMARKS</span>
               </div>
 
               <div className="form-group">
-                <label className="form-label">Primary Lost Reason *</label>
+                <label className="form-label" style={{ fontSize: '12px', fontWeight: '800', color: '#0F172A', marginBottom: '6px', display: 'block' }}>Primary Lost Reason *</label>
                 <select
-                  className="form-select"
                   value={lostReason}
                   onChange={(e) => setLostReason(e.target.value)}
-                  style={{ fontWeight: '700', fontSize: '13px' }}
+                  style={{
+                    width: '100%',
+                    padding: '10px 14px',
+                    paddingRight: '36px',
+                    borderRadius: '12px',
+                    border: '1.5px solid #CBD5E1',
+                    fontSize: '13px',
+                    fontWeight: '700',
+                    color: '#0F172A',
+                    backgroundColor: '#FFFFFF',
+                    backgroundImage: `url("data:image/svg+xml;utf8,<svg fill='%23475569' height='20' viewBox='0 0 24 24' width='20' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/></svg>")`,
+                    backgroundRepeat: 'no-repeat',
+                    backgroundPosition: 'right 12px center',
+                    appearance: 'none',
+                    WebkitAppearance: 'none',
+                    boxShadow: '0 2px 6px rgba(0, 0, 0, 0.03)',
+                    cursor: 'pointer',
+                    outline: 'none',
+                  }}
                 >
                   {COMMON_REASONS.map((r) => (
                     <option key={r} value={r}>
@@ -616,50 +749,53 @@ export const LostSaleModal = ({ initialData, customer, onClose, onSaved }) => {
                     placeholder="Specify the exact reason..."
                     value={customReason}
                     onChange={(e) => setCustomReason(e.target.value)}
-                    style={{ marginTop: '8px' }}
+                    style={{ marginTop: '8px', padding: '10px 14px', borderRadius: '10px', border: '1.5px solid #CBD5E1' }}
                     required
                   />
                 )}
               </div>
 
-              <div className="form-group" style={{ marginTop: '12px' }}>
-                <label className="form-label">Discussion Remarks & Competitor Intel</label>
+              <div className="form-group" style={{ marginTop: '14px' }}>
+                <label className="form-label" style={{ fontSize: '12px', fontWeight: '800', color: '#0F172A', marginBottom: '6px', display: 'block' }}>Discussion Remarks & Intel Notes</label>
                 <textarea
-                  className="form-input"
                   rows="2"
                   placeholder="e.g. Customer liked our design but Supreme Tiles offered 10% lower bill + free site delivery..."
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
-                  style={{ fontSize: '12.5px' }}
+                  style={{ width: '100%', padding: '10px 14px', borderRadius: '12px', border: '1.5px solid #CBD5E1', fontSize: '12.5px', color: '#0F172A', backgroundColor: '#FFFFFF', outline: 'none' }}
                 />
               </div>
             </div>
           </div>
 
-          {/* Sticky Modal Action Footer */}
+          {/* Sticky Action Footer */}
           <div
             style={{
-              padding: '14px 24px',
+              padding: '16px 24px',
               borderTop: '1px solid #E2E8F0',
               background: '#F8FAFC',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'flex-end',
-              gap: '10px',
+              gap: '12px',
             }}
           >
-            <button type="button" className="btn btn-secondary" onClick={onClose}>
+            <button type="button" className="btn btn-secondary" onClick={onClose} style={{ borderRadius: '10px', padding: '8px 18px', fontWeight: '700' }}>
               Cancel
             </button>
             <button
               type="submit"
-              className="btn btn-primary"
               disabled={saving}
               style={{
                 background: 'linear-gradient(135deg, #DC2626 0%, #991B1B 100%)',
+                color: '#FFFFFF',
+                border: 'none',
+                borderRadius: '10px',
                 fontWeight: '800',
-                padding: '8px 20px',
-                boxShadow: '0 4px 12px rgba(220, 38, 38, 0.25)',
+                padding: '9px 22px',
+                fontSize: '13px',
+                cursor: 'pointer',
+                boxShadow: '0 4px 14px rgba(220, 38, 38, 0.35)',
               }}
             >
               {saving ? 'Recording...' : initialData ? 'Update Lost Sale' : '✓ Save Lost Sale Analysis'}

@@ -360,28 +360,30 @@ export const MobilePairingView = ({ isModal = false, onClose = null }) => {
                 </button>
               </div>
 
-              {/* Dynamic QR Display Box */}
+              {/* Dynamic Ultra-Professional QR Display Box */}
               <div
                 style={{
-                  backgroundColor: '#FFFFFF',
-                  border: '2px solid #E2E8F0',
-                  borderRadius: '20px',
-                  padding: '24px',
+                  background: 'linear-gradient(135deg, #0F172A 0%, #1E293B 100%)',
+                  borderRadius: '24px',
+                  padding: '30px 24px',
                   display: 'flex',
                   flexDirection: 'column',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  boxShadow: '0 15px 30px -10px rgba(37, 99, 235, 0.1)',
+                  boxShadow: '0 20px 40px -10px rgba(15, 23, 42, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.1)',
                   position: 'relative',
                   marginBottom: '24px',
+                  border: '1px solid rgba(255, 255, 255, 0.12)',
                 }}
               >
-                <div style={{ position: 'relative', padding: '12px', backgroundColor: '#FFFFFF', borderRadius: '16px' }}>
+                {/* High Contrast QR Code Container */}
+                <div style={{ position: 'relative', padding: '16px', backgroundColor: '#FFFFFF', borderRadius: '20px', boxShadow: '0 20px 50px rgba(0, 0, 0, 0.5)' }}>
                   <QRCodeSVG
                     value={dynamicQrPayload}
                     size={220}
                     level="H"
                     includeMargin={false}
+                    fgColor="#0F172A"
                     imageSettings={{
                       src: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="%232563EB"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14.5v-9l6 4.5-6 4.5z"/></svg>',
                       x: undefined,
@@ -393,21 +395,63 @@ export const MobilePairingView = ({ isModal = false, onClose = null }) => {
                   />
                 </div>
 
-                <div style={{ marginTop: '16px', textAlign: 'center' }}>
-                  <span
+                {/* Instant Pairing Status Pulse & Copy Badge */}
+                <div style={{ marginTop: '20px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+                  <div
                     style={{
-                      backgroundColor: '#EFF6FF',
-                      color: '#2563EB',
-                      border: '1px solid #BFDBFE',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      padding: '5px 14px',
+                      borderRadius: '20px',
+                      background: 'rgba(37, 99, 235, 0.2)',
+                      border: '1px solid rgba(59, 130, 246, 0.4)',
+                      color: '#93C5FD',
                       fontSize: '12px',
                       fontWeight: '700',
-                      padding: '4px 12px',
-                      borderRadius: '20px',
-                      fontFamily: 'monospace',
                     }}
                   >
-                    http://{selectedIp}:{customPort}/api
-                  </span>
+                    <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#3B82F6', boxShadow: '0 0 10px #3B82F6' }} />
+                    READY FOR INSTANT PHONE SCAN
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
+                    <span
+                      style={{
+                        backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                        color: '#E2E8F0',
+                        border: '1px solid rgba(255, 255, 255, 0.15)',
+                        fontSize: '12px',
+                        fontWeight: '700',
+                        padding: '5px 14px',
+                        borderRadius: '10px',
+                        fontFamily: 'monospace',
+                        letterSpacing: '0.02em',
+                      }}
+                    >
+                      http://{selectedIp}:{customPort}/api
+                    </span>
+                    <button
+                      type="button"
+                      onClick={handleCopyUrl}
+                      style={{
+                        padding: '5px 12px',
+                        borderRadius: '10px',
+                        background: copied ? '#059669' : 'rgba(37, 99, 235, 0.3)',
+                        color: '#FFFFFF',
+                        border: '1px solid rgba(255, 255, 255, 0.2)',
+                        fontSize: '11.5px',
+                        fontWeight: '700',
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                      }}
+                    >
+                      {copied ? <Check size={13} /> : <Copy size={13} />}
+                      {copied ? 'Copied!' : 'Copy'}
+                    </button>
+                  </div>
                 </div>
               </div>
 

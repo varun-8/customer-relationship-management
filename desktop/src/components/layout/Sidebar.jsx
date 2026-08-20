@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   LayoutGrid,
   Users,
@@ -105,6 +105,18 @@ export const Sidebar = ({
     .toUpperCase();
   const userRole = user?.role === 'owner' ? 'Showroom Owner' : 'Sales Executive';
 
+  // Keyboard shortcut (Ctrl+B / Cmd+B) to expand/shorten navigation
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'b') {
+        e.preventDefault();
+        setIsCollapsed((prev) => !prev);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
   return (
     <aside
       className={`app-sidebar ${isCollapsed ? 'app-sidebar-collapsed' : ''}`}
@@ -119,6 +131,8 @@ export const Sidebar = ({
         <div
           className="sidebar-brand"
           title={appShortName || 'Vasantham CRM'}
+          onClick={() => isCollapsed && setIsCollapsed(false)}
+          style={{ cursor: isCollapsed ? 'pointer' : 'default' }}
         >
           <div
             className="sidebar-brand-logo"
@@ -145,14 +159,14 @@ export const Sidebar = ({
           )}
         </div>
 
-        {/* Collapse / Expand Toggle Button */}
+        {/* Top Collapse / Expand Toggle Button */}
         <button
           type="button"
           className="sidebar-collapse-toggle"
           onClick={() => setIsCollapsed(!isCollapsed)}
-          title={isCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar'}
+          title={isCollapsed ? 'Expand Navigation Bar (Ctrl+B)' : 'Shorten Navigation Bar (Ctrl+B)'}
         >
-          {isCollapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
+          {isCollapsed ? <ChevronRight size={15} /> : <ChevronLeft size={15} />}
         </button>
       </div>
 
@@ -204,58 +218,41 @@ export const Sidebar = ({
             </nav>
           </div>
         ))}
+      </div>
 
-        {/* Tools Section */}
-        <div className="sidebar-nav-group">
+      {/* Dedicated Bottom Expand / Shorten Control Bar */}
+      <div style={{ padding: '10px 12px', borderTop: '1px solid rgba(255, 255, 255, 0.06)' }}>
+        <button
+          type="button"
+          onClick={() => setIsCollapsed(!isCollapsed)}
+          style={{
+            width: '100%',
+            padding: isCollapsed ? '9px 0' : '8px 12px',
+            borderRadius: '10px',
+            border: '1px solid rgba(255, 255, 255, 0.12)',
+            backgroundColor: 'rgba(255, 255, 255, 0.05)',
+            color: '#94A3B8',
+            fontSize: '12px',
+            fontWeight: '700',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: isCollapsed ? 'center' : 'space-between',
+            transition: 'all 0.2s ease',
+          }}
+          className="sidebar-bottom-toggle-btn"
+          title={isCollapsed ? 'Expand Navigation Bar (Ctrl+B)' : 'Shorten Navigation Bar (Ctrl+B)'}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            {isCollapsed ? <ChevronRight size={16} color="#38BDF8" /> : <ChevronLeft size={16} color="#38BDF8" />}
+            {!isCollapsed && <span style={{ color: '#E2E8F0' }}>Shorten Navigation</span>}
+          </div>
           {!isCollapsed && (
-            <div className="sidebar-group-heading">
-              Showroom Tools
-            </div>
+            <span style={{ fontSize: '9.5px', backgroundColor: 'rgba(255, 255, 255, 0.1)', padding: '1px 6px', borderRadius: '4px', color: '#94A3B8', fontWeight: '800' }}>
+              Ctrl+B
+            </span>
           )}
-
-          <nav className="sidebar-nav-list">
-            <button
-              type="button"
-              onClick={() => setActiveTab('mobile-pairing')}
-              className={`sidebar-nav-item sidebar-tool-item ${activeTab === 'mobile-pairing' ? 'sidebar-nav-item-active' : ''}`}
-              title={isCollapsed ? 'Pair Mobile App with QR' : undefined}
-              style={{ backgroundColor: activeTab === 'mobile-pairing' ? undefined : 'rgba(37, 99, 235, 0.08)' }}
-            >
-              <span className="sidebar-nav-item-indicator" />
-              <div className="sidebar-nav-icon-box">
-                <QrCode size={18} color={activeTab === 'mobile-pairing' ? '#FFFFFF' : '#2563EB'} strokeWidth={1.9} />
-              </div>
-              {!isCollapsed && (
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
-                  <span className="sidebar-nav-item-label" style={{ color: activeTab === 'mobile-pairing' ? '#FFFFFF' : '#2563EB', fontWeight: '700' }}>
-                    Pair Mobile App
-                  </span>
-                  <span className="sidebar-tool-pill" style={{ backgroundColor: '#DBEAFE', color: '#1D4ED8' }}>
-                    QR
-                  </span>
-                </div>
-              )}
-            </button>
-
-            <button
-              type="button"
-              onClick={onOpenMobileSimulator}
-              className="sidebar-nav-item sidebar-tool-item"
-              title={isCollapsed ? 'Launch Mobile CRM App Preview' : undefined}
-            >
-              <span className="sidebar-nav-item-indicator" />
-              <div className="sidebar-nav-icon-box">
-                <Smartphone size={18} color="#38BDF8" strokeWidth={1.9} />
-              </div>
-              {!isCollapsed && (
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
-                  <span className="sidebar-nav-item-label">Mobile App View</span>
-                  <span className="sidebar-tool-pill">SIMULATOR</span>
-                </div>
-              )}
-            </button>
-          </nav>
-        </div>
+        </button>
       </div>
 
       {/* 3. Desktop Sidebar Footer: Real User Identity Card */}

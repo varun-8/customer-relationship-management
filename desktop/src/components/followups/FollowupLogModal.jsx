@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { api } from '../../services/api';
 import { useToast } from '../../context/ToastContext';
+import { getWhatsAppUrl } from '../../utils/whatsappHelper';
 
 const OUTCOMES = [
   'Spoke with Customer / Positive Interest',
@@ -96,6 +97,10 @@ export const FollowupLogModal = ({ followUp: initialFollowUp, onClose, onSaved, 
       salesperson: d.salesperson || 'Showroom Staff',
       leadTemperature: d.leadTemperature || 'Hot',
       nextFollowUp: d.nextFollowUp || tomorrow.toISOString().split('T')[0],
+      approxQuantity: d.approxQuantity || d.sqft,
+      houseStage: d.houseStage,
+      customerType: d.customerType,
+      lastReason: d.lastReason || d.notes,
     };
     setSelectedFollowUp(mapped);
     if (mapped.quotationValue) setQuotationValue(String(mapped.quotationValue));
@@ -167,9 +172,9 @@ export const FollowupLogModal = ({ followUp: initialFollowUp, onClose, onSaved, 
         bottom: 0,
         width: '100vw',
         height: '100vh',
-        backgroundColor: 'rgba(15, 23, 42, 0.75)',
-        backdropFilter: 'blur(8px)',
-        WebkitBackdropFilter: 'blur(8px)',
+        backgroundColor: 'rgba(15, 23, 42, 0.85)',
+        backdropFilter: 'blur(16px)',
+        WebkitBackdropFilter: 'blur(16px)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -181,9 +186,9 @@ export const FollowupLogModal = ({ followUp: initialFollowUp, onClose, onSaved, 
       <div
         className="modal-card"
         style={{
-          maxWidth: '680px',
+          maxWidth: '720px',
           width: '100%',
-          maxHeight: '88vh',
+          maxHeight: '90vh',
           borderRadius: '24px',
           overflow: 'hidden',
           display: 'flex',
@@ -282,18 +287,13 @@ export const FollowupLogModal = ({ followUp: initialFollowUp, onClose, onSaved, 
               </div>
             )}
 
-            {/* SECTION 1: CUSTOMER LEAD & QUOTATION */}
+            {/* SECTION 1: CUSTOMER LEAD DETAILS CARD */}
             <div style={{ backgroundColor: '#FFFFFF', borderRadius: '18px', border: '1px solid #E2E8F0', padding: '18px', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.02)' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
                 <div style={{ fontSize: '12px', fontWeight: '800', color: '#0F172A', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'flex', alignItems: 'center', gap: '6px' }}>
                   <User size={14} color="#2563EB" />
-                  <span>1. CUSTOMER LEAD & QUOTATION VALUE</span>
+                  <span>1. CUSTOMER LEAD & COMMERCIAL DETAILS</span>
                 </div>
-                {selectedFollowUp?.salesperson && (
-                  <span style={{ fontSize: '11.5px', color: '#64748B', fontWeight: '700' }}>
-                    Rep: {selectedFollowUp.salesperson}
-                  </span>
-                )}
               </div>
 
               {!selectedFollowUp ? (
@@ -338,17 +338,76 @@ export const FollowupLogModal = ({ followUp: initialFollowUp, onClose, onSaved, 
                   )}
                 </div>
               ) : (
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
-                  <div style={{ backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '14px', padding: '12px 16px' }}>
-                    <div style={{ fontSize: '11px', color: '#64748B', fontWeight: '800', textTransform: 'uppercase' }}>CUSTOMER NAME</div>
-                    <div style={{ fontWeight: '800', fontSize: '14.5px', color: '#0F172A', marginTop: '2px' }}>
-                      {selectedFollowUp.customerName}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  {/* Lead Summary Banner */}
+                  <div style={{ backgroundColor: '#F8FAFC', borderRadius: '16px', padding: '16px', border: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <h4 style={{ margin: 0, fontSize: '16px', fontWeight: '800', color: '#0F172A' }}>
+                          {selectedFollowUp.customerName}
+                        </h4>
+                        {selectedFollowUp.customerId && (
+                          <span style={{ fontSize: '11px', color: '#2563EB', fontWeight: '800', fontFamily: 'monospace', backgroundColor: '#EFF6FF', border: '1px solid #DBEAFE', padding: '2px 7px', borderRadius: '6px' }}>
+                            #{selectedFollowUp.customerId}
+                          </span>
+                        )}
+                      </div>
+
+                      {selectedFollowUp.phone && (
+                        <a
+                          href={getWhatsAppUrl(selectedFollowUp.phone, selectedFollowUp)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{ fontSize: '11.5px', fontWeight: '800', color: '#15803D', backgroundColor: '#DCFCE7', border: '1px solid #86EFAC', padding: '4px 10px', borderRadius: '8px', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                        >
+                          💬 WhatsApp Copy
+                        </a>
+                      )}
                     </div>
-                    <div style={{ fontSize: '12px', color: '#2563EB', fontWeight: '700', marginTop: '2px' }}>
-                      📞 {selectedFollowUp.phone || 'No phone'}
+
+                    {/* Detail Grid Pills */}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '10px', fontSize: '12px' }}>
+                      <div style={{ backgroundColor: '#FFFFFF', padding: '8px 12px', borderRadius: '10px', border: '1px solid #E2E8F0' }}>
+                        <span style={{ fontSize: '10.5px', color: '#64748B', fontWeight: '700', textTransform: 'uppercase' }}>Phone Number</span>
+                        <div style={{ fontWeight: '800', color: '#0F172A', marginTop: '1px' }}>📞 {selectedFollowUp.phone || 'N/A'}</div>
+                      </div>
+
+                      <div style={{ backgroundColor: '#FFFFFF', padding: '8px 12px', borderRadius: '10px', border: '1px solid #E2E8F0' }}>
+                        <span style={{ fontSize: '10.5px', color: '#64748B', fontWeight: '700', textTransform: 'uppercase' }}>Requirements</span>
+                        <div style={{ fontWeight: '700', color: '#334155', marginTop: '1px' }}>
+                          {Array.isArray(selectedFollowUp.requirement)
+                            ? selectedFollowUp.requirement.join(', ')
+                            : typeof selectedFollowUp.requirement === 'string'
+                            ? selectedFollowUp.requirement.replace(/([a-z])([A-Z])/g, '$1, $2').replace(/([A-Z]+)([A-Z][a-z])/g, '$1, $2')
+                            : selectedFollowUp.requirement || 'Tiles & Sanitary'}
+                        </div>
+                      </div>
+
+                      <div style={{ backgroundColor: '#FFFFFF', padding: '8px 12px', borderRadius: '10px', border: '1px solid #E2E8F0' }}>
+                        <span style={{ fontSize: '10.5px', color: '#64748B', fontWeight: '700', textTransform: 'uppercase' }}>Approx Quantity</span>
+                        <div style={{ fontWeight: '700', color: '#334155', marginTop: '1px' }}>📦 {selectedFollowUp.approxQuantity || 'N/A'}</div>
+                      </div>
+
+                      <div style={{ backgroundColor: '#FFFFFF', padding: '8px 12px', borderRadius: '10px', border: '1px solid #E2E8F0' }}>
+                        <span style={{ fontSize: '10.5px', color: '#64748B', fontWeight: '700', textTransform: 'uppercase' }}>Salesperson</span>
+                        <div style={{ fontWeight: '700', color: '#0F172A', marginTop: '1px' }}>👤 {selectedFollowUp.salesperson || 'Staff'} ({selectedFollowUp.customerType || 'Direct Client'})</div>
+                      </div>
+
+                      <div style={{ backgroundColor: '#FFFFFF', padding: '8px 12px', borderRadius: '10px', border: '1px solid #E2E8F0' }}>
+                        <span style={{ fontSize: '10.5px', color: '#64748B', fontWeight: '700', textTransform: 'uppercase' }}>Stage</span>
+                        <div style={{ fontWeight: '700', color: '#334155', marginTop: '1px' }}>🏗️ {selectedFollowUp.houseStage || 'Planning'}</div>
+                      </div>
                     </div>
+
+                    {(selectedFollowUp.lastReason || selectedFollowUp.notes) && (
+                      <div style={{ backgroundColor: '#FFFFFF', padding: '8px 12px', borderRadius: '10px', border: '1px solid #E2E8F0', fontSize: '12px' }}>
+                        <span style={{ color: '#64748B', fontWeight: '700' }}>Last Discussion Note:</span>{' '}
+                        <span style={{ fontStyle: 'italic', color: '#334155' }}>"{selectedFollowUp.lastReason || selectedFollowUp.notes}"</span>
+                      </div>
+                    )}
                   </div>
 
+                  {/* Editable Quotation Input */}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                     <label style={{ fontSize: '11px', fontWeight: '800', color: '#64748B', textTransform: 'uppercase' }}>
                       QUOTATION VALUE (₹)
@@ -384,7 +443,25 @@ export const FollowupLogModal = ({ followUp: initialFollowUp, onClose, onSaved, 
                   <select
                     value={outcome}
                     onChange={(e) => setOutcome(e.target.value)}
-                    style={{ width: '100%', padding: '10px 14px', borderRadius: '12px', border: '1.5px solid #CBD5E1', fontSize: '13px', fontWeight: '700', color: '#0F172A', backgroundColor: '#FFFFFF', outline: 'none' }}
+                    style={{
+                      width: '100%',
+                      padding: '11px 16px',
+                      borderRadius: '12px',
+                      border: '1.5px solid #CBD5E1',
+                      fontSize: '13px',
+                      fontWeight: '700',
+                      color: '#0F172A',
+                      backgroundColor: '#FFFFFF',
+                      backgroundImage: `url("data:image/svg+xml;utf8,<svg fill='%23475569' height='20' viewBox='0 0 24 24' width='20' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/></svg>")`,
+                      backgroundRepeat: 'no-repeat',
+                      backgroundPosition: 'right 12px center',
+                      paddingRight: '36px',
+                      appearance: 'none',
+                      WebkitAppearance: 'none',
+                      boxShadow: '0 2px 6px rgba(0, 0, 0, 0.03)',
+                      cursor: 'pointer',
+                      outline: 'none',
+                    }}
                   >
                     {OUTCOMES.map((o) => (
                       <option key={o} value={o}>
