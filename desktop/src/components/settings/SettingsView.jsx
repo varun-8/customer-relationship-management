@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Palette,
   Layers,
@@ -80,6 +80,64 @@ export const SettingsView = ({ initialTab = 'branding', onOpenPairingModal }) =>
   const [wipeError, setWipeError] = useState('');
   const [wipeSuccess, setWipeSuccess] = useState('');
   const [showWipeConfirm, setShowWipeConfirm] = useState(false);
+
+  // Daily Auto-Backup & 30-Day Retention Policy State
+  const [backupConfig, setBackupConfig] = useState(null);
+  const [backupPathInput, setBackupPathInput] = useState('');
+  const [savingBackupPath, setSavingBackupPath] = useState(false);
+  const [runningAutoBackup, setRunningAutoBackup] = useState(false);
+  const [backupSuccessMsg, setBackupSuccessMsg] = useState('');
+
+  const fetchBackupConfig = async () => {
+    try {
+      const res = await api.getBackupConfig();
+      if (res && res.success && res.data) {
+        setBackupConfig(res.data);
+        setBackupPathInput(res.data.backupDir || '');
+      }
+    } catch (e) {
+      console.warn('Backup config fetch error:', e);
+    }
+  };
+
+  useEffect(() => {
+    if (activeSettingsTab === 'backup') {
+      fetchBackupConfig();
+    }
+  }, [activeSettingsTab]);
+
+  const handleUpdateBackupPath = async () => {
+    if (!backupPathInput.trim()) return;
+    setSavingBackupPath(true);
+    setBackupSuccessMsg('');
+    try {
+      const res = await api.updateBackupConfig({ backupDir: backupPathInput.trim() });
+      if (res && res.success) {
+        setBackupSuccessMsg('Backup storage folder location updated successfully!');
+        fetchBackupConfig();
+      }
+    } catch (e) {
+      alert(e.message || 'Failed to update backup directory path');
+    } finally {
+      setSavingBackupPath(false);
+    }
+  };
+
+  const handleRunManualAutoBackup = async () => {
+    setRunningAutoBackup(true);
+    setBackupSuccessMsg('');
+    try {
+      const res = await api.runAutoBackup(true);
+      if (res && res.success) {
+        setBackupSuccessMsg(`🎉 ${res.message || 'Full backup completed!'}`);
+        fetchBackupConfig();
+      }
+    } catch (e) {
+      alert(e.message || 'Failed to run backup');
+    } finally {
+      setRunningAutoBackup(false);
+    }
+  };
 
   const handleWipeDatabase = async () => {
     if (!devKeyInput.trim()) {
@@ -334,8 +392,10 @@ export const SettingsView = ({ initialTab = 'branding', onOpenPairingModal }) =>
         </div>
       </div>
 
-      {/* 2. Navigation Tab Dock */}
+      {/* 2. Accessible Navigation Tab Dock */}
       <div
+        role="tablist"
+        aria-label="Settings Navigation"
         style={{
           display: 'flex',
           alignItems: 'center',
@@ -354,13 +414,17 @@ export const SettingsView = ({ initialTab = 'branding', onOpenPairingModal }) =>
           return (
             <button
               key={tab.id}
+              role="tab"
+              aria-selected={isActive}
+              aria-controls={`panel-${tab.id}`}
+              id={`tab-${tab.id}`}
               type="button"
               onClick={() => setActiveSettingsTab(tab.id)}
               style={{
                 display: 'flex',
                 alignItems: 'center',
                 gap: '8px',
-                padding: '9px 18px',
+                padding: '10px 20px',
                 borderRadius: '12px',
                 border: 'none',
                 backgroundColor: isActive ? '#2563EB' : 'transparent',
@@ -368,10 +432,12 @@ export const SettingsView = ({ initialTab = 'branding', onOpenPairingModal }) =>
                 fontWeight: isActive ? '800' : '600',
                 fontSize: '13px',
                 cursor: 'pointer',
-                transition: 'all 0.2s ease',
+                transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+                outline: 'none',
+                boxShadow: isActive ? '0 2px 10px rgba(37, 99, 235, 0.25)' : 'none',
               }}
             >
-              <Icon size={15} />
+              <Icon size={16} />
               <span>{tab.label}</span>
             </button>
           );
@@ -381,6 +447,9 @@ export const SettingsView = ({ initialTab = 'branding', onOpenPairingModal }) =>
       {/* TAB 1: SHOWROOM BRANDING */}
       {activeSettingsTab === 'branding' && (
         <div
+          role="tabpanel"
+          id="panel-branding"
+          aria-labelledby="tab-branding"
           style={{
             backgroundColor: '#FFFFFF',
             borderRadius: '20px',
@@ -585,19 +654,21 @@ export const SettingsView = ({ initialTab = 'branding', onOpenPairingModal }) =>
 
       {/* TAB 2: CRM FORM BUILDER */}
       {activeSettingsTab === 'builder' && (
-        <FormBuilderView />
+        <div role="tabpanel" id="panel-builder" aria-labelledby="tab-builder">
+          <FormBuilderView />
+        </div>
       )}
 
       {/* TAB 3: CUSTOMER ID SEQUENCE */}
       {activeSettingsTab === 'sequence' && (
-        <div style={{ backgroundColor: '#FFFFFF', borderRadius: '20px', border: '1px solid #E2E8F0', padding: '24px', boxShadow: '0 4px 15px rgba(0,0,0,0.03)' }}>
+        <div role="tabpanel" id="panel-sequence" aria-labelledby="tab-sequence" style={{ backgroundColor: '#FFFFFF', borderRadius: '20px', border: '1px solid #E2E8F0', padding: '24px', boxShadow: '0 4px 15px rgba(0,0,0,0.03)' }}>
           <SequenceConfigModal isEmbedded={true} />
         </div>
       )}
 
       {/* TAB 4: BUSINESS PROFILE & STATUS-SPECIFIC WHATSAPP TEMPLATES */}
       {activeSettingsTab === 'business' && (
-        <form onSubmit={handleSaveBusinessProfile} style={{ backgroundColor: '#FFFFFF', borderRadius: '20px', border: '1px solid #E2E8F0', padding: '24px', boxShadow: '0 4px 15px rgba(0,0,0,0.03)', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+        <form role="tabpanel" id="panel-business" aria-labelledby="tab-business" onSubmit={handleSaveBusinessProfile} style={{ backgroundColor: '#FFFFFF', borderRadius: '20px', border: '1px solid #E2E8F0', padding: '24px', boxShadow: '0 4px 15px rgba(0,0,0,0.03)', display: 'flex', flexDirection: 'column', gap: '20px' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #F1F5F9', paddingBottom: '16px' }}>
             <div>
               <h2 style={{ fontSize: '17px', fontWeight: '800', color: '#0F172A', margin: 0 }}>
@@ -771,7 +842,133 @@ export const SettingsView = ({ initialTab = 'branding', onOpenPairingModal }) =>
 
       {/* TAB 5: DATA BACKUP & SYSTEM */}
       {activeSettingsTab === 'backup' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+        <div role="tabpanel" id="panel-backup" aria-labelledby="tab-backup" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          {/* Daily Auto-Backup & 30-Day Retention Policy Card */}
+          <div style={{ backgroundColor: '#FFFFFF', borderRadius: '20px', border: '1px solid #E2E8F0', padding: '24px', boxShadow: '0 4px 15px rgba(0,0,0,0.03)', display: 'flex', flexDirection: 'column', gap: '18px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #F1F5F9', paddingBottom: '14px', flexWrap: 'wrap', gap: '10px' }}>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <RotateCcw size={18} color="#2563EB" />
+                  <h2 style={{ fontSize: '17px', fontWeight: '800', color: '#0F172A', margin: 0 }}>
+                    Daily Auto-Backup & Retention Policy (Max 30 Backups)
+                  </h2>
+                </div>
+                <p style={{ fontSize: '12.5px', color: '#64748B', margin: '4px 0 0' }}>
+                  Automatic daily backup triggers once when desktop app opens. Retains up to 30 backups; older files are automatically purged.
+                </p>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '11.5px', fontWeight: '800', backgroundColor: '#EFF6FF', color: '#2563EB', border: '1px solid #BFDBFE', padding: '4px 10px', borderRadius: '8px' }}>
+                  Retention: Max 30 Backups
+                </span>
+                {backupConfig?.lastAutoBackupDate === new Date().toISOString().split('T')[0] && (
+                  <span style={{ fontSize: '11.5px', fontWeight: '800', backgroundColor: '#DCFCE7', color: '#15803D', border: '1px solid #86EFAC', padding: '4px 10px', borderRadius: '8px' }}>
+                    ✓ Backed Up Today
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {backupSuccessMsg && (
+              <div style={{ padding: '10px 14px', borderRadius: '10px', backgroundColor: '#DCFCE7', border: '1px solid #86EFAC', color: '#15803D', fontSize: '12.5px', fontWeight: '700' }}>
+                {backupSuccessMsg}
+              </div>
+            )}
+
+            {/* Configurable Backup Storage Directory */}
+            <div style={{ backgroundColor: '#F8FAFC', borderRadius: '14px', border: '1px solid #E2E8F0', padding: '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <label style={{ fontSize: '12px', fontWeight: '800', color: '#0F172A', display: 'block' }}>
+                BACKUP STORAGE FOLDER LOCATION (CONFIGURABLE)
+              </label>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <input
+                  type="text"
+                  value={backupPathInput}
+                  onChange={(e) => setBackupPathInput(e.target.value)}
+                  placeholder="e.g. C:\Vasantham_CRM_Backups"
+                  style={{ flex: 1, padding: '10px 14px', borderRadius: '10px', border: '1.5px solid #CBD5E1', fontSize: '13px', color: '#0F172A', fontFamily: 'monospace', backgroundColor: '#FFFFFF' }}
+                />
+                <button
+                  type="button"
+                  onClick={handleUpdateBackupPath}
+                  disabled={savingBackupPath}
+                  style={{ backgroundColor: '#0F172A', color: '#FFFFFF', border: 'none', borderRadius: '10px', padding: '10px 18px', fontSize: '12.5px', fontWeight: '800', cursor: 'pointer', whiteSpace: 'nowrap' }}
+                >
+                  {savingBackupPath ? 'Saving...' : 'Set Storage Path'}
+                </button>
+              </div>
+              <p style={{ fontSize: '11.5px', color: '#64748B', margin: 0 }}>
+                All customer records, follow-ups, lost sales, KPIs, schemas, branding, and staff metrics are written to this folder.
+              </p>
+            </div>
+
+            {/* Manual Run & History List */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
+              <div style={{ fontSize: '13px', color: '#334155', fontWeight: '700' }}>
+                Total Retained Auto-Backups: <span style={{ color: '#2563EB', fontWeight: '900' }}>{backupConfig?.totalBackupsCount || 0} / 30</span>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleRunManualAutoBackup}
+                disabled={runningAutoBackup}
+                style={{
+                  background: 'linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)',
+                  color: '#FFFFFF',
+                  border: 'none',
+                  borderRadius: '10px',
+                  padding: '10px 20px',
+                  fontSize: '12.5px',
+                  fontWeight: '800',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  boxShadow: '0 4px 12px rgba(37, 99, 235, 0.25)',
+                }}
+              >
+                <RotateCcw size={15} className={runningAutoBackup ? 'spin-anim' : ''} />
+                <span>{runningAutoBackup ? 'Running Backup...' : 'Run Auto-Backup Now'}</span>
+              </button>
+            </div>
+
+            {/* Backup Files History Table */}
+            {backupConfig?.backups && backupConfig.backups.length > 0 && (
+              <div style={{ border: '1px solid #E2E8F0', borderRadius: '12px', overflow: 'hidden', marginTop: '4px' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '12.5px' }}>
+                  <thead>
+                    <tr style={{ backgroundColor: '#F8FAFC', borderBottom: '1px solid #E2E8F0' }}>
+                      <th style={{ padding: '10px 14px', fontWeight: '800', color: '#475569' }}>Backup File Name</th>
+                      <th style={{ padding: '10px 14px', fontWeight: '800', color: '#475569' }}>File Size</th>
+                      <th style={{ padding: '10px 14px', fontWeight: '800', color: '#475569' }}>Created Date</th>
+                      <th style={{ padding: '10px 14px', fontWeight: '800', color: '#475569', textAlign: 'right' }}>Retention Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {backupConfig.backups.slice(0, 10).map((b, idx) => (
+                      <tr key={b.name} style={{ borderBottom: idx < backupConfig.backups.length - 1 ? '1px solid #F1F5F9' : 'none' }}>
+                        <td style={{ padding: '10px 14px', fontFamily: 'monospace', fontWeight: '700', color: '#0F172A' }}>
+                          📄 {b.name}
+                        </td>
+                        <td style={{ padding: '10px 14px', color: '#475569', fontWeight: '600' }}>
+                          {b.sizeFormatted}
+                        </td>
+                        <td style={{ padding: '10px 14px', color: '#64748B' }}>
+                          {new Date(b.createdAt).toLocaleString('en-IN')}
+                        </td>
+                        <td style={{ padding: '10px 14px', textAlign: 'right' }}>
+                          <span style={{ fontSize: '10.5px', fontWeight: '800', color: '#059669', backgroundColor: '#ECFDF5', padding: '2px 8px', borderRadius: '6px' }}>
+                            Retained ({idx + 1}/30)
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
           {/* Backup & Export Options */}
           <div style={{ backgroundColor: '#FFFFFF', borderRadius: '20px', border: '1px solid #E2E8F0', padding: '24px', boxShadow: '0 4px 15px rgba(0,0,0,0.03)', display: 'flex', flexDirection: 'column', gap: '18px' }}>
             <div style={{ borderBottom: '1px solid #F1F5F9', paddingBottom: '14px' }}>

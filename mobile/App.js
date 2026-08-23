@@ -1652,6 +1652,7 @@ export default function App() {
               renderItem={({ item }) => {
                 const data = item.data instanceof Map ? Object.fromEntries(item.data) : (item.data || item);
                 const initial = (data.customerName || 'C').charAt(0).toUpperCase();
+                const statusStyle = getStatusBadgeStyle(data.status);
 
                 return (
                   <TouchableOpacity
@@ -1661,8 +1662,8 @@ export default function App() {
                   >
                     {/* Left: Avatar + Customer Name & Customer ID */}
                     <View style={styles.leadLeftGroup}>
-                      <View style={styles.leadAvatar}>
-                        <Text style={styles.leadAvatarText}>{initial}</Text>
+                      <View style={[styles.leadAvatar, { backgroundColor: statusStyle.bg }]}>
+                        <Text style={[styles.leadAvatarText, { color: statusStyle.dot }]}>{initial}</Text>
                       </View>
 
                       <View style={styles.leadInfoCol}>
@@ -1677,9 +1678,9 @@ export default function App() {
 
                     {/* Right: Status Pill & Chevron */}
                     <View style={styles.leadRightGroup}>
-                      <View style={styles.leadStatusPill}>
-                        <View style={styles.leadStatusDot} />
-                        <Text style={styles.leadStatusText}>
+                      <View style={[styles.leadStatusPill, { backgroundColor: statusStyle.bg, borderColor: statusStyle.border }]}>
+                        <View style={[styles.leadStatusDot, { backgroundColor: statusStyle.dot }]} />
+                        <Text style={[styles.leadStatusText, { color: statusStyle.text }]}>
                           {formatStatusLabel(data.status)}
                         </Text>
                       </View>

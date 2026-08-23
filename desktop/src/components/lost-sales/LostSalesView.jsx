@@ -558,28 +558,6 @@ export const LostSalesView = () => {
 
           <button
             type="button"
-            onClick={handleExportCSV}
-            style={{
-              height: '34px',
-              padding: '0 12px',
-              borderRadius: '8px',
-              border: '1px solid #E2E8F0',
-              background: '#FFFFFF',
-              color: '#334155',
-              fontSize: '12px',
-              fontWeight: '700',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-            }}
-          >
-            <Download size={13} />
-            <span>CSV</span>
-          </button>
-
-          <button
-            type="button"
             onClick={() => {
               setEditingRecord(null);
               setShowModal(true);

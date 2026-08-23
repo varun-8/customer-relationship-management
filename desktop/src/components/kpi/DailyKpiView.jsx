@@ -221,6 +221,24 @@ export const DailyKpiView = () => {
       .sort((a, b) => b.salesValue - a.salesValue || b.ordersCount - a.ordersCount || b.visits - a.visits);
   }, [dayCustomers, staffList]);
 
+  // Calculate Monthly Performance Summary Stats
+  const monthlyMetrics = useMemo(() => {
+    if (!dailyTrends || dailyTrends.length === 0) {
+      return { totalRevenue: 0, activeDaysCount: 0, bestDay: null, totalOrders: 0 };
+    }
+    const totalRevenue = dailyTrends.reduce((acc, t) => acc + (Number(t.salesValue) || 0), 0);
+    const totalOrders = dailyTrends.reduce((acc, t) => acc + (Number(t.ordersCount) || 0), 0);
+    const activeDays = dailyTrends.filter((t) => Number(t.salesValue) > 0 || Number(t.ordersCount) > 0);
+    const bestDay = [...dailyTrends].sort((a, b) => (Number(b.salesValue) || 0) - (Number(a.salesValue) || 0))[0];
+
+    return {
+      totalRevenue,
+      activeDaysCount: activeDays.length,
+      bestDay: bestDay && Number(bestDay.salesValue) > 0 ? bestDay : null,
+      totalOrders,
+    };
+  }, [dailyTrends]);
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
       {/* 1. Header Toolbar */}
@@ -327,15 +345,6 @@ export const DailyKpiView = () => {
             title="Refresh"
           >
             <RefreshCw size={14} className={loading || dayLoading ? 'spin' : ''} />
-          </button>
-
-          <button
-            type="button"
-            onClick={handleExportCSV}
-            style={{ backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '10px', padding: '6px 14px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', color: '#475569', display: 'flex', alignItems: 'center', gap: '6px' }}
-          >
-            <Download size={14} />
-            <span>Export CSV</span>
           </button>
         </div>
       </div>
@@ -493,24 +502,40 @@ export const DailyKpiView = () => {
               )}
             </div>
 
-            {/* Monthly Day-by-Day Performance Overview */}
-            <div style={{ backgroundColor: '#FFFFFF', borderRadius: '20px', border: '1px solid #E2E8F0', padding: '20px', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
+            {/* Monthly Day-by-Day Performance Calendar & Overview */}
+            <div style={{ backgroundColor: '#FFFFFF', borderRadius: '20px', border: '1px solid #E2E8F0', padding: '20px', boxShadow: '0 2px 8px rgba(0,0,0,0.02)', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <TrendingUp size={18} color="#2563EB" />
-                  <span style={{ fontSize: '14px', fontWeight: '800', color: '#0F172A' }}>
-                    Monthly Performance Days ({selectedMonth})
+                  <div style={{ width: '32px', height: '32px', borderRadius: '10px', backgroundColor: '#EFF6FF', color: '#2563EB', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <CalendarDays size={16} />
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '14px', fontWeight: '800', color: '#0F172A' }}>
+                      Monthly Performance Days
+                    </div>
+                    <div style={{ fontSize: '11px', color: '#64748B', fontWeight: '600' }}>
+                      {new Date(selectedMonth + '-01').toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })}
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: '11px', fontWeight: '700', backgroundColor: '#ECFDF5', color: '#047857', padding: '3px 8px', borderRadius: '6px', border: '1px solid #A7F3D0' }}>
+                    {monthlyMetrics.activeDaysCount} Active Days
+                  </span>
+                  <span style={{ fontSize: '11px', fontWeight: '700', backgroundColor: '#EFF6FF', color: '#1D4ED8', padding: '3px 8px', borderRadius: '6px', border: '1px solid #BFDBFE' }}>
+                    ₹{monthlyMetrics.totalRevenue.toLocaleString('en-IN')} Total
                   </span>
                 </div>
-                <span style={{ fontSize: '11.5px', color: '#64748B', fontWeight: '600' }}>
-                  Select day to view
-                </span>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '6px', maxHeight: '240px', overflowY: 'auto', paddingRight: '4px' }}>
+              {/* Day Tiles Grid */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '6px', maxHeight: '250px', overflowY: 'auto', paddingRight: '2px' }}>
                 {dailyTrends.map((t) => {
                   const isSelected = t.date === selectedDay;
                   const isCurrentDay = t.date === todayStr;
+                  const hasSales = Number(t.salesValue) > 0;
+                  const isHighSales = Number(t.salesValue) >= 50000;
 
                   return (
                     <button
@@ -519,9 +544,23 @@ export const DailyKpiView = () => {
                       onClick={() => setSelectedDay(t.date)}
                       style={{
                         padding: '8px 4px',
-                        borderRadius: '10px',
-                        border: isSelected ? '2px solid #2563EB' : t.salesValue > 0 ? '1px solid #A7F3D0' : '1px solid #E2E8F0',
-                        backgroundColor: isSelected ? '#EFF6FF' : t.salesValue > 0 ? '#ECFDF5' : isCurrentDay ? '#FEF3C7' : '#F8FAFC',
+                        borderRadius: '12px',
+                        border: isSelected
+                          ? '2px solid #2563EB'
+                          : isHighSales
+                          ? '1px solid #6EE7B7'
+                          : hasSales
+                          ? '1px solid #A7F3D0'
+                          : '1px solid #E2E8F0',
+                        backgroundColor: isSelected
+                          ? '#EFF6FF'
+                          : isHighSales
+                          ? '#D1FAE5'
+                          : hasSales
+                          ? '#ECFDF5'
+                          : isCurrentDay
+                          ? '#FEF3C7'
+                          : '#F8FAFC',
                         color: isSelected ? '#1D4ED8' : '#0F172A',
                         cursor: 'pointer',
                         textAlign: 'center',
@@ -529,24 +568,49 @@ export const DailyKpiView = () => {
                         flexDirection: 'column',
                         alignItems: 'center',
                         gap: '2px',
+                        position: 'relative',
+                        transition: 'all 0.15s ease',
+                        boxShadow: isSelected ? '0 0 0 3px rgba(37, 99, 235, 0.15)' : 'none',
                       }}
+                      title={`${t.date}: ₹${(t.salesValue || 0).toLocaleString('en-IN')} (${t.ordersCount || 0} orders, ${t.visits || 0} visits)`}
                     >
-                      <span style={{ fontSize: '10px', fontWeight: '700', color: '#64748B', textTransform: 'uppercase' }}>
+                      {isCurrentDay && (
+                        <span style={{ position: 'absolute', top: '2px', right: '3px', fontSize: '7px', fontWeight: '900', color: '#D97706' }}>
+                          ●
+                        </span>
+                      )}
+                      <span style={{ fontSize: '9.5px', fontWeight: '700', color: isSelected ? '#2563EB' : '#64748B', textTransform: 'uppercase' }}>
                         {t.dayOfWeek}
                       </span>
-                      <span style={{ fontSize: '13px', fontWeight: '900' }}>
+                      <span style={{ fontSize: '13px', fontWeight: '900', color: isSelected ? '#1E40AF' : '#0F172A' }}>
                         {t.dayNumber}
                       </span>
-                      {t.salesValue > 0 ? (
-                        <span style={{ fontSize: '10px', fontWeight: '800', color: '#059669' }}>
+                      {hasSales ? (
+                        <span style={{ fontSize: '9.5px', fontWeight: '800', color: isHighSales ? '#047857' : '#059669' }}>
                           ₹{Math.round(t.salesValue / 1000)}k
                         </span>
                       ) : (
-                        <span style={{ fontSize: '10px', color: '#94A3B8' }}>—</span>
+                        <span style={{ fontSize: '9.5px', color: '#94A3B8' }}>—</span>
                       )}
                     </button>
                   );
                 })}
+              </div>
+
+              {/* Legend Bar */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '6px', borderTop: '1px solid #F1F5F9', fontSize: '10.5px', color: '#64748B', fontWeight: '600' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#059669' }} /> Sales Day
+                  </span>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#D97706' }} /> Today
+                  </span>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#94A3B8' }} /> Rest / No Sales
+                  </span>
+                </div>
+                <span>Click day tile to load deep dive</span>
               </div>
             </div>
           </div>

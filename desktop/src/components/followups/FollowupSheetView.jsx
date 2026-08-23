@@ -403,16 +403,6 @@ export const FollowupSheetView = ({ onEditCustomer }) => {
             <RefreshCw size={15} className={loading ? 'spin' : ''} />
           </button>
 
-          {/* CSV Export */}
-          <button
-            type="button"
-            onClick={handleExportCSV}
-            style={{ backgroundColor: '#F8FAFC', border: '1.5px solid #E2E8F0', borderRadius: '10px', padding: '8px 14px', fontSize: '12.5px', fontWeight: '700', cursor: 'pointer', color: '#475569', display: 'flex', alignItems: 'center', gap: '6px' }}
-          >
-            <Download size={15} />
-            <span>CSV</span>
-          </button>
-
           {/* Log Activity Primary Button */}
           <button
             type="button"

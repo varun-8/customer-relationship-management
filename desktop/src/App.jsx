@@ -21,6 +21,7 @@ import { ExecutiveDashboardView } from './components/dashboard/ExecutiveDashboar
 import { FollowupSheetView } from './components/followups/FollowupSheetView';
 import { EmployeeManagementView } from './components/employees/EmployeeManagementView';
 import { MobilePairingView } from './components/mobile-pairing/MobilePairingView';
+import { ReportsView } from './components/reports/ReportsView';
 import { api } from './services/api';
 
 const MainAppContent = () => {
@@ -63,12 +64,30 @@ const MainAppContent = () => {
     return () => clearInterval(interval);
   }, [verifyServerConnection]);
 
+  // Automatic Daily Auto-Backup on Desktop App Launch (Runs once daily)
+  useEffect(() => {
+    const triggerStartupAutoBackup = async () => {
+      try {
+        const res = await api.runAutoBackup(false);
+        if (res && res.success && !res.alreadyRanToday) {
+          toast.success(`Daily Auto-Backup Completed! All records backed up to ${res.fileName}`);
+        }
+      } catch (err) {
+        console.warn('Startup auto-backup error:', err);
+      }
+    };
+
+    triggerStartupAutoBackup();
+  }, [toast]);
+
   const getHeaderInfo = () => {
     switch (activeTab) {
       case 'dashboard':
         return { title: 'Executive Dashboard', subtitle: 'Real-time sales revenue, conversion funnel, and team performance metrics' };
       case 'customers':
         return { title: 'Customer CRM & Leads', subtitle: 'Search, filter, and manage showroom customer profiles' };
+      case 'reports':
+        return { title: 'Reports & Export Center', subtitle: 'Generate, filter, preview, and export executive PDF reports' };
       case 'kpi':
         return { title: 'Daily Showroom KPI', subtitle: 'Track daily visitor footfall, quotations generated, and sales targets' };
       case 'followups':
@@ -122,6 +141,7 @@ const MainAppContent = () => {
               />
             )}
 
+            {activeTab === 'reports' && <ReportsView />}
             {activeTab === 'kpi' && <DailyKpiView />}
             {activeTab === 'followups' && (
               <FollowupSheetView onEditCustomer={(customer) => setEditingCustomer(customer)} />

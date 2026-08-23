@@ -50,11 +50,20 @@ const calculateCrmKpiForDate = async (targetDateStr, staffFilter = null) => {
   const matched = [];
   allCustomers.forEach((doc) => {
     const cust = extractCustomerData(doc);
-    const isDateMatch = cust.entryDate === targetDateStr || toDateString(cust.createdAt) === targetDateStr;
-    const isStaffMatch = !staffFilter || staffFilter === 'all' || cust.salesperson.toLowerCase().includes(staffFilter.toLowerCase());
+    const createdToday = cust.entryDate === targetDateStr || toDateString(cust.createdAt) === targetDateStr;
+    const updatedToday = toDateString(cust.updatedAt) === targetDateStr;
+    const lastFollowUpToday = cust.lastFollowUp && toDateString(cust.lastFollowUp) === targetDateStr;
+
+    const isDateMatch = createdToday || updatedToday || lastFollowUpToday;
+    const isStaffMatch = !staffFilter || staffFilter === 'all' || (cust.salesperson && cust.salesperson.toLowerCase().includes(staffFilter.toLowerCase()));
 
     if (isDateMatch && isStaffMatch) {
-      matched.push(cust);
+      matched.push({
+        ...cust,
+        createdToday,
+        updatedToday,
+        lastFollowUpToday,
+      });
     }
   });
 
@@ -68,19 +77,17 @@ const calculateCrmKpiForDate = async (targetDateStr, staffFilter = null) => {
   const crossSellItems = new Set();
 
   matched.forEach((c) => {
-    // 1. Footfall / Walk-ins
-    if (c.leadSource === 'Walk-in' || !c.leadSource) {
+    // 1. Walk-ins: Customers entered on target date
+    if (c.createdToday) {
       visits += 1;
-    } else {
-      visits += 1; // Any direct showroom customer interaction
     }
 
-    // 2. Quotes given
+    // 2. Quotations given
     if (c.status === 'Quotation' || c.status === 'Negotiation' || c.quotationValue > 0) {
       quotes += 1;
     }
 
-    // 3. Orders closed & Revenue
+    // 3. Orders closed & Closed Revenue
     if (c.status === 'Order Confirmed') {
       orders += 1;
       salesValue += (c.orderValue || c.quotationValue || 0);
@@ -91,7 +98,7 @@ const calculateCrmKpiForDate = async (targetDateStr, staffFilter = null) => {
       oldCustomersCount += 1;
     }
 
-    // 5. Engineer Calls
+    // 5. Engineer / Architect Interactions
     if (c.leadSource === 'Engineer' || c.leadSource === 'Architect' || c.customerType === 'Architect' || c.customerType === 'Mason') {
       engineerCallsCount += 1;
     }
@@ -103,19 +110,24 @@ const calculateCrmKpiForDate = async (targetDateStr, staffFilter = null) => {
       c.crossSell.split(',').forEach((item) => crossSellItems.add(item.trim()));
     }
 
-    // 7. Follow-ups
-    followUpsCount += (c.followUpCount || 1);
+    // 7. Follow-ups recorded
+    if (c.lastFollowUpToday || c.updatedToday) {
+      followUpsCount += (c.followUpCount || 1);
+    } else if (c.createdToday) {
+      followUpsCount += 1;
+    }
   });
 
-  const conversionRate = visits > 0 ? Number(((orders / visits) * 100).toFixed(1)) : 0;
-  const quoteRate = visits > 0 ? Number(((quotes / visits) * 100).toFixed(1)) : 0;
+  const finalVisits = visits > 0 ? visits : matched.length;
+  const conversionRate = finalVisits > 0 ? Number(((orders / finalVisits) * 100).toFixed(1)) : 0;
+  const quoteRate = finalVisits > 0 ? Number(((quotes / finalVisits) * 100).toFixed(1)) : 0;
 
   return {
     date: new Date(targetDateStr),
     dateString: targetDateStr,
     staffName: staffFilter && staffFilter !== 'all' ? staffFilter : 'Showroom Team',
     walkins: {
-      visits: visits || matched.length,
+      visits: finalVisits,
       quotes,
       orders,
     },

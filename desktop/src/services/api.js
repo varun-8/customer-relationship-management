@@ -413,4 +413,23 @@ export const api = {
       body: JSON.stringify(brandingData),
     });
   },
+
+  // Daily Auto-Backup & Retention Policy APIs
+  async getBackupConfig() {
+    return request('/backup/config');
+  },
+
+  async updateBackupConfig(data) {
+    return request('/backup/config', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  async runAutoBackup(force = false) {
+    return request('/backup/run', {
+      method: 'POST',
+      body: JSON.stringify({ force }),
+    });
+  },
 };

@@ -13,6 +13,7 @@ import {
   LogOut,
   Shield,
   QrCode,
+  FileText,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useBranding } from '../../context/BrandingContext';
@@ -49,6 +50,12 @@ export const Sidebar = ({
           icon: Users,
           badge: totalCustomers > 0 ? totalCustomers : null,
           badgeColor: '#2563EB',
+        },
+        {
+          id: 'reports',
+          label: 'Reports & PDF Center',
+          shortLabel: 'Reports',
+          icon: FileText,
         },
         {
           id: 'kpi',
