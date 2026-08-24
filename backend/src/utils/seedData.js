@@ -6,37 +6,37 @@ const CustomerForm = require('../models/CustomerForm');
 const Customer = require('../models/Customer');
 const { DEFAULT_INITIAL_FIELDS } = require('../controllers/formController');
 
-const seedData = async () => {
-  try {
-    console.log('[Seed] Connecting to MongoDB Atlas...');
-    await mongoose.connect(process.env.MONGODB_URI);
-    console.log('[Seed] Connected successfully.');
+const runSeedingLogic = async () => {
+  console.log('[Seed] Initializing Vasantham CRM default database records...');
 
-    // 1. Seed Users
-    console.log('[Seed] Seeding Users...');
-    await User.deleteMany({});
-
-    const owner = await User.create({
+  // 1. Seed Users
+  let owner = await User.findOne({ email: 'owner@vasantham.com' });
+  if (!owner) {
+    owner = await User.create({
       name: 'Vasantham Admin & Owner',
       email: 'owner@vasantham.com',
       password: 'admin123',
       role: 'owner',
       phone: '9840123456',
     });
+    console.log(`[Seed] Created default Owner account (${owner.email})`);
+  }
 
-    const employee = await User.create({
+  let employee = await User.findOne({ email: 'employee@vasantham.com' });
+  if (!employee) {
+    employee = await User.create({
       name: 'Karthik Raja (Showroom Executive)',
       email: 'employee@vasantham.com',
       password: 'employee123',
       role: 'employee',
       phone: '9840987654',
     });
+    console.log(`[Seed] Created default Employee account (${employee.email})`);
+  }
 
-    console.log(`[Seed] Created Owner (${owner.email}) & Employee (${employee.email})`);
-
-    // 2. Seed Sequence
-    console.log('[Seed] Seeding Customer ID Sequence...');
-    await Sequence.deleteMany({});
+  // 2. Seed Sequence
+  const sequenceExists = await Sequence.findOne({ key: 'customer_id' });
+  if (!sequenceExists) {
     const sequence = await Sequence.create({
       key: 'customer_id',
       prefix: 'CUS-',
@@ -46,13 +46,13 @@ const seedData = async () => {
       step: 1,
       description: 'Main Vasantham Customer Code Sequence',
     });
-    console.log(`[Seed] Initialized Sequence ${sequence.prefix}000001 (Current: ${sequence.currentValue})`);
+    console.log(`[Seed] Initialized Sequence ${sequence.prefix}000001`);
+  }
 
-    // 3. Seed Published Form & Main Draft Form with all 23 fields
-    console.log('[Seed] Seeding 23-field Published Customer CRM Form and Draft...');
-    await CustomerForm.deleteMany({});
-
-    const publishedForm = await CustomerForm.create({
+  // 3. Seed Published Form & Draft Form
+  const publishedFormExists = await CustomerForm.findOne({ status: 'published' });
+  if (!publishedFormExists) {
+    await CustomerForm.create({
       name: 'Vasantham 23-Field CRM Form',
       version: 1,
       status: 'published',
@@ -63,20 +63,19 @@ const seedData = async () => {
       changelog: 'Official 23-field specification for Vasantham Tiles & Sanitary Wares showroom',
     });
 
-    const draftForm = await CustomerForm.create({
+    await CustomerForm.create({
       name: 'Draft Customer Form',
       version: 2,
       status: 'draft',
       fields: DEFAULT_INITIAL_FIELDS,
       createdBy: owner._id,
     });
+    console.log(`[Seed] Created 23-field Published CRM Form v1 & Draft v2`);
+  }
 
-    console.log(`[Seed] Created Form v1 (Published) & Draft v2 with ${DEFAULT_INITIAL_FIELDS.length} fields`);
-
-    // 4. Seed Initial Sample Customers with all 23 fields
-    console.log('[Seed] Seeding Sample Customers...');
-    await Customer.deleteMany({});
-
+  // 4. Seed Initial Sample Customers if none exist
+  const customerCount = await Customer.countDocuments({});
+  if (customerCount === 0) {
     const sampleCustomers = [
       {
         customerId: 'CUS-000001',
@@ -211,11 +210,30 @@ const seedData = async () => {
         },
       },
     ];
-
     await Customer.insertMany(sampleCustomers);
-    console.log(`[Seed] Inserted ${sampleCustomers.length} showroom demo customers with full 23 fields.`);
+    console.log(`[Seed] Inserted ${sampleCustomers.length} showroom demo customers.`);
+  }
 
-    console.log('[Seed] Database seeding completed successfully! ✨');
+  console.log('[Seed] Database initialization complete ✨');
+};
+
+const autoSeedIfEmpty = async () => {
+  try {
+    const userCount = await User.countDocuments({});
+    if (userCount === 0) {
+      console.log('[Auto-Seed] Empty database detected. Auto-seeding initial defaults...');
+      await runSeedingLogic();
+    }
+  } catch (err) {
+    console.warn('[Auto-Seed Warning] Error checking database state:', err.message);
+  }
+};
+
+const seedData = async () => {
+  try {
+    console.log('[Seed] Connecting to MongoDB...');
+    await mongoose.connect(process.env.MONGODB_URI);
+    await runSeedingLogic();
     process.exit(0);
   } catch (error) {
     console.error('[Seed Error]:', error);
@@ -223,4 +241,11 @@ const seedData = async () => {
   }
 };
 
-seedData();
+if (require.main === module) {
+  seedData();
+}
+
+module.exports = {
+  autoSeedIfEmpty,
+  seedData,
+};

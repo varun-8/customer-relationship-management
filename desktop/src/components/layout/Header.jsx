@@ -11,6 +11,7 @@ export const Header = ({
   isChecking = false,
   onRetryConnection,
   onOpenPairingModal,
+  onTitleClick,
 }) => {
   const [activeDeviceCount, setActiveDeviceCount] = useState(0);
 
@@ -36,7 +37,18 @@ export const Header = ({
   return (
     <header className="app-header">
       <div className="page-header-intro">
-        <h1 className="page-header-title">{title || 'Customers'}</h1>
+        <h1
+          className="page-header-title"
+          onClick={onTitleClick}
+          style={{
+            cursor: onTitleClick ? 'pointer' : 'default',
+            userSelect: 'none',
+            WebkitUserSelect: 'none',
+          }}
+          title={onTitleClick ? 'Click 5 times on Settings to activate Developer Mode' : ''}
+        >
+          {title || 'Customers'}
+        </h1>
         <p className="page-header-subtitle">
           {subtitle || 'Manage and track all customer interactions'}
         </p>

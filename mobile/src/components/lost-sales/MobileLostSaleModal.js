@@ -249,14 +249,20 @@ export function MobileLostSaleModal({
 
             {/* Section 4: Price Difference & Calculated Gap */}
             <Text style={[styles.sectionLabel, { marginTop: 14 }]}>3. PRICE DIFFERENCE (₹)</Text>
-            <View style={{ flexDirection: 'row', gap: 10 }}>
-              <TextInput
-                style={[styles.textInput, { flex: 1, fontWeight: '800', color: '#DC2626' }]}
-                value={priceDifference}
-                onChangeText={setPriceDifference}
-                keyboardType="numeric"
-                placeholder="e.g. 15000"
-              />
+            <View style={{ flexDirection: 'row', gap: 10, alignItems: 'center' }}>
+              <View style={styles.priceDiffInputWrapper}>
+                <View style={styles.currencyPrefixBadge}>
+                  <Text style={styles.currencyPrefixText}>₹</Text>
+                </View>
+                <TextInput
+                  style={[styles.textInput, { flex: 1, borderWidth: 0, fontWeight: '800', color: '#DC2626' }]}
+                  value={priceDifference}
+                  onChangeText={setPriceDifference}
+                  keyboardType="numeric"
+                  placeholder="e.g. 15000"
+                  placeholderTextColor="#94A3B8"
+                />
+              </View>
               <View style={styles.gapCard}>
                 <Text style={styles.gapCardPercent}>
                   {diffPercent > 0 ? `-${diffPercent}%` : '0%'}
@@ -486,6 +492,30 @@ const styles = StyleSheet.create({
     paddingVertical: 9,
     fontSize: 13,
     color: '#0F172A',
+  },
+  priceDiffInputWrapper: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1.5,
+    borderColor: '#FECDD3',
+    borderRadius: 10,
+    overflow: 'hidden',
+  },
+  currencyPrefixBadge: {
+    backgroundColor: '#FEE2E2',
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    borderRightWidth: 1,
+    borderRightColor: '#FECDD3',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  currencyPrefixText: {
+    fontSize: 15,
+    fontWeight: '900',
+    color: '#DC2626',
   },
   gapCard: {
     backgroundColor: '#FEF2F2',

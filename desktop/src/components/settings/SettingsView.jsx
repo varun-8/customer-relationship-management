@@ -23,6 +23,7 @@ import {
   Save,
   MessageSquare,
   RotateCcw,
+  Terminal,
 } from 'lucide-react';
 import { api } from '../../services/api';
 import { useBranding } from '../../context/BrandingContext';
@@ -36,7 +37,12 @@ import {
   DEFAULT_STATUS_TEMPLATES,
 } from '../../utils/whatsappHelper';
 
-export const SettingsView = ({ initialTab = 'branding', onOpenPairingModal }) => {
+export const SettingsView = ({
+  initialTab = 'branding',
+  onOpenPairingModal,
+  devModeUnlocked = false,
+  onUnlockDevMode,
+}) => {
   const [activeSettingsTab, setActiveSettingsTab] = useState(initialTab);
   const [importModalMode, setImportModalMode] = useState(null); // 'csv' | 'json' | null
 
@@ -295,6 +301,7 @@ export const SettingsView = ({ initialTab = 'branding', onOpenPairingModal }) =>
     { id: 'sequence', label: 'ID Sequence', icon: Hash },
     { id: 'business', label: 'Business & WhatsApp', icon: Building2 },
     { id: 'backup', label: 'Data Backup & System', icon: Database },
+    ...(devModeUnlocked ? [{ id: 'dev', label: 'Developer Mode', icon: Terminal }] : []),
   ];
 
   const waStatusOptions = [
@@ -327,18 +334,32 @@ export const SettingsView = ({ initialTab = 'branding', onOpenPairingModal }) =>
       {/* 1. Header Overview Cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '14px' }}>
         {/* Card 1: Branding */}
-        <div style={{ backgroundColor: '#FFFFFF', borderRadius: '18px', border: '1px solid #E2E8F0', padding: '16px 20px', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
+        <div
+          onClick={onUnlockDevMode}
+          style={{
+            backgroundColor: '#FFFFFF',
+            borderRadius: '18px',
+            border: '1px solid #E2E8F0',
+            padding: '16px 20px',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.02)',
+            cursor: 'pointer',
+            userSelect: 'none',
+          }}
+          title="Settings & System Configuration — Click 5 times on title to toggle Developer Mode"
+        >
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span style={{ fontSize: '11px', fontWeight: '800', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.04em' }}>SHOWROOM IDENTITY</span>
-            <div style={{ width: '34px', height: '34px', borderRadius: '10px', backgroundColor: '#EFF6FF', color: '#2563EB', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Palette size={16} />
+            <span style={{ fontSize: '11px', fontWeight: '800', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+              SHOWROOM IDENTITY {devModeUnlocked ? ' (DEV UNLOCKED)' : ''}
+            </span>
+            <div style={{ width: '34px', height: '34px', borderRadius: '10px', backgroundColor: devModeUnlocked ? '#FEF3C7' : '#EFF6FF', color: devModeUnlocked ? '#D97706' : '#2563EB', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              {devModeUnlocked ? <Terminal size={16} /> : <Palette size={16} />}
             </div>
           </div>
           <div style={{ fontSize: '16px', fontWeight: '800', color: '#0F172A', marginTop: '6px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
             {appShortName || 'Vasantham CRM'}
           </div>
-          <div style={{ fontSize: '12px', color: '#64748B', marginTop: '2px' }}>
-            {logoImage ? 'Custom Logo Uploaded' : 'System Icon Theme'}
+          <div style={{ fontSize: '12px', color: devModeUnlocked ? '#D97706' : '#64748B', marginTop: '2px', fontWeight: devModeUnlocked ? '700' : '400' }}>
+            {devModeUnlocked ? '🔓 Developer Mode Unlocked' : logoImage ? 'Custom Logo Uploaded' : 'System Icon Theme'}
           </div>
         </div>
 
@@ -1031,19 +1052,48 @@ export const SettingsView = ({ initialTab = 'branding', onOpenPairingModal }) =>
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* TAB 6: DEVELOPER MODE (DATA WIPE & PURGE UTILITIES) */}
+      {devModeUnlocked && activeSettingsTab === 'dev' && (
+        <div role="tabpanel" id="panel-dev" aria-labelledby="tab-dev" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          {/* Developer Mode Banner */}
+          <div style={{ backgroundColor: '#1E293B', color: '#FFFFFF', borderRadius: '20px', padding: '24px', boxShadow: '0 4px 20px rgba(0,0,0,0.12)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                <div style={{ width: '44px', height: '44px', borderRadius: '12px', backgroundColor: '#334155', color: '#38BDF8', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Terminal size={24} />
+                </div>
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <h2 style={{ fontSize: '18px', fontWeight: '900', color: '#F8FAFC', margin: 0 }}>
+                      Developer Mode
+                    </h2>
+                    <span style={{ fontSize: '11px', fontWeight: '800', backgroundColor: '#0284C7', color: '#FFFFFF', padding: '2px 8px', borderRadius: '6px' }}>
+                      DEV UNLOCKED
+                    </span>
+                  </div>
+                  <p style={{ fontSize: '12.5px', color: '#94A3B8', margin: '4px 0 0' }}>
+                    Activated via 5-click sequence on Settings & System Configuration header. Allows developer database purge and environment operations.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
 
           {/* Developer Reset Danger Zone */}
-          <div style={{ backgroundColor: '#FEF2F2', borderRadius: '20px', border: '1px solid #FECDD3', padding: '24px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          <div style={{ backgroundColor: '#FEF2F2', borderRadius: '20px', border: '1.5px solid #FECDD3', padding: '24px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               <div style={{ width: '36px', height: '36px', borderRadius: '10px', backgroundColor: '#FEE2E2', color: '#DC2626', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <Key size={18} />
               </div>
               <div>
                 <h3 style={{ fontSize: '15px', fontWeight: '800', color: '#991B1B', margin: 0 }}>
-                  Developer Database Reset & Purge Zone
+                  Developer Database Reset & Data Wipe Zone
                 </h3>
                 <p style={{ fontSize: '12px', color: '#991B1B', margin: '2px 0 0' }}>
-                  Requires developer security key configured in backend `.env` file.
+                  Requires developer security key configured in backend `.env` file (<code style={{ backgroundColor: '#FEE2E2', padding: '2px 6px', borderRadius: '4px', fontWeight: '700' }}>vasantham_dev_secret_wipe_key_2026</code>).
                 </p>
               </div>
             </div>
@@ -1060,21 +1110,28 @@ export const SettingsView = ({ initialTab = 'branding', onOpenPairingModal }) =>
               </div>
             )}
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', maxWidth: '480px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', maxWidth: '520px' }}>
               <input
-                type="password"
+                type={showDevKey ? 'text' : 'password'}
                 placeholder="Enter DEV_KEY to authorize"
                 value={devKeyInput}
                 onChange={(e) => setDevKeyInput(e.target.value)}
-                style={{ flex: 1, padding: '9px 12px', borderRadius: '10px', border: '1px solid #FECDD3', fontSize: '13px', color: '#0F172A' }}
+                style={{ flex: 1, padding: '9.5px 14px', borderRadius: '10px', border: '1px solid #FECDD3', fontSize: '13px', color: '#0F172A', backgroundColor: '#FFFFFF' }}
               />
+              <button
+                type="button"
+                onClick={() => setShowDevKey(!showDevKey)}
+                style={{ backgroundColor: '#FFFFFF', border: '1px solid #FECDD3', color: '#991B1B', borderRadius: '10px', padding: '9.5px 12px', cursor: 'pointer', fontSize: '12px', fontWeight: '700' }}
+              >
+                {showDevKey ? 'Hide Key' : 'Show Key'}
+              </button>
               <button
                 type="button"
                 onClick={handleWipeDatabase}
                 disabled={wipingData}
-                style={{ backgroundColor: '#DC2626', color: '#FFFFFF', border: 'none', borderRadius: '10px', padding: '9px 16px', fontSize: '12.5px', fontWeight: '800', cursor: 'pointer' }}
+                style={{ backgroundColor: '#DC2626', color: '#FFFFFF', border: 'none', borderRadius: '10px', padding: '9.5px 18px', fontSize: '12.5px', fontWeight: '800', cursor: 'pointer', boxShadow: '0 2px 6px rgba(220, 38, 38, 0.3)', whiteSpace: 'nowrap' }}
               >
-                {wipingData ? 'Purging...' : 'Purge Database'}
+                {wipingData ? 'Purging Data...' : 'Purge Database'}
               </button>
             </div>
           </div>

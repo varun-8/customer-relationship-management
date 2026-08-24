@@ -760,10 +760,10 @@ const styles = StyleSheet.create({
   },
   radioCardActive: {
     backgroundColor: '#EFF6FF',
-    borderColor: '#0F172A',
-    shadowColor: '#0F172A',
+    borderColor: '#2563EB',
+    shadowColor: '#2563EB',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.12,
     shadowRadius: 4,
     elevation: 2,
   },
@@ -773,7 +773,7 @@ const styles = StyleSheet.create({
     color: '#334155',
   },
   radioCardTextActive: {
-    color: '#0F172A',
+    color: '#1D4ED8',
     fontWeight: '900',
   },
   radioDotCircle: {
@@ -787,14 +787,14 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
   },
   radioDotCircleActive: {
-    borderColor: '#0F172A',
+    borderColor: '#2563EB',
     backgroundColor: '#FFFFFF',
   },
   radioDotInner: {
     width: 9,
     height: 9,
     borderRadius: 4.5,
-    backgroundColor: '#0F172A',
+    backgroundColor: '#2563EB',
   },
   // Multi-Select Grid
   multiSummaryBanner: {

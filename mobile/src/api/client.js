@@ -519,7 +519,7 @@ export const apiClient = {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 6000);
 
-      const res = await fetch(`${base}/customers?search=${encodeURIComponent(search)}`, { headers, signal: controller.signal });
+      const res = await fetch(`${base}/customers?search=${encodeURIComponent(search)}&limit=500`, { headers, signal: controller.signal });
       clearTimeout(timeoutId);
 
       const data = await res.json();

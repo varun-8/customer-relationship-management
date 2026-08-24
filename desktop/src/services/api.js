@@ -196,6 +196,14 @@ export const api = {
     });
   },
 
+  async bulkImportCustomers(rows = []) {
+    return request('/customers/bulk-import', {
+      method: 'POST',
+      body: JSON.stringify({ rows }),
+      timeout: 30000,
+    });
+  },
+
   async updateCustomer(id, customerData, notes = '', status) {
     return request(`/customers/${id}`, {
       method: 'PUT',

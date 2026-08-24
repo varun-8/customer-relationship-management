@@ -300,20 +300,7 @@ export const CustomerListTable = ({ onAddCustomer, onEditCustomer, onViewCustome
               <ChevronDown size={14} color="var(--text-muted)" />
             </button>
             {showTypeDropdown && (
-              <div
-                style={{
-                  position: 'absolute',
-                  top: '42px',
-                  left: 0,
-                  background: '#FFFFFF',
-                  border: '1px solid var(--border-default)',
-                  borderRadius: '8px',
-                  boxShadow: 'var(--shadow-md)',
-                  zIndex: 20,
-                  minWidth: '160px',
-                  padding: '4px',
-                }}
-              >
+              <div className="dropdown-menu-popover" style={{ minWidth: '160px' }}>
                 {['all', 'Building Owner', 'Mason', 'Architect', 'Engineer', 'Contractor', 'Builder', 'Referral', 'Other'].map((t) => (
                   <div
                     key={t}
@@ -321,17 +308,10 @@ export const CustomerListTable = ({ onAddCustomer, onEditCustomer, onViewCustome
                       setCustomerType(t);
                       setShowTypeDropdown(false);
                     }}
-                    style={{
-                      padding: '7px 12px',
-                      fontSize: '12.5px',
-                      borderRadius: '6px',
-                      cursor: 'pointer',
-                      background: customerType === t ? '#EFF6FF' : 'transparent',
-                      color: customerType === t ? '#2563EB' : 'var(--text-primary)',
-                      fontWeight: customerType === t ? '700' : '500',
-                    }}
+                    className={`dropdown-menu-item ${customerType === t ? 'selected' : ''}`}
                   >
-                    {t === 'all' ? 'All Types' : t}
+                    <span>{t === 'all' ? 'All Types' : t}</span>
+                    {customerType === t && <span style={{ color: '#2563EB', fontSize: '11px' }}>✓</span>}
                   </div>
                 ))}
               </div>
@@ -348,20 +328,7 @@ export const CustomerListTable = ({ onAddCustomer, onEditCustomer, onViewCustome
               <ChevronDown size={14} color="var(--text-muted)" />
             </button>
             {showStatusDropdown && (
-              <div
-                style={{
-                  position: 'absolute',
-                  top: '42px',
-                  left: 0,
-                  background: '#FFFFFF',
-                  border: '1px solid var(--border-default)',
-                  borderRadius: '8px',
-                  boxShadow: 'var(--shadow-md)',
-                  zIndex: 20,
-                  minWidth: '170px',
-                  padding: '4px',
-                }}
-              >
+              <div className="dropdown-menu-popover" style={{ minWidth: '180px' }}>
                 {['all', 'Newly Contacted', 'Walk-in', 'Quotation', 'Follow-up', 'Negotiation', 'Order Confirmed', 'Lost', 'Future Requirement'].map((s) => (
                   <div
                     key={s}
@@ -369,17 +336,10 @@ export const CustomerListTable = ({ onAddCustomer, onEditCustomer, onViewCustome
                       setStatus(s);
                       setShowStatusDropdown(false);
                     }}
-                    style={{
-                      padding: '7px 12px',
-                      fontSize: '12.5px',
-                      borderRadius: '6px',
-                      cursor: 'pointer',
-                      background: status === s ? '#EFF6FF' : 'transparent',
-                      color: status === s ? '#2563EB' : 'var(--text-primary)',
-                      fontWeight: status === s ? '700' : '500',
-                    }}
+                    className={`dropdown-menu-item ${status === s ? 'selected' : ''}`}
                   >
-                    {s === 'all' ? 'All Status' : s}
+                    <span>{s === 'all' ? 'All Status' : s}</span>
+                    {status === s && <span style={{ color: '#2563EB', fontSize: '11px' }}>✓</span>}
                   </div>
                 ))}
               </div>

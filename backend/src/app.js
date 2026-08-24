@@ -66,7 +66,20 @@ app.use((req, res) => {
 
 // Global Error Handler
 app.use((err, req, res, next) => {
-  console.error('Unhandled server error:', err);
+  console.error('Unhandled server error:', err.message || err);
+
+  const isDbErr = err.name === 'MongooseServerSelectionError' ||
+    err.name === 'MongoNetworkError' ||
+    (err.message && (err.message.includes('ECONNREFUSED') || err.message.includes('timed out')));
+
+  if (isDbErr) {
+    return res.status(503).json({
+      success: false,
+      message: 'CRM Backend is connecting to MongoDB (mongodb://127.0.0.1:27017). Please verify MongoDB service is running.',
+      isDbConnecting: true,
+    });
+  }
+
   res.status(err.status || 500).json({
     success: false,
     message: err.message || 'Internal Server Error',

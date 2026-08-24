@@ -23,6 +23,10 @@ const connectDB = async () => {
     const dbType = isLocal ? 'Local MongoDB' : 'MongoDB Atlas Cloud';
     console.log(`[${dbType}] Connected successfully: ${conn.connection.host} / ${conn.connection.name}`);
     
+    // Auto-seed default admin accounts and form schemas if DB is empty
+    const { autoSeedIfEmpty } = require('../utils/seedData');
+    autoSeedIfEmpty().catch((err) => console.warn('[Auto-Seed Error]', err.message));
+
     if (retryInterval) {
       clearInterval(retryInterval);
       retryInterval = null;

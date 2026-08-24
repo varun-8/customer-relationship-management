@@ -45,8 +45,10 @@ export const CustomerProvider = ({ children }) => {
     }
   }, []);
 
+  const retryTimeoutRef = React.useRef(null);
+
   // Load Customers
-  const fetchCustomers = useCallback(async () => {
+  const fetchCustomers = useCallback(async (isAutoRetry = false) => {
     setLoading(true);
     setFetchError(null);
     try {
@@ -71,6 +73,14 @@ export const CustomerProvider = ({ children }) => {
     } catch (err) {
       console.warn('Error fetching customer list:', err.message);
       setFetchError(err.message);
+
+      // Auto retry once after 2.5 seconds if server is initializing on startup
+      if (!isAutoRetry) {
+        clearTimeout(retryTimeoutRef.current);
+        retryTimeoutRef.current = setTimeout(() => {
+          fetchCustomers(true);
+        }, 2500);
+      }
     } finally {
       setLoading(false);
     }
@@ -83,6 +93,7 @@ export const CustomerProvider = ({ children }) => {
 
   useEffect(() => {
     fetchCustomers();
+    return () => clearTimeout(retryTimeoutRef.current);
   }, [fetchCustomers]);
 
   const createCustomer = async (data, notes = '') => {

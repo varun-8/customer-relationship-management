@@ -7,6 +7,7 @@ const {
   updateCustomer,
   deleteCustomer,
   lookupCustomerByPhone,
+  bulkImportCustomers,
 } = require('../controllers/customerController');
 const { protect } = require('../middlewares/authMiddleware');
 const { validateCustomerData } = require('../middlewares/validateCustomer');
@@ -18,6 +19,7 @@ router.get('/', getCustomers);
 router.get('/lookup-phone/:phone', lookupCustomerByPhone);
 router.get('/:id', getCustomerById);
 router.post('/', validateCustomerData, createCustomer);
+router.post('/bulk-import', bulkImportCustomers);
 router.put('/:id', validateCustomerData, updateCustomer);
 router.delete('/:id', deleteCustomer);
 

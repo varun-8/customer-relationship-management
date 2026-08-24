@@ -234,13 +234,19 @@ export function MobileFollowupLogModal({
 
             {/* Section 4: Quotation Value */}
             <Text style={[styles.sectionLabel, { marginTop: 14 }]}>4. DEAL / QUOTATION VALUE (₹)</Text>
-            <TextInput
-              style={[styles.textInput, { fontWeight: '800', color: '#059669', fontSize: 15 }]}
-              value={quotationValue}
-              onChangeText={setQuotationValue}
-              keyboardType="numeric"
-              placeholder="e.g. 150000"
-            />
+            <View style={styles.quoteValueInputWrapper}>
+              <View style={styles.currencyPrefixBadgeEmerald}>
+                <Text style={styles.currencyPrefixTextEmerald}>₹</Text>
+              </View>
+              <TextInput
+                style={[styles.textInput, { flex: 1, borderWidth: 0, fontWeight: '800', color: '#059669', fontSize: 15 }]}
+                value={quotationValue}
+                onChangeText={setQuotationValue}
+                keyboardType="numeric"
+                placeholder="e.g. 150000"
+                placeholderTextColor="#94A3B8"
+              />
+            </View>
 
             {/* Section 5: Discussion Notes */}
             <Text style={[styles.sectionLabel, { marginTop: 14 }]}>5. DISCUSSION REMARKS & NOTES</Text>
@@ -442,6 +448,29 @@ const styles = StyleSheet.create({
     paddingVertical: 9,
     fontSize: 13,
     color: '#0F172A',
+  },
+  quoteValueInputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1.5,
+    borderColor: '#A7F3D0',
+    borderRadius: 10,
+    overflow: 'hidden',
+  },
+  currencyPrefixBadgeEmerald: {
+    backgroundColor: '#ECFDF5',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRightWidth: 1,
+    borderRightColor: '#A7F3D0',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  currencyPrefixTextEmerald: {
+    fontSize: 16,
+    fontWeight: '900',
+    color: '#059669',
   },
   footerRow: {
     flexDirection: 'row',

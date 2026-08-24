@@ -265,30 +265,18 @@ export const DynamicFieldInput = ({ field, value, onChange, error }) => {
 
       case 'select':
         return (
-          <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-            <select
-              className="form-select"
-              value={value ?? ''}
-              onChange={(e) => handleChange(e.target.value)}
-              style={{ appearance: 'none', paddingRight: '32px', cursor: 'pointer' }}
-            >
-              <option value="">{placeholder || '-- Select an option --'}</option>
-              {options.map((opt, idx) => (
-                <option key={idx} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
-            <ChevronDown
-              size={15}
-              style={{
-                position: 'absolute',
-                right: '12px',
-                color: '#64748B',
-                pointerEvents: 'none',
-              }}
-            />
-          </div>
+          <select
+            className="form-select"
+            value={value ?? ''}
+            onChange={(e) => handleChange(e.target.value)}
+          >
+            <option value="">{placeholder || '-- Select an option --'}</option>
+            {options.map((opt, idx) => (
+              <option key={idx} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
         );
 
       case 'multiselect': {

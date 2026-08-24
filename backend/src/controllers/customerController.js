@@ -297,6 +297,86 @@ const lookupCustomerByPhone = async (req, res) => {
   }
 };
 
+// @desc Bulk import customers from CSV/JSON and update ID sequence counter
+// @route POST /api/customers/bulk-import
+const bulkImportCustomers = async (req, res) => {
+  try {
+    const { rows = [] } = req.body;
+    if (!Array.isArray(rows) || rows.length === 0) {
+      return res.status(400).json({ success: false, message: 'No customer data rows provided for import.' });
+    }
+
+    const Sequence = require('../models/Sequence');
+    let successCount = 0;
+    let maxIdVal = 0;
+
+    let seqDoc = await Sequence.findOne({ key: 'customer_id' });
+    if (!seqDoc) {
+      seqDoc = await Sequence.create({
+        key: 'customer_id',
+        prefix: 'CUS-',
+        currentValue: 1,
+        startValue: 1,
+        padding: 6,
+        step: 1,
+      });
+    }
+
+    let currentSeqNum = seqDoc.currentValue;
+    const docsToInsert = [];
+
+    for (const item of rows) {
+      const customerData = item.data ? (item.data instanceof Map ? Object.fromEntries(item.data) : item.data) : item;
+      
+      let customerId = item.customerId || customerData.customerId;
+      if (!customerId) {
+        currentSeqNum++;
+        const padded = String(currentSeqNum).padStart(seqDoc.padding || 6, '0');
+        customerId = `${seqDoc.prefix || 'CUS-'}${padded}`;
+      } else {
+        const numMatch = customerId.match(/\d+/);
+        if (numMatch) {
+          const num = parseInt(numMatch[0], 10);
+          if (num > maxIdVal) maxIdVal = num;
+        }
+      }
+
+      docsToInsert.push({
+        customerId,
+        formVersion: item.formVersion || 1,
+        data: customerData,
+        notes: item.notes || customerData.notes || 'Imported via Data Hub',
+        createdBy: {
+          userId: req.user?._id,
+          name: req.user?.name || 'Showroom Owner',
+          role: req.user?.role || 'owner',
+        },
+      });
+      successCount++;
+    }
+
+    if (docsToInsert.length > 0) {
+      await Customer.insertMany(docsToInsert, { ordered: false });
+
+      const newMax = Math.max(currentSeqNum, maxIdVal);
+      await Sequence.findOneAndUpdate(
+        { key: 'customer_id' },
+        { $set: { currentValue: newMax } },
+        { upsert: true }
+      );
+    }
+
+    res.json({
+      success: true,
+      importedCount: successCount,
+      message: `Successfully bulk imported ${successCount} records into CRM database!`,
+    });
+  } catch (error) {
+    console.error('Bulk import error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 module.exports = {
   getCustomers,
   getCustomerById,
@@ -304,4 +384,5 @@ module.exports = {
   updateCustomer,
   deleteCustomer,
   lookupCustomerByPhone,
+  bulkImportCustomers,
 };

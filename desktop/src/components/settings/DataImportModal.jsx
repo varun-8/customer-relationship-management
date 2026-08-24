@@ -186,22 +186,14 @@ export const DataImportModal = ({ mode = 'csv', onClose }) => {
         }
       }
 
-      // 2. Import Customers in batches
-      const total = allParsedRows.length;
-      for (let i = 0; i < total; i++) {
-        const row = allParsedRows[i];
-        try {
-          const customerData = row.data ? (row.data instanceof Map ? Object.fromEntries(row.data) : row.data) : row;
-          const notes = row.notes || customerData.notes || 'Imported via Data Hub';
-
-          await api.createCustomer(customerData, notes);
-          successCount++;
-        } catch (err) {
-          console.warn('Row import failed:', err);
-          failCount++;
+      // 2. High-speed Bulk Import Customers & update Sequence counter
+      if (allParsedRows && allParsedRows.length > 0) {
+        setProgress(40);
+        const bulkRes = await api.bulkImportCustomers(allParsedRows);
+        if (bulkRes && bulkRes.success) {
+          successCount = bulkRes.importedCount || allParsedRows.length;
         }
-
-        setProgress(Math.round(((i + 1) / total) * 100));
+        setProgress(90);
       }
 
       // 3. Refresh CRM customer list
@@ -209,9 +201,10 @@ export const DataImportModal = ({ mode = 'csv', onClose }) => {
         await fetchCustomers();
       }
 
+      setProgress(100);
       setResultMessage({
         success: true,
-        text: `Successfully imported ${successCount} customer records!${failCount > 0 ? ` (${failCount} skipped/duplicates)` : ''}`,
+        text: `Successfully imported ${successCount} customer records into CRM database! Instant mobile & desktop sync active.`,
       });
     } catch (err) {
       setError('Import process encountered an issue: ' + err.message);

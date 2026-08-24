@@ -80,6 +80,34 @@ const MainAppContent = () => {
     triggerStartupAutoBackup();
   }, [toast]);
 
+  // Developer Mode 5-Click Activation State
+  const [devModeUnlocked, setDevModeUnlocked] = useState(
+    () => localStorage.getItem('vasantham_dev_mode_active') === 'true'
+  );
+  const [headerClickCount, setHeaderClickCount] = useState(0);
+
+  const handleHeaderTitleClick = () => {
+    if (activeTab === 'settings' || activeTab === 'builder') {
+      const nextCount = headerClickCount + 1;
+      setHeaderClickCount(nextCount);
+
+      if (nextCount >= 5) {
+        setDevModeUnlocked(true);
+        localStorage.setItem('vasantham_dev_mode_active', 'true');
+        toast.success(
+          '🔓 Developer Mode Activated! Developer & Database Reset tools are now unlocked.',
+          'Developer Mode'
+        );
+        setHeaderClickCount(0);
+      } else if (nextCount >= 2) {
+        toast.info(
+          `Click ${5 - nextCount} more times to unlock Developer Mode (${nextCount}/5)`,
+          'Developer Mode'
+        );
+      }
+    }
+  };
+
   const getHeaderInfo = () => {
     switch (activeTab) {
       case 'dashboard':
@@ -127,6 +155,7 @@ const MainAppContent = () => {
           isChecking={isCheckingServer}
           onRetryConnection={() => verifyServerConnection(true)}
           onOpenPairingModal={() => setActiveTab('mobile-pairing')}
+          onTitleClick={handleHeaderTitleClick}
         />
 
         <div className="app-content">
@@ -149,8 +178,28 @@ const MainAppContent = () => {
             {activeTab === 'lost' && <LostSalesView />}
             {activeTab === 'employees' && <EmployeeManagementView />}
             {activeTab === 'mobile-pairing' && <MobilePairingView />}
-            {activeTab === 'builder' && <SettingsView initialTab="builder" onOpenPairingModal={() => setActiveTab('mobile-pairing')} />}
-            {activeTab === 'settings' && <SettingsView initialTab="branding" onOpenPairingModal={() => setActiveTab('mobile-pairing')} />}
+            {activeTab === 'builder' && (
+              <SettingsView
+                initialTab="builder"
+                onOpenPairingModal={() => setActiveTab('mobile-pairing')}
+                devModeUnlocked={devModeUnlocked}
+                onUnlockDevMode={() => {
+                  setDevModeUnlocked(true);
+                  localStorage.setItem('vasantham_dev_mode_active', 'true');
+                }}
+              />
+            )}
+            {activeTab === 'settings' && (
+              <SettingsView
+                initialTab="branding"
+                onOpenPairingModal={() => setActiveTab('mobile-pairing')}
+                devModeUnlocked={devModeUnlocked}
+                onUnlockDevMode={() => {
+                  setDevModeUnlocked(true);
+                  localStorage.setItem('vasantham_dev_mode_active', 'true');
+                }}
+              />
+            )}
             {activeTab === 'sequence' && <SequenceConfigModal />}
             {activeTab === 'versions' && <FormVersionHistoryModal />}
           </div>
