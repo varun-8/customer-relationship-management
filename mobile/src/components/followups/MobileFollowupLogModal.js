@@ -14,14 +14,22 @@ import {
 import { apiClient } from '../../api/client';
 
 const OUTCOMES = [
-  'Spoke with Customer / Positive Interest',
-  'Customer Visiting Showroom Today / Soon',
-  'Sent Revised Quotation / Discount Provided',
-  'No Answer / Customer Busy / Callback Requested',
-  'Negotiating Final Price / Competitor Comparison',
-  'Site Measurement Scheduled',
-  'Order Confirmed / Ready for Billing',
-  'Deal Lost / Postponed',
+  { label: 'Spoke with Customer / Positive Interest', shortLabel: 'Positive Interest', icon: '🤝', color: '#1D4ED8', bg: '#EFF6FF', border: '#BFDBFE' },
+  { label: 'Customer Visiting Showroom Today / Soon', shortLabel: 'Visiting Showroom', icon: '🏢', color: '#047857', bg: '#ECFDF5', border: '#A7F3D0' },
+  { label: 'Sent Revised Quotation / Discount Provided', shortLabel: 'Sent Revised Quote', icon: '📄', color: '#7E22CE', bg: '#FAF5FF', border: '#DDD6FE' },
+  { label: 'No Answer / Customer Busy / Callback Requested', shortLabel: 'No Answer / Busy', icon: '📵', color: '#B45309', bg: '#FFFBEB', border: '#FDE68A' },
+  { label: 'Negotiating Final Price / Competitor Comparison', shortLabel: 'Price Negotiation', icon: '💰', color: '#0369A1', bg: '#F0F9FF', border: '#BAE6FD' },
+  { label: 'Site Measurement Scheduled', shortLabel: 'Site Measurement', icon: '📐', color: '#4338CA', bg: '#EEF2FF', border: '#C7D2FE' },
+  { label: 'Order Confirmed / Ready for Billing', shortLabel: 'Order Confirmed', icon: '🛒', color: '#059669', bg: '#D1FAE5', border: '#6EE7B7' },
+  { label: 'Deal Lost / Postponed', shortLabel: 'Deal Lost / Postponed', icon: '✕', color: '#DC2626', bg: '#FEF2F2', border: '#FECACA' },
+];
+
+const QUICK_SNIPPETS = [
+  'Liked showroom tile samples',
+  'Negotiating 5-10% discount',
+  'Scheduled site measurement',
+  'Shared quote PDF on WhatsApp',
+  'Callback requested in evening',
 ];
 
 export function MobileFollowupLogModal({
@@ -54,6 +62,14 @@ export function MobileFollowupLogModal({
     setNextFollowUp(d.toISOString().split('T')[0]);
   };
 
+  const handleAppendSnippet = (snippet) => {
+    setDiscussionNotes((prev) => {
+      const cleanSnippet = snippet.trim();
+      if (!prev.trim()) return cleanSnippet;
+      return `${prev.trim()}\n• ${cleanSnippet}`;
+    });
+  };
+
   const handleSubmit = async () => {
     if (outcome === 'Deal Lost / Postponed') {
       if (onOpenLostSale) {
@@ -80,7 +96,7 @@ export function MobileFollowupLogModal({
         onClose();
       } else {
         Alert.alert(
-          '📡 Connection Issue',
+          'Connection Issue',
           res?.message || 'Could not save follow-up to the server. Please check your network connection.',
           [
             { text: 'Cancel', style: 'cancel' },
@@ -90,7 +106,7 @@ export function MobileFollowupLogModal({
       }
     } catch (e) {
       Alert.alert(
-        '📡 Network Error',
+        'Network Error',
         `Connection failed: ${e.message}. Your entries have been preserved.`,
         [
           { text: 'Cancel', style: 'cancel' },
@@ -106,164 +122,210 @@ export function MobileFollowupLogModal({
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <View style={styles.modalOverlay}>
         <View style={styles.modalCard}>
-          {/* Signature Dark Header */}
-          <View style={styles.headerDark}>
-            <View style={styles.headerIconBox}>
-              <Text style={{ fontSize: 20 }}>📞</Text>
+          {/* Top Sheet Drag Handle */}
+          <View style={styles.sheetHandleWrapper}>
+            <View style={styles.sheetHandle} />
+          </View>
+
+          {/* Clean Light Header */}
+          <View style={styles.headerLight}>
+            <View style={styles.headerIconBoxLight}>
+              <Text style={{ fontSize: 18 }}>📞</Text>
             </View>
             <View style={{ flex: 1 }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                <Text style={styles.headerTitleDark}>Log Follow-up Activity</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                <Text style={styles.headerTitleLight}>Log Follow-up Activity</Text>
                 {followUp.customerId && (
-                  <View style={styles.headerIdBadge}>
-                    <Text style={styles.headerIdBadgeText}>#{followUp.customerId}</Text>
+                  <View style={styles.headerIdBadgeLight}>
+                    <Text style={styles.headerIdBadgeTextLight}>#{followUp.customerId}</Text>
                   </View>
                 )}
               </View>
-              <Text style={styles.headerSubtitleDark} numberOfLines={1}>
-                {followUp.customerName} • 📞 {followUp.phone || 'No phone'}
+              <Text style={styles.headerSubtitleLight} numberOfLines={1}>
+                {followUp.customerName} {followUp.phone ? `• 📱 ${followUp.phone}` : ''}
               </Text>
             </View>
-            <TouchableOpacity onPress={onClose} style={styles.headerCloseBtn} activeOpacity={0.7}>
-              <Text style={styles.headerCloseBtnText}>✕</Text>
+            <TouchableOpacity onPress={onClose} style={styles.headerCloseBtnLight} activeOpacity={0.7}>
+              <Text style={styles.headerCloseBtnTextLight}>✕</Text>
             </TouchableOpacity>
           </View>
 
-          <ScrollView showsVerticalScrollIndicator={false} style={styles.scroll} contentContainerStyle={{ padding: 18 }}>
-            {/* Section 1: Outcome Picker */}
-            <Text style={styles.sectionLabel}>1. DISCUSSION OUTCOME *</Text>
-            <View style={styles.outcomeChipsContainer}>
-              {OUTCOMES.map((o) => {
-                const isSelected = outcome === o;
-                return (
+          <ScrollView showsVerticalScrollIndicator={false} style={styles.scroll} contentContainerStyle={{ padding: 16 }}>
+            {/* 1. Discussion Outcome */}
+            <View style={styles.sectionCard}>
+              <Text style={styles.sectionHeading}>1. Call Outcome *</Text>
+              <View style={styles.outcomeGrid}>
+                {OUTCOMES.map((o) => {
+                  const isSelected = outcome === o.label;
+                  const isLost = o.label === 'Deal Lost / Postponed';
+
+                  return (
+                    <TouchableOpacity
+                      key={o.label}
+                      style={[
+                        styles.outcomeCard,
+                        isSelected && {
+                          backgroundColor: isLost ? '#FEF2F2' : o.bg,
+                          borderColor: isLost ? '#DC2626' : o.color,
+                          borderWidth: 1.5,
+                        },
+                      ]}
+                      onPress={() => setOutcome(o.label)}
+                      activeOpacity={0.75}
+                    >
+                      <View style={[styles.outcomeIconCircle, { backgroundColor: isSelected ? '#FFFFFF' : '#F1F5F9' }]}>
+                        <Text style={{ fontSize: 13 }}>{o.icon}</Text>
+                      </View>
+                      <Text
+                        style={[
+                          styles.outcomeCardText,
+                          isSelected && { color: isLost ? '#DC2626' : o.color, fontWeight: '800' },
+                        ]}
+                        numberOfLines={1}
+                      >
+                        {o.shortLabel}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+
+              {/* Lead Priority Temperature Integrated Inside Section 1 */}
+              <View style={styles.subHeadingRow}>
+                <Text style={styles.subHeadingLabel}>Lead Priority</Text>
+              </View>
+              <View style={styles.tempRow}>
+                <TouchableOpacity
+                  style={[
+                    styles.tempBtn,
+                    leadTemperature === 'Hot' && { backgroundColor: '#FEF2F2', borderColor: '#DC2626', borderWidth: 1.5 },
+                  ]}
+                  onPress={() => setLeadTemperature('Hot')}
+                  activeOpacity={0.75}
+                >
+                  <Text style={{ fontSize: 15 }}>🔥</Text>
+                  <Text style={[styles.tempBtnText, leadTemperature === 'Hot' && { color: '#DC2626', fontWeight: '900' }]}>
+                    Hot Deal
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[
+                    styles.tempBtn,
+                    leadTemperature === 'Warm' && { backgroundColor: '#FFFBEB', borderColor: '#D97706', borderWidth: 1.5 },
+                  ]}
+                  onPress={() => setLeadTemperature('Warm')}
+                  activeOpacity={0.75}
+                >
+                  <Text style={{ fontSize: 15 }}>☀️</Text>
+                  <Text style={[styles.tempBtnText, leadTemperature === 'Warm' && { color: '#D97706', fontWeight: '900' }]}>
+                    Warm Lead
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[
+                    styles.tempBtn,
+                    leadTemperature === 'Future' && { backgroundColor: '#EFF6FF', borderColor: '#2563EB', borderWidth: 1.5 },
+                  ]}
+                  onPress={() => setLeadTemperature('Future')}
+                  activeOpacity={0.75}
+                >
+                  <Text style={{ fontSize: 15 }}>⏳</Text>
+                  <Text style={[styles.tempBtnText, leadTemperature === 'Future' && { color: '#2563EB', fontWeight: '900' }]}>
+                    Future
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {/* 2. Next Follow-up Schedule & Valuation */}
+            <View style={styles.sectionCard}>
+              <Text style={styles.sectionHeading}>2. Schedule & Valuation</Text>
+              
+              {/* Next Follow-up Date */}
+              <View style={styles.scheduleRowHeader}>
+                <Text style={styles.subHeadingLabel}>Next Reminder Date *</Text>
+                <View style={{ flexDirection: 'row', gap: 4 }}>
+                  <TouchableOpacity style={styles.quickDayBtn} onPress={() => handleQuickDays(1)}>
+                    <Text style={styles.quickDayText}>+1d</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.quickDayBtn} onPress={() => handleQuickDays(3)}>
+                    <Text style={styles.quickDayText}>+3d</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.quickDayBtn} onPress={() => handleQuickDays(7)}>
+                    <Text style={styles.quickDayText}>+1w</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.quickDayBtn} onPress={() => handleQuickDays(15)}>
+                    <Text style={styles.quickDayText}>+15d</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              <View style={styles.dateInputWrapper}>
+                <Text style={{ fontSize: 14, marginRight: 8 }}>📅</Text>
+                <TextInput
+                  style={styles.dateTextInput}
+                  value={nextFollowUp}
+                  onChangeText={setNextFollowUp}
+                  placeholder="YYYY-MM-DD"
+                  placeholderTextColor="#94A3B8"
+                />
+              </View>
+
+              {/* Deal / Quotation Value */}
+              <View style={[styles.scheduleRowHeader, { marginTop: 12 }]}>
+                <Text style={styles.subHeadingLabel}>Deal / Quotation Value (₹)</Text>
+              </View>
+              <View style={styles.quoteValueInputWrapper}>
+                <View style={styles.currencyPrefixBadgeEmerald}>
+                  <Text style={styles.currencyPrefixTextEmerald}>₹</Text>
+                </View>
+                <TextInput
+                  style={[styles.quoteTextInput, { flex: 1 }]}
+                  value={quotationValue}
+                  onChangeText={setQuotationValue}
+                  keyboardType="numeric"
+                  placeholder="e.g. 150000"
+                  placeholderTextColor="#94A3B8"
+                />
+              </View>
+            </View>
+
+            {/* 3. Discussion Remarks & 1-Tap Snippets */}
+            <View style={styles.sectionCard}>
+              <Text style={styles.sectionHeading}>3. Discussion Notes & Remarks</Text>
+              
+              {/* Quick Snippet Chips placed directly above textarea */}
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6, paddingBottom: 8 }}>
+                {QUICK_SNIPPETS.map((snip, idx) => (
                   <TouchableOpacity
-                    key={o}
-                    style={[
-                      styles.outcomeChip,
-                      isSelected && styles.outcomeChipActive,
-                      o === 'Deal Lost / Postponed' && isSelected && { backgroundColor: '#FEE2E2', borderColor: '#F87171' },
-                    ]}
-                    onPress={() => setOutcome(o)}
+                    key={idx}
+                    style={styles.snippetChip}
+                    onPress={() => handleAppendSnippet(snip)}
                     activeOpacity={0.75}
                   >
-                    <Text
-                      style={[
-                        styles.outcomeChipText,
-                        isSelected && styles.outcomeChipTextActive,
-                        o === 'Deal Lost / Postponed' && isSelected && { color: '#991B1B' },
-                      ]}
-                    >
-                      {isSelected ? '✓ ' : ''}{o}
-                    </Text>
+                    <Text style={styles.snippetChipText}>+ {snip}</Text>
                   </TouchableOpacity>
-                );
-              })}
-            </View>
+                ))}
+              </ScrollView>
 
-            {/* Section 2: Lead Priority Temperature */}
-            <Text style={[styles.sectionLabel, { marginTop: 14 }]}>2. LEAD PRIORITY TEMPERATURE *</Text>
-            <View style={styles.tempRow}>
-              <TouchableOpacity
-                style={[
-                  styles.tempBtn,
-                  leadTemperature === 'Hot' && { backgroundColor: '#FEF2F2', borderColor: '#DC2626' },
-                ]}
-                onPress={() => setLeadTemperature('Hot')}
-              >
-                <Text style={{ fontSize: 16 }}>🔥</Text>
-                <Text style={[styles.tempBtnText, leadTemperature === 'Hot' && { color: '#DC2626', fontWeight: '900' }]}>
-                  Hot
-                </Text>
-                <Text style={styles.tempBtnSub}>Closing Soon</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[
-                  styles.tempBtn,
-                  leadTemperature === 'Warm' && { backgroundColor: '#FFFBEB', borderColor: '#D97706' },
-                ]}
-                onPress={() => setLeadTemperature('Warm')}
-              >
-                <Text style={{ fontSize: 16 }}>☀️</Text>
-                <Text style={[styles.tempBtnText, leadTemperature === 'Warm' && { color: '#D97706', fontWeight: '900' }]}>
-                  Warm
-                </Text>
-                <Text style={styles.tempBtnSub}>Evaluating</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[
-                  styles.tempBtn,
-                  leadTemperature === 'Future' && { backgroundColor: '#EFF6FF', borderColor: '#2563EB' },
-                ]}
-                onPress={() => setLeadTemperature('Future')}
-              >
-                <Text style={{ fontSize: 16 }}>⏳</Text>
-                <Text style={[styles.tempBtnText, leadTemperature === 'Future' && { color: '#2563EB', fontWeight: '900' }]}>
-                  Future
-                </Text>
-                <Text style={styles.tempBtnSub}>Site Stage</Text>
-              </TouchableOpacity>
-            </View>
-
-            {/* Section 3: Next Follow-up Date & Quick Helpers */}
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 14, marginBottom: 6 }}>
-              <Text style={styles.sectionLabel}>3. NEXT FOLLOW-UP DATE *</Text>
-              <View style={{ flexDirection: 'row', gap: 4 }}>
-                <TouchableOpacity style={styles.quickDayBtn} onPress={() => handleQuickDays(1)}>
-                  <Text style={styles.quickDayText}>+1d</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.quickDayBtn} onPress={() => handleQuickDays(3)}>
-                  <Text style={styles.quickDayText}>+3d</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.quickDayBtn} onPress={() => handleQuickDays(7)}>
-                  <Text style={styles.quickDayText}>+1w</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.quickDayBtn} onPress={() => handleQuickDays(15)}>
-                  <Text style={styles.quickDayText}>+15d</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-
-            <TextInput
-              style={styles.textInput}
-              value={nextFollowUp}
-              onChangeText={setNextFollowUp}
-              placeholder="YYYY-MM-DD (e.g. 2026-08-20)"
-            />
-
-            {/* Section 4: Quotation Value */}
-            <Text style={[styles.sectionLabel, { marginTop: 14 }]}>4. DEAL / QUOTATION VALUE (₹)</Text>
-            <View style={styles.quoteValueInputWrapper}>
-              <View style={styles.currencyPrefixBadgeEmerald}>
-                <Text style={styles.currencyPrefixTextEmerald}>₹</Text>
-              </View>
               <TextInput
-                style={[styles.textInput, { flex: 1, borderWidth: 0, fontWeight: '800', color: '#059669', fontSize: 15 }]}
-                value={quotationValue}
-                onChangeText={setQuotationValue}
-                keyboardType="numeric"
-                placeholder="e.g. 150000"
+                style={styles.notesTextInput}
+                value={discussionNotes}
+                onChangeText={setDiscussionNotes}
+                multiline
+                placeholder="Type customer discussion notes, tile requirements, objections or next steps..."
                 placeholderTextColor="#94A3B8"
               />
             </View>
 
-            {/* Section 5: Discussion Notes */}
-            <Text style={[styles.sectionLabel, { marginTop: 14 }]}>5. DISCUSSION REMARKS & NOTES</Text>
-            <TextInput
-              style={[styles.textInput, { height: 60, textAlignVertical: 'top' }]}
-              value={discussionNotes}
-              onChangeText={setDiscussionNotes}
-              multiline
-              placeholder="e.g. Customer liked 4x2 marble tiles, requested 5% adhesive discount..."
-            />
-
-            <View style={{ height: 20 }} />
+            <View style={{ height: 10 }} />
           </ScrollView>
 
           {/* Action Footer */}
           <View style={styles.footerRow}>
-            <TouchableOpacity style={styles.cancelBtn} onPress={onClose}>
+            <TouchableOpacity style={styles.cancelBtn} onPress={onClose} activeOpacity={0.75}>
               <Text style={styles.cancelBtnText}>Cancel</Text>
             </TouchableOpacity>
 
@@ -271,12 +333,13 @@ export function MobileFollowupLogModal({
               style={styles.saveBtn}
               onPress={handleSubmit}
               disabled={submitting}
+              activeOpacity={0.85}
             >
               {submitting ? (
                 <ActivityIndicator size="small" color="#FFFFFF" />
               ) : (
                 <Text style={styles.saveBtnText}>
-                  {outcome === 'Deal Lost / Postponed' ? 'Record Lost Deal →' : '✓ Save Follow-up'}
+                  {outcome === 'Deal Lost / Postponed' ? '✕ Record Lost Deal' : '✓ Save Follow-up Activity'}
                 </Text>
               )}
             </TouchableOpacity>
@@ -290,117 +353,152 @@ export function MobileFollowupLogModal({
 const styles = StyleSheet.create({
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(15, 23, 42, 0.65)',
+    backgroundColor: 'rgba(15, 23, 42, 0.70)',
     justifyContent: 'flex-end',
   },
   modalCard: {
-    backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
+    backgroundColor: '#F8FAFC',
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
     overflow: 'hidden',
     paddingBottom: Platform.OS === 'ios' ? 34 : 20,
-    maxHeight: '90%',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    elevation: 10,
+    maxHeight: '92%',
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: -6 },
+    shadowOpacity: 0.16,
+    shadowRadius: 16,
+    elevation: 16,
   },
-  headerDark: {
-    backgroundColor: '#0F172A',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
+  sheetHandleWrapper: {
+    alignItems: 'center',
+    paddingTop: 10,
+    paddingBottom: 4,
+    backgroundColor: '#FFFFFF',
+  },
+  sheetHandle: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#CBD5E1',
+  },
+  headerLight: {
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 18,
+    paddingTop: 6,
+    paddingBottom: 14,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 10,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.08)',
+    borderBottomColor: '#E2E8F0',
   },
-  headerIconBox: {
-    width: 42,
-    height: 42,
-    borderRadius: 12,
-    backgroundColor: '#2563EB',
+  headerIconBoxLight: {
+    width: 38,
+    height: 38,
+    borderRadius: 10,
+    backgroundColor: '#EFF6FF',
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#2563EB',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.35,
-    shadowRadius: 5,
-    elevation: 3,
+    borderWidth: 1,
+    borderColor: '#DBEAFE',
   },
-  headerTitleDark: {
+  headerTitleLight: {
     fontSize: 16,
     fontWeight: '900',
-    color: '#FFFFFF',
-    letterSpacing: -0.2,
+    color: '#0F172A',
+    letterSpacing: -0.3,
   },
-  headerSubtitleDark: {
-    fontSize: 12,
-    color: '#94A3B8',
+  headerSubtitleLight: {
+    fontSize: 11.5,
+    color: '#64748B',
     marginTop: 2,
-    fontWeight: '600',
+    fontWeight: '500',
   },
-  headerIdBadge: {
-    backgroundColor: 'rgba(255, 255, 255, 0.12)',
-    paddingHorizontal: 7,
-    paddingVertical: 2,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.15)',
+  headerIdBadgeLight: {
+    backgroundColor: '#F1F5F9',
+    paddingHorizontal: 6,
+    paddingVertical: 1.5,
+    borderRadius: 5,
   },
-  headerIdBadgeText: {
-    fontSize: 10.5,
+  headerIdBadgeTextLight: {
+    fontSize: 10,
     fontWeight: '800',
-    color: '#93C5FD',
-    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+    color: '#475569',
   },
-  headerCloseBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+  headerCloseBtnLight: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: '#F1F5F9',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  headerCloseBtnText: {
+  headerCloseBtnTextLight: {
     fontSize: 13,
     fontWeight: '800',
-    color: '#CBD5E1',
+    color: '#64748B',
   },
   scroll: {
     marginVertical: 0,
   },
-  sectionLabel: {
-    fontSize: 11,
-    fontWeight: '800',
-    color: '#64748B',
-    letterSpacing: 0.4,
-    marginBottom: 6,
-  },
-  outcomeChipsContainer: {
-    gap: 6,
-  },
-  outcomeChip: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 10,
+  sectionCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 14,
     borderWidth: 1,
     borderColor: '#E2E8F0',
-    backgroundColor: '#F8FAFC',
+    marginBottom: 12,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.02,
+    shadowRadius: 2,
+    elevation: 1,
   },
-  outcomeChipActive: {
-    borderColor: '#2563EB',
-    backgroundColor: '#EFF6FF',
-  },
-  outcomeChipText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#334155',
-  },
-  outcomeChipTextActive: {
-    color: '#1D4ED8',
+  sectionHeading: {
+    fontSize: 12.5,
     fontWeight: '800',
+    color: '#0F172A',
+    marginBottom: 10,
+    letterSpacing: -0.2,
+  },
+  subHeadingRow: {
+    marginTop: 12,
+    marginBottom: 6,
+  },
+  subHeadingLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#475569',
+  },
+  outcomeGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 7,
+  },
+  outcomeCard: {
+    width: '48.6%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 9,
+    paddingVertical: 9.5,
+    borderRadius: 12,
+    borderWidth: 1.2,
+    borderColor: '#E2E8F0',
+    backgroundColor: '#F8FAFC',
+    gap: 7,
+  },
+  outcomeIconCircle: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  outcomeCardText: {
+    fontSize: 11.5,
+    fontWeight: '800',
+    color: '#334155',
+    flex: 1,
   },
   tempRow: {
     flexDirection: 'row',
@@ -408,102 +506,162 @@ const styles = StyleSheet.create({
   },
   tempBtn: {
     flex: 1,
+    flexDirection: 'row',
     paddingVertical: 10,
-    borderRadius: 12,
+    borderRadius: 13,
     borderWidth: 1.5,
     borderColor: '#E2E8F0',
     backgroundColor: '#F8FAFC',
     alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.03,
+    shadowRadius: 2,
+    elevation: 1,
   },
   tempBtnText: {
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: '900',
     color: '#334155',
-    marginTop: 2,
+    letterSpacing: -0.2,
   },
-  tempBtnSub: {
-    fontSize: 9.5,
-    color: '#64748B',
-    marginTop: 1,
+  scheduleRowHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 6,
   },
   quickDayBtn: {
-    paddingHorizontal: 7,
-    paddingVertical: 2,
-    borderRadius: 5,
-    backgroundColor: '#F1F5F9',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
+    paddingHorizontal: 8.5,
+    paddingVertical: 3.5,
+    borderRadius: 7,
+    backgroundColor: '#EFF6FF',
+    borderWidth: 1.2,
+    borderColor: '#BFDBFE',
   },
   quickDayText: {
     fontSize: 10.5,
-    fontWeight: '700',
-    color: '#475569',
+    fontWeight: '900',
+    color: '#1D4ED8',
   },
-  textInput: {
+  dateInputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: '#F8FAFC',
-    borderWidth: 1,
+    borderWidth: 1.2,
     borderColor: '#CBD5E1',
-    borderRadius: 10,
+    borderRadius: 12,
     paddingHorizontal: 12,
     paddingVertical: 9,
+  },
+  dateTextInput: {
+    flex: 1,
     fontSize: 13,
     color: '#0F172A',
+    fontWeight: '700',
+    paddingVertical: 0,
   },
   quoteValueInputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#FFFFFF',
-    borderWidth: 1.5,
+    borderWidth: 1.2,
     borderColor: '#A7F3D0',
-    borderRadius: 10,
+    borderRadius: 12,
     overflow: 'hidden',
   },
   currencyPrefixBadgeEmerald: {
     backgroundColor: '#ECFDF5',
-    paddingHorizontal: 14,
+    paddingHorizontal: 12,
     paddingVertical: 10,
-    borderRightWidth: 1,
+    borderRightWidth: 1.2,
     borderRightColor: '#A7F3D0',
     alignItems: 'center',
     justifyContent: 'center',
   },
   currencyPrefixTextEmerald: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '900',
     color: '#059669',
+  },
+  quoteTextInput: {
+    paddingHorizontal: 10,
+    paddingVertical: 9,
+    fontSize: 14,
+    color: '#059669',
+    fontWeight: '900',
+  },
+  snippetChip: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    backgroundColor: '#FFFBEB',
+    borderWidth: 1.2,
+    borderColor: '#FDE68A',
+  },
+  snippetChipText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#92400E',
+  },
+  notesTextInput: {
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1.2,
+    borderColor: '#CBD5E1',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 13,
+    color: '#0F172A',
+    height: 78,
+    textAlignVertical: 'top',
   },
   footerRow: {
     flexDirection: 'row',
     gap: 10,
-    marginTop: 12,
-    paddingTop: 10,
+    paddingHorizontal: 16,
+    paddingTop: 12,
     borderTopWidth: 1,
-    borderTopColor: '#F1F5F9',
+    borderTopColor: '#E2E8F0',
+    backgroundColor: '#FFFFFF',
   },
   cancelBtn: {
     flex: 1,
-    paddingVertical: 12,
-    borderRadius: 12,
+    paddingVertical: 13,
+    borderRadius: 10,
     alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: '#F8FAFC',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderWidth: 1.5,
+    borderColor: '#CBD5E1',
   },
   cancelBtnText: {
     fontSize: 13,
-    fontWeight: '700',
-    color: '#475569',
+    fontWeight: '800',
+    color: '#334155',
+    letterSpacing: -0.2,
   },
   saveBtn: {
     flex: 2,
-    paddingVertical: 12,
-    borderRadius: 12,
+    paddingVertical: 13,
+    borderRadius: 10,
     alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: '#2563EB',
+    borderWidth: 1,
+    borderColor: '#1D4ED8',
+    shadowColor: '#2563EB',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 2,
   },
   saveBtnText: {
-    fontSize: 13,
-    fontWeight: '800',
+    fontSize: 13.5,
+    fontWeight: '900',
     color: '#FFFFFF',
+    letterSpacing: -0.2,
   },
 });

@@ -15,7 +15,9 @@ import {
 } from 'react-native';
 
 const formatRelativeUrgency = (nextFollowUp) => {
-  if (!nextFollowUp) return { label: 'No Date', color: '#64748B', bg: '#F1F5F9', border: '#E2E8F0', dot: '#94A3B8', isOverdue: false, isToday: false };
+  if (!nextFollowUp) {
+    return { label: 'No Date', color: '#64748B', bg: '#F1F5F9', border: '#E2E8F0', dot: '#94A3B8', icon: '📅', isOverdue: false, isToday: false };
+  }
   try {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -30,6 +32,7 @@ const formatRelativeUrgency = (nextFollowUp) => {
         bg: '#FEF2F2',
         border: '#FECDD3',
         dot: '#EF4444',
+        icon: '⚠️',
         accent: '#EF4444',
         isOverdue: true,
         isToday: false,
@@ -42,6 +45,7 @@ const formatRelativeUrgency = (nextFollowUp) => {
         bg: '#EFF6FF',
         border: '#BFDBFE',
         dot: '#2563EB',
+        icon: '⚡',
         accent: '#2563EB',
         isOverdue: false,
         isToday: true,
@@ -54,6 +58,7 @@ const formatRelativeUrgency = (nextFollowUp) => {
         bg: '#ECFDF5',
         border: '#A7F3D0',
         dot: '#10B981',
+        icon: '🟢',
         accent: '#10B981',
         isOverdue: false,
         isToday: false,
@@ -65,12 +70,13 @@ const formatRelativeUrgency = (nextFollowUp) => {
       bg: '#F8FAFC',
       border: '#E2E8F0',
       dot: '#64748B',
+      icon: '📅',
       accent: '#64748B',
       isOverdue: false,
       isToday: false,
     };
   } catch (e) {
-    return { label: nextFollowUp, color: '#64748B', bg: '#F1F5F9', border: '#E2E8F0', dot: '#94A3B8', accent: '#CBD5E1', isOverdue: false, isToday: false };
+    return { label: nextFollowUp, color: '#64748B', bg: '#F1F5F9', border: '#E2E8F0', dot: '#94A3B8', icon: '📅', accent: '#CBD5E1', isOverdue: false, isToday: false };
   }
 };
 
@@ -85,14 +91,13 @@ const getCustomerTypeColors = (type) => {
 
 export function MobileFollowupSheet({
   followups,
+  customers = [],
   counts,
   loading,
   refreshing,
   onRefresh,
   activeTab,
   onTabChange,
-  temperatureFilter,
-  onTemperatureChange,
   currentProfile,
   onLogActivity,
   onRecordLost,
@@ -102,26 +107,123 @@ export function MobileFollowupSheet({
   const [localSearch, setLocalSearch] = useState('');
   const [selectedDetailItem, setSelectedDetailItem] = useState(null);
 
+  // Check if active profile is an employee / sales person
+  const isEmployee = Boolean(
+    currentProfile && currentProfile.role !== 'owner' && currentProfile.name
+  );
+  const staffName = currentProfile?.name ? currentProfile.name.trim().toLowerCase() : '';
+
+  // Filter leads to only the logged-in salesperson's records if employee
+  const staffScopedFollowups = useMemo(() => {
+    if (!followups || followups.length === 0) return [];
+    if (!isEmployee || !staffName) return followups;
+    return followups.filter((f) => {
+      const s = (f.salesperson || '').trim().toLowerCase();
+      return s === staffName || s.includes(staffName) || staffName.includes(s);
+    });
+  }, [followups, isEmployee, staffName]);
+
+  // Compute dynamic counts strictly for the active user's scope
+  const activeCounts = useMemo(() => {
+    if (!isEmployee) {
+      return counts || { today: 0, upcoming: 0, overdue: 0, total: 0 };
+    }
+    // Calculate employee-specific counts from staffScopedFollowups
+    let today = 0;
+    let upcoming = 0;
+    let overdue = 0;
+    staffScopedFollowups.forEach((f) => {
+      if (f.bucket === 'today') today += 1;
+      else if (f.bucket === 'overdue') overdue += 1;
+      else upcoming += 1;
+    });
+    return {
+      today,
+      upcoming,
+      overdue,
+      total: staffScopedFollowups.length,
+    };
+  }, [isEmployee, staffScopedFollowups, counts]);
+
   // Filter followups based on search text
   const displayedFollowups = useMemo(() => {
-    if (!localSearch.trim()) return followups || [];
+    const baseList = staffScopedFollowups || [];
+    if (!localSearch.trim()) return baseList;
     const q = localSearch.toLowerCase().trim();
-    return (followups || []).filter((f) => {
+    return baseList.filter((f) => {
       const name = String(f.customerName || '').toLowerCase();
       const phone = String(f.phone || '').toLowerCase();
       const id = String(f.customerId || '').toLowerCase();
       const req = (typeof f.requirement === 'string' ? f.requirement : Array.isArray(f.requirement) ? f.requirement.join(' ') : '').toLowerCase();
       return name.includes(q) || phone.includes(q) || id.includes(q) || req.includes(q);
     });
-  }, [followups, localSearch]);
+  }, [staffScopedFollowups, localSearch]);
 
-  const detailUrgency = selectedDetailItem ? formatRelativeUrgency(selectedDetailItem.nextFollowUp) : null;
-  const detailTypeColors = selectedDetailItem ? getCustomerTypeColors(selectedDetailItem.customerType) : null;
-  const detailReqText = selectedDetailItem
-    ? Array.isArray(selectedDetailItem.requirement)
-      ? selectedDetailItem.requirement.join(', ')
-      : (selectedDetailItem.requirement || 'Tiles & Sanitary Wares')
+  // Match selected detail item with full customer record from parent list
+  const fullDetailItem = useMemo(() => {
+    if (!selectedDetailItem) return null;
+    const match = (customers || []).find(
+      (c) => c.customerId === selectedDetailItem.customerId || c._id === selectedDetailItem._id
+    );
+    if (!match) return selectedDetailItem;
+    const d = match.data instanceof Map ? Object.fromEntries(match.data) : (match.data || match);
+    return {
+      ...selectedDetailItem,
+      ...d,
+    };
+  }, [selectedDetailItem, customers]);
+
+  const detailUrgency = fullDetailItem ? formatRelativeUrgency(fullDetailItem.nextFollowUp) : null;
+  const detailTypeColors = fullDetailItem ? getCustomerTypeColors(fullDetailItem.customerType) : null;
+  const detailReqText = fullDetailItem
+    ? Array.isArray(fullDetailItem.requirement)
+      ? fullDetailItem.requirement.join(', ')
+      : (fullDetailItem.requirement || 'Tiles & Sanitary Wares')
     : '';
+
+  // Parse discussion history to construct a vertical activity timeline
+  const activityTimeline = useMemo(() => {
+    if (!fullDetailItem?.notes || !fullDetailItem.notes.trim()) return [];
+    const lines = fullDetailItem.notes.split('\n');
+    const list = [];
+    lines.forEach((line) => {
+      if (!line.trim()) return;
+      // Match format: [YYYY-MM-DD] Outcome: DiscussionNotes
+      const match = line.match(/^\[([\d-]+)\]\s*(.*?):\s*(.*)$/);
+      if (match) {
+        list.push({
+          date: match[1],
+          outcome: match[2],
+          notes: match[3],
+        });
+      } else {
+        list.push({
+          date: '',
+          outcome: 'Activity Logged',
+          notes: line,
+        });
+      }
+    });
+    return list.reverse(); // Newest first
+  }, [fullDetailItem?.notes]);
+
+  const formatTimelineDate = (dateStr) => {
+    if (!dateStr) return '';
+    try {
+      const parts = dateStr.split('-');
+      if (parts.length === 3) {
+        const monthIndex = parseInt(parts[1], 10) - 1;
+        const day = parseInt(parts[2], 10);
+        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        if (months[monthIndex]) {
+          return `${day} ${months[monthIndex]} ${parts[0]}`;
+        }
+      }
+      return dateStr;
+    } catch (e) {
+      return dateStr;
+    }
+  };
 
   return (
     <View style={styles.container}>
@@ -144,126 +246,127 @@ export function MobileFollowupSheet({
         </View>
       )}
 
-      {/* 1. iOS-Grade Segmented Time-Horizon Dock */}
-      <View style={styles.segmentContainer}>
-        <TouchableOpacity
-          style={[styles.segmentBtn, activeTab === 'today' && styles.segmentBtnActive]}
-          onPress={() => onTabChange('today')}
-          activeOpacity={0.75}
-        >
-          <View style={[styles.segmentDot, { backgroundColor: '#2563EB' }]} />
-          <Text style={[styles.segmentText, activeTab === 'today' && styles.segmentTextActive]}>
-            Today
-          </Text>
-          <View style={[styles.segmentBadge, activeTab === 'today' && styles.segmentBadgeActiveBlue]}>
-            <Text style={[styles.segmentBadgeText, activeTab === 'today' && styles.segmentBadgeTextActiveBlue]}>
-              {counts?.today || 0}
-            </Text>
-          </View>
-        </TouchableOpacity>
+      {/* ── Screen Header & Executive Quick Stats Summary ── */}
+      <View style={styles.sheetHeaderWrapper}>
+        <View style={styles.sheetTopTitleRow}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <View style={styles.headerIconBadge}>
+                <Text style={{ fontSize: 16 }}>⚡</Text>
+              </View>
+              <View>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Text style={styles.sheetTopTitle}>
+                    {isEmployee ? 'Follow-ups' : 'Showroom Follow-ups'}
+                  </Text>
+                  <View style={styles.sheetTopCountBadge}>
+                    <Text style={styles.sheetTopCountBadgeText}>{activeCounts?.total || 0}</Text>
+                  </View>
+                </View>
+                <Text style={styles.sheetTopSubtitle}>
+                  {isEmployee
+                    ? `Your active callback queue & scheduled reminders`
+                    : 'Showroom active customer follow-ups & callbacks'}
+                </Text>
+              </View>
+            </View>
 
-        <TouchableOpacity
-          style={[styles.segmentBtn, activeTab === 'upcoming' && styles.segmentBtnActive]}
-          onPress={() => onTabChange('upcoming')}
-          activeOpacity={0.75}
-        >
-          <View style={[styles.segmentDot, { backgroundColor: '#10B981' }]} />
-          <Text style={[styles.segmentText, activeTab === 'upcoming' && styles.segmentTextActive]}>
-            7 Days
-          </Text>
-          <View style={[styles.segmentBadge, activeTab === 'upcoming' && styles.segmentBadgeActiveGreen]}>
-            <Text style={[styles.segmentBadgeText, activeTab === 'upcoming' && styles.segmentBadgeTextActiveGreen]}>
-              {counts?.upcoming || 0}
-            </Text>
+            {isEmployee && (
+              <View style={styles.employeeIdentityChip}>
+                <Text style={styles.employeeIdentityChipText}>👤 {currentProfile?.name}</Text>
+              </View>
+            )}
           </View>
-        </TouchableOpacity>
+        </View>
 
-        <TouchableOpacity
-          style={[styles.segmentBtn, activeTab === 'overdue' && styles.segmentBtnActive]}
-          onPress={() => onTabChange('overdue')}
-          activeOpacity={0.75}
-        >
-          <View style={[styles.segmentDot, { backgroundColor: '#EF4444' }]} />
-          <Text style={[styles.segmentText, activeTab === 'overdue' && styles.segmentTextActive]}>
-            Overdue
-          </Text>
-          <View style={[styles.segmentBadge, activeTab === 'overdue' && styles.segmentBadgeActiveRed]}>
-            <Text style={[styles.segmentBadgeText, activeTab === 'overdue' && styles.segmentBadgeTextActiveRed]}>
-              {counts?.overdue || 0}
-            </Text>
+        {/* 3 Executive Stat Tiles */}
+        <View style={styles.headerStatRow}>
+          <View style={[styles.headerStatCard, { backgroundColor: '#EFF6FF', borderColor: '#BFDBFE' }]}>
+            <Text style={styles.headerStatEmoji}>🎯</Text>
+            <Text style={[styles.headerStatVal, { color: '#1E40AF' }]}>{activeCounts?.today || 0}</Text>
+            <Text style={styles.headerStatLabel}>Due Today</Text>
           </View>
-        </TouchableOpacity>
 
-        <TouchableOpacity
-          style={[styles.segmentBtn, activeTab === 'all' && styles.segmentBtnActive]}
-          onPress={() => onTabChange('all')}
-          activeOpacity={0.75}
-        >
-          <Text style={[styles.segmentText, activeTab === 'all' && styles.segmentTextActive]}>
-            All
-          </Text>
-          <View style={[styles.segmentBadge, activeTab === 'all' && styles.segmentBadgeActiveDark]}>
-            <Text style={[styles.segmentBadgeText, activeTab === 'all' && styles.segmentBadgeTextActiveDark]}>
-              {counts?.total || 0}
-            </Text>
+          <View style={[styles.headerStatCard, (activeCounts?.overdue || 0) > 0 ? { backgroundColor: '#FEF2F2', borderColor: '#FECACA' } : { backgroundColor: '#F8FAFC', borderColor: '#E2E8F0' }]}>
+            <Text style={styles.headerStatEmoji}>{(activeCounts?.overdue || 0) > 0 ? '⚠️' : '✅'}</Text>
+            <Text style={[styles.headerStatVal, (activeCounts?.overdue || 0) > 0 ? { color: '#DC2626' } : { color: '#475569' }]}>{activeCounts?.overdue || 0}</Text>
+            <Text style={styles.headerStatLabel}>Overdue</Text>
           </View>
-        </TouchableOpacity>
+
+          <View style={[styles.headerStatCard, { backgroundColor: '#F0FDF4', borderColor: '#BBF7D0' }]}>
+            <Text style={styles.headerStatEmoji}>📅</Text>
+            <Text style={[styles.headerStatVal, { color: '#166534' }]}>{activeCounts?.upcoming || 0}</Text>
+            <Text style={styles.headerStatLabel}>Next 7 Days</Text>
+          </View>
+        </View>
       </View>
 
-      {/* 2. Search & Priority Filter Toolbar */}
+      {/* 1. In-List Search Toolbar */}
       <View style={styles.filterToolbar}>
-        {/* Quick In-List Search Bar */}
         <View style={styles.searchBar}>
-          <Text style={styles.searchIcon}>🔍</Text>
+          <Text style={{ fontSize: 13 }}>🔍</Text>
           <TextInput
             style={styles.searchInput}
-            placeholder="Search follow-up queue..."
+            placeholder="Search follow-ups by customer name, phone or ID..."
             placeholderTextColor="#94A3B8"
             value={localSearch}
             onChangeText={setLocalSearch}
           />
           {localSearch ? (
             <TouchableOpacity onPress={() => setLocalSearch('')} style={styles.clearSearchBtn}>
-              <Text style={{ fontSize: 12, color: '#64748B', fontWeight: '700' }}>✕</Text>
+              <Text style={{ fontSize: 12, color: '#64748B', fontWeight: '800' }}>✕</Text>
             </TouchableOpacity>
           ) : null}
         </View>
+      </View>
 
-        {/* Priority & Staff Filter Chips */}
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6, paddingVertical: 2 }}>
-          {['all', 'Hot', 'Warm', 'Future'].map((t) => {
-            const isSel = temperatureFilter === t;
-            const label = t === 'Hot' ? 'Hot Deals' : t === 'Warm' ? 'Warm Leads' : t === 'Future' ? 'Future Req.' : 'All Priority';
-            const icon = t === 'Hot' ? '🔥' : t === 'Warm' ? '☀️' : t === 'Future' ? '⏳' : '🎯';
-
+      {/* 2. Horizontal scrolling Filter Tab pills */}
+      <View style={styles.filterTabBar}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.filterTabBarContent}
+        >
+          {[
+            { id: 'today', label: 'Today', icon: '🎯', count: activeCounts?.today || 0 },
+            { id: 'upcoming', label: '7 Days', icon: '📅', count: activeCounts?.upcoming || 0 },
+            { id: 'overdue', label: 'Overdue', icon: '⚠️', count: activeCounts?.overdue || 0 },
+            { id: 'all', label: 'All', icon: '📋', count: activeCounts?.total || 0 },
+          ].map((tab) => {
+            const isSelected = activeTab === tab.id;
             return (
               <TouchableOpacity
-                key={t}
-                style={[styles.filterPill, isSel && styles.filterPillActive]}
-                onPress={() => onTemperatureChange(t)}
+                key={tab.id}
+                onPress={() => onTabChange(tab.id)}
+                style={[styles.filterTab, isSelected && styles.filterTabActive]}
                 activeOpacity={0.75}
               >
-                <Text style={{ fontSize: 11 }}>{icon}</Text>
-                <Text style={[styles.filterPillText, isSel && styles.filterPillTextActive]}>
-                  {label}
+                <Text style={{ fontSize: 12, marginRight: 4 }}>{tab.icon}</Text>
+                <Text style={[styles.filterTabText, isSelected && styles.filterTabTextActive]}>
+                  {tab.label}
                 </Text>
+                <View style={[styles.filterTabBadge, isSelected && styles.filterTabBadgeActive]}>
+                  <Text style={[styles.filterTabBadgeText, isSelected && styles.filterTabBadgeTextActive]}>
+                    {tab.count}
+                  </Text>
+                </View>
               </TouchableOpacity>
             );
           })}
         </ScrollView>
       </View>
 
-      {/* 3. Follow-up Cards List (Rock Solid Stale-While-Revalidate FlatList) */}
+      {/* 3. Follow-up Cards List */}
       {loading && (!displayedFollowups || displayedFollowups.length === 0) ? (
         <View style={styles.loadingBox}>
           <ActivityIndicator size="small" color="#2563EB" />
-          <Text style={styles.loadingText}>Fetching follow-up schedule...</Text>
+          <Text style={styles.loadingText}>Fetching your follow-ups schedule...</Text>
         </View>
       ) : (
         <FlatList
           data={displayedFollowups || []}
           keyExtractor={(item, index) => item._id || item.customerId || `fu_${item.phone}_${index}`}
-          extraData={{ activeTab, temperatureFilter, refreshing }}
+          extraData={{ activeTab, refreshing, isEmployee, staffName }}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ paddingBottom: 95, paddingTop: 4 }}
           refreshControl={
@@ -273,33 +376,33 @@ export function MobileFollowupSheet({
             <View style={styles.emptyBox}>
               <Text style={{ fontSize: 32, marginBottom: 8 }}>✨</Text>
               <Text style={styles.emptyTitle}>
-                {localSearch ? 'No matching follow-ups' : 'Follow-up Queue is Clear!'}
+                {localSearch
+                  ? 'No matching leads found'
+                  : isEmployee
+                  ? `No leads scheduled in this section`
+                  : 'Follow-up Queue is Clear!'}
               </Text>
               <Text style={styles.emptySubtitle}>
                 {localSearch
-                  ? `No leads match "${localSearch}" in this bucket.`
+                  ? `No leads match "${localSearch}" in your pipeline.`
                   : activeTab === 'today'
-                  ? 'All calls for today are cleared. Great job!'
+                  ? 'All scheduled calls for today are cleared. Great job!'
                   : activeTab === 'overdue'
-                  ? 'Zero overdue leads. Pipeline is well nurtured.'
-                  : 'No scheduled follow-up reminders in this bucket.'}
+                  ? 'Zero overdue leads in your pipeline.'
+                  : 'No scheduled reminders in this section.'}
               </Text>
             </View>
           }
           renderItem={({ item }) => {
             const urgency = formatRelativeUrgency(item.nextFollowUp);
-            const isHot = item.leadTemperature === 'Hot';
-            const isWarm = item.leadTemperature === 'Warm';
-            const typeColors = getCustomerTypeColors(item.customerType);
             const initial = (item.customerName || 'C').charAt(0).toUpperCase();
+            const typeColors = getCustomerTypeColors(item.customerType);
 
             // Accent strip border color
             const accentBorderColor = urgency.isOverdue
               ? '#EF4444'
               : urgency.isToday
               ? '#2563EB'
-              : isHot
-              ? '#F59E0B'
               : '#10B981';
 
             return (
@@ -308,10 +411,10 @@ export function MobileFollowupSheet({
                 activeOpacity={0.75}
                 onPress={() => setSelectedDetailItem(item)}
               >
-                {/* Header Row: Avatar, Identity & Urgency Pill */}
+                {/* Header Row: Avatar, Customer Name & Relative Urgency Pill */}
                 <View style={styles.cardHeader}>
-                  <View style={[styles.avatarCircle, { backgroundColor: typeColors.bg, borderColor: typeColors.border }]}>
-                    <Text style={[styles.avatarText, { color: typeColors.text }]}>{initial}</Text>
+                  <View style={styles.avatarCircle}>
+                    <Text style={styles.avatarText}>{initial}</Text>
                   </View>
 
                   <View style={{ flex: 1, marginLeft: 10, marginRight: 6 }}>
@@ -326,58 +429,68 @@ export function MobileFollowupSheet({
                       )}
                     </View>
 
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 2 }}>
-                      <Text style={styles.metaType}>
-                        {typeColors.icon} {item.customerType || 'Customer'}
-                      </Text>
-                      {item.salesperson ? (
-                        <>
-                          <Text style={styles.metaDot}>•</Text>
-                          <Text style={styles.metaRep} numberOfLines={1}>
-                            👤 {item.salesperson.split(' ')[0]}
+                    {item.phone || item.location ? (
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 2 }}>
+                        {item.phone ? (
+                          <Text style={styles.metaPhone} numberOfLines={1}>
+                            📞 {item.phone}
                           </Text>
-                        </>
-                      ) : null}
-                    </View>
+                        ) : null}
+                        {item.phone && item.location ? <Text style={styles.metaDot}>•</Text> : null}
+                        {item.location ? (
+                          <Text style={styles.metaLocation} numberOfLines={1}>
+                            📍 {item.location}
+                          </Text>
+                        ) : null}
+                      </View>
+                    ) : null}
                   </View>
 
                   {/* Relative Urgency Pill */}
                   <View style={[styles.urgencyBadge, { backgroundColor: urgency.bg, borderColor: urgency.border }]}>
-                    <View style={[styles.urgencyDot, { backgroundColor: urgency.dot }]} />
+                    <Text style={{ fontSize: 10 }}>{urgency.icon}</Text>
                     <Text style={[styles.urgencyLabel, { color: urgency.color }]}>
                       {urgency.label}
                     </Text>
                   </View>
                 </View>
 
-                {/* Footer Strip: Valuation, Temperature Pill & Tap Chevron */}
+                {/* Middle Info Strip: Customer Type Badge & Requirement Tag */}
+                <View style={styles.cardMiddleRow}>
+                  {item.customerType ? (
+                    <View style={[styles.cardTypePill, { backgroundColor: typeColors.bg, borderColor: typeColors.border }]}>
+                      <Text style={{ fontSize: 10 }}>{typeColors.icon}</Text>
+                      <Text style={[styles.cardTypePillText, { color: typeColors.text }]}>
+                        {item.customerType}
+                      </Text>
+                    </View>
+                  ) : null}
+
+                  {item.requirement ? (
+                    <View style={styles.cardReqTag}>
+                      <Text style={styles.cardReqTagText} numberOfLines={1}>
+                        📐 {Array.isArray(item.requirement) ? item.requirement.join(', ') : item.requirement}
+                      </Text>
+                    </View>
+                  ) : null}
+                </View>
+
+                {/* Footer Strip: Valuation & Tap Chevron */}
                 <View style={styles.cardFooterStrip}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                     {item.quotationValue ? (
-                      <Text style={styles.footerValuationText}>
-                        ₹{Number(item.quotationValue || 0).toLocaleString('en-IN')}
-                      </Text>
-                    ) : null}
-
-                    <View
-                      style={[
-                        styles.tempPill,
-                        isHot ? styles.tempHot : isWarm ? styles.tempWarm : styles.tempFuture,
-                      ]}
-                    >
-                      <Text
-                        style={[
-                          styles.tempPillText,
-                          { color: isHot ? '#DC2626' : isWarm ? '#B45309' : '#1E40AF' },
-                        ]}
-                      >
-                        {isHot ? '🔥 HOT' : isWarm ? '☀️ WARM' : '⏳ FUTURE'}
-                      </Text>
-                    </View>
+                      <View style={styles.valuationBadge}>
+                        <Text style={styles.footerValuationText}>
+                          ₹{Number(item.quotationValue || 0).toLocaleString('en-IN')}
+                        </Text>
+                      </View>
+                    ) : (
+                      <Text style={styles.footerValuationMuted}>Quote Pending</Text>
+                    )}
                   </View>
 
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                    <Text style={styles.tapToViewText}>Tap for actions</Text>
+                    <Text style={styles.tapToViewText}>Review details</Text>
                     <Text style={styles.chevronIcon}>›</Text>
                   </View>
                 </View>
@@ -387,7 +500,7 @@ export function MobileFollowupSheet({
         />
       )}
 
-      {/* 4. Detailed Information & Action Hub Modal (Opened on clicking record) */}
+      {/* 4. Professional Lead Detail Sheet */}
       <Modal
         visible={Boolean(selectedDetailItem)}
         transparent
@@ -395,208 +508,306 @@ export function MobileFollowupSheet({
         onRequestClose={() => setSelectedDetailItem(null)}
       >
         <View style={styles.modalOverlay}>
-          <View style={styles.detailModalCard}>
-            {/* Modal Header */}
-            <View style={styles.detailModalHeader}>
-              <View style={{ flex: 1 }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                  <Text style={styles.detailModalTitle} numberOfLines={1}>
-                    {selectedDetailItem?.customerName || 'Customer Follow-up'}
-                  </Text>
-                  {selectedDetailItem?.customerId && (
-                    <View style={styles.idBadge}>
-                      <Text style={styles.idBadgeText}>#{selectedDetailItem.customerId}</Text>
-                    </View>
-                  )}
-                </View>
-                {detailUrgency && (
-                  <View style={[styles.detailUrgencyBanner, { backgroundColor: detailUrgency.bg, borderColor: detailUrgency.border }]}>
-                    <View style={[styles.urgencyDot, { backgroundColor: detailUrgency.dot }]} />
-                    <Text style={[styles.detailUrgencyText, { color: detailUrgency.color }]}>
-                      Follow-up Status: {detailUrgency.label} ({selectedDetailItem?.nextFollowUp || 'Scheduled'})
-                    </Text>
-                  </View>
-                )}
-              </View>
-
-              <TouchableOpacity
-                onPress={() => setSelectedDetailItem(null)}
-                style={styles.detailModalCloseBtn}
-                activeOpacity={0.7}
-              >
-                <Text style={{ fontSize: 16, color: '#64748B', fontWeight: '800' }}>✕</Text>
-              </TouchableOpacity>
+          <View style={styles.detailSheet}>
+            {/* Drag Handle */}
+            <View style={styles.sheetHandleWrapper}>
+              <View style={styles.sheetHandle} />
             </View>
 
-            <ScrollView showsVerticalScrollIndicator={false} style={{ marginVertical: 10 }}>
-              {/* Contact & Assignment Card */}
-              <View style={styles.detailSectionCard}>
-                <Text style={styles.detailSectionHeading}>👤 Contact & Assignment</Text>
-                
-                {selectedDetailItem?.phone ? (
-                  <View style={styles.detailRow}>
-                    <Text style={styles.detailLabel}>Mobile Phone:</Text>
-                    <Text style={styles.detailValueBold}>{selectedDetailItem.phone}</Text>
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 24 }}>
+
+              {/* ── Hero Header ── */}
+              <View style={styles.dHeroSection}>
+                <View style={styles.dHeroTop}>
+                  <View style={styles.dHeroAvatarBox}>
+                    <Text style={styles.dHeroAvatarLetter}>
+                      {(fullDetailItem?.customerName || 'C').charAt(0).toUpperCase()}
+                    </Text>
                   </View>
-                ) : null}
 
-                {selectedDetailItem?.location ? (
-                  <View style={styles.detailRow}>
-                    <Text style={styles.detailLabel}>Location:</Text>
-                    <Text style={styles.detailValue}>{selectedDetailItem.location}</Text>
-                  </View>
-                ) : null}
-
-                <View style={styles.detailRow}>
-                  <Text style={styles.detailLabel}>Customer Type:</Text>
-                  <Text style={[styles.detailValue, { color: detailTypeColors?.text || '#0F172A', fontWeight: '700' }]}>
-                    {detailTypeColors?.icon} {selectedDetailItem?.customerType || 'Customer'}
-                  </Text>
-                </View>
-
-                {selectedDetailItem?.salesperson ? (
-                  <View style={styles.detailRow}>
-                    <Text style={styles.detailLabel}>Assigned Rep:</Text>
-                    <Text style={styles.detailValueBold}>👤 {selectedDetailItem.salesperson}</Text>
-                  </View>
-                ) : null}
-              </View>
-
-              {/* Project & Valuation Card */}
-              <View style={styles.detailSectionCard}>
-                <Text style={styles.detailSectionHeading}>🏗️ Project & Requirement</Text>
-
-                <View style={styles.detailRow}>
-                  <Text style={styles.detailLabel}>Quotation Value:</Text>
-                  <Text style={styles.detailPriceValue}>
-                    ₹ {Number(selectedDetailItem?.quotationValue || 0).toLocaleString('en-IN')}
-                  </Text>
-                </View>
-
-                <View style={styles.detailRow}>
-                  <Text style={styles.detailLabel}>Requirement:</Text>
-                  <Text style={styles.detailValue} numberOfLines={2}>
-                    {detailReqText}
-                  </Text>
-                </View>
-
-                {selectedDetailItem?.approxQuantity ? (
-                  <View style={styles.detailRow}>
-                    <Text style={styles.detailLabel}>Approx Quantity:</Text>
-                    <Text style={styles.detailValue}>{selectedDetailItem.approxQuantity} sq.ft</Text>
-                  </View>
-                ) : null}
-
-                <View style={styles.detailRow}>
-                  <Text style={styles.detailLabel}>Lead Priority:</Text>
-                  <Text style={[styles.detailValue, { fontWeight: '800' }]}>
-                    {selectedDetailItem?.leadTemperature === 'Hot' ? '🔥 Hot Deal' : selectedDetailItem?.leadTemperature === 'Warm' ? '☀️ Warm Lead' : '⏳ Future Requirement'}
-                  </Text>
-                </View>
-
-                {selectedDetailItem?.status ? (
-                  <View style={styles.detailRow}>
-                    <Text style={styles.detailLabel}>Pipeline Stage:</Text>
-                    <Text style={styles.detailValue}>{selectedDetailItem.status}</Text>
-                  </View>
-                ) : null}
-              </View>
-
-              {/* Follow-up Notes & Discussion Context */}
-              <View style={styles.detailNotesCard}>
-                <View style={styles.detailNotesHeaderRow}>
-                  <Text style={styles.detailSectionHeading}>💬 Last Discussion & Notes</Text>
-                  {selectedDetailItem?.followUpCount ? (
-                    <View style={styles.detailNotesCountBadge}>
-                      <Text style={styles.detailNotesCountText}>
-                        Interaction #{selectedDetailItem.followUpCount}
+                  <View style={{ flex: 1 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                      <Text style={styles.dHeroName} numberOfLines={1}>
+                        {fullDetailItem?.customerName || 'Customer'}
                       </Text>
+                      {fullDetailItem?.customerId && (
+                        <View style={styles.dHeroIdPill}>
+                          <Text style={styles.dHeroIdPillText}>#{fullDetailItem.customerId}</Text>
+                        </View>
+                      )}
                     </View>
-                  ) : null}
+
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 3, flexWrap: 'wrap' }}>
+                      {fullDetailItem?.customerType && (
+                        <View style={[styles.dHeroTypePill, { backgroundColor: detailTypeColors?.bg, borderColor: detailTypeColors?.border }]}>
+                          <Text style={{ fontSize: 10 }}>{detailTypeColors?.icon}</Text>
+                          <Text style={[styles.dHeroTypePillText, { color: detailTypeColors?.text }]}>
+                            {fullDetailItem.customerType}
+                          </Text>
+                        </View>
+                      )}
+                      {fullDetailItem?.location && (
+                        <Text style={styles.dHeroLocation}>📍 {fullDetailItem.location}</Text>
+                      )}
+                    </View>
+                  </View>
+
+                  <TouchableOpacity
+                    onPress={() => setSelectedDetailItem(null)}
+                    style={styles.dCloseBtn}
+                    activeOpacity={0.7}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  >
+                    <Text style={styles.dCloseBtnText}>✕</Text>
+                  </TouchableOpacity>
                 </View>
 
-                {selectedDetailItem?.notes && selectedDetailItem.notes.trim() !== '' ? (
-                  <View style={styles.detailNotesBubble}>
-                    <Text style={styles.detailNotesText}>
-                      "{selectedDetailItem.notes.trim()}"
+                {/* Follow-up Status Ribbon */}
+                {detailUrgency && (
+                  <View style={[styles.dStatusRibbon, { backgroundColor: detailUrgency.bg, borderColor: detailUrgency.border }]}>
+                    <View style={[styles.dStatusDot, { backgroundColor: detailUrgency.dot || detailUrgency.accent }]} />
+                    <Text style={[styles.dStatusText, { color: detailUrgency.color }]}>
+                      {detailUrgency.icon} {detailUrgency.label}
                     </Text>
-                  </View>
-                ) : (
-                  <View style={styles.detailNotesEmptyBubble}>
-                    <Text style={styles.detailNotesEmptyText}>
-                      No discussion notes logged yet. Use "Log Follow-up Call" below to record key points.
-                    </Text>
+                    {fullDetailItem?.nextFollowUp && (
+                      <Text style={[styles.dStatusDateText, { color: detailUrgency.color }]}>
+                        — {fullDetailItem.nextFollowUp}
+                      </Text>
+                    )}
                   </View>
                 )}
-
-                {selectedDetailItem?.lastReason && selectedDetailItem.lastReason.trim() !== '' ? (
-                  <View style={styles.detailReasonRow}>
-                    <Text style={styles.detailReasonLabel}>🎯 Objective:</Text>
-                    <Text style={styles.detailReasonValue} numberOfLines={2}>
-                      {selectedDetailItem.lastReason.trim()}
-                    </Text>
-                  </View>
-                ) : null}
-
-                {selectedDetailItem?.lastFollowUp ? (
-                  <View style={styles.detailLastDateRow}>
-                    <Text style={styles.detailLastDateText}>
-                      🕒 Last Interaction: {selectedDetailItem.lastFollowUp}
-                    </Text>
-                  </View>
-                ) : null}
               </View>
-            </ScrollView>
 
-            {/* Action Buttons Hub (EXCLUSIVELY PRESENT IN DETAIL VIEW) */}
-            <View style={styles.detailActionHub}>
-              {/* Direct Communication Quick Dialers */}
-              {selectedDetailItem?.phone ? (
-                <View style={styles.detailQuickDialRow}>
+              {/* ── Quick Contact Bar (Call + WhatsApp at top) ── */}
+              {fullDetailItem?.phone ? (
+                <View style={styles.dContactBar}>
                   <TouchableOpacity
-                    style={styles.detailCallBtn}
-                    onPress={() => Linking.openURL(`tel:${selectedDetailItem.phone}`)}
+                    style={styles.dContactCallBtn}
+                    onPress={() => Linking.openURL(`tel:${fullDetailItem.phone}`)}
                     activeOpacity={0.75}
                   >
-                    <Text style={styles.detailCallBtnText}>📞 Direct Call</Text>
+                    <Text style={styles.dContactCallIcon}>📞</Text>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.dContactCallLabel}>Call Now</Text>
+                      <Text style={styles.dContactCallNumber}>{fullDetailItem.phone}</Text>
+                    </View>
                   </TouchableOpacity>
 
                   <TouchableOpacity
-                    style={styles.detailWaBtn}
-                    onPress={() => openWhatsApp(selectedDetailItem)}
+                    style={styles.dContactWaBtn}
+                    onPress={() => openWhatsApp(fullDetailItem)}
                     activeOpacity={0.75}
                   >
-                    <Text style={styles.detailWaBtnText}>💬 WhatsApp Chat</Text>
+                    <Text style={styles.dContactWaIcon}>💬</Text>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.dContactWaLabel}>WhatsApp</Text>
+                      <Text style={styles.dContactWaSub}>Send Quote</Text>
+                    </View>
                   </TouchableOpacity>
                 </View>
               ) : null}
 
-              {/* Main Action Hub: Log Call vs Record Lost */}
-              <View style={styles.detailMainActionRow}>
-                <TouchableOpacity
-                  style={styles.detailLogCallBtn}
-                  onPress={() => {
-                    const item = selectedDetailItem;
-                    setSelectedDetailItem(null);
-                    onLogActivity(item);
-                  }}
-                  activeOpacity={0.85}
-                >
-                  <Text style={styles.detailLogCallBtnText}>📝 Log Follow-up Call</Text>
-                </TouchableOpacity>
+              {/* ── Pipeline & Valuation Summary ── */}
+              <View style={styles.dInfoGrid}>
+                <View style={styles.dInfoTile}>
+                  <Text style={styles.dInfoTileLabel}>Quotation Value</Text>
+                  <Text style={styles.dInfoTileValueGreen}>
+                    ₹ {Number(fullDetailItem?.quotationValue || 0).toLocaleString('en-IN')}
+                  </Text>
+                </View>
 
-                <TouchableOpacity
-                  style={styles.detailLostBtn}
-                  onPress={() => {
-                    const item = selectedDetailItem;
-                    setSelectedDetailItem(null);
-                    onRecordLost(item);
-                  }}
-                  activeOpacity={0.85}
-                >
-                  <Text style={styles.detailLostBtnText}>✕ Mark Lost</Text>
-                </TouchableOpacity>
+                {fullDetailItem?.tileBudget ? (
+                  <View style={styles.dInfoTile}>
+                    <Text style={styles.dInfoTileLabel}>Tile Budget</Text>
+                    <Text style={[styles.dInfoTileValue, { color: '#2563EB' }]}>
+                      ₹ {Number(fullDetailItem.tileBudget).toLocaleString('en-IN')}
+                    </Text>
+                  </View>
+                ) : null}
+
+                <View style={styles.dInfoTile}>
+                  <Text style={styles.dInfoTileLabel}>Lead Priority</Text>
+                  <Text style={styles.dInfoTileValue}>
+                    {fullDetailItem?.leadTemperature === 'Hot' ? '🔥 Hot' : fullDetailItem?.leadTemperature === 'Warm' ? '☀️ Warm' : '⏳ Future'}
+                  </Text>
+                </View>
+
+                {fullDetailItem?.status ? (
+                  <View style={styles.dInfoTile}>
+                    <Text style={styles.dInfoTileLabel}>Pipeline Stage</Text>
+                    <Text style={styles.dInfoTileValue}>{fullDetailItem.status}</Text>
+                  </View>
+                ) : null}
               </View>
+
+              {/* ── Material & Project Specifications ── */}
+              <View style={styles.dSection}>
+                <View style={styles.dSectionHead}>
+                  <Text style={styles.dSectionIcon}>📐</Text>
+                  <Text style={styles.dSectionTitle}>Material & Project Specifications</Text>
+                </View>
+                
+                <View style={styles.dSectionMetaRow}>
+                  <Text style={styles.dSectionMetaLabel}>Tile Requirement:</Text>
+                  <Text style={styles.dSectionMetaVal}>{detailReqText || '—'}</Text>
+                </View>
+
+                {fullDetailItem?.approxQuantity ? (
+                  <View style={styles.dSectionMetaRow}>
+                    <Text style={styles.dSectionMetaLabel}>Approx Flooring Qty:</Text>
+                    <Text style={styles.dSectionMetaVal}>{fullDetailItem.approxQuantity} sq.ft</Text>
+                  </View>
+                ) : null}
+
+                {fullDetailItem?.sanitaryRequirement ? (
+                  <View style={styles.dSectionMetaRow}>
+                    <Text style={styles.dSectionMetaLabel}>Sanitary Ware Spec:</Text>
+                    <Text style={styles.dSectionMetaVal}>{fullDetailItem.sanitaryRequirement}</Text>
+                  </View>
+                ) : null}
+
+                {fullDetailItem?.adhesiveRequirement ? (
+                  <View style={styles.dSectionMetaRow}>
+                    <Text style={styles.dSectionMetaLabel}>Adhesives & Grouts:</Text>
+                    <Text style={styles.dSectionMetaVal}>{fullDetailItem.adhesiveRequirement}</Text>
+                  </View>
+                ) : null}
+
+                {fullDetailItem?.crossSell ? (
+                  <View style={styles.dSectionMetaRow}>
+                    <Text style={styles.dSectionMetaLabel}>Cross-Sell Interest:</Text>
+                    <Text style={styles.dSectionMetaVal}>{fullDetailItem.crossSell}</Text>
+                  </View>
+                ) : null}
+              </View>
+
+              {/* ── Site Progress & Assignment Details ── */}
+              <View style={styles.dSection}>
+                <View style={styles.dSectionHead}>
+                  <Text style={styles.dSectionIcon}>🏗️</Text>
+                  <Text style={styles.dSectionTitle}>Site Progress & Identity</Text>
+                </View>
+
+                {fullDetailItem?.houseStage ? (
+                  <View style={styles.dSectionMetaRow}>
+                    <Text style={styles.dSectionMetaLabel}>Construction Phase:</Text>
+                    <Text style={styles.dSectionMetaVal}>{fullDetailItem.houseStage}</Text>
+                  </View>
+                ) : null}
+
+                {fullDetailItem?.leadSource ? (
+                  <View style={styles.dSectionMetaRow}>
+                    <Text style={styles.dSectionMetaLabel}>Inquiry Source:</Text>
+                    <Text style={styles.dSectionMetaVal}>{fullDetailItem.leadSource}</Text>
+                  </View>
+                ) : null}
+
+                {fullDetailItem?.salesperson ? (
+                  <View style={styles.dSectionMetaRow}>
+                    <Text style={styles.dSectionMetaLabel}>Assigned Staff:</Text>
+                    <Text style={styles.dSectionMetaVal}>👤 {fullDetailItem.salesperson}</Text>
+                  </View>
+                ) : null}
+
+                {fullDetailItem?.phone ? (
+                  <View style={styles.dSectionMetaRow}>
+                    <Text style={styles.dSectionMetaLabel}>Contact Phone:</Text>
+                    <Text style={styles.dSectionMetaVal}>{fullDetailItem.phone}</Text>
+                  </View>
+                ) : null}
+              </View>
+
+              {/* ── Activity Timeline (Vertical History List) ── */}
+              <View style={styles.dSection}>
+                <View style={styles.dSectionHead}>
+                  <Text style={styles.dSectionIcon}>⏳</Text>
+                  <Text style={styles.dSectionTitle}>Activity Timeline</Text>
+                </View>
+
+                {activityTimeline.length > 0 ? (
+                  <View style={styles.timelineContainer}>
+                    {/* Vertical line through timeline */}
+                    <View style={styles.timelineVerticalLine} />
+
+                    {activityTimeline.map((act, index) => {
+                      // Color code bullet dots based on activity outcome
+                      const outcomeLower = act.outcome.toLowerCase();
+                      const isPositive = outcomeLower.includes('won') || outcomeLower.includes('confirmed') || outcomeLower.includes('order');
+                      const isNegative = outcomeLower.includes('lost') || outcomeLower.includes('postponed');
+                      const dotColor = isPositive ? '#10B981' : isNegative ? '#EF4444' : '#3B82F6';
+                      const dotBg = isPositive ? '#ECFDF5' : isNegative ? '#FEF2F2' : '#EFF6FF';
+
+                      return (
+                        <View key={index} style={styles.timelineItem}>
+                          {/* Left bullet marker */}
+                          <View style={[styles.timelineBullet, { backgroundColor: dotBg, borderColor: dotColor }]}>
+                            <View style={[styles.timelineBulletInner, { backgroundColor: dotColor }]} />
+                          </View>
+
+                          {/* Right Content details card */}
+                          <View style={styles.timelineContent}>
+                            <View style={styles.timelineHeaderRow}>
+                              <Text style={[styles.timelineTitle, { color: dotColor }]}>
+                                {act.outcome}
+                              </Text>
+                              {act.date ? (
+                                <Text style={styles.timelineDate}>
+                                  🕒 {formatTimelineDate(act.date)}
+                                </Text>
+                              ) : null}
+                            </View>
+                            <Text style={styles.timelineNotes}>"{act.notes.trim()}"</Text>
+                          </View>
+                        </View>
+                      );
+                    })}
+                  </View>
+                ) : (
+                  <View style={{ paddingVertical: 12, alignItems: 'center' }}>
+                    <Text style={styles.dNotesEmpty}>
+                      No history notes logged yet. Log callbacks or visits to begin your customer activity timeline.
+                    </Text>
+                  </View>
+                )}
+
+                {fullDetailItem?.lastReason && fullDetailItem.lastReason.trim() !== '' && (
+                  <View style={styles.timelineObjectiveBox}>
+                    <Text style={styles.timelineObjectiveLabel}>🎯 Latest Target Objective:</Text>
+                    <Text style={styles.timelineObjectiveVal}>
+                      {fullDetailItem.lastReason.split(': ').slice(1).join(': ') || fullDetailItem.lastReason}
+                    </Text>
+                  </View>
+                )}
+              </View>
+
+            </ScrollView>
+
+            {/* ── Sticky Action Footer ── */}
+            <View style={styles.dActionFooter}>
+              <TouchableOpacity
+                style={styles.dLogActivityBtn}
+                onPress={() => {
+                  const item = selectedDetailItem;
+                  setSelectedDetailItem(null);
+                  onLogActivity(item);
+                }}
+                activeOpacity={0.85}
+              >
+                <Text style={styles.dLogActivityIcon}>📝</Text>
+                <Text style={styles.dLogActivityText}>Log Activity</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.dMarkLostBtn}
+                onPress={() => {
+                  const item = selectedDetailItem;
+                  setSelectedDetailItem(null);
+                  onRecordLost(item);
+                }}
+                activeOpacity={0.85}
+              >
+                <Text style={styles.dMarkLostText}>✕ Lost</Text>
+              </TouchableOpacity>
             </View>
           </View>
         </View>
@@ -610,265 +821,269 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F8FAFC',
   },
-  // iOS-Grade Segmented Time-Horizon Switcher
-  segmentContainer: {
-    flexDirection: 'row',
-    marginHorizontal: 14,
-    marginTop: 10,
-    marginBottom: 8,
-    padding: 4,
-    backgroundColor: '#F1F5F9',
-    borderRadius: 14,
-    gap: 4,
+  sheetTopTitleRow: {
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 4,
   },
-  segmentBtn: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 7.5,
-    borderRadius: 10,
-    gap: 4,
-  },
-  segmentBtnActive: {
-    backgroundColor: '#FFFFFF',
-    shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: 1.5 },
-    shadowOpacity: 0.08,
-    shadowRadius: 3,
-    elevation: 2,
-  },
-  segmentDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-  },
-  segmentText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#64748B',
-  },
-  segmentTextActive: {
-    color: '#0F172A',
+  sheetTopTitle: {
+    fontSize: 18,
     fontWeight: '900',
+    color: '#0F172A',
+    letterSpacing: -0.4,
   },
-  segmentBadge: {
-    backgroundColor: '#E2E8F0',
-    paddingHorizontal: 5,
-    paddingVertical: 1,
-    borderRadius: 8,
-    minWidth: 16,
-    alignItems: 'center',
-  },
-  segmentBadgeActiveBlue: {
+  sheetTopCountBadge: {
     backgroundColor: '#EFF6FF',
+    borderWidth: 1,
+    borderColor: '#BFDBFE',
+    paddingHorizontal: 7,
+    paddingVertical: 1.5,
+    borderRadius: 7,
   },
-  segmentBadgeTextActiveBlue: {
+  sheetTopCountBadgeText: {
+    fontSize: 11,
+    fontWeight: '900',
     color: '#2563EB',
   },
-  segmentBadgeActiveGreen: {
-    backgroundColor: '#ECFDF5',
-  },
-  segmentBadgeTextActiveGreen: {
-    color: '#047857',
-  },
-  segmentBadgeActiveRed: {
-    backgroundColor: '#FEF2F2',
-  },
-  segmentBadgeTextActiveRed: {
-    color: '#DC2626',
-  },
-  segmentBadgeActiveDark: {
-    backgroundColor: '#F1F5F9',
-  },
-  segmentBadgeTextActiveDark: {
-    color: '#0F172A',
-  },
-  segmentBadgeText: {
-    fontSize: 9.5,
-    fontWeight: '800',
+  sheetTopSubtitle: {
+    fontSize: 11.5,
     color: '#64748B',
+    marginTop: 2,
+    fontWeight: '500',
   },
-  // Search & Filter Toolbar
+  employeeIdentityChip: {
+    backgroundColor: '#F1F5F9',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  employeeIdentityChipText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#334155',
+  },
+  filterTabBar: {
+    marginBottom: 8,
+  },
+  filterTabBarContent: {
+    gap: 8,
+    paddingVertical: 2,
+    paddingHorizontal: 14,
+  },
+  filterTab: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 24,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1.5,
+    borderColor: '#E2E8F0',
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 3,
+    elevation: 1,
+  },
+  filterTabActive: {
+    backgroundColor: '#1E3A5F',
+    borderColor: '#1E3A5F',
+    shadowOpacity: 0.18,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  filterTabText: {
+    fontSize: 13,
+    color: '#334155',
+    fontWeight: '700',
+  },
+  filterTabTextActive: {
+    color: '#FFFFFF',
+    fontWeight: '800',
+  },
+  filterTabBadge: {
+    backgroundColor: '#F1F5F9',
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 10,
+    minWidth: 22,
+    alignItems: 'center',
+  },
+  filterTabBadgeActive: {
+    backgroundColor: 'rgba(255,255,255,0.18)',
+  },
+  filterTabBadgeText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#475569',
+  },
+  filterTabBadgeTextActive: {
+    color: '#FFFFFF',
+  },
   filterToolbar: {
     paddingHorizontal: 14,
-    paddingVertical: 9,
-    backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
-    gap: 8,
+    marginBottom: 8,
+    gap: 6,
   },
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F8FAFC',
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: Platform.OS === 'ios' ? 8 : 5,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-  },
-  searchIcon: {
-    fontSize: 12,
-    marginRight: 6,
-    color: '#64748B',
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 12.5,
-    color: '#0F172A',
-    fontWeight: '600',
-    padding: 0,
-  },
-  clearSearchBtn: {
-    padding: 4,
-  },
-  filterPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
     borderColor: '#E2E8F0',
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    height: 38,
+    gap: 8,
     shadowColor: '#0F172A',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.02,
     shadowRadius: 2,
     elevation: 1,
   },
-  filterPillActive: {
-    backgroundColor: '#0F172A',
-    borderColor: '#0F172A',
-    shadowOpacity: 0.12,
-  },
-  filterPillText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#475569',
-  },
-  filterPillTextActive: {
-    color: '#FFFFFF',
-    fontWeight: '800',
-  },
-  filterPillStaff: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 11,
-    paddingVertical: 6,
-    borderRadius: 20,
-    backgroundColor: '#F8FAFC',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-  },
-  filterPillStaffActive: {
-    backgroundColor: '#2563EB',
-    borderColor: '#1D4ED8',
-  },
-  filterPillStaffText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#475569',
-  },
-  filterPillStaffTextActive: {
-    color: '#FFFFFF',
-    fontWeight: '800',
-  },
-  filterDivider: {
-    width: 1,
-    height: 18,
-    backgroundColor: '#CBD5E1',
-    alignSelf: 'center',
-    marginHorizontal: 3,
-  },
-  loadingBox: {
+  searchInput: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 35,
-  },
-  loadingText: {
-    marginTop: 8,
     fontSize: 12.5,
-    color: '#64748B',
+    color: '#0F172A',
+    fontWeight: '500',
+    paddingVertical: 0,
+  },
+  clearSearchBtn: {
+    padding: 4,
+  },
+  employeeIdentityBadge: {
+    backgroundColor: '#EFF6FF',
+    borderWidth: 1,
+    borderColor: '#BFDBFE',
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 4.5,
+  },
+  employeeIdentityText: {
+    fontSize: 11,
+    color: '#1E40AF',
     fontWeight: '600',
   },
-  emptyBox: {
+  offlineBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#FEF2F2',
+    borderWidth: 1,
+    borderColor: '#FECACA',
+    marginHorizontal: 14,
+    marginTop: 6,
+    marginBottom: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 10,
+  },
+  offlineDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#EF4444',
+  },
+  offlineBannerText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#B91C1C',
+  },
+  offlineRetryBtn: {
+    backgroundColor: '#DC2626',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  offlineRetryBtnText: {
+    fontSize: 10.5,
+    fontWeight: '800',
+    color: '#FFFFFF',
+  },
+  loadingBox: {
+    paddingVertical: 40,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 45,
-    paddingHorizontal: 20,
+    gap: 8,
+  },
+  loadingText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#64748B',
+  },
+  emptyBox: {
+    paddingVertical: 48,
+    paddingHorizontal: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   emptyTitle: {
-    fontSize: 15,
+    fontSize: 14.5,
     fontWeight: '800',
     color: '#0F172A',
+    textAlign: 'center',
   },
   emptySubtitle: {
     fontSize: 12,
     color: '#64748B',
     textAlign: 'center',
     marginTop: 4,
-    maxWidth: 260,
     lineHeight: 17,
   },
-  // High-Modern Follow-up Record Card
   card: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 16,
+    marginHorizontal: 14,
+    marginBottom: 10,
+    borderRadius: 14,
     borderWidth: 1,
     borderColor: '#E2E8F0',
-    marginHorizontal: 14,
-    marginTop: 8,
-    paddingVertical: 13,
-    paddingHorizontal: 15,
+    padding: 13,
     shadowColor: '#0F172A',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 5,
-    elevation: 2,
+    shadowOpacity: 0.03,
+    shadowRadius: 4,
+    elevation: 1,
   },
   cardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
   },
   avatarCircle: {
     width: 38,
     height: 38,
     borderRadius: 11,
+    backgroundColor: '#EFF6FF',
     borderWidth: 1,
+    borderColor: '#DBEAFE',
     alignItems: 'center',
     justifyContent: 'center',
   },
   avatarText: {
     fontSize: 15,
     fontWeight: '900',
+    color: '#2563EB',
   },
   customerName: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '800',
     color: '#0F172A',
     letterSpacing: -0.2,
   },
   idBadge: {
-    backgroundColor: '#F8FAFC',
-    paddingHorizontal: 5.5,
+    backgroundColor: '#F1F5F9',
+    paddingHorizontal: 5,
     paddingVertical: 1.5,
-    borderRadius: 4,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderRadius: 5,
   },
   idBadgeText: {
     fontSize: 9.5,
     fontWeight: '800',
-    color: '#475569',
-    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+    color: '#64748B',
   },
-  metaType: {
+  metaPhone: {
     fontSize: 11,
     color: '#64748B',
     fontWeight: '600',
@@ -877,35 +1092,119 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: '#CBD5E1',
   },
-  metaRep: {
+  metaLocation: {
     fontSize: 11,
-    color: '#475569',
-    fontWeight: '700',
+    color: '#64748B',
+    fontWeight: '500',
   },
   urgencyBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 8.5,
-    paddingVertical: 4,
-    borderRadius: 20,
+    paddingHorizontal: 8,
+    paddingVertical: 3.5,
+    borderRadius: 6,
     borderWidth: 1,
-    gap: 4.5,
-  },
-  urgencyDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
+    gap: 4,
   },
   urgencyLabel: {
-    fontSize: 10.5,
+    fontSize: 10,
     fontWeight: '800',
+  },
+  sheetHeaderWrapper: {
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E2E8F0',
+    paddingBottom: 10,
+    marginBottom: 6,
+  },
+  headerIconBadge: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    backgroundColor: '#FEF3C7',
+    borderWidth: 1,
+    borderColor: '#FDE68A',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerStatRow: {
+    flexDirection: 'row',
+    gap: 8,
+    paddingHorizontal: 14,
+    marginTop: 8,
+  },
+  headerStatCard: {
+    flex: 1,
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingVertical: 7,
+    paddingHorizontal: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerStatEmoji: {
+    fontSize: 11,
+    marginBottom: 1,
+  },
+  headerStatVal: {
+    fontSize: 14,
+    fontWeight: '900',
+    letterSpacing: -0.2,
+  },
+  headerStatLabel: {
+    fontSize: 9.5,
+    fontWeight: '700',
+    color: '#64748B',
+    marginTop: 1,
+  },
+  cardMiddleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 8,
+    flexWrap: 'wrap',
+  },
+  cardTypePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 6,
+    borderWidth: 1,
+  },
+  cardTypePillText: {
+    fontSize: 10,
+    fontWeight: '800',
+  },
+  cardReqTag: {
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 6,
+    flexShrink: 1,
+  },
+  cardReqTagText: {
+    fontSize: 10,
+    color: '#475569',
+    fontWeight: '600',
+  },
+  valuationBadge: {
+    backgroundColor: '#ECFDF5',
+    borderWidth: 1,
+    borderColor: '#A7F3D0',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
   },
   cardFooterStrip: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginTop: 10,
-    paddingTop: 9,
+    paddingTop: 8,
     borderTopWidth: 1,
     borderTopColor: '#F1F5F9',
   },
@@ -914,342 +1213,499 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     color: '#059669',
   },
-  tempPill: {
-    paddingHorizontal: 7,
-    paddingVertical: 3,
-    borderRadius: 6,
-    borderWidth: 1,
-  },
-  tempHot: {
-    backgroundColor: '#FEF2F2',
-    borderColor: '#FECDD3',
-  },
-  tempWarm: {
-    backgroundColor: '#FFFBEB',
-    borderColor: '#FDE68A',
-  },
-  tempFuture: {
-    backgroundColor: '#EFF6FF',
-    borderColor: '#BFDBFE',
-  },
-  tempPillText: {
-    fontSize: 9.5,
-    fontWeight: '900',
-    letterSpacing: 0.3,
+  footerValuationMuted: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#94A3B8',
   },
   tapToViewText: {
     fontSize: 11,
     color: '#64748B',
-    fontWeight: '700',
+    fontWeight: '600',
   },
   chevronIcon: {
-    fontSize: 17,
+    fontSize: 16,
     fontWeight: '700',
     color: '#94A3B8',
     marginLeft: 2,
   },
-
-  // Detailed Modal Styles
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(15, 23, 42, 0.6)',
+    backgroundColor: 'rgba(15, 23, 42, 0.55)',
     justifyContent: 'flex-end',
   },
-  detailModalCard: {
-    backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    padding: 18,
-    maxHeight: '90%',
-    shadowColor: '#000',
+  detailSheet: {
+    backgroundColor: '#F8FAFC',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    maxHeight: '93%',
+    shadowColor: '#0F172A',
     shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 10,
+    shadowOpacity: 0.12,
+    shadowRadius: 12,
     elevation: 12,
   },
-  detailModalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    paddingBottom: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
-  },
-  detailModalTitle: {
-    fontSize: 17,
-    fontWeight: '900',
-    color: '#0F172A',
-  },
-  detailUrgencyBanner: {
-    flexDirection: 'row',
+  sheetHandleWrapper: {
     alignItems: 'center',
-    gap: 5,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
-    borderWidth: 1,
-    marginTop: 6,
-    alignSelf: 'flex-start',
+    paddingTop: 10,
+    paddingBottom: 2,
   },
-  detailUrgencyText: {
-    fontSize: 11,
-    fontWeight: '800',
+  sheetHandle: {
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#CBD5E1',
   },
-  detailModalCloseBtn: {
-    padding: 6,
-    backgroundColor: '#F1F5F9',
-    borderRadius: 8,
-  },
-  detailSectionCard: {
-    backgroundColor: '#F8FAFC',
+
+  /* ── Hero Header ── */
+  dHeroSection: {
+    backgroundColor: '#FFFFFF',
+    marginHorizontal: 14,
+    marginTop: 8,
+    borderRadius: 14,
+    padding: 14,
     borderWidth: 1,
     borderColor: '#E2E8F0',
+  },
+  dHeroTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 11,
+  },
+  dHeroAvatarBox: {
+    width: 42,
+    height: 42,
     borderRadius: 12,
-    padding: 12,
-    marginBottom: 10,
-  },
-  detailSectionHeading: {
-    fontSize: 12,
-    fontWeight: '800',
-    color: '#334155',
-    marginBottom: 8,
-    textTransform: 'uppercase',
-    letterSpacing: 0.3,
-  },
-  detailRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    backgroundColor: '#EFF6FF',
+    borderWidth: 1.2,
+    borderColor: '#DBEAFE',
     alignItems: 'center',
-    paddingVertical: 3.5,
+    justifyContent: 'center',
   },
-  detailLabel: {
-    fontSize: 12,
-    color: '#64748B',
-    fontWeight: '600',
-  },
-  detailValue: {
-    fontSize: 12.5,
-    color: '#0F172A',
-    fontWeight: '600',
-    maxWidth: '60%',
-    textAlign: 'right',
-  },
-  detailValueBold: {
-    fontSize: 12.5,
-    color: '#0F172A',
-    fontWeight: '800',
-  },
-  detailPriceValue: {
-    fontSize: 14.5,
+  dHeroAvatarLetter: {
+    fontSize: 17,
     fontWeight: '900',
-    color: '#059669',
+    color: '#2563EB',
   },
-  detailNotesCard: {
-    backgroundColor: '#FFFDF5',
+  dHeroName: {
+    fontSize: 16.5,
+    fontWeight: '900',
+    color: '#0F172A',
+    letterSpacing: -0.3,
+    flexShrink: 1,
+  },
+  dHeroIdPill: {
+    backgroundColor: '#F1F5F9',
+    paddingHorizontal: 5,
+    paddingVertical: 1.5,
+    borderRadius: 5,
     borderWidth: 1,
-    borderColor: '#FDE68A',
-    borderRadius: 14,
-    padding: 13,
-    marginBottom: 10,
+    borderColor: '#E2E8F0',
   },
-  detailNotesHeaderRow: {
+  dHeroIdPillText: {
+    fontSize: 9.5,
+    fontWeight: '800',
+    color: '#64748B',
+  },
+  dHeroTypePill: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 6,
-  },
-  detailNotesCountBadge: {
-    backgroundColor: '#FEF3C7',
+    gap: 3,
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 6,
     borderWidth: 1,
-    borderColor: '#FDE68A',
   },
-  detailNotesCountText: {
-    fontSize: 10,
+  dHeroTypePillText: {
+    fontSize: 10.5,
     fontWeight: '800',
-    color: '#92400E',
   },
-  detailNotesBubble: {
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#FEF3C7',
-    borderLeftWidth: 3.5,
-    borderLeftColor: '#F59E0B',
+  dHeroLocation: {
+    fontSize: 11,
+    color: '#64748B',
+    fontWeight: '600',
+  },
+  dCloseBtn: {
+    width: 28,
+    height: 28,
     borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    marginTop: 2,
-  },
-  detailNotesText: {
-    fontSize: 13,
-    color: '#78350F',
-    fontStyle: 'italic',
-    lineHeight: 19,
-    fontWeight: '500',
-  },
-  detailNotesEmptyBubble: {
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#F1F5F9',
     borderWidth: 1,
     borderColor: '#E2E8F0',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  dCloseBtnText: {
+    fontSize: 12,
+    color: '#64748B',
+    fontWeight: '900',
+  },
+  dStatusRibbon: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 9,
+    paddingVertical: 4.5,
     borderRadius: 8,
-    paddingHorizontal: 10,
+    borderWidth: 1,
+    marginTop: 10,
+  },
+  dStatusDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  dStatusText: {
+    fontSize: 11.5,
+    fontWeight: '800',
+  },
+  dStatusDateText: {
+    fontSize: 10.5,
+    fontWeight: '600',
+  },
+
+  /* ── Quick Contact Bar ── */
+  dContactBar: {
+    flexDirection: 'row',
+    marginHorizontal: 14,
+    marginTop: 10,
+    gap: 10,
+  },
+  dContactCallBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1.2,
+    borderColor: '#BFDBFE',
+    borderRadius: 13,
+    paddingHorizontal: 12,
+    paddingVertical: 11,
+    shadowColor: '#2563EB',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    elevation: 1,
+  },
+  dContactCallIcon: {
+    fontSize: 18,
+  },
+  dContactCallLabel: {
+    fontSize: 12.5,
+    fontWeight: '900',
+    color: '#1D4ED8',
+    letterSpacing: -0.2,
+  },
+  dContactCallNumber: {
+    fontSize: 10,
+    color: '#3B82F6',
+    fontWeight: '600',
+    marginTop: 1,
+  },
+  dContactWaBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1.2,
+    borderColor: '#A7F3D0',
+    borderRadius: 13,
+    paddingHorizontal: 12,
+    paddingVertical: 11,
+    shadowColor: '#059669',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    elevation: 1,
+  },
+  dContactWaIcon: {
+    fontSize: 18,
+  },
+  dContactWaLabel: {
+    fontSize: 12.5,
+    fontWeight: '900',
+    color: '#047857',
+    letterSpacing: -0.2,
+  },
+  dContactWaSub: {
+    fontSize: 10,
+    color: '#059669',
+    fontWeight: '600',
+    marginTop: 1,
+  },
+
+  /* ── Info Grid Tiles ── */
+  dInfoGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginHorizontal: 14,
+    marginTop: 10,
+    gap: 8,
+  },
+  dInfoTile: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 11,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    minWidth: '46%',
+    flexGrow: 1,
+  },
+  dInfoTileLabel: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#94A3B8',
+    textTransform: 'uppercase',
+    letterSpacing: 0.3,
+    marginBottom: 2,
+  },
+  dInfoTileValue: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#0F172A',
+  },
+  dInfoTileValueGreen: {
+    fontSize: 14,
+    fontWeight: '900',
+    color: '#059669',
+  },
+
+  /* ── Info Sections ── */
+  dSection: {
+    backgroundColor: '#FFFFFF',
+    marginHorizontal: 14,
+    marginTop: 10,
+    borderRadius: 12,
+    padding: 13,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  dSectionHead: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    marginBottom: 6,
+  },
+  dSectionIcon: {
+    fontSize: 13,
+  },
+  dSectionTitle: {
+    fontSize: 12.5,
+    fontWeight: '800',
+    color: '#0F172A',
+    letterSpacing: -0.1,
+  },
+  dSectionBody: {
+    fontSize: 13,
+    color: '#334155',
+    fontWeight: '600',
+    lineHeight: 19,
+  },
+  dSectionMetaRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 4.5,
+    borderTopWidth: 1,
+    borderTopColor: '#F1F5F9',
+    marginTop: 4,
+  },
+  dSectionMetaLabel: {
+    fontSize: 11.5,
+    color: '#64748B',
+    fontWeight: '600',
+  },
+  dSectionMetaVal: {
+    fontSize: 12,
+    color: '#0F172A',
+    fontWeight: '700',
+    maxWidth: '60%',
+    textAlign: 'right',
+  },
+
+  /* ── Notes Card ── */
+  dNotesCard: {
+    backgroundColor: '#FFFFFF',
+    marginHorizontal: 14,
+    marginTop: 10,
+    borderRadius: 12,
+    padding: 13,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  dNotesBubble: {
+    backgroundColor: '#FFFDF7',
+    borderWidth: 1,
+    borderColor: '#FDE68A',
+    borderLeftWidth: 3,
+    borderLeftColor: '#F59E0B',
+    borderRadius: 8,
+    paddingHorizontal: 11,
     paddingVertical: 8,
     marginTop: 2,
   },
-  detailNotesEmptyText: {
+  dNotesQuote: {
+    fontSize: 12.5,
+    color: '#78350F',
+    fontStyle: 'italic',
+    lineHeight: 18,
+    fontWeight: '500',
+  },
+  dNotesEmpty: {
     fontSize: 11.5,
-    color: '#64748B',
+    color: '#94A3B8',
     fontStyle: 'italic',
     lineHeight: 16,
+    marginTop: 2,
   },
-  detailReasonRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  dNotesTimestamp: {
+    fontSize: 10,
+    color: '#94A3B8',
+    fontWeight: '600',
     marginTop: 8,
-    gap: 6,
   },
-  detailReasonLabel: {
-    fontSize: 11,
-    fontWeight: '800',
-    color: '#92400E',
-  },
-  detailReasonValue: {
-    fontSize: 11.5,
-    fontWeight: '700',
-    color: '#1E293B',
-    flex: 1,
-  },
-  detailLastDateRow: {
-    marginTop: 6,
-    paddingTop: 6,
-    borderTopWidth: 1,
-    borderTopColor: '#FEF3C7',
-  },
-  detailLastDateText: {
-    fontSize: 10.5,
-    color: '#B45309',
-    fontWeight: '700',
-  },
-  detailActionHub: {
-    paddingTop: 10,
-    borderTopWidth: 1,
-    borderTopColor: '#F1F5F9',
-    gap: 8,
-  },
-  detailQuickDialRow: {
+
+  /* ── Action Footer ── */
+  dActionFooter: {
     flexDirection: 'row',
-    gap: 8,
-  },
-  detailCallBtn: {
-    flex: 1,
-    backgroundColor: '#EFF6FF',
-    borderWidth: 1,
-    borderColor: '#BFDBFE',
-    paddingVertical: 9,
-    borderRadius: 10,
-    alignItems: 'center',
-  },
-  detailCallBtnText: {
-    fontSize: 12.5,
-    fontWeight: '800',
-    color: '#1D4ED8',
-  },
-  detailWaBtn: {
-    flex: 1,
-    backgroundColor: '#ECFDF5',
-    borderWidth: 1,
-    borderColor: '#A7F3D0',
-    paddingVertical: 9,
-    borderRadius: 10,
-    alignItems: 'center',
-  },
-  detailWaBtnText: {
-    fontSize: 12.5,
-    fontWeight: '800',
-    color: '#047857',
-  },
-  detailMainActionRow: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  detailLogCallBtn: {
-    flex: 2,
-    backgroundColor: '#2563EB',
-    paddingVertical: 11,
-    borderRadius: 10,
-    alignItems: 'center',
-    shadowColor: '#2563EB',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  detailLogCallBtnText: {
-    fontSize: 13,
-    fontWeight: '800',
-    color: '#FFFFFF',
-  },
-  detailLostBtn: {
-    flex: 1,
-    backgroundColor: '#FFF5F5',
-    borderWidth: 1,
-    borderColor: '#FECDD3',
-    paddingVertical: 11,
-    borderRadius: 10,
-    alignItems: 'center',
-  },
-  detailLostBtnText: {
-    fontSize: 12.5,
-    fontWeight: '800',
-    color: '#DC2626',
-  },
-  offlineBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: '#FFFBEB',
-    borderBottomWidth: 1,
-    borderBottomColor: '#FDE68A',
+    gap: 10,
     paddingHorizontal: 14,
-    paddingVertical: 7,
+    paddingTop: 12,
+    paddingBottom: Platform.OS === 'ios' ? 28 : 16,
+    borderTopWidth: 1,
+    borderTopColor: '#E2E8F0',
+    backgroundColor: '#FFFFFF',
   },
-  offlineDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#D97706',
-  },
-  offlineBannerText: {
-    fontSize: 11.5,
-    fontWeight: '700',
-    color: '#92400E',
-  },
-  offlineRetryBtn: {
-    backgroundColor: '#FDE68A',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 6,
-  },
-  offlineRetryBtnText: {
-    fontSize: 11,
-    fontWeight: '800',
-    color: '#78350F',
-  },
-  inlineSyncingBar: {
+  dLogActivityBtn: {
+    flex: 2,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 4,
-    backgroundColor: '#EFF6FF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#DBEAFE',
+    gap: 7,
+    backgroundColor: '#2563EB',
+    borderRadius: 13,
+    paddingVertical: 13,
+    shadowColor: '#2563EB',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    elevation: 3,
   },
-  inlineSyncingText: {
-    fontSize: 11,
-    color: '#2563EB',
+  dLogActivityIcon: {
+    fontSize: 15,
+  },
+  dLogActivityText: {
+    fontSize: 14,
+    fontWeight: '900',
+    color: '#FFFFFF',
+    letterSpacing: -0.2,
+  },
+  dMarkLostBtn: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FEF2F2',
+    borderWidth: 1.2,
+    borderColor: '#FECACA',
+    borderRadius: 13,
+    paddingVertical: 13,
+  },
+  dMarkLostText: {
+    fontSize: 12.5,
+    fontWeight: '900',
+    color: '#DC2626',
+    letterSpacing: -0.2,
+  },
+
+  /* ── Activity Timeline Styles ── */
+  timelineContainer: {
+    marginTop: 8,
+    position: 'relative',
+  },
+  timelineVerticalLine: {
+    position: 'absolute',
+    left: 9,
+    top: 10,
+    bottom: 10,
+    width: 2,
+    backgroundColor: '#E2E8F0',
+  },
+  timelineItem: {
+    flexDirection: 'row',
+    marginBottom: 16,
+    alignItems: 'flex-start',
+  },
+  timelineBullet: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 2,
+    marginRight: 10,
+  },
+  timelineBulletInner: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  timelineContent: {
+    flex: 1,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  timelineHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  timelineTitle: {
+    fontSize: 12.5,
+    fontWeight: '800',
+    letterSpacing: -0.1,
+  },
+  timelineDate: {
+    fontSize: 10,
+    color: '#64748B',
+    fontWeight: '700',
+  },
+  timelineNotes: {
+    fontSize: 12.5,
+    color: '#475569',
+    fontWeight: '500',
+    lineHeight: 18,
+  },
+  timelineObjectiveBox: {
+    marginTop: 10,
+    padding: 10,
+    backgroundColor: '#FFFDF5',
+    borderWidth: 1,
+    borderColor: '#FEF3C7',
+    borderRadius: 8,
+    borderLeftWidth: 3,
+    borderLeftColor: '#F59E0B',
+  },
+  timelineObjectiveLabel: {
+    fontSize: 10.5,
+    fontWeight: '800',
+    color: '#92400E',
+    letterSpacing: 0.1,
+    marginBottom: 2,
+  },
+  timelineObjectiveVal: {
+    fontSize: 12,
+    color: '#78350F',
     fontWeight: '600',
+    lineHeight: 17,
   },
 });
+

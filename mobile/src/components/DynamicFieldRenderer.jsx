@@ -7,7 +7,6 @@ import {
   StyleSheet,
   Platform,
 } from 'react-native';
-import { colors } from '../theme/colors';
 
 export const DynamicFieldRenderer = ({ field, value, onChange, error }) => {
   if (!field || !field.active) {
@@ -100,10 +99,15 @@ export const DynamicFieldRenderer = ({ field, value, onChange, error }) => {
             <TextInput
               style={styles.textInput}
               placeholder={placeholder || `Enter ${label.toLowerCase()}`}
-              placeholderTextColor={colors.textLight}
+              placeholderTextColor="#94A3B8"
               value={value !== undefined && value !== null ? String(value) : ''}
               onChangeText={handleChange}
             />
+            {value ? (
+              <TouchableOpacity onPress={() => handleChange('')} style={styles.clearBtn}>
+                <Text style={styles.clearBtnText}>✕</Text>
+              </TouchableOpacity>
+            ) : null}
           </View>
         );
 
@@ -112,8 +116,8 @@ export const DynamicFieldRenderer = ({ field, value, onChange, error }) => {
           <View style={[styles.inputContainer, styles.textareaContainer, error && styles.inputContainerError]}>
             <TextInput
               style={[styles.textInput, styles.textareaInput]}
-              placeholder={placeholder || `Enter ${label.toLowerCase()}...`}
-              placeholderTextColor={colors.textLight}
+              placeholder={placeholder || `Enter detailed ${label.toLowerCase()}...`}
+              placeholderTextColor="#94A3B8"
               value={value !== undefined && value !== null ? String(value) : ''}
               onChangeText={handleChange}
               multiline
@@ -129,7 +133,7 @@ export const DynamicFieldRenderer = ({ field, value, onChange, error }) => {
             <TextInput
               style={styles.textInput}
               placeholder={placeholder || '0'}
-              placeholderTextColor={colors.textLight}
+              placeholderTextColor="#94A3B8"
               keyboardType="numeric"
               value={value !== undefined && value !== null ? String(value) : ''}
               onChangeText={(text) => {
@@ -137,26 +141,61 @@ export const DynamicFieldRenderer = ({ field, value, onChange, error }) => {
                 handleChange(clean === '' ? '' : Number(clean));
               }}
             />
+            {value ? (
+              <TouchableOpacity onPress={() => handleChange('')} style={styles.clearBtn}>
+                <Text style={styles.clearBtnText}>✕</Text>
+              </TouchableOpacity>
+            ) : null}
           </View>
         );
 
       case 'currency':
         return (
-          <View style={[styles.currencyInputBox, error && styles.inputContainerError]}>
-            <View style={styles.currencySymbolBadge}>
-              <Text style={styles.currencySymbolText}>₹</Text>
+          <View>
+            <View style={[styles.currencyInputBox, error && styles.inputContainerError]}>
+              <View style={styles.currencySymbolBadge}>
+                <Text style={styles.currencySymbolText}>₹</Text>
+              </View>
+              <TextInput
+                style={styles.currencyTextInput}
+                placeholder={placeholder || '0.00'}
+                placeholderTextColor="#94A3B8"
+                keyboardType="numeric"
+                value={value !== undefined && value !== null ? String(value) : ''}
+                onChangeText={(text) => {
+                  const clean = String(text).replace(/[^0-9.]/g, '');
+                  handleChange(clean === '' ? '' : Number(clean));
+                }}
+              />
+              {value ? (
+                <TouchableOpacity onPress={() => handleChange('')} style={styles.clearBtn}>
+                  <Text style={styles.clearBtnText}>✕</Text>
+                </TouchableOpacity>
+              ) : null}
             </View>
-            <TextInput
-              style={styles.currencyTextInput}
-              placeholder={placeholder || '0.00'}
-              placeholderTextColor={colors.textLight}
-              keyboardType="numeric"
-              value={value !== undefined && value !== null ? String(value) : ''}
-              onChangeText={(text) => {
-                const clean = String(text).replace(/[^0-9.]/g, '');
-                handleChange(clean === '' ? '' : Number(clean));
-              }}
-            />
+
+            {/* Quick Amount Suggestion Pills for Easy 1-Tap Entry */}
+            <View style={styles.quickAmountRow}>
+              {[
+                { label: '+25k', val: 25000 },
+                { label: '+50k', val: 50000 },
+                { label: '+1L', val: 100000 },
+                { label: '+2.5L', val: 250000 },
+                { label: '+5L', val: 500000 },
+              ].map((item) => (
+                <TouchableOpacity
+                  key={item.label}
+                  style={styles.quickAmountPill}
+                  onPress={() => {
+                    const currentVal = Number(value) || 0;
+                    handleChange(currentVal + item.val);
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.quickAmountPillText}>{item.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
           </View>
         );
 
@@ -169,7 +208,7 @@ export const DynamicFieldRenderer = ({ field, value, onChange, error }) => {
             <TextInput
               style={styles.phoneTextInput}
               placeholder={placeholder || '98765 43210'}
-              placeholderTextColor={colors.textLight}
+              placeholderTextColor="#94A3B8"
               keyboardType="phone-pad"
               maxLength={14}
               value={value !== undefined && value !== null ? String(value) : ''}
@@ -178,6 +217,11 @@ export const DynamicFieldRenderer = ({ field, value, onChange, error }) => {
                 handleChange(clean);
               }}
             />
+            {value ? (
+              <TouchableOpacity onPress={() => handleChange('')} style={styles.clearBtn}>
+                <Text style={styles.clearBtnText}>✕</Text>
+              </TouchableOpacity>
+            ) : null}
           </View>
         );
 
@@ -187,12 +231,17 @@ export const DynamicFieldRenderer = ({ field, value, onChange, error }) => {
             <TextInput
               style={styles.textInput}
               placeholder={placeholder || 'customer@example.com'}
-              placeholderTextColor={colors.textLight}
+              placeholderTextColor="#94A3B8"
               keyboardType="email-address"
               autoCapitalize="none"
               value={value !== undefined && value !== null ? String(value) : ''}
               onChangeText={handleChange}
             />
+            {value ? (
+              <TouchableOpacity onPress={() => handleChange('')} style={styles.clearBtn}>
+                <Text style={styles.clearBtnText}>✕</Text>
+              </TouchableOpacity>
+            ) : null}
           </View>
         );
 
@@ -204,6 +253,8 @@ export const DynamicFieldRenderer = ({ field, value, onChange, error }) => {
           handleChange(target.toISOString().split('T')[0]);
         };
 
+        const todayStr = new Date().toISOString().split('T')[0];
+
         return (
           <View>
             <View style={[styles.dateInputBox, error && styles.inputContainerError]}>
@@ -211,19 +262,24 @@ export const DynamicFieldRenderer = ({ field, value, onChange, error }) => {
               <TextInput
                 style={styles.dateTextInput}
                 placeholder={placeholder || (type === 'time' ? 'HH:mm' : 'YYYY-MM-DD')}
-                placeholderTextColor={colors.textLight}
+                placeholderTextColor="#94A3B8"
                 value={value !== undefined && value !== null ? String(value) : ''}
                 onChangeText={handleChange}
               />
+              {value ? (
+                <TouchableOpacity onPress={() => handleChange('')} style={styles.clearBtn}>
+                  <Text style={styles.clearBtnText}>✕</Text>
+                </TouchableOpacity>
+              ) : null}
             </View>
             {type === 'date' && (
               <View style={styles.quickDatesRow}>
                 <TouchableOpacity
-                  style={[styles.quickDatePill, value === new Date().toISOString().split('T')[0] && styles.quickDatePillActive]}
+                  style={[styles.quickDatePill, value === todayStr && styles.quickDatePillActive]}
                   onPress={() => setQuickDate(0)}
                   activeOpacity={0.7}
                 >
-                  <Text style={[styles.quickDatePillText, value === new Date().toISOString().split('T')[0] && styles.quickDatePillTextActive]}>
+                  <Text style={[styles.quickDatePillText, value === todayStr && styles.quickDatePillTextActive]}>
                     Today
                   </Text>
                 </TouchableOpacity>
@@ -233,6 +289,13 @@ export const DynamicFieldRenderer = ({ field, value, onChange, error }) => {
                   activeOpacity={0.7}
                 >
                   <Text style={styles.quickDatePillText}>Tomorrow</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.quickDatePill}
+                  onPress={() => setQuickDate(3)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.quickDatePillText}>+3 Days</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={styles.quickDatePill}
@@ -247,7 +310,7 @@ export const DynamicFieldRenderer = ({ field, value, onChange, error }) => {
         );
       }
 
-      // Professional Checkbox Component with Touch Surface
+      // Checkbox Card Component
       case 'checkbox': {
         const isChecked = Boolean(value);
         return (
@@ -271,7 +334,7 @@ export const DynamicFieldRenderer = ({ field, value, onChange, error }) => {
         );
       }
 
-      // Professional Radio Buttons & Select Options
+      // Radio Buttons & Select Options
       case 'radio':
       case 'select': {
         // Render 2-column segmented control for Yes/No
@@ -334,14 +397,14 @@ export const DynamicFieldRenderer = ({ field, value, onChange, error }) => {
         );
       }
 
-      // Professional Multi-Select Options with Clean Checkboxes
+      // Multi-Select Options with Clean Checkboxes
       case 'multiselect':
         return (
           <View>
             {multiSelectedValues.length > 0 && (
               <View style={styles.multiSummaryBanner}>
                 <Text style={styles.multiSummaryText}>
-                  ✓ <Text style={{ fontWeight: '900' }}>{multiSelectedValues.length}</Text> {multiSelectedValues.length === 1 ? 'option selected' : 'options selected'}
+                  ✓ <Text style={{ fontWeight: '900' }}>{multiSelectedValues.length}</Text> {multiSelectedValues.length === 1 ? 'item selected' : 'items selected'}
                 </Text>
               </View>
             )}
@@ -391,7 +454,7 @@ export const DynamicFieldRenderer = ({ field, value, onChange, error }) => {
             <TextInput
               style={styles.textInput}
               placeholder={placeholder || `Enter ${label.toLowerCase()}`}
-              placeholderTextColor={colors.textLight}
+              placeholderTextColor="#94A3B8"
               value={value !== undefined && value !== null ? String(value) : ''}
               onChangeText={handleChange}
             />
@@ -419,6 +482,10 @@ export const DynamicFieldRenderer = ({ field, value, onChange, error }) => {
           <View style={styles.typeBadgeContainer}>
             <Text style={styles.typeBadgeSingle}>Select One</Text>
           </View>
+        ) : required ? (
+          <View style={styles.typeBadgeContainer}>
+            <Text style={styles.typeBadgeRequired}>Required</Text>
+          </View>
         ) : null}
       </View>
 
@@ -443,7 +510,7 @@ export const DynamicFieldInput = DynamicFieldRenderer;
 
 const styles = StyleSheet.create({
   fieldContainer: {
-    marginBottom: 18,
+    marginBottom: 16,
   },
   labelHeaderRow: {
     flexDirection: 'row',
@@ -457,45 +524,62 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   fieldLabel: {
-    fontSize: 13.5,
+    fontSize: 13,
     fontWeight: '800',
     color: '#0F172A',
     letterSpacing: -0.2,
   },
   requiredAsterisk: {
-    color: '#E11D48',
+    color: '#DC2626',
     fontWeight: '900',
-    fontSize: 14,
+    fontSize: 13.5,
   },
   typeBadgeContainer: {
     marginLeft: 8,
   },
   typeBadgeMulti: {
-    fontSize: 10,
+    fontSize: 9.5,
     fontWeight: '800',
     color: '#2563EB',
     backgroundColor: '#EFF6FF',
-    paddingHorizontal: 7,
-    paddingVertical: 2.5,
+    borderWidth: 1,
+    borderColor: '#BFDBFE',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
     borderRadius: 5,
     textTransform: 'uppercase',
-    letterSpacing: 0.4,
+    letterSpacing: 0.3,
   },
   typeBadgeSingle: {
-    fontSize: 10,
+    fontSize: 9.5,
     fontWeight: '800',
-    color: '#0F766E',
+    color: '#059669',
     backgroundColor: '#ECFDF5',
-    paddingHorizontal: 7,
-    paddingVertical: 2.5,
+    borderWidth: 1,
+    borderColor: '#A7F3D0',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
     borderRadius: 5,
     textTransform: 'uppercase',
-    letterSpacing: 0.4,
+    letterSpacing: 0.3,
+  },
+  typeBadgeRequired: {
+    fontSize: 9,
+    fontWeight: '800',
+    color: '#DC2626',
+    backgroundColor: '#FEF2F2',
+    borderWidth: 1,
+    borderColor: '#FECACA',
+    paddingHorizontal: 5,
+    paddingVertical: 1.5,
+    borderRadius: 4,
+    textTransform: 'uppercase',
+    letterSpacing: 0.3,
   },
   fieldDescriptionText: {
-    fontSize: 11.5,
+    fontSize: 11,
     color: '#64748B',
-    lineHeight: 16,
+    lineHeight: 15,
     marginBottom: 6,
   },
   inputBodyWrapper: {
@@ -504,11 +588,13 @@ const styles = StyleSheet.create({
   // Standard Text Input Box
   inputContainer: {
     backgroundColor: '#FFFFFF',
-    borderWidth: 1.5,
-    borderColor: '#E2E8F0',
-    borderRadius: 12,
-    paddingHorizontal: 14,
+    borderWidth: 1.2,
+    borderColor: '#CBD5E1',
+    borderRadius: 13,
+    paddingHorizontal: 13,
     paddingVertical: Platform.OS === 'ios' ? 12 : 9,
+    flexDirection: 'row',
+    alignItems: 'center',
     shadowColor: '#0F172A',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.02,
@@ -520,90 +606,131 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFF1F2',
   },
   textInput: {
-    fontSize: 14,
+    flex: 1,
+    fontSize: 13.5,
     fontWeight: '600',
     color: '#0F172A',
     padding: 0,
   },
+  clearBtn: {
+    padding: 4,
+    marginLeft: 6,
+  },
+  clearBtnText: {
+    fontSize: 12,
+    color: '#94A3B8',
+    fontWeight: '800',
+  },
   textareaContainer: {
-    minHeight: 92,
-    paddingVertical: 12,
+    minHeight: 88,
+    paddingVertical: 10,
+    alignItems: 'flex-start',
   },
   textareaInput: {
-    minHeight: 70,
+    minHeight: 68,
+    textAlignVertical: 'top',
   },
   // Currency Input
   currencyInputBox: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#FFFFFF',
-    borderWidth: 1.5,
-    borderColor: '#E2E8F0',
-    borderRadius: 12,
+    borderWidth: 1.2,
+    borderColor: '#A7F3D0',
+    borderRadius: 13,
     overflow: 'hidden',
+    shadowColor: '#059669',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 3,
+    elevation: 1,
   },
   currencySymbolBadge: {
-    backgroundColor: '#F8FAFC',
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    borderRightWidth: 1.5,
-    borderRightColor: '#E2E8F0',
+    backgroundColor: '#ECFDF5',
+    paddingHorizontal: 13,
+    paddingVertical: 11,
+    borderRightWidth: 1.2,
+    borderRightColor: '#A7F3D0',
     alignItems: 'center',
     justifyContent: 'center',
   },
   currencySymbolText: {
     fontSize: 16,
     fontWeight: '900',
-    color: '#0F766E',
+    color: '#059669',
   },
   currencyTextInput: {
     flex: 1,
-    fontSize: 15,
-    fontWeight: '700',
+    fontSize: 14.5,
+    fontWeight: '800',
     color: '#0F172A',
-    paddingHorizontal: 14,
-    paddingVertical: Platform.OS === 'ios' ? 12 : 9,
+    paddingHorizontal: 12,
+    paddingVertical: Platform.OS === 'ios' ? 11 : 8,
+  },
+  quickAmountRow: {
+    flexDirection: 'row',
+    gap: 6,
+    marginTop: 6,
+    flexWrap: 'wrap',
+  },
+  quickAmountPill: {
+    backgroundColor: '#F0FDF4',
+    borderWidth: 1,
+    borderColor: '#BBF7D0',
+    paddingHorizontal: 9,
+    paddingVertical: 3.5,
+    borderRadius: 7,
+  },
+  quickAmountPillText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#059669',
   },
   // Phone Input
   phoneInputBox: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#FFFFFF',
-    borderWidth: 1.5,
-    borderColor: '#E2E8F0',
-    borderRadius: 12,
+    borderWidth: 1.2,
+    borderColor: '#CBD5E1',
+    borderRadius: 13,
     overflow: 'hidden',
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.02,
+    shadowRadius: 2,
+    elevation: 1,
   },
   phonePrefixBadge: {
     backgroundColor: '#F8FAFC',
     paddingHorizontal: 12,
-    paddingVertical: 12,
-    borderRightWidth: 1.5,
-    borderRightColor: '#E2E8F0',
+    paddingVertical: 11,
+    borderRightWidth: 1.2,
+    borderRightColor: '#CBD5E1',
     alignItems: 'center',
     justifyContent: 'center',
   },
   phonePrefixText: {
-    fontSize: 12.5,
+    fontSize: 12,
     fontWeight: '800',
     color: '#334155',
   },
   phoneTextInput: {
     flex: 1,
-    fontSize: 14.5,
+    fontSize: 14,
     fontWeight: '700',
     color: '#0F172A',
-    paddingHorizontal: 14,
-    paddingVertical: Platform.OS === 'ios' ? 12 : 9,
+    paddingHorizontal: 12,
+    paddingVertical: Platform.OS === 'ios' ? 11 : 8,
   },
   // Date Input
   dateInputBox: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#FFFFFF',
-    borderWidth: 1.5,
-    borderColor: '#E2E8F0',
-    borderRadius: 12,
+    borderWidth: 1.2,
+    borderColor: '#CBD5E1',
+    borderRadius: 13,
     paddingHorizontal: 12,
     paddingVertical: Platform.OS === 'ios' ? 11 : 8,
     gap: 8,
@@ -613,7 +740,7 @@ const styles = StyleSheet.create({
   },
   dateTextInput: {
     flex: 1,
-    fontSize: 14,
+    fontSize: 13.5,
     fontWeight: '700',
     color: '#0F172A',
     padding: 0,
@@ -632,27 +759,27 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   quickDatePillActive: {
-    backgroundColor: '#ECFDF5',
-    borderColor: '#A7F3D0',
+    backgroundColor: '#EFF6FF',
+    borderColor: '#BFDBFE',
   },
   quickDatePillText: {
-    fontSize: 11.5,
-    fontWeight: '700',
+    fontSize: 11,
+    fontWeight: '800',
     color: '#475569',
   },
   quickDatePillTextActive: {
-    color: '#059669',
+    color: '#2563EB',
   },
   // Checkbox Card Design
   checkboxCard: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    borderWidth: 1.5,
-    borderColor: '#E2E8F0',
+    borderRadius: 13,
+    borderWidth: 1.2,
+    borderColor: '#CBD5E1',
     paddingHorizontal: 14,
-    paddingVertical: 12,
+    paddingVertical: 11,
     gap: 12,
   },
   checkboxCardChecked: {
@@ -683,15 +810,16 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   checkboxLabel: {
-    fontSize: 14,
+    fontSize: 13.5,
     fontWeight: '700',
     color: '#1E293B',
   },
   checkboxLabelChecked: {
     color: '#065F46',
+    fontWeight: '800',
   },
   checkboxSubtext: {
-    fontSize: 11.5,
+    fontSize: 11,
     color: '#64748B',
     marginTop: 2,
   },
@@ -707,10 +835,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 8,
     backgroundColor: '#FFFFFF',
-    borderWidth: 1.5,
-    borderColor: '#E2E8F0',
-    borderRadius: 12,
-    paddingVertical: 12,
+    borderWidth: 1.2,
+    borderColor: '#CBD5E1',
+    borderRadius: 13,
+    paddingVertical: 11,
     paddingHorizontal: 14,
   },
   binaryChoiceBtnYes: {
@@ -732,7 +860,7 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   binaryChoiceText: {
-    fontSize: 14,
+    fontSize: 13.5,
     fontWeight: '700',
     color: '#475569',
   },
@@ -744,31 +872,31 @@ const styles = StyleSheet.create({
   radioGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
+    gap: 7,
   },
   radioCard: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
     backgroundColor: '#FFFFFF',
-    borderWidth: 1.5,
-    borderColor: '#E2E8F0',
+    borderWidth: 1.2,
+    borderColor: '#CBD5E1',
     borderRadius: 12,
-    paddingHorizontal: 13,
-    paddingVertical: 10,
-    minHeight: 44,
+    paddingHorizontal: 12,
+    paddingVertical: 9.5,
+    minHeight: 42,
   },
   radioCardActive: {
     backgroundColor: '#EFF6FF',
     borderColor: '#2563EB',
     shadowColor: '#2563EB',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.12,
-    shadowRadius: 4,
-    elevation: 2,
+    shadowOpacity: 0.10,
+    shadowRadius: 3,
+    elevation: 1,
   },
   radioCardText: {
-    fontSize: 13,
+    fontSize: 12.5,
     fontWeight: '700',
     color: '#334155',
   },
@@ -777,10 +905,10 @@ const styles = StyleSheet.create({
     fontWeight: '900',
   },
   radioDotCircle: {
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    borderWidth: 2,
+    width: 17,
+    height: 17,
+    borderRadius: 8.5,
+    borderWidth: 1.8,
     borderColor: '#CBD5E1',
     alignItems: 'center',
     justifyContent: 'center',
@@ -791,9 +919,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
   },
   radioDotInner: {
-    width: 9,
-    height: 9,
-    borderRadius: 4.5,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
     backgroundColor: '#2563EB',
   },
   // Multi-Select Grid
@@ -801,45 +929,45 @@ const styles = StyleSheet.create({
     backgroundColor: '#EFF6FF',
     borderWidth: 1,
     borderColor: '#BFDBFE',
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 4.5,
-    marginBottom: 8,
+    borderRadius: 7,
+    paddingHorizontal: 9,
+    paddingVertical: 3.5,
+    marginBottom: 7,
     alignSelf: 'flex-start',
   },
   multiSummaryText: {
-    fontSize: 11.5,
-    fontWeight: '700',
+    fontSize: 11,
+    fontWeight: '800',
     color: '#1D4ED8',
   },
   multiSelectGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
+    gap: 7,
   },
   multiSelectCard: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
     backgroundColor: '#FFFFFF',
-    borderWidth: 1.5,
-    borderColor: '#E2E8F0',
+    borderWidth: 1.2,
+    borderColor: '#CBD5E1',
     borderRadius: 12,
-    paddingHorizontal: 13,
-    paddingVertical: 10,
-    minHeight: 44,
+    paddingHorizontal: 12,
+    paddingVertical: 9.5,
+    minHeight: 42,
   },
   multiSelectCardActive: {
     backgroundColor: '#EFF6FF',
     borderColor: '#2563EB',
     shadowColor: '#2563EB',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
-    elevation: 2,
+    shadowOpacity: 0.10,
+    shadowRadius: 3,
+    elevation: 1,
   },
   multiSelectCardText: {
-    fontSize: 13,
+    fontSize: 12.5,
     fontWeight: '700',
     color: '#334155',
   },
@@ -848,10 +976,10 @@ const styles = StyleSheet.create({
     fontWeight: '900',
   },
   multiCheckboxBox: {
-    width: 18,
-    height: 18,
-    borderRadius: 5,
-    borderWidth: 2,
+    width: 17,
+    height: 17,
+    borderRadius: 4.5,
+    borderWidth: 1.8,
     borderColor: '#CBD5E1',
     alignItems: 'center',
     justifyContent: 'center',
@@ -863,18 +991,18 @@ const styles = StyleSheet.create({
   },
   multiCheckboxIcon: {
     color: '#FFFFFF',
-    fontSize: 11,
+    fontSize: 10.5,
     fontWeight: '900',
     lineHeight: 12,
   },
   // Auto Number Box
   autoNumberBox: {
     backgroundColor: '#F8FAFC',
-    borderWidth: 1.5,
-    borderColor: '#E2E8F0',
+    borderWidth: 1.2,
+    borderColor: '#CBD5E1',
     borderStyle: 'dashed',
-    borderRadius: 12,
-    padding: 14,
+    borderRadius: 13,
+    padding: 13,
   },
   autoNumberHeader: {
     flexDirection: 'row',
@@ -904,7 +1032,7 @@ const styles = StyleSheet.create({
   },
   errorAlertText: {
     fontSize: 11.5,
-    fontWeight: '700',
-    color: '#E11D48',
+    fontWeight: '800',
+    color: '#DC2626',
   },
 });

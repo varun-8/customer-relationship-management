@@ -23,7 +23,7 @@ const QUICK_SHIFT_SNIPPETS = [
   'Pending stock confirmation from warehouse',
 ];
 
-const DEFAULT_SHIFT_TARGET_SALES = 50000; // ₹ 50,000 shift sales benchmark
+const DEFAULT_SHIFT_TARGET_SALES = 50000; // ₹ 50,000 shift benchmark
 
 export function MobileShiftKpiModal({
   visible,
@@ -217,15 +217,15 @@ export function MobileShiftKpiModal({
       if (res && res.success) {
         setSubmittedSuccess(true);
         Alert.alert(
-          '✓ Shift Report Finalized',
-          `Automated shift performance report for ${activeStaffName} (${selectedDate}) has been saved.`,
+          'Shift Report Finalized',
+          `Shift performance report for ${activeStaffName} (${selectedDate}) has been saved.`,
           [{ text: 'Done', onPress: () => setTimeout(() => onClose(), 500) }]
         );
       } else {
         await saveLocalKpiReport(payload);
         setSubmittedSuccess(true);
         Alert.alert(
-          '✓ Saved Offline',
+          'Saved Offline',
           `Shift report saved offline for ${activeStaffName}. Will sync when reconnected.`,
           [{ text: 'OK', onPress: () => setTimeout(() => onClose(), 500) }]
         );
@@ -234,7 +234,7 @@ export function MobileShiftKpiModal({
       await saveLocalKpiReport(payload);
       setSubmittedSuccess(true);
       Alert.alert(
-        '✓ Saved Offline',
+        'Saved Offline',
         `Network offline. Shift report saved locally and queued for auto-sync.`,
         [{ text: 'OK', onPress: () => setTimeout(() => onClose(), 500) }]
       );
@@ -267,14 +267,14 @@ export function MobileShiftKpiModal({
   // Target Goal Achievement
   const shiftGoalProgress = Math.min(100, Math.round((salesValNum / DEFAULT_SHIFT_TARGET_SALES) * 100));
 
-  // Performance Rating Engine
-  let ratingBadge = { label: '⏱️ Shift Active', color: '#64748B', bg: '#F8FAFC', border: '#E2E8F0' };
+  // Performance Rating Engine (Clean text without emojis)
+  let ratingBadge = { label: 'Shift Active', color: '#64748B', bg: '#F1F5F9', border: '#E2E8F0' };
   if (salesValNum >= 75000 || conversionRate >= 40) {
-    ratingBadge = { label: '⭐ Exceptional Performance', color: '#047857', bg: '#ECFDF5', border: '#A7F3D0' };
+    ratingBadge = { label: 'Exceptional Pace', color: '#047857', bg: '#ECFDF5', border: '#A7F3D0' };
   } else if (salesValNum >= 40000 || conversionRate >= 25) {
-    ratingBadge = { label: '🔥 High Pace Shift', color: '#1D4ED8', bg: '#EFF6FF', border: '#BFDBFE' };
+    ratingBadge = { label: 'High Pace', color: '#1D4ED8', bg: '#EFF6FF', border: '#BFDBFE' };
   } else if (salesValNum > 0 || visitNum > 0) {
-    ratingBadge = { label: '📈 On Track', color: '#B45309', bg: '#FEF3C7', border: '#FDE68A' };
+    ratingBadge = { label: 'On Track', color: '#B45309', bg: '#FEF3C7', border: '#FDE68A' };
   }
 
   // Calculate Team Totals for Owner View
@@ -291,40 +291,58 @@ export function MobileShiftKpiModal({
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <View style={styles.modalOverlay}>
         <View style={styles.modalCard}>
+          
+          {/* Top Drag Handle Indicator */}
+          <View style={styles.sheetHandleWrapper}>
+            <View style={styles.sheetHandle} />
+          </View>
+
           {/* =========================================================
-              1. MINIMALIST CLEAN HEADER
+              1. MINIMALIST CLEAN HEADER (NO EMOJIS)
              ========================================================= */}
           <View style={styles.header}>
             <View style={styles.headerTitleGroup}>
               <View style={styles.headerTextRow}>
+                <View style={styles.headerBarIcon}>
+                  <View style={styles.bar1} />
+                  <View style={styles.bar2} />
+                  <View style={styles.bar3} />
+                </View>
                 <Text style={styles.headerTitle}>Daily Shift KPI</Text>
                 <View style={styles.liveTag}>
                   <View style={styles.liveDot} />
-                  <Text style={styles.liveTagText}>Live Auto-Calculated</Text>
+                  <Text style={styles.liveTagText}>LIVE SYNC</Text>
                 </View>
               </View>
-              <Text style={styles.headerSubtitle}>
-                {currentProfile?.role === 'owner' ? 'Showroom Executive Team Shift Overview' : 'Daily Shift Report & Performance'}
+              <Text style={styles.headerSubtitle} numberOfLines={1}>
+                {currentProfile?.role === 'owner' && viewMode === 'team'
+                  ? 'Showroom Executive Performance & Revenue Matrix'
+                  : `Executive Daily Report • ${activeStaffName}`}
               </Text>
             </View>
 
-            <TouchableOpacity onPress={onClose} style={styles.closeBtn} activeOpacity={0.7}>
+            <TouchableOpacity
+              onPress={onClose}
+              style={styles.closeBtn}
+              activeOpacity={0.7}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
               <Text style={styles.closeBtnText}>✕</Text>
             </TouchableOpacity>
           </View>
 
           {/* =========================================================
-              2. DATE NAVIGATION & SHIFT SELECTOR BAR
+              2. DATE NAVIGATION & PERFORMANCE GRADE BAR
              ========================================================= */}
           <View style={styles.dateSelectorBar}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <View style={styles.dateSegmentGroup}>
               <TouchableOpacity
                 style={[styles.dateChip, selectedDate === todayStr && styles.dateChipActive]}
                 onPress={() => handleDateChange(todayStr)}
                 activeOpacity={0.75}
               >
                 <Text style={[styles.dateChipText, selectedDate === todayStr && styles.dateChipTextActive]}>
-                  📅 Today ({todayStr.split('-').slice(1).join('/')})
+                  Today
                 </Text>
               </TouchableOpacity>
 
@@ -334,7 +352,7 @@ export function MobileShiftKpiModal({
                 activeOpacity={0.75}
               >
                 <Text style={[styles.dateChipText, selectedDate === yesterdayStr && styles.dateChipTextActive]}>
-                  ⏮️ Yesterday ({yesterdayStr.split('-').slice(1).join('/')})
+                  Yesterday
                 </Text>
               </TouchableOpacity>
             </View>
@@ -351,8 +369,7 @@ export function MobileShiftKpiModal({
              ========================================================= */}
           {currentProfile?.role === 'owner' && (
             <View style={styles.staffFilterBar}>
-              <Text style={styles.filterSectionLabel}>SHIFT VIEW MODE</Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6 }}>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6, alignItems: 'center' }}>
                 <TouchableOpacity
                   style={[
                     styles.staffTabPill,
@@ -365,7 +382,7 @@ export function MobileShiftKpiModal({
                   activeOpacity={0.75}
                 >
                   <Text style={[styles.staffTabPillText, viewMode === 'team' && styles.staffTabPillTextActive]}>
-                    📊 Team Leaderboard
+                    Leaderboard
                   </Text>
                 </TouchableOpacity>
 
@@ -385,8 +402,13 @@ export function MobileShiftKpiModal({
                       }}
                       activeOpacity={0.75}
                     >
+                      <View style={[styles.miniStaffAvatar, isSel && { backgroundColor: '#FFFFFF' }]}>
+                        <Text style={[styles.miniStaffAvatarText, isSel && { color: '#0F172A' }]}>
+                          {p.name.charAt(0).toUpperCase()}
+                        </Text>
+                      </View>
                       <Text style={[styles.staffTabPillText, isSel && styles.staffTabPillTextActive]}>
-                        👤 {p.name}
+                        {p.name.split(' ')[0]}
                       </Text>
                     </TouchableOpacity>
                   );
@@ -399,62 +421,61 @@ export function MobileShiftKpiModal({
               4. SCROLLABLE WORKSPACE
              ========================================================= */}
           <ScrollView style={styles.bodyScrollView} showsVerticalScrollIndicator={false}>
-            {/* 100% Auto-Calculated CRM Banner */}
-            <View style={styles.autoCalculatedBanner}>
-              <Text style={{ fontSize: 13 }}>🤖</Text>
-              <Text style={styles.autoCalculatedText}>
-                Shift metrics are 100% auto-calculated from live CRM customer records & follow-up logs.
-              </Text>
-            </View>
 
             {/* VIEW MODE A: OWNER TEAM OVERVIEW & LEADERBOARD */}
             {currentProfile?.role === 'owner' && viewMode === 'team' ? (
               loadingTeam ? (
-                <View style={{ padding: 40, alignItems: 'center' }}>
-                  <ActivityIndicator size="small" color="#0F172A" />
-                  <Text style={{ marginTop: 10, color: '#64748B', fontSize: 13, fontWeight: '600' }}>
-                    Syncing live CRM customer entries & performance...
+                <View style={styles.loadingStateBox}>
+                  <ActivityIndicator size="small" color="#2563EB" />
+                  <Text style={styles.loadingStateText}>
+                    Syncing showroom entries & performance matrix...
                   </Text>
                 </View>
               ) : (
                 <>
-                  {/* Aggregated Team Revenue Card */}
-                  <View style={styles.revenueCard}>
-                    <View style={styles.revenueTopRow}>
-                      <Text style={styles.revenueLabel}>SHOWROOM SHIFT REVENUE ({selectedDate})</Text>
-                      <TouchableOpacity onPress={() => loadTeamPerformance(selectedDate)} style={styles.syncLink} activeOpacity={0.7}>
-                        <Text style={styles.syncLinkText}>🔄 Sync Live CRM</Text>
+                  {/* Aggregated Team Revenue Hero Card */}
+                  <View style={styles.heroDarkCard}>
+                    <View style={styles.heroCardHeaderRow}>
+                      <View style={styles.heroTagBadge}>
+                        <Text style={styles.heroTagBadgeText}>SHOWROOM TOTAL REVENUE</Text>
+                      </View>
+                      <TouchableOpacity
+                        onPress={() => loadTeamPerformance(selectedDate)}
+                        style={styles.heroSyncBtn}
+                        activeOpacity={0.7}
+                      >
+                        <Text style={styles.heroSyncBtnText}>Sync CRM</Text>
                       </TouchableOpacity>
                     </View>
 
-                    <Text style={styles.revenueValue}>
+                    <Text style={styles.heroDarkRevenueValue}>
                       ₹ {teamTotalRevenue.toLocaleString('en-IN')}
                     </Text>
 
                     {/* Team Goal Progress Bar */}
-                    <View style={styles.goalProgressTrack}>
-                      <View style={[styles.goalProgressFill, { width: `${teamGoalProgress}%` }]} />
+                    <View style={styles.darkProgressTrack}>
+                      <View style={[styles.darkProgressFill, { width: `${teamGoalProgress}%` }]} />
                     </View>
-                    <View style={styles.goalLabelRow}>
-                      <Text style={styles.goalSubtext}>Team Target: ₹{teamTargetRevenue.toLocaleString('en-IN')}</Text>
-                      <Text style={styles.goalPercentText}>{teamGoalProgress}% Goal Achieved</Text>
+                    <View style={styles.darkProgressLabelRow}>
+                      <Text style={styles.darkProgressSubtext}>Benchmark: ₹{teamTargetRevenue.toLocaleString('en-IN')}</Text>
+                      <Text style={styles.darkProgressPercent}>{teamGoalProgress}% Target Achieved</Text>
                     </View>
 
                     {/* Metadata Capsules */}
-                    <View style={styles.revenueMetaRow}>
-                      <View style={styles.metaCapsule}>
-                        <Text style={styles.metaCapsuleLabel}>Team Invoices:</Text>
-                        <Text style={styles.metaCapsuleValue}>{teamTotalBills}</Text>
+                    <View style={styles.heroStatGrid}>
+                      <View style={styles.heroStatTile}>
+                        <Text style={styles.heroStatTileLabel}>INVOICES</Text>
+                        <Text style={styles.heroStatTileVal}>{teamTotalBills}</Text>
                       </View>
-
-                      <View style={styles.metaCapsule}>
-                        <Text style={styles.metaCapsuleLabel}>Total Walk-ins:</Text>
-                        <Text style={styles.metaCapsuleValue}>{teamTotalVisits}</Text>
+                      <View style={styles.heroStatDivider} />
+                      <View style={styles.heroStatTile}>
+                        <Text style={styles.heroStatTileLabel}>FOOTFALL</Text>
+                        <Text style={styles.heroStatTileVal}>{teamTotalVisits}</Text>
                       </View>
-
-                      <View style={styles.metaCapsule}>
-                        <Text style={styles.metaCapsuleLabel}>Team Conversion:</Text>
-                        <Text style={[styles.metaCapsuleValue, { color: teamAvgConversion > 0 ? '#059669' : '#0F172A' }]}>
+                      <View style={styles.heroStatDivider} />
+                      <View style={styles.heroStatTile}>
+                        <Text style={styles.heroStatTileLabel}>WIN RATE</Text>
+                        <Text style={[styles.heroStatTileVal, { color: teamAvgConversion > 0 ? '#34D399' : '#FFFFFF' }]}>
                           {teamAvgConversion}%
                         </Text>
                       </View>
@@ -463,24 +484,25 @@ export function MobileShiftKpiModal({
 
                   {/* Section Title */}
                   <View style={styles.sectionHeadingRow}>
-                    <Text style={styles.sectionTitle}>🏆 SALES EXECUTIVE PERFORMANCE LEADERBOARD</Text>
+                    <Text style={styles.sectionTitle}>SALES EXECUTIVE PERFORMANCE</Text>
+                    <Text style={styles.sectionBadge}>{teamPerformance.length} Executives</Text>
                   </View>
 
-                  {/* Employee Performance Matrix List */}
+                  {/* Employee Performance List */}
                   {teamPerformance.length === 0 ? (
-                    <View style={{ padding: 30, alignItems: 'center' }}>
-                      <Text style={{ fontSize: 13, color: '#64748B' }}>No sales employees found.</Text>
+                    <View style={styles.emptyStateBox}>
+                      <Text style={styles.emptyStateText}>No sales executive records found for this shift date.</Text>
                     </View>
                   ) : (
                     teamPerformance.map((emp, idx) => {
-                      const rankBadge = idx === 0 ? '🥇 #1' : idx === 1 ? '🥈 #2' : idx === 2 ? '🥉 #3' : `#${idx + 1}`;
-                      const rankColor = idx === 0 ? '#D97706' : idx === 1 ? '#475569' : idx === 2 ? '#B45309' : '#64748B';
+                      const rankBadge = `#${idx + 1}`;
                       const rankBg = idx === 0 ? '#FEF3C7' : idx === 1 ? '#F1F5F9' : idx === 2 ? '#FFEDD5' : '#F8FAFC';
+                      const rankColor = idx === 0 ? '#B45309' : idx === 1 ? '#475569' : idx === 2 ? '#9A3412' : '#64748B';
 
                       return (
                         <TouchableOpacity
                           key={emp.staffName}
-                          style={styles.empPerfCard}
+                          style={styles.empLeaderCard}
                           activeOpacity={0.8}
                           onPress={() => {
                             setViewMode('individual');
@@ -488,83 +510,80 @@ export function MobileShiftKpiModal({
                             loadKpiData(emp.staffName, selectedDate);
                           }}
                         >
-                          {/* Card Header: Rank + Avatar + Name + Closed Sales */}
-                          <View style={styles.empPerfHeader}>
+                          {/* Card Top Row: Rank + Avatar + Name + Closed Sales */}
+                          <View style={styles.empLeaderTopRow}>
                             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
-                              <View style={[styles.rankBadge, { backgroundColor: rankBg }]}>
-                                <Text style={[styles.rankBadgeText, { color: rankColor }]}>{rankBadge}</Text>
+                              <View style={[styles.rankMedalPill, { backgroundColor: rankBg }]}>
+                                <Text style={[styles.rankMedalPillText, { color: rankColor }]}>{rankBadge}</Text>
                               </View>
 
-                              <View style={styles.empAvatar}>
-                                <Text style={styles.empAvatarText}>{emp.staffName.charAt(0).toUpperCase()}</Text>
+                              <View style={styles.empAvatarCircle}>
+                                <Text style={styles.empAvatarCircleText}>{emp.staffName.charAt(0).toUpperCase()}</Text>
                               </View>
 
                               <View style={{ flex: 1 }}>
-                                <Text style={styles.empName} numberOfLines={1}>
+                                <Text style={styles.empLeaderName} numberOfLines={1}>
                                   {emp.staffName}
                                 </Text>
-                                <Text style={styles.empSubtext}>
+                                <Text style={styles.empLeaderSub}>
                                   {emp.totalBills} Invoices • {emp.conversionRate}% Win Rate
                                 </Text>
                               </View>
                             </View>
 
                             <View style={{ alignItems: 'flex-end' }}>
-                              <Text style={styles.empSalesValue}>
+                              <Text style={styles.empLeaderRevenue}>
                                 ₹ {emp.salesValue.toLocaleString('en-IN')}
                               </Text>
-                              <View style={[styles.empStatusBadge, emp.isSubmitted ? styles.empStatusBadgeLogged : styles.empStatusBadgePending]}>
-                                <Text style={[styles.empStatusBadgeText, emp.isSubmitted ? styles.empStatusBadgeTextLogged : styles.empStatusBadgeTextPending]}>
-                                  {emp.isSubmitted ? '✓ Report Logged' : '⏳ In Progress'}
+                              <View style={[styles.statusMiniBadge, emp.isSubmitted ? styles.statusMiniBadgeLogged : styles.statusMiniBadgePending]}>
+                                <Text style={[styles.statusMiniBadgeText, emp.isSubmitted ? styles.statusMiniBadgeTextLogged : styles.statusMiniBadgeTextPending]}>
+                                  {emp.isSubmitted ? 'Saved' : 'Active'}
                                 </Text>
                               </View>
                             </View>
                           </View>
 
                           {/* Mini Progress Track */}
-                          <View style={[styles.goalProgressTrack, { marginTop: 10, height: 4 }]}>
-                            <View style={[styles.goalProgressFill, { width: `${emp.targetPct}%` }]} />
+                          <View style={styles.miniProgressTrack}>
+                            <View style={[styles.miniProgressFill, { width: `${emp.targetPct}%` }]} />
                           </View>
 
-                          {/* 4 Read-Only Stat Badges Row */}
-                          <View style={styles.empStatGrid}>
-                            <View style={styles.empStatItem}>
-                              <Text style={styles.empStatLabel}>WALK-INS</Text>
-                              <Text style={styles.empStatVal}>🚶 {emp.visits}</Text>
+                          {/* 4-Stat Metric Breakdown Row (No emojis) */}
+                          <View style={styles.empMetricGrid}>
+                            <View style={styles.empMetricCol}>
+                              <Text style={styles.empMetricKey}>WALK-INS</Text>
+                              <Text style={styles.empMetricNum}>{emp.visits}</Text>
                             </View>
-
-                            <View style={styles.empStatItem}>
-                              <Text style={styles.empStatLabel}>QUOTES</Text>
-                              <Text style={styles.empStatVal}>📄 {emp.quotes}</Text>
+                            <View style={styles.empMetricCol}>
+                              <Text style={styles.empMetricKey}>QUOTES</Text>
+                              <Text style={styles.empMetricNum}>{emp.quotes}</Text>
                             </View>
-
-                            <View style={styles.empStatItem}>
-                              <Text style={styles.empStatLabel}>ORDERS</Text>
-                              <Text style={[styles.empStatVal, { color: '#059669' }]}>🛒 {emp.orders}</Text>
+                            <View style={styles.empMetricCol}>
+                              <Text style={styles.empMetricKey}>ORDERS</Text>
+                              <Text style={[styles.empMetricNum, { color: '#059669' }]}>{emp.orders}</Text>
                             </View>
-
-                            <View style={styles.empStatItem}>
-                              <Text style={styles.empStatLabel}>FOLLOW-UPS</Text>
-                              <Text style={[styles.empStatVal, { color: '#2563EB' }]}>📞 {emp.followups}</Text>
+                            <View style={styles.empMetricCol}>
+                              <Text style={styles.empMetricKey}>CALLS</Text>
+                              <Text style={[styles.empMetricNum, { color: '#2563EB' }]}>{emp.followups}</Text>
                             </View>
                           </View>
 
-                          {/* Milestone Pills Row */}
+                          {/* Milestone Badges Row (No emojis) */}
                           {(emp.oldCustomers || emp.engineerCalls || emp.crossSell) && (
-                            <View style={styles.milestoneBadgesRow}>
+                            <View style={styles.empMilestonesRow}>
                               {emp.oldCustomers && (
-                                <View style={styles.milestoneBadge}>
-                                  <Text style={styles.milestoneBadgeText}>🔄 Repeat Clients</Text>
+                                <View style={styles.empMilestoneTag}>
+                                  <Text style={styles.empMilestoneTagText}>Repeat Customer</Text>
                                 </View>
                               )}
                               {emp.engineerCalls && (
-                                <View style={styles.milestoneBadge}>
-                                  <Text style={styles.milestoneBadgeText}>📐 Architect Call</Text>
+                                <View style={styles.empMilestoneTag}>
+                                  <Text style={styles.empMilestoneTagText}>Architect Visit</Text>
                                 </View>
                               )}
                               {emp.crossSell && (
-                                <View style={styles.milestoneBadge}>
-                                  <Text style={styles.milestoneBadgeText}>🏷️ Cross-Sell Combo</Text>
+                                <View style={styles.empMilestoneTag}>
+                                  <Text style={styles.empMilestoneTagText}>Cross-Sell</Text>
                                 </View>
                               )}
                             </View>
@@ -572,17 +591,17 @@ export function MobileShiftKpiModal({
 
                           {/* Handover Remarks Preview */}
                           {emp.notes ? (
-                            <View style={styles.notesPreviewBox}>
-                              <Text style={styles.notesPreviewLabel}>SHIFT REMARKS:</Text>
-                              <Text style={styles.notesPreviewText} numberOfLines={2}>
+                            <View style={styles.empNotesPreviewBox}>
+                              <Text style={styles.empNotesPreviewLabel}>REMARKS:</Text>
+                              <Text style={styles.empNotesPreviewText} numberOfLines={2}>
                                 "{emp.notes}"
                               </Text>
                             </View>
                           ) : null}
 
-                          {/* Drill-down action bar */}
-                          <View style={styles.empCardFooter}>
-                            <Text style={styles.inspectLinkText}>Inspect Full Shift Report ›</Text>
+                          {/* Card Footer Action */}
+                          <View style={styles.empLeaderCardFooter}>
+                            <Text style={styles.inspectDetailsText}>Inspect Shift Details ›</Text>
                           </View>
                         </TouchableOpacity>
                       );
@@ -593,15 +612,15 @@ export function MobileShiftKpiModal({
             ) : (
               /* VIEW MODE B: INDIVIDUAL AUTO-CALCULATED SHIFT REPORT */
               loading ? (
-                <View style={{ padding: 40, alignItems: 'center' }}>
-                  <ActivityIndicator size="small" color="#0F172A" />
-                  <Text style={{ marginTop: 10, color: '#64748B', fontSize: 13, fontWeight: '600' }}>
-                    Auto-calculating shift performance from CRM...
+                <View style={styles.loadingStateBox}>
+                  <ActivityIndicator size="small" color="#2563EB" />
+                  <Text style={styles.loadingStateText}>
+                    Calculating shift performance from CRM records...
                   </Text>
                 </View>
               ) : (
                 <>
-                  {/* Back to Leaderboard Banner for Owner */}
+                  {/* Back to Leaderboard Button for Owner */}
                   {currentProfile?.role === 'owner' && (
                     <TouchableOpacity
                       style={styles.backToTeamBtn}
@@ -611,157 +630,175 @@ export function MobileShiftKpiModal({
                       }}
                       activeOpacity={0.8}
                     >
-                      <Text style={styles.backToTeamBtnText}>← Back to Team Leaderboard</Text>
+                      <Text style={styles.backToTeamBtnText}>← Back to Leaderboard</Text>
                     </TouchableOpacity>
                   )}
 
-                  {/* Revenue Display Card */}
-                  <View style={styles.revenueCard}>
-                    <View style={styles.revenueTopRow}>
-                      <Text style={styles.revenueLabel}>CLOSED REVENUE ({selectedDate})</Text>
-                      <TouchableOpacity onPress={() => loadKpiData(activeStaffName, selectedDate)} style={styles.syncLink} activeOpacity={0.7}>
-                        <Text style={styles.syncLinkText}>🔄 Sync Live CRM</Text>
+                  {/* Individual Revenue Hero Card */}
+                  <View style={styles.heroDarkCard}>
+                    <View style={styles.heroCardHeaderRow}>
+                      <View style={styles.heroTagBadge}>
+                        <Text style={styles.heroTagBadgeText}>CLOSED REVENUE</Text>
+                      </View>
+                      <TouchableOpacity
+                        onPress={() => loadKpiData(activeStaffName, selectedDate)}
+                        style={styles.heroSyncBtn}
+                        activeOpacity={0.7}
+                      >
+                        <Text style={styles.heroSyncBtnText}>Sync CRM</Text>
                       </TouchableOpacity>
                     </View>
 
-                    <Text style={styles.revenueValue}>
+                    <Text style={styles.heroDarkRevenueValue}>
                       ₹ {salesValNum.toLocaleString('en-IN')}
                     </Text>
 
                     {/* Goal Achievement Progress Bar */}
-                    <View style={styles.goalProgressTrack}>
-                      <View style={[styles.goalProgressFill, { width: `${shiftGoalProgress}%` }]} />
+                    <View style={styles.darkProgressTrack}>
+                      <View style={[styles.darkProgressFill, { width: `${shiftGoalProgress}%` }]} />
                     </View>
-                    <View style={styles.goalLabelRow}>
-                      <Text style={styles.goalSubtext}>Daily Goal: ₹{DEFAULT_SHIFT_TARGET_SALES.toLocaleString('en-IN')}</Text>
-                      <Text style={styles.goalPercentText}>{shiftGoalProgress}% Achieved</Text>
+                    <View style={styles.darkProgressLabelRow}>
+                      <Text style={styles.darkProgressSubtext}>Target: ₹{DEFAULT_SHIFT_TARGET_SALES.toLocaleString('en-IN')}</Text>
+                      <Text style={styles.darkProgressPercent}>{shiftGoalProgress}% Target Achieved</Text>
                     </View>
 
                     {/* Metadata Capsules */}
-                    <View style={styles.revenueMetaRow}>
-                      <View style={styles.metaCapsule}>
-                        <Text style={styles.metaCapsuleLabel}>Invoices:</Text>
-                        <Text style={styles.metaCapsuleValue}>{totalBills || 0}</Text>
+                    <View style={styles.heroStatGrid}>
+                      <View style={styles.heroStatTile}>
+                        <Text style={styles.heroStatTileLabel}>INVOICES</Text>
+                        <Text style={styles.heroStatTileVal}>{totalBills || 0}</Text>
                       </View>
-
-                      <View style={styles.metaCapsule}>
-                        <Text style={styles.metaCapsuleLabel}>Conversion:</Text>
-                        <Text style={[styles.metaCapsuleValue, { color: conversionRate > 0 ? '#059669' : '#0F172A' }]}>
+                      <View style={styles.heroStatDivider} />
+                      <View style={styles.heroStatTile}>
+                        <Text style={styles.heroStatTileLabel}>WIN RATE</Text>
+                        <Text style={[styles.heroStatTileVal, { color: conversionRate > 0 ? '#34D399' : '#FFFFFF' }]}>
                           {conversionRate}%
                         </Text>
                       </View>
-
-                      <View style={styles.metaCapsule}>
-                        <Text style={styles.metaCapsuleLabel}>Staff:</Text>
-                        <Text style={styles.metaCapsuleValue}>{activeStaffName.split(' ')[0]}</Text>
+                      <View style={styles.heroStatDivider} />
+                      <View style={styles.heroStatTile}>
+                        <Text style={styles.heroStatTileLabel}>EXECUTIVE</Text>
+                        <Text style={styles.heroStatTileVal} numberOfLines={1}>{activeStaffName.split(' ')[0]}</Text>
                       </View>
                     </View>
                   </View>
 
-                  {/* Section: Showroom Conversion Funnel (100% Read-Only Auto-Calculated) */}
+                  {/* Section: Showroom Conversion Funnel */}
                   <View style={styles.sectionHeadingRow}>
-                    <Text style={styles.sectionTitle}>SHOWROOM FUNNEL METRICS</Text>
+                    <Text style={styles.sectionTitle}>SHOWROOM PIPELINE & FUNNEL</Text>
+                    <Text style={styles.sectionBadge}>Auto-Calculated</Text>
                   </View>
 
-                  {/* 3-Column Read-Only Funnel Cards */}
+                  {/* 4-Metric Balanced Funnel Grid (No Emojis) */}
                   <View style={styles.funnelGrid}>
                     {/* Card 1: Walk-ins */}
-                    <View style={styles.funnelCard}>
-                      <Text style={styles.funnelCardLabel}>Walk-ins</Text>
-                      <Text style={styles.funnelCardNumber}>{visits || 0}</Text>
-                      <Text style={styles.funnelCardHint}>Total Footfall</Text>
+                    <View style={styles.funnelTileCard}>
+                      <View style={styles.funnelHeaderPill}>
+                        <Text style={styles.funnelHeaderPillText}>FOOTFALL</Text>
+                      </View>
+                      <Text style={styles.funnelTileNumber}>{visits || 0}</Text>
+                      <Text style={styles.funnelTileTitle}>Walk-in Visitors</Text>
+                      <Text style={styles.funnelTileSub}>Total Showroom Traffic</Text>
                     </View>
 
                     {/* Card 2: Quotations */}
-                    <View style={styles.funnelCard}>
-                      <Text style={styles.funnelCardLabel}>Quotations</Text>
-                      <Text style={styles.funnelCardNumber}>{quotes || 0}</Text>
-                      <Text style={styles.funnelCardHint}>{quoteRate}% of visits</Text>
+                    <View style={styles.funnelTileCard}>
+                      <View style={[styles.funnelHeaderPill, { backgroundColor: '#F5F3FF' }]}>
+                        <Text style={[styles.funnelHeaderPillText, { color: '#7C3AED' }]}>PROPOSALS</Text>
+                      </View>
+                      <Text style={styles.funnelTileNumber}>{quotes || 0}</Text>
+                      <Text style={styles.funnelTileTitle}>Quotations</Text>
+                      <Text style={styles.funnelTileSub}>{quoteRate}% of footfall</Text>
                     </View>
 
                     {/* Card 3: Orders Closed */}
-                    <View style={[styles.funnelCard, { borderColor: '#CBD5E1' }]}>
-                      <Text style={[styles.funnelCardLabel, { color: '#0F172A' }]}>Orders Closed</Text>
-                      <Text style={[styles.funnelCardNumber, { color: '#0F172A' }]}>{orders || 0}</Text>
-                      <Text style={[styles.funnelCardHint, { color: '#059669', fontWeight: '700' }]}>{conversionRate}% won</Text>
+                    <View style={[styles.funnelTileCard, { borderColor: '#A7F3D0', backgroundColor: '#F0FDF4' }]}>
+                      <View style={[styles.funnelHeaderPill, { backgroundColor: '#DCFCE7' }]}>
+                        <Text style={[styles.funnelHeaderPillText, { color: '#047857' }]}>CONVERSIONS</Text>
+                      </View>
+                      <Text style={[styles.funnelTileNumber, { color: '#047857' }]}>{orders || 0}</Text>
+                      <Text style={[styles.funnelTileTitle, { color: '#047857' }]}>Orders Won</Text>
+                      <Text style={[styles.funnelTileSub, { color: '#059669', fontWeight: '700' }]}>{conversionRate}% win rate</Text>
+                    </View>
+
+                    {/* Card 4: Follow-ups */}
+                    <View style={styles.funnelTileCard}>
+                      <View style={[styles.funnelHeaderPill, { backgroundColor: '#FFFBEB' }]}>
+                        <Text style={[styles.funnelHeaderPillText, { color: '#B45309' }]}>TOUCHPOINTS</Text>
+                      </View>
+                      <Text style={styles.funnelTileNumber}>{followups || 0}</Text>
+                      <Text style={styles.funnelTileTitle}>Follow-ups</Text>
+                      <Text style={styles.funnelTileSub}>Calls & messages</Text>
                     </View>
                   </View>
 
-                  {/* Follow-ups Activity Card */}
-                  <View style={styles.listCardRow}>
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.listCardTitle}>Client Follow-ups</Text>
-                      <Text style={styles.listCardSubtitle}>Calls, chats & quotation check-ins recorded today</Text>
-                    </View>
-                    <View style={styles.badgeSolidDark}>
-                      <Text style={styles.badgeSolidDarkText}>{followups || 0} calls</Text>
-                    </View>
-                  </View>
-
-                  {/* Section: Strategic Milestones (Auto-Detected) */}
-                  <View style={[styles.sectionHeadingRow, { marginTop: 20 }]}>
+                  {/* Section: Strategic Milestones (No Emojis) */}
+                  <View style={styles.sectionHeadingRow}>
                     <Text style={styles.sectionTitle}>AUTO-DETECTED STRATEGIC MILESTONES</Text>
                   </View>
 
                   {/* Repeat Customer Status */}
-                  <View style={styles.readOnlyMilestoneRow}>
+                  <View style={[styles.milestoneCard, oldCustomers && styles.milestoneCardActive]}>
+                    <View style={[styles.milestoneDot, oldCustomers && styles.milestoneDotActive]} />
                     <View style={{ flex: 1 }}>
-                      <Text style={styles.milestoneToggleTitle}>Repeat / Existing Clients Served</Text>
-                      <Text style={styles.milestoneToggleSubtitle}>Detected from customer entries marked Existing Customer</Text>
+                      <Text style={styles.milestoneCardTitle}>Repeat / Existing Clients</Text>
+                      <Text style={styles.milestoneCardSub}>Auto-detected from returning customer records</Text>
                     </View>
-                    <View style={[styles.togglePill, oldCustomers ? styles.togglePillActive : styles.togglePillInactive]}>
-                      <Text style={[styles.togglePillText, oldCustomers ? styles.togglePillTextActive : styles.togglePillTextInactive]}>
-                        {oldCustomers ? '✓ Yes' : '✕ No'}
+                    <View style={[styles.milestonePill, oldCustomers ? styles.milestonePillActive : styles.milestonePillInactive]}>
+                      <Text style={[styles.milestonePillText, oldCustomers ? styles.milestonePillTextActive : styles.milestonePillTextInactive]}>
+                        {oldCustomers ? 'Detected' : 'None'}
                       </Text>
                     </View>
                   </View>
 
                   {/* Engineer / Architect Status */}
-                  <View style={styles.readOnlyMilestoneRow}>
+                  <View style={[styles.milestoneCard, engineerCalls && styles.milestoneCardActive]}>
+                    <View style={[styles.milestoneDot, engineerCalls && styles.milestoneDotActive]} />
                     <View style={{ flex: 1 }}>
-                      <Text style={styles.milestoneToggleTitle}>Engineer / Architect Interactions</Text>
-                      <Text style={styles.milestoneToggleSubtitle}>Detected from influencer customer entries</Text>
+                      <Text style={styles.milestoneCardTitle}>Architect / Engineer Visits</Text>
+                      <Text style={styles.milestoneCardSub}>Auto-detected from influencer trade records</Text>
                     </View>
-                    <View style={[styles.togglePill, engineerCalls ? styles.togglePillActive : styles.togglePillInactive]}>
-                      <Text style={[styles.togglePillText, engineerCalls ? styles.togglePillTextActive : styles.togglePillTextInactive]}>
-                        {engineerCalls ? '✓ Yes' : '✕ No'}
+                    <View style={[styles.milestonePill, engineerCalls ? styles.milestonePillActive : styles.milestonePillInactive]}>
+                      <Text style={[styles.milestonePillText, engineerCalls ? styles.milestonePillTextActive : styles.milestonePillTextInactive]}>
+                        {engineerCalls ? 'Detected' : 'None'}
                       </Text>
                     </View>
                   </View>
 
                   {/* Cross-Sell Status */}
-                  <View style={styles.readOnlyMilestoneRow}>
+                  <View style={[styles.milestoneCard, crossSell && styles.milestoneCardActive]}>
+                    <View style={[styles.milestoneDot, crossSell && styles.milestoneDotActive]} />
                     <View style={{ flex: 1 }}>
-                      <Text style={styles.milestoneToggleTitle}>Cross-sell Combo Achieved</Text>
-                      <Text style={styles.milestoneSub}>Detected from adhesives, grouts or sanitary additions</Text>
+                      <Text style={styles.milestoneCardTitle}>Cross-Sell Product Combo</Text>
+                      <Text style={styles.milestoneCardSub}>Adhesive, grout or sanitary additions recorded</Text>
                     </View>
-                    <View style={[styles.togglePill, crossSell ? styles.togglePillActive : styles.togglePillInactive]}>
-                      <Text style={[styles.togglePillText, crossSell ? styles.togglePillTextActive : styles.togglePillTextInactive]}>
-                        {crossSell ? '✓ Yes' : '✕ No'}
+                    <View style={[styles.milestonePill, crossSell ? styles.milestonePillActive : styles.milestonePillInactive]}>
+                      <Text style={[styles.milestonePillText, crossSell ? styles.milestonePillTextActive : styles.milestonePillTextInactive]}>
+                        {crossSell ? 'Detected' : 'None'}
                       </Text>
                     </View>
                   </View>
 
                   {/* Section: Shift Handover Remarks */}
-                  <View style={{ marginTop: 20, marginBottom: 24 }}>
+                  <View style={styles.handoverSectionBox}>
                     <Text style={styles.sectionTitle}>HANDOVER & SHIFT REMARKS</Text>
                     
-                    {/* Quick Prompts */}
-                    <View style={styles.promptChipsRow}>
+                    {/* Quick Smart Snippets */}
+                    <View style={styles.promptChipsContainer}>
                       {QUICK_SHIFT_SNIPPETS.map((snip, idx) => (
                         <TouchableOpacity
                           key={idx}
-                          style={styles.promptChip}
+                          style={styles.smartPromptChip}
                           onPress={() => setShiftNotes((prev) => (prev ? `${prev}; ${snip}` : snip))}
                           activeOpacity={0.7}
                         >
-                          <Text style={styles.promptChipText}>+ {snip}</Text>
+                          <Text style={styles.smartPromptChipText}>+ {snip}</Text>
                         </TouchableOpacity>
                       ))}
                     </View>
 
                     <TextInput
-                      style={styles.notesTextInput}
+                      style={styles.handoverTextInput}
                       placeholder="Enter closing remarks, customer objections, site visits or stock requests..."
                       placeholderTextColor="#94A3B8"
                       multiline
@@ -798,7 +835,7 @@ export function MobileShiftKpiModal({
                   <ActivityIndicator size="small" color="#FFFFFF" />
                 ) : (
                   <Text style={styles.footerSubmitBtnText}>
-                    {submittedSuccess ? '✓ Report Finalized' : `Finalize & Save ${activeStaffName}'s Shift`}
+                    {submittedSuccess ? 'Shift Finalized' : 'Finalize & Save Shift'}
                   </Text>
                 )}
               </TouchableOpacity>
@@ -813,31 +850,43 @@ export function MobileShiftKpiModal({
 const styles = StyleSheet.create({
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(15, 23, 42, 0.65)',
+    backgroundColor: 'rgba(15, 23, 42, 0.70)',
     justifyContent: 'flex-end',
   },
   modalCard: {
     backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 22,
-    borderTopRightRadius: 22,
-    maxHeight: '92%',
-    minHeight: '78%',
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    maxHeight: '94%',
+    minHeight: '80%',
     display: 'flex',
     flexDirection: 'column',
     overflow: 'hidden',
     shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 16,
-    elevation: 20,
+    shadowOffset: { width: 0, height: -6 },
+    shadowOpacity: 0.20,
+    shadowRadius: 20,
+    elevation: 24,
+  },
+  sheetHandleWrapper: {
+    alignItems: 'center',
+    paddingTop: 10,
+    paddingBottom: 4,
+    backgroundColor: '#FFFFFF',
+  },
+  sheetHandle: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#CBD5E1',
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
-    paddingTop: 18,
-    paddingBottom: 14,
+    paddingTop: 8,
+    paddingBottom: 12,
     borderBottomWidth: 1,
     borderBottomColor: '#F1F5F9',
     backgroundColor: '#FFFFFF',
@@ -850,39 +899,69 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
   },
+  headerBarIcon: {
+    width: 24,
+    height: 24,
+    borderRadius: 6,
+    backgroundColor: '#EFF6FF',
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    justifyContent: 'center',
+    gap: 2.5,
+    paddingBottom: 4,
+  },
+  bar1: {
+    width: 2.5,
+    height: 6,
+    backgroundColor: '#2563EB',
+    borderRadius: 1,
+  },
+  bar2: {
+    width: 2.5,
+    height: 10,
+    backgroundColor: '#2563EB',
+    borderRadius: 1,
+  },
+  bar3: {
+    width: 2.5,
+    height: 14,
+    backgroundColor: '#2563EB',
+    borderRadius: 1,
+  },
   headerTitle: {
-    fontSize: 19,
+    fontSize: 18,
     fontWeight: '800',
     color: '#0F172A',
-    letterSpacing: -0.3,
+    letterSpacing: -0.4,
   },
   liveTag: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
     backgroundColor: '#ECFDF5',
-    paddingHorizontal: 7,
+    paddingHorizontal: 6.5,
     paddingVertical: 2,
-    borderRadius: 6,
+    borderRadius: 5,
     borderWidth: 1,
     borderColor: '#A7F3D0',
   },
   liveDot: {
-    width: 5,
-    height: 5,
+    width: 4.5,
+    height: 4.5,
     borderRadius: 2.5,
     backgroundColor: '#10B981',
   },
   liveTagText: {
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: '800',
     color: '#047857',
+    letterSpacing: 0.5,
   },
   headerSubtitle: {
-    fontSize: 12,
+    fontSize: 11.5,
     color: '#64748B',
-    fontWeight: '600',
-    marginTop: 2,
+    fontWeight: '500',
+    marginTop: 3,
   },
   closeBtn: {
     width: 32,
@@ -893,7 +972,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   closeBtnText: {
-    fontSize: 14,
+    fontSize: 13,
     color: '#475569',
     fontWeight: '800',
   },
@@ -907,30 +986,40 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#F1F5F9',
   },
-  dateChip: {
-    paddingHorizontal: 10,
-    paddingVertical: 4.5,
+  dateSegmentGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#E2E8F0',
     borderRadius: 8,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
+    padding: 2.5,
+    gap: 2,
+  },
+  dateChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 4.5,
+    borderRadius: 6,
+    backgroundColor: 'transparent',
   },
   dateChipActive: {
-    backgroundColor: '#0F172A',
-    borderColor: '#0F172A',
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 2,
+    elevation: 1,
   },
   dateChipText: {
-    fontSize: 11,
+    fontSize: 11.5,
     fontWeight: '600',
-    color: '#475569',
+    color: '#64748B',
   },
   dateChipTextActive: {
-    color: '#FFFFFF',
+    color: '#0F172A',
     fontWeight: '800',
   },
   ratingPill: {
-    paddingHorizontal: 8,
-    paddingVertical: 3.5,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
     borderRadius: 8,
     borderWidth: 1,
   },
@@ -943,20 +1032,16 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderBottomWidth: 1,
     borderBottomColor: '#F1F5F9',
-    backgroundColor: '#FAFAFA',
-  },
-  filterSectionLabel: {
-    fontSize: 10,
-    fontWeight: '800',
-    color: '#94A3B8',
-    letterSpacing: 0.5,
-    marginBottom: 6,
+    backgroundColor: '#FFFFFF',
   },
   staffTabPill: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 11,
+    paddingVertical: 5.5,
     borderRadius: 8,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#F8FAFC',
     borderWidth: 1,
     borderColor: '#E2E8F0',
   },
@@ -964,245 +1049,433 @@ const styles = StyleSheet.create({
     backgroundColor: '#0F172A',
     borderColor: '#0F172A',
   },
+  miniStaffAvatar: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: '#E2E8F0',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  miniStaffAvatarText: {
+    fontSize: 9.5,
+    fontWeight: '800',
+    color: '#475569',
+  },
   staffTabPillText: {
-    fontSize: 12,
+    fontSize: 11.5,
     fontWeight: '600',
     color: '#475569',
   },
   staffTabPillTextActive: {
     color: '#FFFFFF',
-    fontWeight: '700',
+    fontWeight: '800',
   },
   bodyScrollView: {
     flex: 1,
-    paddingHorizontal: 20,
+    paddingHorizontal: 18,
     paddingTop: 14,
     backgroundColor: '#F8FAFC',
   },
-  autoCalculatedBanner: {
-    flexDirection: 'row',
+  loadingStateBox: {
+    padding: 40,
     alignItems: 'center',
-    gap: 8,
-    backgroundColor: '#EFF6FF',
-    borderWidth: 1,
-    borderColor: '#BFDBFE',
-    borderRadius: 12,
-    padding: 10,
-    marginBottom: 14,
   },
-  autoCalculatedText: {
-    fontSize: 11.5,
-    color: '#1D4ED8',
-    fontWeight: '700',
-    flex: 1,
+  loadingStateText: {
+    marginTop: 10,
+    color: '#64748B',
+    fontSize: 12.5,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  emptyStateBox: {
+    padding: 30,
+    alignItems: 'center',
+  },
+  emptyStateText: {
+    fontSize: 12.5,
+    color: '#64748B',
   },
   backToTeamBtn: {
     backgroundColor: '#EFF6FF',
     borderWidth: 1,
     borderColor: '#BFDBFE',
     borderRadius: 10,
-    paddingVertical: 9,
-    paddingHorizontal: 14,
-    marginBottom: 14,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    marginBottom: 12,
     alignSelf: 'flex-start',
   },
   backToTeamBtnText: {
-    fontSize: 12,
+    fontSize: 11.5,
     fontWeight: '800',
     color: '#1D4ED8',
   },
-  revenueCard: {
+  heroDarkCard: {
+    backgroundColor: '#0F172A',
+    borderRadius: 18,
+    padding: 16,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.18,
+    shadowRadius: 10,
+    elevation: 4,
+    marginBottom: 14,
+  },
+  heroCardHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  heroTagBadge: {
+    backgroundColor: 'rgba(255, 255, 255, 0.10)',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 5,
+  },
+  heroTagBadgeText: {
+    fontSize: 9,
+    fontWeight: '800',
+    color: '#94A3B8',
+    letterSpacing: 0.8,
+  },
+  heroSyncBtn: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  heroSyncBtnText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#60A5FA',
+  },
+  heroDarkRevenueValue: {
+    fontSize: 32,
+    fontWeight: '900',
+    color: '#FFFFFF',
+    letterSpacing: -0.8,
+    marginTop: 6,
+    marginBottom: 6,
+  },
+  darkProgressTrack: {
+    height: 6,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    borderRadius: 3,
+    overflow: 'hidden',
+    marginVertical: 4,
+  },
+  darkProgressFill: {
+    height: '100%',
+    backgroundColor: '#38BDF8',
+    borderRadius: 3,
+  },
+  darkProgressLabelRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  darkProgressSubtext: {
+    fontSize: 10.5,
+    color: '#94A3B8',
+    fontWeight: '600',
+  },
+  darkProgressPercent: {
+    fontSize: 10.5,
+    color: '#34D399',
+    fontWeight: '800',
+  },
+  heroStatGrid: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+    borderRadius: 12,
+    paddingVertical: 9,
+    paddingHorizontal: 12,
+  },
+  heroStatTile: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  heroStatTileLabel: {
+    fontSize: 8.5,
+    fontWeight: '800',
+    color: '#94A3B8',
+    letterSpacing: 0.5,
+  },
+  heroStatTileVal: {
+    fontSize: 13.5,
+    fontWeight: '900',
+    color: '#FFFFFF',
+    marginTop: 2,
+  },
+  heroStatDivider: {
+    width: 1,
+    height: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.12)',
+  },
+  sectionHeadingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 8,
+    marginBottom: 10,
+  },
+  sectionTitle: {
+    fontSize: 10.5,
+    fontWeight: '900',
+    color: '#475569',
+    letterSpacing: 0.6,
+  },
+  sectionBadge: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#64748B',
+  },
+  funnelGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 12,
+  },
+  funnelTileCard: {
+    width: (Dimensions.get('window').width - 44) / 2,
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
-    padding: 16,
+    padding: 13,
     borderWidth: 1,
     borderColor: '#E2E8F0',
     shadowColor: '#0F172A',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.03,
-    shadowRadius: 6,
+    shadowRadius: 4,
     elevation: 1,
   },
-  revenueTopRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  revenueLabel: {
-    fontSize: 10.5,
-    fontWeight: '800',
-    color: '#64748B',
-    letterSpacing: 0.5,
-  },
-  syncLink: {
-    paddingHorizontal: 4,
-    paddingVertical: 2,
-  },
-  syncLinkText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#2563EB',
-  },
-  revenueValue: {
-    fontSize: 32,
-    fontWeight: '900',
-    color: '#0F172A',
-    letterSpacing: -0.6,
-    marginVertical: 4,
-  },
-  goalProgressTrack: {
-    height: 6,
+  funnelHeaderPill: {
     backgroundColor: '#F1F5F9',
-    borderRadius: 3,
-    overflow: 'hidden',
-    marginVertical: 4,
-  },
-  goalProgressFill: {
-    height: '100%',
-    backgroundColor: '#2563EB',
-    borderRadius: 3,
-  },
-  goalLabelRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    paddingHorizontal: 6.5,
+    paddingVertical: 2.5,
+    borderRadius: 5,
+    alignSelf: 'flex-start',
     marginBottom: 6,
   },
-  goalSubtext: {
-    fontSize: 10.5,
-    color: '#64748B',
-    fontWeight: '600',
-  },
-  goalPercentText: {
-    fontSize: 10.5,
-    color: '#059669',
+  funnelHeaderPillText: {
+    fontSize: 8.5,
     fontWeight: '800',
+    color: '#475569',
+    letterSpacing: 0.5,
   },
-  revenueMetaRow: {
+  funnelTileNumber: {
+    fontSize: 22,
+    fontWeight: '900',
+    color: '#0F172A',
+    letterSpacing: -0.4,
+  },
+  funnelTileTitle: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#334155',
+    marginTop: 2,
+  },
+  funnelTileSub: {
+    fontSize: 10,
+    color: '#94A3B8',
+    fontWeight: '600',
+    marginTop: 2,
+  },
+  milestoneCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    marginTop: 4,
-    flexWrap: 'wrap',
-  },
-  metaCapsule: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: '#F8FAFC',
-    paddingHorizontal: 8,
-    paddingVertical: 3.5,
-    borderRadius: 6,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
+    padding: 12,
     borderWidth: 1,
     borderColor: '#E2E8F0',
+    marginBottom: 8,
+    gap: 10,
   },
-  metaCapsuleLabel: {
-    fontSize: 11,
-    color: '#64748B',
-    fontWeight: '600',
+  milestoneCardActive: {
+    borderColor: '#BAE6FD',
+    backgroundColor: '#F0F9FF',
   },
-  metaCapsuleValue: {
-    fontSize: 11.5,
+  milestoneDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#CBD5E1',
+    marginLeft: 2,
+  },
+  milestoneDotActive: {
+    backgroundColor: '#0284C7',
+  },
+  milestoneCardTitle: {
+    fontSize: 12.5,
+    fontWeight: '800',
     color: '#0F172A',
-    fontWeight: '800',
   },
-  sectionHeadingRow: {
-    marginTop: 18,
-    marginBottom: 8,
-  },
-  sectionTitle: {
+  milestoneCardSub: {
     fontSize: 10.5,
-    fontWeight: '800',
     color: '#64748B',
-    letterSpacing: 0.6,
+    marginTop: 1,
+  },
+  milestonePill: {
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderRadius: 7,
+    borderWidth: 1,
+  },
+  milestonePillActive: {
+    backgroundColor: '#0F172A',
+    borderColor: '#0F172A',
+  },
+  milestonePillInactive: {
+    backgroundColor: '#F1F5F9',
+    borderColor: '#E2E8F0',
+  },
+  milestonePillText: {
+    fontSize: 11,
+    fontWeight: '800',
+  },
+  milestonePillTextActive: {
+    color: '#FFFFFF',
+  },
+  milestonePillTextInactive: {
+    color: '#64748B',
+  },
+  handoverSectionBox: {
+    marginTop: 10,
+    marginBottom: 24,
+  },
+  promptChipsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginTop: 6,
     marginBottom: 8,
   },
-  empPerfCard: {
+  smartPromptChip: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    paddingHorizontal: 9,
+    paddingVertical: 4.5,
+    borderRadius: 7,
+  },
+  smartPromptChipText: {
+    fontSize: 10.5,
+    fontWeight: '600',
+    color: '#475569',
+  },
+  handoverTextInput: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+    padding: 12,
+    fontSize: 12.5,
+    color: '#0F172A',
+    textAlignVertical: 'top',
+    minHeight: 70,
+  },
+  empLeaderCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
     borderWidth: 1,
     borderColor: '#E2E8F0',
     padding: 14,
-    marginBottom: 12,
+    marginBottom: 10,
     shadowColor: '#0F172A',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.03,
     shadowRadius: 5,
     elevation: 1.5,
   },
-  empPerfHeader: {
+  empLeaderTopRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  rankBadge: {
-    paddingHorizontal: 7,
-    paddingVertical: 3,
-    borderRadius: 6,
+  rankMedalPill: {
+    paddingHorizontal: 6.5,
+    paddingVertical: 2.5,
+    borderRadius: 5,
     borderWidth: 1,
     borderColor: '#E2E8F0',
   },
-  rankBadgeText: {
-    fontSize: 11,
+  rankMedalPillText: {
+    fontSize: 10.5,
     fontWeight: '900',
   },
-  empAvatar: {
-    width: 38,
-    height: 38,
-    borderRadius: 12,
+  empAvatarCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 11,
     backgroundColor: '#EFF6FF',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  empAvatarText: {
-    fontSize: 16,
+  empAvatarCircleText: {
+    fontSize: 15,
     fontWeight: '800',
     color: '#2563EB',
   },
-  empName: {
-    fontSize: 14.5,
+  empLeaderName: {
+    fontSize: 14,
     fontWeight: '800',
     color: '#0F172A',
     letterSpacing: -0.2,
   },
-  empSubtext: {
-    fontSize: 11,
+  empLeaderSub: {
+    fontSize: 10.5,
     color: '#64748B',
     marginTop: 1,
     fontWeight: '500',
   },
-  empSalesValue: {
-    fontSize: 16,
+  empLeaderRevenue: {
+    fontSize: 15.5,
     fontWeight: '900',
     color: '#0F172A',
     textAlign: 'right',
   },
-  empStatusBadge: {
+  statusMiniBadge: {
     marginTop: 3,
     paddingHorizontal: 6,
     paddingVertical: 2,
-    borderRadius: 6,
+    borderRadius: 5,
     borderWidth: 1,
   },
-  empStatusBadgeLogged: {
+  statusMiniBadgeLogged: {
     backgroundColor: '#ECFDF5',
     borderColor: '#A7F3D0',
   },
-  empStatusBadgePending: {
+  statusMiniBadgePending: {
     backgroundColor: '#F8FAFC',
     borderColor: '#E2E8F0',
   },
-  empStatusBadgeText: {
-    fontSize: 10,
+  statusMiniBadgeText: {
+    fontSize: 9.5,
     fontWeight: '800',
   },
-  empStatusBadgeTextLogged: {
+  statusMiniBadgeTextLogged: {
     color: '#047857',
   },
-  empStatusBadgeTextPending: {
+  statusMiniBadgeTextPending: {
     color: '#64748B',
   },
-  empStatGrid: {
+  miniProgressTrack: {
+    height: 4,
+    backgroundColor: '#F1F5F9',
+    borderRadius: 2,
+    overflow: 'hidden',
+    marginTop: 10,
+    marginBottom: 8,
+  },
+  miniProgressFill: {
+    height: '100%',
+    backgroundColor: '#2563EB',
+    borderRadius: 2,
+  },
+  empMetricGrid: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -1210,238 +1483,91 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     borderWidth: 1,
     borderColor: '#F1F5F9',
-    paddingVertical: 8,
-    paddingHorizontal: 10,
-    marginTop: 12,
+    paddingVertical: 7,
+    paddingHorizontal: 8,
+    marginTop: 4,
   },
-  empStatItem: {
+  empMetricCol: {
     alignItems: 'center',
     flex: 1,
   },
-  empStatLabel: {
-    fontSize: 8.5,
+  empMetricKey: {
+    fontSize: 8,
     fontWeight: '800',
     color: '#94A3B8',
     letterSpacing: 0.5,
   },
-  empStatVal: {
-    fontSize: 12,
+  empMetricNum: {
+    fontSize: 11.5,
     fontWeight: '800',
     color: '#0F172A',
     marginTop: 2,
   },
-  milestoneBadgesRow: {
+  empMilestonesRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 6,
-    marginTop: 10,
+    marginTop: 8,
   },
-  milestoneBadge: {
+  empMilestoneTag: {
     backgroundColor: '#F0F9FF',
     borderWidth: 1,
     borderColor: '#BAE6FD',
     paddingHorizontal: 7,
-    paddingVertical: 3,
+    paddingVertical: 2.5,
     borderRadius: 6,
   },
-  milestoneBadgeText: {
-    fontSize: 10.5,
+  empMilestoneTagText: {
+    fontSize: 10,
     fontWeight: '700',
     color: '#0369A1',
   },
-  notesPreviewBox: {
+  empNotesPreviewBox: {
     backgroundColor: '#FFFBEB',
     borderWidth: 1,
     borderColor: '#FDE68A',
     borderRadius: 8,
     padding: 8,
-    marginTop: 10,
+    marginTop: 8,
   },
-  notesPreviewLabel: {
-    fontSize: 9.5,
+  empNotesPreviewLabel: {
+    fontSize: 9,
     fontWeight: '800',
     color: '#B45309',
     letterSpacing: 0.5,
   },
-  notesPreviewText: {
-    fontSize: 11,
+  empNotesPreviewText: {
+    fontSize: 10.5,
     color: '#92400E',
     marginTop: 2,
     fontStyle: 'italic',
   },
-  empCardFooter: {
-    marginTop: 10,
-    paddingTop: 8,
+  empLeaderCardFooter: {
+    marginTop: 8,
+    paddingTop: 6,
     borderTopWidth: 1,
     borderTopColor: '#F1F5F9',
     alignItems: 'flex-end',
   },
-  inspectLinkText: {
-    fontSize: 11.5,
+  inspectDetailsText: {
+    fontSize: 11,
     fontWeight: '800',
     color: '#2563EB',
-  },
-  funnelGrid: {
-    flexDirection: 'row',
-    gap: 8,
-    marginBottom: 10,
-  },
-  funnelCard: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 14,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    alignItems: 'center',
-    shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.02,
-    shadowRadius: 3,
-    elevation: 1,
-  },
-  funnelCardLabel: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#64748B',
-  },
-  funnelCardNumber: {
-    fontSize: 22,
-    fontWeight: '900',
-    color: '#0F172A',
-    marginVertical: 4,
-    letterSpacing: -0.4,
-  },
-  funnelCardHint: {
-    fontSize: 10,
-    color: '#94A3B8',
-    fontWeight: '600',
-  },
-  listCardRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 14,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-  },
-  listCardTitle: {
-    fontSize: 13.5,
-    fontWeight: '700',
-    color: '#0F172A',
-  },
-  listCardSubtitle: {
-    fontSize: 11,
-    color: '#64748B',
-    marginTop: 1,
-  },
-  badgeSolidDark: {
-    backgroundColor: '#0F172A',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 8,
-  },
-  badgeSolidDarkText: {
-    fontSize: 12,
-    fontWeight: '800',
-    color: '#FFFFFF',
-  },
-  readOnlyMilestoneRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 14,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    marginBottom: 8,
-  },
-  milestoneToggleTitle: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#0F172A',
-  },
-  milestoneToggleSubtitle: {
-    fontSize: 11,
-    color: '#64748B',
-    marginTop: 1,
-  },
-  milestoneSub: {
-    fontSize: 11,
-    color: '#64748B',
-    marginTop: 1,
-  },
-  togglePill: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 8,
-    borderWidth: 1,
-  },
-  togglePillActive: {
-    backgroundColor: '#0F172A',
-    borderColor: '#0F172A',
-  },
-  togglePillInactive: {
-    backgroundColor: '#F1F5F9',
-    borderColor: '#E2E8F0',
-  },
-  togglePillText: {
-    fontSize: 11.5,
-    fontWeight: '800',
-  },
-  togglePillTextActive: {
-    color: '#FFFFFF',
-  },
-  togglePillTextInactive: {
-    color: '#64748B',
-  },
-  promptChipsRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 6,
-    marginBottom: 8,
-  },
-  promptChip: {
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-  },
-  promptChipText: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: '#475569',
-  },
-  notesTextInput: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#CBD5E1',
-    padding: 12,
-    fontSize: 13,
-    color: '#0F172A',
-    textAlignVertical: 'top',
-    minHeight: 70,
   },
   footer: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
-    paddingVertical: 14,
+    paddingVertical: 12,
     backgroundColor: '#FFFFFF',
     borderTopWidth: 1,
     borderTopColor: '#F1F5F9',
-    gap: 12,
+    gap: 10,
   },
   footerCancelBtn: {
-    paddingVertical: 12,
-    paddingHorizontal: 18,
+    paddingVertical: 11,
+    paddingHorizontal: 16,
     borderRadius: 10,
     backgroundColor: '#F8FAFC',
     borderWidth: 1,
@@ -1449,28 +1575,28 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   footerCancelBtnText: {
-    fontSize: 13,
+    fontSize: 12.5,
     fontWeight: '700',
     color: '#475569',
   },
   footerSubmitBtn: {
     flex: 1,
-    paddingVertical: 13,
-    paddingHorizontal: 18,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
     borderRadius: 10,
     backgroundColor: '#0F172A',
     alignItems: 'center',
     shadowColor: '#0F172A',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 6,
+    shadowOpacity: 0.12,
+    shadowRadius: 5,
     elevation: 3,
   },
   footerSubmitBtnSuccess: {
     backgroundColor: '#059669',
   },
   footerSubmitBtnText: {
-    fontSize: 13.5,
+    fontSize: 13,
     fontWeight: '800',
     color: '#FFFFFF',
   },

@@ -7,11 +7,11 @@ import {
   TextInput,
   ActivityIndicator,
   ScrollView,
-  SafeAreaView,
   Platform,
   Alert,
   KeyboardAvoidingView,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '../../theme/colors';
 import { apiClient } from '../../api/client';
 

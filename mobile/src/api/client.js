@@ -179,25 +179,29 @@ export const apiClient = {
   async getApiBase() {
     if (cachedWorkingHost) return cachedWorkingHost;
 
-    const custom = await AsyncStorage.getItem(HOST_STORAGE_KEY);
-    if (custom && (custom.includes('10.169.195.176') || custom.includes('10.169.195.237') || custom.includes('10.169.195.152') || custom.includes('10.169.195.222'))) {
-      await AsyncStorage.removeItem(HOST_STORAGE_KEY);
-    } else if (custom) {
-      cachedWorkingHost = custom;
-      return custom;
-    }
+    try {
+      const custom = await AsyncStorage.getItem(HOST_STORAGE_KEY);
+      if (custom && custom.trim() !== '') {
+        const cleanHost = custom.trim().replace(/\/+$/, '');
+        const fullApiUrl = cleanHost.endsWith('/api') ? cleanHost : `${cleanHost}/api`;
+        cachedWorkingHost = fullApiUrl;
+        return fullApiUrl;
+      }
+    } catch (e) {}
 
     cachedWorkingHost = DEFAULT_HOST;
     return DEFAULT_HOST;
   },
 
   async setApiBase(url) {
+    if (!url) return null;
     let cleanUrl = url.trim().replace(/\/+$/, '');
     if (!cleanUrl.endsWith('/api')) {
       cleanUrl += '/api';
     }
     cachedWorkingHost = cleanUrl;
     await AsyncStorage.setItem(HOST_STORAGE_KEY, cleanUrl);
+    await AsyncStorage.setItem('vasantham_is_paired', 'true');
     return cleanUrl;
   },
 
@@ -331,28 +335,32 @@ export const apiClient = {
   async checkIsPairedAndOnline() {
     try {
       const storedHost = await AsyncStorage.getItem(HOST_STORAGE_KEY);
-      if (!storedHost) {
-        return { isPaired: false, host: null, reason: 'No paired host stored' };
-      }
+      if (storedHost && storedHost.trim() !== '') {
+        const cleanHost = storedHost.trim().replace(/\/+$/, '');
+        const baseApi = cleanHost.endsWith('/api') ? cleanHost : `${cleanHost}/api`;
+        const healthUrl = `${baseApi}/health`;
 
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 3000);
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 3500);
 
-      const cleanHost = storedHost.trim().replace(/\/+$/, '');
-      const healthUrl = cleanHost.endsWith('/api') ? `${cleanHost}/health` : `${cleanHost}/api/health`;
+        try {
+          const res = await fetch(healthUrl, { signal: controller.signal });
+          clearTimeout(timeoutId);
 
-      const res = await fetch(healthUrl, { signal: controller.signal });
-      clearTimeout(timeoutId);
-
-      if (res.ok) {
-        const data = await res.json();
-        cachedWorkingHost = cleanHost.endsWith('/api') ? cleanHost : `${cleanHost}/api`;
-        await AsyncStorage.setItem('vasantham_is_paired', 'true');
-        return { isPaired: true, host: cachedWorkingHost, data };
+          if (res.ok) {
+            const data = await res.json();
+            cachedWorkingHost = baseApi;
+            await AsyncStorage.setItem(HOST_STORAGE_KEY, baseApi);
+            await AsyncStorage.setItem('vasantham_is_paired', 'true');
+            return { isPaired: true, host: baseApi, data };
+          }
+        } catch (fetchErr) {
+          clearTimeout(timeoutId);
+        }
       }
     } catch (e) {}
 
-    return { isPaired: false, host: cachedWorkingHost, reason: 'Server unreachable' };
+    return { isPaired: false, host: null, reason: 'Server unreachable' };
   },
 
   async setPairedStatus(isPaired) {
@@ -393,11 +401,27 @@ export const apiClient = {
 
   // Test connection to backend
   async testConnection(customBase = null) {
-    const candidates = customBase ? [customBase] : getCandidateHosts();
-    for (const host of candidates) {
+    const candidates = [];
+    if (customBase) {
+      let clean = customBase.trim().replace(/\/+$/, '');
+      if (!clean.endsWith('/api')) clean += '/api';
+      candidates.push(clean);
+    } else {
+      const stored = await AsyncStorage.getItem(HOST_STORAGE_KEY);
+      if (stored) {
+        let cleanStored = stored.trim().replace(/\/+$/, '');
+        if (!cleanStored.endsWith('/api')) cleanStored += '/api';
+        candidates.push(cleanStored);
+      }
+      candidates.push(...getCandidateHosts());
+    }
+
+    const uniqueCandidates = [...new Set(candidates)];
+
+    for (const host of uniqueCandidates) {
       try {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 2500);
+        const timeoutId = setTimeout(() => controller.abort(), 3000);
 
         const res = await fetch(`${host}/health`, { signal: controller.signal });
         clearTimeout(timeoutId);
@@ -428,45 +452,31 @@ export const apiClient = {
       }
     }
 
-    // Current default subnet
-    candidateSubnets.push(CURRENT_LAN_IP.split('.').slice(0, 3).join('.'));
-    candidateSubnets.push('192.168.1');
-    candidateSubnets.push('192.168.0');
-    candidateSubnets.push('192.168.29');
-    candidateSubnets.push('10.0.0');
-
+    // Default common LAN subnets
+    candidateSubnets.push('10.169.195', '192.168.1', '192.168.0', '192.168.29', '192.168.137', '172.20.10');
     const uniqueSubnets = [...new Set(candidateSubnets)];
 
-    // 1. Fast-check candidate hosts first
-    const primaryTest = await this.testConnection();
-    if (primaryTest.success) {
-      return primaryTest;
-    }
-
-    // 2. Parallel sweep across candidate subnets
     for (const subnet of uniqueSubnets) {
-      if (onProgress) onProgress(`Scanning ${subnet}.x subnet for CRM desktop server...`);
+      if (onProgress) onProgress(`Scanning ${subnet}.* for Desktop CRM...`);
 
-      // Build target list for this subnet (common host numbers first)
-      const priorityHosts = [1, 2, 100, 101, 102, 150, 176, 189, 200, 254];
-      const allHosts = Array.from({ length: 254 }, (_, i) => i + 1);
-      const orderedHostList = [...new Set([...priorityHosts, ...allHosts])];
+      // Scan common static IP allocations in batches
+      const ipBatches = [
+        [189, 176, 237, 152, 222, 100, 101, 102, 103, 104, 105],
+        [1, 2, 3, 4, 5, 10, 20, 50],
+      ];
 
-      // Scan in parallel batches of 25 to avoid socket exhaustion
-      const batchSize = 25;
-      for (let i = 0; i < orderedHostList.length; i += batchSize) {
-        const batch = orderedHostList.slice(i, i + batchSize);
-        const promises = batch.map((hostNum) => {
-          const targetUrl = `http://${subnet}.${hostNum}:5000/api`;
+      for (const batch of ipBatches) {
+        const promises = batch.map((lastOctet) => {
+          const targetUrl = `http://${subnet}.${lastOctet}:5000/api`;
           return new Promise(async (resolve) => {
             try {
-              const controller = new AbortController();
-              const timeoutId = setTimeout(() => controller.abort(), 900);
-              const res = await fetch(`${targetUrl}/health`, { signal: controller.signal });
-              clearTimeout(timeoutId);
-              if (res.ok) {
-                const data = await res.json();
-                if (data && data.status === 'healthy') {
+              const ctrl = new AbortController();
+              const tid = setTimeout(() => ctrl.abort(), 1200);
+              const r = await fetch(`${targetUrl}/health`, { signal: ctrl.signal });
+              clearTimeout(tid);
+              if (r.ok) {
+                const data = await r.json();
+                if (data.status === 'ok' || data.uptime !== undefined) {
                   resolve({ success: true, host: targetUrl, data });
                   return;
                 }
@@ -481,6 +491,7 @@ export const apiClient = {
         if (found) {
           cachedWorkingHost = found.host;
           await AsyncStorage.setItem(HOST_STORAGE_KEY, found.host);
+          await AsyncStorage.setItem('vasantham_is_paired', 'true');
           return found;
         }
       }

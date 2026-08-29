@@ -75,11 +75,6 @@ exports.getFollowupsList = async (req, res) => {
     }).sort({ updatedAt: -1 });
 
     const allFollowups = [];
-    let todayCount = 0;
-    let upcomingCount = 0;
-    let overdueCount = 0;
-    let hotCount = 0;
-    let totalPipelineValue = 0;
 
     rawCustomers.forEach((doc) => {
       const c = extractCustomerData(doc);
@@ -87,10 +82,6 @@ exports.getFollowupsList = async (req, res) => {
       // Skip closed or lost deals from active follow-up queue
       const statusLower = (c.status || '').toLowerCase();
       if (c.status === 'Order Confirmed' || statusLower.includes('lost')) return;
-
-      const qVal = c.quotationValue || 0;
-      totalPipelineValue += qVal;
-      if (c.leadTemperature === 'Hot') hotCount += 1;
 
       // Determine Time-Horizon Bucket
       let bucket = 'upcoming';
@@ -116,11 +107,6 @@ exports.getFollowupsList = async (req, res) => {
         daysDiff = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
       }
 
-      // Count metrics
-      if (bucket === 'today') todayCount += 1;
-      if (bucket === 'upcoming' || bucket === 'future') upcomingCount += 1;
-      if (bucket === 'overdue') overdueCount += 1;
-
       allFollowups.push({
         ...c,
         bucket,
@@ -128,8 +114,34 @@ exports.getFollowupsList = async (req, res) => {
       });
     });
 
+    // Apply Salesperson Filter (BEFORE calculating counts if specific salesperson is requested)
+    let scopedFollowups = allFollowups;
+    if (salesperson && salesperson !== 'all') {
+      const target = salesperson.trim().toLowerCase();
+      scopedFollowups = allFollowups.filter((f) => {
+        const staff = (f.salesperson || '').trim().toLowerCase();
+        return staff === target || staff.includes(target) || target.includes(staff);
+      });
+    }
+
+    // Calculate Scoped Counts
+    let todayCount = 0;
+    let upcomingCount = 0;
+    let overdueCount = 0;
+    let hotCount = 0;
+    let totalPipelineValue = 0;
+
+    scopedFollowups.forEach((f) => {
+      const qVal = f.quotationValue || 0;
+      totalPipelineValue += qVal;
+      if (f.leadTemperature === 'Hot') hotCount += 1;
+      if (f.bucket === 'today') todayCount += 1;
+      if (f.bucket === 'upcoming' || f.bucket === 'future') upcomingCount += 1;
+      if (f.bucket === 'overdue') overdueCount += 1;
+    });
+
     // Apply Filter by Tab
-    let filtered = allFollowups;
+    let filtered = scopedFollowups;
     if (tab === 'today') {
       filtered = filtered.filter((f) => f.bucket === 'today');
     } else if (tab === 'overdue') {
@@ -138,18 +150,9 @@ exports.getFollowupsList = async (req, res) => {
       filtered = filtered.filter((f) => f.bucket === 'upcoming' || f.bucket === 'future');
     }
 
-    // Apply Temperature Filter
+    // Apply Temperature Filter (if specified)
     if (temperature && temperature !== 'all') {
       filtered = filtered.filter((f) => f.leadTemperature === temperature);
-    }
-
-    // Apply Salesperson Filter
-    if (salesperson && salesperson !== 'all') {
-      const target = salesperson.trim().toLowerCase();
-      filtered = filtered.filter((f) => {
-        const staff = (f.salesperson || '').trim().toLowerCase();
-        return staff === target || staff.includes(target) || target.includes(staff);
-      });
     }
 
     // Apply Search Query
@@ -188,7 +191,7 @@ exports.getFollowupsList = async (req, res) => {
         upcoming: upcomingCount,
         overdue: overdueCount,
         hot: hotCount,
-        total: allFollowups.length,
+        total: scopedFollowups.length,
         totalPipelineValue,
       },
     });
