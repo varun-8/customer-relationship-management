@@ -3238,3 +3238,20 @@ button:focus-visible {
     transform: scale(1) translateY(0);
   }
 }
+
+/* Staff Profile Card Hover Effects */
+.staff-profile-card {
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.2s ease;
+}
+
+.staff-profile-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 28px -6px rgba(15, 23, 42, 0.08), 0 4px 12px rgba(37, 99, 235, 0.04) !important;
+  border-color: #CBD5E1 !important;
+}
+
+.btn-glow-effect:hover {
+  transform: translateY(-1.5px);
+  box-shadow: 0 8px 24px rgba(37, 99, 235, 0.45) !important;
+}
+
