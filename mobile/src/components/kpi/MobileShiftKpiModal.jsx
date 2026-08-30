@@ -475,7 +475,7 @@ export function MobileShiftKpiModal({
                       <View style={styles.heroStatDivider} />
                       <View style={styles.heroStatTile}>
                         <Text style={styles.heroStatTileLabel}>WIN RATE</Text>
-                        <Text style={[styles.heroStatTileVal, { color: teamAvgConversion > 0 ? '#34D399' : '#FFFFFF' }]}>
+                        <Text style={[styles.heroStatTileVal, { color: teamAvgConversion > 0 ? '#059669' : '#000000' }]}>
                           {teamAvgConversion}%
                         </Text>
                       </View>
@@ -671,7 +671,7 @@ export function MobileShiftKpiModal({
                       <View style={styles.heroStatDivider} />
                       <View style={styles.heroStatTile}>
                         <Text style={styles.heroStatTileLabel}>WIN RATE</Text>
-                        <Text style={[styles.heroStatTileVal, { color: conversionRate > 0 ? '#34D399' : '#FFFFFF' }]}>
+                        <Text style={[styles.heroStatTileVal, { color: conversionRate > 0 ? '#059669' : '#000000' }]}>
                           {conversionRate}%
                         </Text>
                       </View>
@@ -1112,14 +1112,11 @@ const styles = StyleSheet.create({
     color: '#1D4ED8',
   },
   heroDarkCard: {
-    backgroundColor: '#0F172A',
+    backgroundColor: '#F3F4F6',
     borderRadius: 18,
     padding: 16,
-    shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.18,
-    shadowRadius: 10,
-    elevation: 4,
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
     marginBottom: 14,
   },
   heroCardHeaderRow: {
@@ -1128,7 +1125,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   heroTagBadge: {
-    backgroundColor: 'rgba(255, 255, 255, 0.10)',
+    backgroundColor: '#E2E8F0',
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 5,
@@ -1136,7 +1133,7 @@ const styles = StyleSheet.create({
   heroTagBadgeText: {
     fontSize: 9,
     fontWeight: '800',
-    color: '#94A3B8',
+    color: '#000000',
     letterSpacing: 0.8,
   },
   heroSyncBtn: {
@@ -1146,26 +1143,26 @@ const styles = StyleSheet.create({
   heroSyncBtnText: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#60A5FA',
+    color: '#1D4ED8',
   },
   heroDarkRevenueValue: {
     fontSize: 32,
     fontWeight: '900',
-    color: '#FFFFFF',
+    color: '#000000',
     letterSpacing: -0.8,
     marginTop: 6,
     marginBottom: 6,
   },
   darkProgressTrack: {
     height: 6,
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    backgroundColor: '#E2E8F0',
     borderRadius: 3,
     overflow: 'hidden',
     marginVertical: 4,
   },
   darkProgressFill: {
     height: '100%',
-    backgroundColor: '#38BDF8',
+    backgroundColor: '#2563EB',
     borderRadius: 3,
   },
   darkProgressLabelRow: {
@@ -1176,22 +1173,24 @@ const styles = StyleSheet.create({
   },
   darkProgressSubtext: {
     fontSize: 10.5,
-    color: '#94A3B8',
+    color: '#000000',
     fontWeight: '600',
   },
   darkProgressPercent: {
     fontSize: 10.5,
-    color: '#34D399',
+    color: '#059669',
     fontWeight: '800',
   },
   heroStatGrid: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+    backgroundColor: '#FFFFFF',
     borderRadius: 12,
     paddingVertical: 9,
     paddingHorizontal: 12,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
   },
   heroStatTile: {
     alignItems: 'center',
@@ -1200,19 +1199,19 @@ const styles = StyleSheet.create({
   heroStatTileLabel: {
     fontSize: 8.5,
     fontWeight: '800',
-    color: '#94A3B8',
+    color: '#000000',
     letterSpacing: 0.5,
   },
   heroStatTileVal: {
     fontSize: 13.5,
     fontWeight: '900',
-    color: '#FFFFFF',
+    color: '#000000',
     marginTop: 2,
   },
   heroStatDivider: {
     width: 1,
     height: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.12)',
+    backgroundColor: '#CBD5E1',
   },
   sectionHeadingRow: {
     flexDirection: 'row',

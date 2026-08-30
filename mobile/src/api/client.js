@@ -1,9 +1,12 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform, NativeModules } from 'react-native';
 
-// Current active development host
-const CURRENT_LAN_IP = '10.169.195.189';
-const DEFAULT_HOST = `http://${CURRENT_LAN_IP}:5000/api`;
+// Environment variable override from build configuration
+const ENV_SERVER_IP = process.env.EXPO_PUBLIC_SERVER_IP || '';
+const ENV_API_URL = process.env.EXPO_PUBLIC_API_URL || (ENV_SERVER_IP ? `http://${ENV_SERVER_IP}:5000/api` : '');
+
+// Default host constructed dynamically
+const DEFAULT_HOST = ENV_API_URL || 'http://localhost:5000/api';
 const HOST_STORAGE_KEY = 'vasantham_api_host_url';
 const TOKEN_KEY = 'vasantham_mobile_jwt';
 const DEVICE_ID_STORAGE_KEY = 'vasantham_mobile_device_id';
@@ -26,7 +29,15 @@ let cachedDeviceId = null;
 const getCandidateHosts = () => {
   const candidates = [];
 
-  // Extract host from React Native bundle URL if available
+  // 1. Prioritize environment variable API URL if configured during build
+  if (ENV_API_URL) {
+    candidates.push(ENV_API_URL);
+  }
+  if (ENV_SERVER_IP) {
+    candidates.push(`http://${ENV_SERVER_IP}:5000/api`);
+  }
+
+  // 2. Extract host from React Native bundle URL if running in Expo Go / Metro
   const scriptURL = NativeModules.SourceCode?.scriptURL;
   if (scriptURL) {
     try {
@@ -37,12 +48,13 @@ const getCandidateHosts = () => {
     } catch (e) {}
   }
 
+  // 3. Fallbacks
   candidates.push(DEFAULT_HOST);
   candidates.push('http://localhost:5000/api');
   candidates.push('http://10.0.2.2:5000/api'); // Android emulator fallback
   candidates.push('http://127.0.0.1:5000/api');
 
-  return [...new Set(candidates)];
+  return [...new Set(candidates.filter(Boolean))];
 };
 
 let cachedWorkingHost = null;
@@ -438,10 +450,41 @@ export const apiClient = {
     return { success: false, error: 'Cannot connect to backend API server. Verify backend is running.' };
   },
 
-  // Auto-detect Desktop CRM Server across local subnets
+  // Auto-detect Desktop CRM Server across local subnets automatically
   async autoDetectServer(onProgress) {
+    // 1. Check previously stored host IP first
+    try {
+      const stored = await AsyncStorage.getItem(HOST_STORAGE_KEY);
+      if (stored) {
+        let cleanStored = stored.trim().replace(/\/+$/, '');
+        if (!cleanStored.endsWith('/api')) cleanStored += '/api';
+        const ctrl = new AbortController();
+        const tid = setTimeout(() => ctrl.abort(), 1000);
+        try {
+          const r = await fetch(`${cleanStored}/health`, { signal: ctrl.signal });
+          clearTimeout(tid);
+          if (r.ok) {
+            const data = await r.json();
+            cachedWorkingHost = cleanStored;
+            await AsyncStorage.setItem(HOST_STORAGE_KEY, cleanStored);
+            await AsyncStorage.setItem('vasantham_is_paired', 'true');
+            return { success: true, host: cleanStored, data };
+          }
+        } catch (e) {
+          clearTimeout(tid);
+        }
+      }
+    } catch (e) {}
+
     // Collect seed subnet roots
     const candidateSubnets = [];
+
+    if (ENV_SERVER_IP) {
+      const parts = ENV_SERVER_IP.split('.');
+      if (parts.length === 4) {
+        candidateSubnets.push(`${parts[0]}.${parts[1]}.${parts[2]}`);
+      }
+    }
 
     // Check scriptURL if running on physical device via Metro
     const scriptURL = NativeModules.SourceCode?.scriptURL;
@@ -453,17 +496,19 @@ export const apiClient = {
     }
 
     // Default common LAN subnets
-    candidateSubnets.push('10.169.195', '192.168.1', '192.168.0', '192.168.29', '192.168.137', '172.20.10');
-    const uniqueSubnets = [...new Set(candidateSubnets)];
+    candidateSubnets.push('192.168.1', '192.168.0', '192.168.29', '192.168.43', '10.169.195', '192.168.137', '10.0.0', '172.20.10');
+    const uniqueSubnets = [...new Set(candidateSubnets.filter(Boolean))];
+
+    // Generate fast parallel octet chunks (1..254 in chunks of 25)
+    const allOctets = Array.from({ length: 254 }, (_, i) => i + 1);
+    const chunkSize = 25;
+    const ipBatches = [];
+    for (let i = 0; i < allOctets.length; i += chunkSize) {
+      ipBatches.push(allOctets.slice(i, i + chunkSize));
+    }
 
     for (const subnet of uniqueSubnets) {
       if (onProgress) onProgress(`Scanning ${subnet}.* for Desktop CRM...`);
-
-      // Scan common static IP allocations in batches
-      const ipBatches = [
-        [189, 176, 237, 152, 222, 100, 101, 102, 103, 104, 105],
-        [1, 2, 3, 4, 5, 10, 20, 50],
-      ];
 
       for (const batch of ipBatches) {
         const promises = batch.map((lastOctet) => {
@@ -471,12 +516,12 @@ export const apiClient = {
           return new Promise(async (resolve) => {
             try {
               const ctrl = new AbortController();
-              const tid = setTimeout(() => ctrl.abort(), 1200);
+              const tid = setTimeout(() => ctrl.abort(), 650);
               const r = await fetch(`${targetUrl}/health`, { signal: ctrl.signal });
               clearTimeout(tid);
               if (r.ok) {
                 const data = await r.json();
-                if (data.status === 'ok' || data.uptime !== undefined) {
+                if (data.status === 'online' || data.status === 'ok' || data.online === true || data.dbConnected !== undefined || data.service) {
                   resolve({ success: true, host: targetUrl, data });
                   return;
                 }

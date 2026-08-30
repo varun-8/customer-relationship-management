@@ -71,18 +71,7 @@ const formatStatusLabel = (status) => {
 };
 
 const getBrandingIconEmoji = (iconName) => {
-  switch (iconName) {
-    case 'Box': return '📦';
-    case 'Layers': return '📚';
-    case 'Building': return '🏢';
-    case 'Sparkles': return '✨';
-    case 'Gem': return '💎';
-    case 'ShoppingBag': return '🛍️';
-    case 'Store': return '🏬';
-    case 'Briefcase': return '💼';
-    case 'Shield': return '🛡️';
-    default: return '🏢';
-  }
+  return '';
 };
 
 // Premium Vector-Style Line-Art Navigation Icons
@@ -222,28 +211,28 @@ const SECTIONS = [
     id: 'contact',
     title: 'Profile & Contact',
     shortTitle: '1. Contact',
-    icon: '👤',
+    icon: '',
     fieldNames: ['customerId', 'entryDate', 'customerName', 'phone', 'location', 'leadSource', 'salesperson', 'customerType'],
   },
   {
     id: 'requirements',
     title: 'Project Requirements',
     shortTitle: '2. Project',
-    icon: '📐',
+    icon: '',
     fieldNames: ['houseStage', 'requirement', 'approxQuantity', 'tileBudget', 'sanitaryRequirement', 'adhesiveRequirement'],
   },
   {
     id: 'quotation',
     title: 'Quotation & Financials',
     shortTitle: '3. Quotation',
-    icon: '💰',
+    icon: '',
     fieldNames: ['quotationValue', 'quotationDate', 'status', 'orderValue', 'crossSell'],
   },
   {
     id: 'followup',
     title: 'Follow-up & Notes',
     shortTitle: '4. Follow-up',
-    icon: '📅',
+    icon: '',
     fieldNames: ['nextFollowUp', 'lastFollowUp', 'followUpCount', 'lastReason'],
   },
 ];
@@ -543,13 +532,31 @@ export default function App() {
           if (savedRole && isMounted) {
             setAuthRoleState(savedRole);
           }
-        } else {
-          // If connection is not made on startup, open scanner automatically
+          return;
+        }
+
+        // If stored host is unreachable, try background auto-detection across local Wi-Fi
+        const autoDetected = await apiClient.autoDetectServer();
+        if (autoDetected && autoDetected.success && autoDetected.host) {
           if (isMounted) {
-            setIsPairedState(false);
-            setIsOnline(false);
-            setShowQrScanner(true);
+            setServerHost(autoDetected.host);
+            setIsPairedState(true);
+            setIsOnline(true);
+            setShowQrScanner(false);
           }
+          const savedRole = await apiClient.getSavedAuthRole();
+          if (savedRole && isMounted) {
+            setAuthRoleState(savedRole);
+          }
+          await initData(true);
+          return;
+        }
+
+        // If auto-detect fails, open scanner
+        if (isMounted) {
+          setIsPairedState(false);
+          setIsOnline(false);
+          setShowQrScanner(true);
         }
       } catch (e) {
         if (isMounted) {
@@ -1527,18 +1534,15 @@ export default function App() {
             return (
               <View style={styles.statTileRow}>
                 <View style={styles.statTile}>
-                  <Text style={styles.statTileIcon}>💰</Text>
                   <Text style={styles.statTileValue} numberOfLines={1}>{pipelineStr}</Text>
                   <Text style={styles.statTileLabel}>{isOwner ? 'Pipeline' : 'My Pipeline'}</Text>
                 </View>
-                <View style={[styles.statTile, styles.statTileAccentBlue]}>
-                  <Text style={styles.statTileIcon}>👥</Text>
-                  <Text style={[styles.statTileValue, styles.statTileValueBlue]}>{roleCustomers.length}</Text>
+                <View style={styles.statTile}>
+                  <Text style={styles.statTileValue}>{roleCustomers.length}</Text>
                   <Text style={styles.statTileLabel}>{isOwner ? 'Active Leads' : 'My Leads'}</Text>
                 </View>
-                <View style={[styles.statTile, urgentCount > 0 ? styles.statTileAccentRed : styles.statTileAccentGray]}>
-                  <Text style={styles.statTileIcon}>{urgentCount > 0 ? '🔥' : '📞'}</Text>
-                  <Text style={[styles.statTileValue, urgentCount > 0 ? styles.statTileValueRed : styles.statTileValueGray]}>{urgentCount}</Text>
+                <View style={styles.statTile}>
+                  <Text style={styles.statTileValue}>{urgentCount}</Text>
                   <Text style={styles.statTileLabel}>
                     {urgentCount > 0
                       ? (followupCounts.overdue > 0 ? `${followupCounts.overdue} Overdue` : 'Due Today')
@@ -1582,7 +1586,7 @@ export default function App() {
                   );
                 })
               ) : (
-                [['all', 'All', ''], ['Building Owner', 'Owner', '🏢'], ['Architect', 'Architect', '📐'], ['Mason', 'Mason', '🧱']].map(([type, label, icon]) => {
+                [['all', 'All', ''], ['Building Owner', 'Owner', ''], ['Architect', 'Architect', ''], ['Mason', 'Mason', '']].map(([type, label, icon]) => {
                   const isSelected = typeFilter === type;
                   const count = type === 'all'
                     ? filteredCustomers.length
@@ -1633,7 +1637,6 @@ export default function App() {
               }
               ListEmptyComponent={
                 <View style={styles.emptyContainer}>
-                  <Text style={{ fontSize: 44, marginBottom: 12 }}>{isOnline ? '📋' : '📡'}</Text>
                   <Text style={styles.emptyTitle}>
                     {isOnline ? (search ? 'No Matches Found' : 'No Customers Yet') : 'Cannot Reach Server'}
                   </Text>
@@ -1645,18 +1648,18 @@ export default function App() {
                   {!isOnline && (
                     <View style={{ flexDirection: 'row', gap: 8, marginTop: 16, flexWrap: 'wrap', justifyContent: 'center' }}>
                       <TouchableOpacity
-                        style={[styles.retryConnectionBtn, { backgroundColor: '#2563EB' }]}
+                        style={[styles.retryConnectionBtn, { backgroundColor: '#F3F4F6', borderColor: '#D1D5DB', borderWidth: 1 }]}
                         onPress={() => setShowQrScanner(true)}
                         activeOpacity={0.8}
                       >
-                        <Text style={styles.retryConnectionBtnText}>📷 Scan QR Code</Text>
+                        <Text style={[styles.retryConnectionBtnText, { color: '#000000' }]}>Scan QR Code</Text>
                       </TouchableOpacity>
                       <TouchableOpacity
-                        style={[styles.retryConnectionBtn, { backgroundColor: '#0F172A' }]}
+                        style={[styles.retryConnectionBtn, { backgroundColor: '#000000' }]}
                         onPress={() => setShowSettingsModal(true)}
                         activeOpacity={0.8}
                       >
-                        <Text style={styles.retryConnectionBtnText}>⚙️ Server IP</Text>
+                        <Text style={[styles.retryConnectionBtnText, { color: '#FFFFFF' }]}>Server IP</Text>
                       </TouchableOpacity>
                     </View>
                   )}
@@ -1749,12 +1752,9 @@ export default function App() {
             {/* Top Form Header Bar */}
             <View style={styles.formTopHeaderBar}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                <View style={styles.formHeaderIconCircle}>
-                  <Text style={{ fontSize: 14 }}>📝</Text>
-                </View>
                 <View>
                   <Text style={styles.formHeaderTitle}>Add New Customer</Text>
-                  <Text style={styles.formHeaderSub}>{branding.appName || 'Vasantham CRM'} • Step {currentSectionIndex + 1} of {SECTIONS.length}</Text>
+                  <Text style={styles.formHeaderSub}>{branding.appName || 'Vasantham CRM'}</Text>
                 </View>
               </View>
 
@@ -1767,78 +1767,16 @@ export default function App() {
               </TouchableOpacity>
             </View>
 
-            {/* Form Progress Bar */}
-            <View style={styles.progressBarWrapper}>
-              <View
-                style={[
-                  styles.progressBarFill,
-                  { width: `${((currentSectionIndex + 1) / SECTIONS.length) * 100}%` },
-                ]}
-              />
-            </View>
-
-            {/* Section Step Chips */}
-            <View style={styles.sectionTabBar}>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 14, gap: 8 }}>
-                {SECTIONS.map((sec, idx) => {
-                  const isActive = sec.id === formSection;
-                  const isCompleted = idx < currentSectionIndex;
-
-                  return (
-                    <TouchableOpacity
-                      key={sec.id}
-                      onPress={() => setFormSection(sec.id)}
-                      style={[
-                        styles.sectionTabChip,
-                        isActive && styles.sectionTabChipActive,
-                        isCompleted && styles.sectionTabChipCompleted,
-                      ]}
-                      activeOpacity={0.75}
-                    >
-                      <Text
-                        style={[
-                          styles.sectionTabChipText,
-                          isActive && styles.sectionTabChipTextActive,
-                          isCompleted && styles.sectionTabChipTextCompleted,
-                        ]}
-                      >
-                        {isCompleted ? '✓ ' : ''}{sec.shortTitle}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </ScrollView>
-            </View>
-
-            {/* Active Section Form Fields */}
+            {/* Continuous Single-Screen Form View */}
             <ScrollView
               style={styles.formScrollView}
               showsVerticalScrollIndicator={false}
               keyboardShouldPersistTaps="handled"
             >
-              {/* Banner of Active Section */}
-              <View style={styles.sectionBannerBox}>
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <Text style={styles.sectionBannerTitle}>
-                    {SECTIONS[currentSectionIndex]?.icon}{' '}
-                    {SECTIONS[currentSectionIndex]?.title}
-                  </Text>
-                  <View style={styles.sectionStepCounterBadge}>
-                    <Text style={styles.sectionStepCounterText}>
-                      Step {currentSectionIndex + 1} of {SECTIONS.length}
-                    </Text>
-                  </View>
-                </View>
-                <Text style={styles.sectionBannerSubtitle}>
-                  Please fill the required details below to record this lead.
-                </Text>
-              </View>
-
               {/* Real-time Existing Customer Auto-Detection Banner */}
               {existingCustomerAlert && (
                 <View style={styles.existingCustomerBanner}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
-                    <Text style={{ fontSize: 22 }}>🔄</Text>
                     <View style={{ flex: 1 }}>
                       <Text style={styles.existingCustomerBannerTitle}>
                         Existing Customer Detected!
@@ -1864,68 +1802,38 @@ export default function App() {
                     }}
                     activeOpacity={0.8}
                   >
-                    <Text style={styles.autoFillProfileBtnText}>⚡ Auto-fill</Text>
+                    <Text style={styles.autoFillProfileBtnText}>Auto-fill</Text>
                   </TouchableOpacity>
                 </View>
               )}
 
-              {/* Dynamic Field Inputs for this Section */}
+              {/* All Active Fields Rendered at a Stretch */}
               <View style={styles.inputsCard}>
-                {(() => {
-                  const currentSec = SECTIONS.find((s) => s.id === formSection);
-                  const allMappedFieldNames = SECTIONS.flatMap((s) => s.fieldNames);
-                  let sectionFields = activeFields.filter((f) => currentSec?.fieldNames.includes(f.name));
-
-                  // Append any dynamically added custom fields on the final section so they are never missed
-                  if (currentSec?.id === 'followup') {
-                    const unmappedFields = activeFields.filter((f) => !allMappedFieldNames.includes(f.name));
-                    sectionFields = [...sectionFields, ...unmappedFields];
-                  }
-
-                  return sectionFields.map((field) => (
-                    <DynamicFieldRenderer
-                      key={field.id || field.name}
-                      field={field}
-                      value={formData[field.name]}
-                      error={errors[field.name]}
-                      onChange={(val) => handleFieldChange(field.name, val)}
-                    />
-                  ));
-                })()}
+                {activeFields.map((field) => (
+                  <DynamicFieldRenderer
+                    key={field.id || field.name}
+                    field={field}
+                    value={formData[field.name]}
+                    error={errors[field.name]}
+                    onChange={(val) => handleFieldChange(field.name, val)}
+                  />
+                ))}
               </View>
 
-              {/* Navigation Buttons for Form */}
-              <View style={styles.formNavButtonsRow}>
-                {currentSectionIndex > 0 ? (
-                  <TouchableOpacity
-                    style={styles.prevSectionBtn}
-                    onPress={() => setFormSection(SECTIONS[currentSectionIndex - 1].id)}
-                  >
-                    <Text style={styles.prevSectionBtnText}>← Previous</Text>
-                  </TouchableOpacity>
-                ) : null}
-
-                {currentSectionIndex < SECTIONS.length - 1 ? (
-                  <TouchableOpacity
-                    style={styles.nextSectionBtn}
-                    onPress={() => setFormSection(SECTIONS[currentSectionIndex + 1].id)}
-                  >
-                    <Text style={styles.nextSectionBtnText}>Next Section →</Text>
-                  </TouchableOpacity>
-                ) : (
-                  <TouchableOpacity
-                    style={styles.submitFinalBtn}
-                    onPress={handleCreateCustomer}
-                    disabled={submitting}
-                  >
-                    <Text style={styles.submitFinalBtnText}>
-                      {submitting ? 'Saving to MongoDB Atlas...' : '✓ Register Customer'}
-                    </Text>
-                  </TouchableOpacity>
-                )}
+              {/* Single Final Submit Button */}
+              <View style={{ marginVertical: 16 }}>
+                <TouchableOpacity
+                  style={styles.submitFinalBtn}
+                  onPress={handleCreateCustomer}
+                  disabled={submitting}
+                >
+                  <Text style={styles.submitFinalBtnText}>
+                    {submitting ? 'Saving Customer...' : 'Register Customer'}
+                  </Text>
+                </TouchableOpacity>
               </View>
 
-              <View style={{ height: 50 }} />
+              <View style={{ height: 60 }} />
             </ScrollView>
           </View>
         </KeyboardAvoidingView>
@@ -2082,48 +1990,48 @@ export default function App() {
 
                 {/* 3. 4 Key Financial & Deal Metrics (2x2 Grid) */}
                 <View style={styles.statTilesGrid}>
-                  <View style={[styles.statTileItem, { backgroundColor: '#FFFBEB', borderColor: '#FDE68A' }]}>
+                  <View style={[styles.statTileItem, { backgroundColor: '#F3F4F6', borderColor: '#D1D5DB' }]}>
                     <View style={styles.statTileHeaderRow}>
                       <Text style={styles.statTileEmoji}>💰</Text>
-                      <Text style={[styles.statTileLabel, { color: '#92400E' }]}>QUOTATION VALUE</Text>
+                      <Text style={[styles.statTileLabel, { color: '#000000' }]}>QUOTATION VALUE</Text>
                     </View>
-                    <Text style={[styles.statTileValue, { color: '#B45309' }]} numberOfLines={1}>
+                    <Text style={[styles.statTileValue, { color: '#000000' }]} numberOfLines={1}>
                       {data.quotationValue ? `₹ ${Number(data.quotationValue).toLocaleString('en-IN')}` : '₹ 0'}
                     </Text>
-                    <Text style={styles.statTileSubtext}>Estimated Deal</Text>
+                    <Text style={[styles.statTileSubtext, { color: '#000000' }]}>Estimated Deal</Text>
                   </View>
 
-                  <View style={[styles.statTileItem, { backgroundColor: '#EFF6FF', borderColor: '#BFDBFE' }]}>
+                  <View style={[styles.statTileItem, { backgroundColor: '#F3F4F6', borderColor: '#D1D5DB' }]}>
                     <View style={styles.statTileHeaderRow}>
                       <Text style={styles.statTileEmoji}>🧱</Text>
-                      <Text style={[styles.statTileLabel, { color: '#1E40AF' }]}>TILE BUDGET</Text>
+                      <Text style={[styles.statTileLabel, { color: '#000000' }]}>TILE BUDGET</Text>
                     </View>
-                    <Text style={[styles.statTileValue, { color: '#1D4ED8' }]} numberOfLines={1}>
+                    <Text style={[styles.statTileValue, { color: '#000000' }]} numberOfLines={1}>
                       {data.tileBudget ? `₹ ${Number(data.tileBudget).toLocaleString('en-IN')}` : '₹ 0'}
                     </Text>
-                    <Text style={styles.statTileSubtext}>Client Budget</Text>
+                    <Text style={[styles.statTileSubtext, { color: '#000000' }]}>Client Budget</Text>
                   </View>
 
-                  <View style={[styles.statTileItem, { backgroundColor: '#F0FDF4', borderColor: '#BBF7D0' }]}>
+                  <View style={[styles.statTileItem, { backgroundColor: '#F3F4F6', borderColor: '#D1D5DB' }]}>
                     <View style={styles.statTileHeaderRow}>
                       <Text style={styles.statTileEmoji}>📐</Text>
-                      <Text style={[styles.statTileLabel, { color: '#166534' }]}>APPROX AREA</Text>
+                      <Text style={[styles.statTileLabel, { color: '#000000' }]}>APPROX AREA</Text>
                     </View>
-                    <Text style={[styles.statTileValue, { color: '#15803D' }]} numberOfLines={1}>
+                    <Text style={[styles.statTileValue, { color: '#000000' }]} numberOfLines={1}>
                       {data.approxQuantity ? `${data.approxQuantity} sq.ft` : '—'}
                     </Text>
-                    <Text style={styles.statTileSubtext}>Flooring Area</Text>
+                    <Text style={[styles.statTileSubtext, { color: '#000000' }]}>Flooring Area</Text>
                   </View>
 
-                  <View style={[styles.statTileItem, { backgroundColor: '#F8FAFC', borderColor: '#E2E8F0' }]}>
+                  <View style={[styles.statTileItem, { backgroundColor: '#F3F4F6', borderColor: '#D1D5DB' }]}>
                     <View style={styles.statTileHeaderRow}>
                       <Text style={styles.statTileEmoji}>🏗️</Text>
-                      <Text style={[styles.statTileLabel, { color: '#475569' }]}>HOUSE STAGE</Text>
+                      <Text style={[styles.statTileLabel, { color: '#000000' }]}>HOUSE STAGE</Text>
                     </View>
-                    <Text style={[styles.statTileValue, { color: '#0F172A' }]} numberOfLines={1}>
+                    <Text style={[styles.statTileValue, { color: '#000000' }]} numberOfLines={1}>
                       {data.houseStage || 'Flooring Stage'}
                     </Text>
-                    <Text style={styles.statTileSubtext}>Current Phase</Text>
+                    <Text style={[styles.statTileSubtext, { color: '#000000' }]}>Current Phase</Text>
                   </View>
                 </View>
 
@@ -2399,7 +2307,7 @@ export default function App() {
         onClose={() => setWhatsAppModalCustomer(null)}
       />
 
-      {/* Floating Glassmorphic Dock */}
+      {/* Sleek Low-Design Navigation Bar (4 Items) */}
       {activeScreen !== 'detail' && activeScreen !== 'add' && (
         <View style={styles.floatingDockWrapper} pointerEvents="box-none">
           <View style={styles.floatingDockContainer}>
@@ -2409,12 +2317,11 @@ export default function App() {
               onPress={() => setActiveScreen('list')}
               activeOpacity={0.75}
             >
-              <View style={styles.dockItemCapsule}>
-                <LeadsNavIcon active={activeScreen === 'list'} color={activeScreen === 'list' ? '#2563EB' : '#94A3B8'} />
+              <View style={[styles.dockItemCapsule, activeScreen === 'list' && styles.dockItemCapsuleActive]}>
+                <LeadsNavIcon active={activeScreen === 'list'} color={activeScreen === 'list' ? '#000000' : '#6B7280'} />
                 <Text style={[styles.dockTabLabel, activeScreen === 'list' && styles.dockTabLabelActive]}>
                   Leads
                 </Text>
-                {activeScreen === 'list' && <View style={styles.activeTabUnderline} />}
               </View>
             </TouchableOpacity>
 
@@ -2427,29 +2334,22 @@ export default function App() {
               }}
               activeOpacity={0.75}
             >
-              <View style={styles.dockItemCapsule}>
-                <View style={{ position: 'relative' }}>
-                  <FollowupsNavIcon active={activeScreen === 'followups'} color={activeScreen === 'followups' ? '#2563EB' : '#94A3B8'} />
-                  {(followupCounts.overdue > 0 || followupCounts.today > 0) && (
-                    <View
-                      style={[
-                        styles.dockBadge,
-                        { backgroundColor: followupCounts.overdue > 0 ? '#EF4444' : '#2563EB' },
-                      ]}
-                    >
-                      <Text style={styles.dockBadgeText}>
-                        {followupCounts.overdue > 0 ? followupCounts.overdue : followupCounts.today}
-                      </Text>
-                    </View>
-                  )}
-                </View>
+              <View style={[styles.dockItemCapsule, activeScreen === 'followups' && styles.dockItemCapsuleActive]}>
+                <FollowupsNavIcon active={activeScreen === 'followups'} color={activeScreen === 'followups' ? '#000000' : '#6B7280'} />
                 <Text style={[styles.dockTabLabel, activeScreen === 'followups' && styles.dockTabLabelActive]}>
                   Follow-ups
                 </Text>
+                {(followupCounts.overdue > 0 || followupCounts.today > 0) && (
+                  <View style={styles.dockBadge}>
+                    <Text style={styles.dockBadgeText}>
+                      {followupCounts.overdue > 0 ? followupCounts.overdue : followupCounts.today}
+                    </Text>
+                  </View>
+                )}
               </View>
             </TouchableOpacity>
 
-            {/* Center Elevated Hero Action Button: + New Lead */}
+            {/* Center Action Button: + Lead */}
             <TouchableOpacity
               style={styles.dockCenterHeroBtn}
               onPress={() => {
@@ -2461,35 +2361,18 @@ export default function App() {
               activeOpacity={0.85}
             >
               <View style={styles.dockCenterHeroCircle}>
-                <Text style={styles.dockCenterHeroPlus}>+</Text>
+                <Text style={styles.dockCenterHeroPlus}>+ Lead</Text>
               </View>
             </TouchableOpacity>
 
-            {/* Tab 3: KPI Shift */}
-            <TouchableOpacity
-              style={styles.dockTab}
-              onPress={() => {
-                loadTodayMobileKpi();
-                setShowKpiModal(true);
-              }}
-              activeOpacity={0.75}
-            >
-              <View style={styles.dockItemCapsule}>
-                <ShiftKpiNavIcon active={showKpiModal} color={showKpiModal ? '#2563EB' : '#94A3B8'} />
-                <Text style={[styles.dockTabLabel, showKpiModal && styles.dockTabLabelActive]}>
-                  Shift KPI
-                </Text>
-              </View>
-            </TouchableOpacity>
-
-            {/* Tab 4: Server Settings / Profile */}
+            {/* Tab 3: Server Settings / Profile */}
             <TouchableOpacity
               style={styles.dockTab}
               onPress={() => setShowSettingsModal(true)}
               activeOpacity={0.75}
             >
-              <View style={styles.dockItemCapsule}>
-                <SettingsNavIcon active={showSettingsModal} color={showSettingsModal ? '#2563EB' : '#94A3B8'} />
+              <View style={[styles.dockItemCapsule, showSettingsModal && styles.dockItemCapsuleActive]}>
+                <SettingsNavIcon active={showSettingsModal} color={showSettingsModal ? '#000000' : '#6B7280'} />
                 <Text style={[styles.dockTabLabel, showSettingsModal && styles.dockTabLabelActive]}>
                   Settings
                 </Text>
@@ -2669,7 +2552,7 @@ const styles = StyleSheet.create({
   },
   screenBody: {
     flex: 1,
-    backgroundColor: '#F1F5F9',
+    backgroundColor: '#FFFFFF',
     paddingTop: 14,
     paddingHorizontal: 14,
   },
@@ -2681,16 +2564,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#FFFFFF',
-    borderWidth: 1.5,
-    borderColor: '#E2E8F0',
-    borderRadius: 16,
-    paddingHorizontal: 16,
-    height: 50,
-    shadowColor: '#64748B',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 2,
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    borderRadius: 4,
+    paddingHorizontal: 14,
+    height: 44,
+    shadowOpacity: 0,
+    elevation: 0,
   },
   searchIcon: {
     fontSize: 15,
@@ -2699,7 +2579,7 @@ const styles = StyleSheet.create({
   },
   searchInput: {
     flex: 1,
-    color: '#0F172A',
+    color: '#000000',
     fontSize: 14,
     fontWeight: '500',
     paddingVertical: 0,
@@ -2707,8 +2587,10 @@ const styles = StyleSheet.create({
   searchClearBtn: {
     width: 22,
     height: 22,
-    borderRadius: 11,
-    backgroundColor: '#E2E8F0',
+    borderRadius: 4,
+    backgroundColor: '#F3F4F6',
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -2720,54 +2602,50 @@ const styles = StyleSheet.create({
   },
   statTile: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    paddingVertical: 14,
+    backgroundColor: '#F3F4F6',
+    borderRadius: 4,
+    paddingVertical: 12,
     paddingHorizontal: 10,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#F1F5F9',
-    shadowColor: '#94A3B8',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 2,
+    borderColor: '#D1D5DB',
+    shadowOpacity: 0,
+    elevation: 0,
   },
   statTileAccentBlue: {
-    backgroundColor: '#EFF6FF',
-    borderColor: '#DBEAFE',
+    backgroundColor: '#F3F4F6',
+    borderColor: '#D1D5DB',
   },
   statTileAccentRed: {
-    backgroundColor: '#FFF1F2',
-    borderColor: '#FECDD3',
+    backgroundColor: '#F3F4F6',
+    borderColor: '#D1D5DB',
   },
   statTileAccentGray: {
-    backgroundColor: '#F8FAFC',
-    borderColor: '#E2E8F0',
+    backgroundColor: '#F3F4F6',
+    borderColor: '#D1D5DB',
   },
   statTileIcon: {
-    fontSize: 18,
-    marginBottom: 5,
+    display: 'none',
   },
   statTileValue: {
     fontSize: 20,
     fontWeight: '800',
-    color: '#10B981',
+    color: '#000000',
     letterSpacing: -0.5,
   },
   statTileValueBlue: {
-    color: '#2563EB',
+    color: '#000000',
   },
   statTileValueRed: {
-    color: '#EF4444',
+    color: '#000000',
   },
   statTileValueGray: {
-    color: '#94A3B8',
+    color: '#000000',
   },
   statTileLabel: {
     fontSize: 10,
     fontWeight: '700',
-    color: '#64748B',
+    color: '#000000',
     marginTop: 2,
     textAlign: 'center',
     letterSpacing: 0.1,
@@ -2785,49 +2663,48 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
-    paddingHorizontal: 14,
-    paddingVertical: 9,
-    borderRadius: 24,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 4,
     backgroundColor: '#FFFFFF',
-    borderWidth: 1.5,
-    borderColor: '#E2E8F0',
-    shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 3,
-    elevation: 1,
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    shadowOpacity: 0,
+    elevation: 0,
   },
   filterTabActive: {
-    backgroundColor: '#1E3A5F',
-    borderColor: '#1E3A5F',
-    shadowOpacity: 0.18,
-    shadowRadius: 6,
-    elevation: 3,
+    backgroundColor: '#F3F4F6',
+    borderColor: '#000000',
+    shadowOpacity: 0,
+    elevation: 0,
   },
   filterTabText: {
-    fontSize: 13,
-    color: '#334155',
-    fontWeight: '700',
+    fontSize: 12.5,
+    color: '#374151',
+    fontWeight: '600',
   },
   filterTabTextActive: {
-    color: '#FFFFFF',
+    color: '#000000',
     fontWeight: '800',
   },
   filterTabBadge: {
-    backgroundColor: '#F1F5F9',
-    paddingHorizontal: 7,
-    paddingVertical: 2,
-    borderRadius: 10,
-    minWidth: 22,
+    backgroundColor: '#F3F4F6',
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: 4,
+    minWidth: 20,
     alignItems: 'center',
   },
   filterTabBadgeActive: {
-    backgroundColor: 'rgba(255,255,255,0.18)',
+    backgroundColor: '#000000',
+    borderColor: '#000000',
   },
   filterTabBadgeText: {
-    fontSize: 11,
+    fontSize: 10.5,
     fontWeight: '800',
-    color: '#475569',
+    color: '#000000',
   },
   filterTabBadgeTextActive: {
     color: '#FFFFFF',
@@ -2841,7 +2718,7 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontSize: 13,
-    color: '#64748B',
+    color: '#6B7280',
     fontWeight: '600',
   },
   emptyContainer: {
@@ -2852,20 +2729,20 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 16,
     fontWeight: '800',
-    color: '#0F172A',
+    color: '#000000',
   },
   emptySubtitle: {
     fontSize: 12,
-    color: '#64748B',
+    color: '#6B7280',
     marginTop: 4,
     textAlign: 'center',
     paddingHorizontal: 20,
     lineHeight: 18,
   },
   offlineBanner: {
-    backgroundColor: '#FEF2F2',
+    backgroundColor: '#F3F4F6',
     borderBottomWidth: 1,
-    borderBottomColor: '#FECDD3',
+    borderBottomColor: '#D1D5DB',
     paddingVertical: 8,
     paddingHorizontal: 14,
     flexDirection: 'row',
@@ -2874,62 +2751,60 @@ const styles = StyleSheet.create({
   },
   offlineBannerText: {
     fontSize: 11.5,
-    color: '#991B1B',
+    color: '#000000',
     fontWeight: '700',
   },
   offlineBannerAction: {
     fontSize: 11.5,
-    color: '#DC2626',
+    color: '#000000',
     fontWeight: '800',
     marginLeft: 6,
   },
   retryConnectionBtn: {
     marginTop: 14,
-    backgroundColor: '#2563EB',
+    backgroundColor: '#F3F4F6',
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
     paddingHorizontal: 18,
     paddingVertical: 10,
-    borderRadius: 12,
-    shadowColor: '#2563EB',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 3,
+    borderRadius: 4,
+    shadowOpacity: 0,
+    elevation: 0,
   },
   retryConnectionBtnText: {
-    color: '#FFFFFF',
+    color: '#000000',
     fontSize: 12.5,
     fontWeight: '800',
   },
-  // Lead Card — premium 2-row layout
+  // Lead Card — wireframe layout
   leadCard: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#FFFFFF',
-    borderRadius: 18,
+    borderRadius: 4,
     borderWidth: 1,
-    borderColor: '#EFF3F8',
-    paddingVertical: 14,
-    paddingHorizontal: 14,
+    borderColor: '#D1D5DB',
+    paddingVertical: 12,
+    paddingHorizontal: 12,
     marginBottom: 10,
-    shadowColor: '#1E3A5F',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 2,
+    shadowOpacity: 0,
+    elevation: 0,
   },
   leadAvatar: {
-    width: 46,
-    height: 46,
-    borderRadius: 14,
-    backgroundColor: '#EFF6FF',
+    width: 40,
+    height: 40,
+    borderRadius: 4,
+    backgroundColor: '#F3F4F6',
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 12,
+    marginRight: 10,
   },
   leadAvatarText: {
-    fontSize: 20,
+    fontSize: 16,
     fontWeight: '800',
-    color: '#2563EB',
+    color: '#000000',
   },
   leadInfoCol: {
     flex: 1,
@@ -2937,8 +2812,8 @@ const styles = StyleSheet.create({
   },
   leadName: {
     fontSize: 14.5,
-    fontWeight: '700',
-    color: '#0F172A',
+    fontWeight: '800',
+    color: '#000000',
     letterSpacing: -0.2,
   },
   leadMetaRow: {
@@ -2949,17 +2824,17 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
   },
   leadTypeBadge: {
-    backgroundColor: '#F0F9FF',
+    backgroundColor: '#F3F4F6',
     borderWidth: 1,
-    borderColor: '#BAE6FD',
-    paddingHorizontal: 7,
-    paddingVertical: 2,
-    borderRadius: 6,
+    borderColor: '#D1D5DB',
+    paddingHorizontal: 6,
+    paddingVertical: 1.5,
+    borderRadius: 4,
   },
   leadTypeBadgeText: {
     fontSize: 10.5,
     fontWeight: '700',
-    color: '#0369A1',
+    color: '#000000',
   },
   leadPhone: {
     fontSize: 11,
@@ -2980,24 +2855,24 @@ const styles = StyleSheet.create({
   leadStatusPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F0F9FF',
+    backgroundColor: '#F3F4F6',
     borderWidth: 1,
-    borderColor: '#E0F2FE',
-    paddingHorizontal: 9,
-    paddingVertical: 4,
-    borderRadius: 20,
-    gap: 5,
+    borderColor: '#D1D5DB',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 4,
+    gap: 4,
   },
   leadStatusDot: {
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: '#2563EB',
+    backgroundColor: '#000000',
   },
   leadStatusText: {
     fontSize: 11,
-    fontWeight: '700',
-    color: '#2563EB',
+    fontWeight: '800',
+    color: '#000000',
   },
   leadChevron: {
     fontSize: 20,
@@ -3238,78 +3113,28 @@ const styles = StyleSheet.create({
   },
   inputsCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    borderWidth: 1.2,
-    borderColor: '#E2E8F0',
-    padding: 16,
-    shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 6,
-    elevation: 2,
-  },
-  formNavButtonsRow: {
-    flexDirection: 'row',
-    gap: 10,
-    marginTop: 18,
-  },
-  prevSectionBtn: {
-    flex: 1,
-    backgroundColor: '#F8FAFC',
-    borderWidth: 1.5,
-    borderColor: '#CBD5E1',
-    paddingVertical: 13,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  prevSectionBtnText: {
-    color: '#334155',
-    fontSize: 13.5,
-    fontWeight: '800',
-    letterSpacing: -0.2,
-  },
-  nextSectionBtn: {
-    flex: 1,
-    backgroundColor: '#2563EB',
-    paddingVertical: 13,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
+    borderRadius: 4,
     borderWidth: 1,
-    borderColor: '#1D4ED8',
-    shadowColor: '#2563EB',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.12,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  nextSectionBtnText: {
-    color: '#FFFFFF',
-    fontSize: 13.5,
-    fontWeight: '800',
-    letterSpacing: -0.2,
+    borderColor: '#D1D5DB',
+    padding: 14,
+    shadowOpacity: 0,
+    elevation: 0,
   },
   submitFinalBtn: {
-    flex: 1,
-    backgroundColor: '#059669',
-    paddingVertical: 13,
-    borderRadius: 10,
+    backgroundColor: '#F3F4F6',
+    paddingVertical: 12,
+    borderRadius: 4,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: '#047857',
-    shadowColor: '#059669',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.12,
-    shadowRadius: 4,
-    elevation: 2,
+    borderColor: '#D1D5DB',
+    shadowOpacity: 0,
+    elevation: 0,
   },
   submitFinalBtnText: {
-    color: '#FFFFFF',
+    color: '#000000',
     fontSize: 14,
-    fontWeight: '900',
-    letterSpacing: -0.2,
+    fontWeight: '800',
   },
   // Customer Detail Screen Styles — Ultra-Modern Mobile Overhaul
   detailScrollView: {
@@ -4047,52 +3872,32 @@ const styles = StyleSheet.create({
     fontSize: 9.5,
     fontWeight: '800',
   },
-  profileContextText: {
-    fontSize: 10.5,
-    color: '#64748B',
-    marginTop: 1,
-  },
-  profileSwitchPill: {
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#CBD5E1',
-    borderRadius: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-  },
-  profileSwitchPillText: {
-    fontSize: 11,
-    fontWeight: '800',
-    color: '#2563EB',
-  },
-  // Floating Glassmorphic Dock Styles matching Mockup
+  // Floating Navigation Dock Styles matching Low-Design Wireframe
   floatingDockWrapper: {
     position: 'absolute',
-    bottom: Platform.OS === 'ios' ? 24 : 14,
+    bottom: 0,
     left: 0,
     right: 0,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 16,
+    paddingHorizontal: 0,
     zIndex: 999,
   },
   floatingDockContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'space-around',
     backgroundColor: '#FFFFFF',
-    borderRadius: 40,
-    paddingHorizontal: 8,
-    paddingVertical: 8,
+    borderRadius: 0,
+    paddingHorizontal: 6,
+    paddingTop: 8,
+    paddingBottom: Platform.OS === 'ios' ? 22 : 10,
     width: '100%',
-    maxWidth: 440,
-    borderWidth: 1.5,
-    borderColor: '#F1F5F9',
-    shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.08,
-    shadowRadius: 18,
-    elevation: 10,
+    maxWidth: '100%',
+    borderTopWidth: 1,
+    borderTopColor: '#D1D5DB',
+    shadowOpacity: 0,
+    elevation: 0,
   },
   dockTab: {
     flex: 1,
@@ -4101,42 +3906,47 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   dockItemCapsule: {
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 6,
+    paddingVertical: 5,
     paddingHorizontal: 8,
-    minWidth: 62,
+    gap: 5,
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: 'transparent',
+  },
+  dockItemCapsuleActive: {
+    backgroundColor: '#F3F4F6',
+    borderColor: '#D1D5DB',
   },
   dockTabLabel: {
     fontSize: 11,
     fontWeight: '600',
-    color: '#94A3B8',
-    marginTop: 3,
-    letterSpacing: -0.2,
+    color: '#6B7280',
   },
   dockTabLabelActive: {
-    color: '#2563EB',
+    color: '#000000',
     fontWeight: '800',
     fontSize: 11,
   },
   dockBadge: {
-    position: 'absolute',
-    top: -5,
-    right: -8,
     minWidth: 16,
     height: 16,
-    borderRadius: 8,
+    borderRadius: 4,
+    backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 3,
-    borderWidth: 1.5,
-    borderColor: '#FFFFFF',
-    elevation: 4,
+    paddingHorizontal: 4,
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    elevation: 0,
+    marginLeft: 2,
   },
   dockBadgeText: {
     fontSize: 9,
     fontWeight: '900',
-    color: '#FFFFFF',
+    color: '#000000',
   },
   dockCenterHeroBtn: {
     alignItems: 'center',
@@ -4144,34 +3954,30 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   dockCenterHeroCircle: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    backgroundColor: '#2563EB',
-    borderWidth: 3,
-    borderColor: '#EFF6FF',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 4,
+    backgroundColor: '#000000',
+    borderWidth: 1,
+    borderColor: '#000000',
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#2563EB',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.35,
-    shadowRadius: 8,
-    elevation: 6,
+    shadowOpacity: 0,
+    elevation: 0,
   },
   dockCenterHeroPlus: {
     color: '#FFFFFF',
-    fontSize: 26,
-    fontWeight: '400',
-    lineHeight: 28,
+    fontSize: 11,
+    fontWeight: '800',
   },
   // QR Code & Mobile Pairing Styles
   headerQrScanBtn: {
     width: 32,
     height: 32,
-    borderRadius: 16,
-    backgroundColor: '#EFF6FF',
+    borderRadius: 4,
+    backgroundColor: '#F3F4F6',
     borderWidth: 1,
-    borderColor: '#BFDBFE',
+    borderColor: '#D1D5DB',
     alignItems: 'center',
     justifyContent: 'center',
   },

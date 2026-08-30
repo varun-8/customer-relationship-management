@@ -27,8 +27,10 @@ import {
 import { api } from '../../services/api';
 import { LostSaleModal } from './LostSaleModal';
 import { ConnectionErrorState } from '../common/ConnectionErrorState';
+import { useTestingMode } from '../../context/TestingModeContext';
 
 export const LostSalesView = () => {
+  const { isLowDesignMode } = useTestingMode();
   const todayStr = new Date().toISOString().split('T')[0];
 
   // State
@@ -192,20 +194,20 @@ export const LostSalesView = () => {
           className="metric-card-item"
           style={{
             background: '#FFFFFF',
-            borderRadius: '14px',
-            border: '1px solid #E2E8F0',
+            borderRadius: isLowDesignMode ? '4px' : '14px',
+            border: isLowDesignMode ? '1px solid #D1D5DB' : '1px solid #E2E8F0',
             padding: '14px 18px',
-            boxShadow: '0 1px 3px rgba(15, 23, 42, 0.03)',
+            boxShadow: isLowDesignMode ? 'none' : '0 1px 3px rgba(15, 23, 42, 0.03)',
             display: 'flex',
             alignItems: 'center',
             gap: '14px',
           }}
         >
-          <div className="metric-icon-box" style={{ width: '42px', height: '42px', borderRadius: '10px', background: '#FEF2F2', color: '#DC2626', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div className="metric-icon-box" style={{ width: '42px', height: '42px', borderRadius: isLowDesignMode ? '4px' : '10px', background: isLowDesignMode ? '#F3F4F6' : '#FEF2F2', color: isLowDesignMode ? '#374151' : '#DC2626', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <IndianRupee size={20} />
           </div>
           <div>
-            <div className="metric-value" style={{ fontSize: '20px', fontWeight: '900', color: '#DC2626', lineHeight: 1.1 }}>
+            <div className="metric-value" style={{ fontSize: '20px', fontWeight: '900', color: isLowDesignMode ? '#111827' : '#DC2626', lineHeight: 1.1 }}>
               ₹{(analytics?.totalLostValue || 0).toLocaleString('en-IN')}
             </div>
             <div className="metric-label" style={{ fontSize: '11.5px', color: '#64748B', fontWeight: '700', marginTop: '2px' }}>
@@ -222,20 +224,20 @@ export const LostSalesView = () => {
           className="metric-card-item"
           style={{
             background: '#FFFFFF',
-            borderRadius: '14px',
-            border: '1px solid #E2E8F0',
+            borderRadius: isLowDesignMode ? '4px' : '14px',
+            border: isLowDesignMode ? '1px solid #D1D5DB' : '1px solid #E2E8F0',
             padding: '14px 18px',
-            boxShadow: '0 1px 3px rgba(15, 23, 42, 0.03)',
+            boxShadow: isLowDesignMode ? 'none' : '0 1px 3px rgba(15, 23, 42, 0.03)',
             display: 'flex',
             alignItems: 'center',
             gap: '14px',
           }}
         >
-          <div className="metric-icon-box" style={{ width: '42px', height: '42px', borderRadius: '10px', background: '#FFF7ED', color: '#EA580C', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div className="metric-icon-box" style={{ width: '42px', height: '42px', borderRadius: isLowDesignMode ? '4px' : '10px', background: isLowDesignMode ? '#F3F4F6' : '#FFF7ED', color: isLowDesignMode ? '#374151' : '#EA580C', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <Building2 size={20} />
           </div>
           <div style={{ minWidth: 0 }}>
-            <div className="metric-value" style={{ fontSize: '15.5px', fontWeight: '900', color: '#0F172A', lineHeight: 1.2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            <div className="metric-value" style={{ fontSize: '15.5px', fontWeight: '900', color: '#111827', lineHeight: 1.2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {topCompetitor ? topCompetitor.competitor : 'None'}
             </div>
             <div className="metric-label" style={{ fontSize: '11.5px', color: '#64748B', fontWeight: '700', marginTop: '2px' }}>
@@ -252,20 +254,20 @@ export const LostSalesView = () => {
           className="metric-card-item"
           style={{
             background: '#FFFFFF',
-            borderRadius: '14px',
-            border: '1px solid #E2E8F0',
+            borderRadius: isLowDesignMode ? '4px' : '14px',
+            border: isLowDesignMode ? '1px solid #D1D5DB' : '1px solid #E2E8F0',
             padding: '14px 18px',
-            boxShadow: '0 1px 3px rgba(15, 23, 42, 0.03)',
+            boxShadow: isLowDesignMode ? 'none' : '0 1px 3px rgba(15, 23, 42, 0.03)',
             display: 'flex',
             alignItems: 'center',
             gap: '14px',
           }}
         >
-          <div className="metric-icon-box" style={{ width: '42px', height: '42px', borderRadius: '10px', background: '#FFFBEB', color: '#D97706', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div className="metric-icon-box" style={{ width: '42px', height: '42px', borderRadius: isLowDesignMode ? '4px' : '10px', background: isLowDesignMode ? '#F3F4F6' : '#FFFBEB', color: isLowDesignMode ? '#374151' : '#D97706', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <AlertTriangle size={20} />
           </div>
           <div style={{ minWidth: 0 }}>
-            <div className="metric-value" style={{ fontSize: '15.5px', fontWeight: '900', color: '#0F172A', lineHeight: 1.2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            <div className="metric-value" style={{ fontSize: '15.5px', fontWeight: '900', color: '#111827', lineHeight: 1.2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {topReason ? topReason.reason : 'No Data'}
             </div>
             <div className="metric-label" style={{ fontSize: '11.5px', color: '#64748B', fontWeight: '700', marginTop: '2px' }}>
@@ -282,20 +284,20 @@ export const LostSalesView = () => {
           className="metric-card-item"
           style={{
             background: '#FFFFFF',
-            borderRadius: '14px',
-            border: '1px solid #E2E8F0',
+            borderRadius: isLowDesignMode ? '4px' : '14px',
+            border: isLowDesignMode ? '1px solid #D1D5DB' : '1px solid #E2E8F0',
             padding: '14px 18px',
-            boxShadow: '0 1px 3px rgba(15, 23, 42, 0.03)',
+            boxShadow: isLowDesignMode ? 'none' : '0 1px 3px rgba(15, 23, 42, 0.03)',
             display: 'flex',
             alignItems: 'center',
             gap: '14px',
           }}
         >
-          <div className="metric-icon-box" style={{ width: '42px', height: '42px', borderRadius: '10px', background: '#EFF6FF', color: '#2563EB', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div className="metric-icon-box" style={{ width: '42px', height: '42px', borderRadius: isLowDesignMode ? '4px' : '10px', background: isLowDesignMode ? '#F3F4F6' : '#EFF6FF', color: isLowDesignMode ? '#374151' : '#2563EB', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <TrendingDown size={20} />
           </div>
           <div>
-            <div className="metric-value" style={{ fontSize: '20px', fontWeight: '900', color: '#2563EB', lineHeight: 1.1 }}>
+            <div className="metric-value" style={{ fontSize: '20px', fontWeight: '900', color: isLowDesignMode ? '#111827' : '#2563EB', lineHeight: 1.1 }}>
               ₹{(analytics?.averagePriceDifference || 0).toLocaleString('en-IN')}
             </div>
             <div className="metric-label" style={{ fontSize: '11.5px', color: '#64748B', fontWeight: '700', marginTop: '2px' }}>

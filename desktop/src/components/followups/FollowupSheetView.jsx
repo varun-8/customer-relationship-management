@@ -28,8 +28,10 @@ import { FollowupLogModal } from './FollowupLogModal';
 import { LostSaleModal } from '../lost-sales/LostSaleModal';
 import { ConnectionErrorState } from '../common/ConnectionErrorState';
 import { getWhatsAppUrl } from '../../utils/whatsappHelper';
+import { useTestingMode } from '../../context/TestingModeContext';
 
 export const FollowupSheetView = ({ onEditCustomer }) => {
+  const { isLowDesignMode } = useTestingMode();
   const [activeTab, setActiveTab] = useState('today'); // 'today', 'upcoming', 'overdue', 'all'
   const [temperatureFilter, setTemperatureFilter] = useState('all'); // 'Hot', 'Warm', 'Future', 'all'
   const [salespersonFilter, setSalespersonFilter] = useState('all');
@@ -138,7 +140,7 @@ export const FollowupSheetView = ({ onEditCustomer }) => {
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+    <div className="followup-sheet-view" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
       {/* 1. Top Executive Summary Metric Cards */}
       <div
         style={{
@@ -152,26 +154,26 @@ export const FollowupSheetView = ({ onEditCustomer }) => {
           onClick={() => setActiveTab('overdue')}
           style={{
             backgroundColor: '#FFFFFF',
-            borderRadius: '18px',
-            border: `1.5px solid ${activeTab === 'overdue' ? '#EF4444' : counts.overdue > 0 ? '#FECDD3' : '#E2E8F0'}`,
+            borderRadius: isLowDesignMode ? '4px' : '18px',
+            border: `1.5px solid ${isLowDesignMode ? '#D1D5DB' : (activeTab === 'overdue' ? '#EF4444' : counts.overdue > 0 ? '#FECDD3' : '#E2E8F0')}`,
             padding: '16px 20px',
             cursor: 'pointer',
-            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.02)',
+            boxShadow: isLowDesignMode ? 'none' : '0 2px 8px rgba(0, 0, 0, 0.02)',
             transition: 'all 0.2s ease',
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span style={{ fontSize: '11px', fontWeight: '800', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            <span style={{ fontSize: '11px', fontWeight: '800', color: isLowDesignMode ? '#000000' : '#64748B', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
               OVERDUE FOLLOW-UPS
             </span>
-            <div style={{ width: '36px', height: '36px', borderRadius: '10px', backgroundColor: '#FEE2E2', color: '#DC2626', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ width: '36px', height: '36px', borderRadius: isLowDesignMode ? '4px' : '10px', backgroundColor: isLowDesignMode ? '#F3F4F6' : '#FEE2E2', color: isLowDesignMode ? '#000000' : '#DC2626', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <AlertTriangle size={18} />
             </div>
           </div>
-          <div style={{ fontSize: '22px', fontWeight: '900', color: counts.overdue > 0 ? '#DC2626' : '#0F172A', marginTop: '6px' }}>
+          <div style={{ fontSize: '22px', fontWeight: '900', color: isLowDesignMode ? '#000000' : (counts.overdue > 0 ? '#DC2626' : '#0F172A'), marginTop: '6px' }}>
             {counts.overdue} Leads
           </div>
-          <div style={{ fontSize: '12px', color: '#64748B', marginTop: '4px' }}>
+          <div style={{ fontSize: '12px', color: isLowDesignMode ? '#000000' : '#64748B', marginTop: '4px' }}>
             Scheduled date has passed
           </div>
         </div>
@@ -181,26 +183,26 @@ export const FollowupSheetView = ({ onEditCustomer }) => {
           onClick={() => setActiveTab('today')}
           style={{
             backgroundColor: '#FFFFFF',
-            borderRadius: '18px',
-            border: `1.5px solid ${activeTab === 'today' ? '#2563EB' : '#E2E8F0'}`,
+            borderRadius: isLowDesignMode ? '4px' : '18px',
+            border: `1.5px solid ${isLowDesignMode ? '#D1D5DB' : (activeTab === 'today' ? '#2563EB' : '#E2E8F0')}`,
             padding: '16px 20px',
             cursor: 'pointer',
-            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.02)',
+            boxShadow: isLowDesignMode ? 'none' : '0 2px 8px rgba(0, 0, 0, 0.02)',
             transition: 'all 0.2s ease',
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span style={{ fontSize: '11px', fontWeight: '800', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            <span style={{ fontSize: '11px', fontWeight: '800', color: isLowDesignMode ? '#000000' : '#64748B', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
               TODAY'S CALL SCHEDULE
             </span>
-            <div style={{ width: '36px', height: '36px', borderRadius: '10px', backgroundColor: '#EFF6FF', color: '#2563EB', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ width: '36px', height: '36px', borderRadius: isLowDesignMode ? '4px' : '10px', backgroundColor: isLowDesignMode ? '#F3F4F6' : '#EFF6FF', color: isLowDesignMode ? '#000000' : '#2563EB', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <Clock size={18} />
             </div>
           </div>
-          <div style={{ fontSize: '22px', fontWeight: '900', color: '#2563EB', marginTop: '6px' }}>
+          <div style={{ fontSize: '22px', fontWeight: '900', color: isLowDesignMode ? '#000000' : '#2563EB', marginTop: '6px' }}>
             {counts.today} Calls
           </div>
-          <div style={{ fontSize: '12px', color: '#64748B', marginTop: '4px' }}>
+          <div style={{ fontSize: '12px', color: isLowDesignMode ? '#000000' : '#64748B', marginTop: '4px' }}>
             Active calls & showroom visits
           </div>
         </div>
@@ -210,26 +212,26 @@ export const FollowupSheetView = ({ onEditCustomer }) => {
           onClick={() => setActiveTab('upcoming')}
           style={{
             backgroundColor: '#FFFFFF',
-            borderRadius: '18px',
-            border: `1.5px solid ${activeTab === 'upcoming' ? '#059669' : '#E2E8F0'}`,
+            borderRadius: isLowDesignMode ? '4px' : '18px',
+            border: `1.5px solid ${isLowDesignMode ? '#D1D5DB' : (activeTab === 'upcoming' ? '#059669' : '#E2E8F0')}`,
             padding: '16px 20px',
             cursor: 'pointer',
-            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.02)',
+            boxShadow: isLowDesignMode ? 'none' : '0 2px 8px rgba(0, 0, 0, 0.02)',
             transition: 'all 0.2s ease',
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span style={{ fontSize: '11px', fontWeight: '800', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            <span style={{ fontSize: '11px', fontWeight: '800', color: isLowDesignMode ? '#000000' : '#64748B', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
               UPCOMING (NEXT 7 DAYS)
             </span>
-            <div style={{ width: '36px', height: '36px', borderRadius: '10px', backgroundColor: '#ECFDF5', color: '#059669', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ width: '36px', height: '36px', borderRadius: isLowDesignMode ? '4px' : '10px', backgroundColor: isLowDesignMode ? '#F3F4F6' : '#ECFDF5', color: isLowDesignMode ? '#000000' : '#059669', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <Calendar size={18} />
             </div>
           </div>
-          <div style={{ fontSize: '22px', fontWeight: '900', color: '#059669', marginTop: '6px' }}>
+          <div style={{ fontSize: '22px', fontWeight: '900', color: isLowDesignMode ? '#000000' : '#059669', marginTop: '6px' }}>
             {counts.upcoming} Scheduled
           </div>
-          <div style={{ fontSize: '12px', color: '#64748B', marginTop: '4px' }}>
+          <div style={{ fontSize: '12px', color: isLowDesignMode ? '#000000' : '#64748B', marginTop: '4px' }}>
             Upcoming pipeline nurture
           </div>
         </div>
@@ -239,26 +241,26 @@ export const FollowupSheetView = ({ onEditCustomer }) => {
           onClick={() => setTemperatureFilter(temperatureFilter === 'Hot' ? 'all' : 'Hot')}
           style={{
             backgroundColor: '#FFFFFF',
-            borderRadius: '18px',
-            border: `1.5px solid ${temperatureFilter === 'Hot' ? '#D97706' : '#E2E8F0'}`,
+            borderRadius: isLowDesignMode ? '4px' : '18px',
+            border: `1.5px solid ${isLowDesignMode ? '#D1D5DB' : (temperatureFilter === 'Hot' ? '#D97706' : '#E2E8F0')}`,
             padding: '16px 20px',
             cursor: 'pointer',
-            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.02)',
+            boxShadow: isLowDesignMode ? 'none' : '0 2px 8px rgba(0, 0, 0, 0.02)',
             transition: 'all 0.2s ease',
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span style={{ fontSize: '11px', fontWeight: '800', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            <span style={{ fontSize: '11px', fontWeight: '800', color: isLowDesignMode ? '#000000' : '#64748B', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
               HOT PIPELINE VALUE
             </span>
-            <div style={{ width: '36px', height: '36px', borderRadius: '10px', backgroundColor: '#FEF3C7', color: '#D97706', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ width: '36px', height: '36px', borderRadius: isLowDesignMode ? '4px' : '10px', backgroundColor: isLowDesignMode ? '#F3F4F6' : '#FEF3C7', color: isLowDesignMode ? '#000000' : '#D97706', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <Flame size={18} />
             </div>
           </div>
-          <div style={{ fontSize: '20px', fontWeight: '900', color: '#D97706', marginTop: '6px' }}>
+          <div style={{ fontSize: '20px', fontWeight: '900', color: isLowDesignMode ? '#000000' : '#D97706', marginTop: '6px' }}>
             ₹{(counts.totalPipelineValue || 0).toLocaleString('en-IN')}
           </div>
-          <div style={{ fontSize: '12px', color: '#64748B', marginTop: '4px' }}>
+          <div style={{ fontSize: '12px', color: isLowDesignMode ? '#000000' : '#64748B', marginTop: '4px' }}>
             {counts.hot} Hot conversion deals
           </div>
         </div>

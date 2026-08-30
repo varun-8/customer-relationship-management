@@ -1,8 +1,15 @@
-node_modules
-android/.cxx
-android/app/.cxx
-android/build
-android/app/build
-.expo
-dist
-.temp
+# Exclude entire local native folders & build outputs for lightweight upload (~1.5 MB)
+android/
+ios/
+node_modules/
+.expo/
+dist/
+.cxx/
+.gradle/
+*.apk
+*.aab
+*.tar.gz
+*.zip
+*.log
+.temp/
+scratch/

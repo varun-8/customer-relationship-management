@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Plus } from 'lucide-react';
 import { ErrorBoundary } from './components/common/ErrorBoundary';
 import { ToastProvider, useToast } from './context/ToastContext';
+import { TestingModeProvider } from './context/TestingModeContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { CustomerProvider, useCustomer } from './context/CustomerContext';
 import { FormBuilderProvider } from './context/FormBuilderContext';
@@ -243,15 +244,17 @@ export default function App() {
   return (
     <ErrorBoundary>
       <ToastProvider>
-        <AuthProvider>
-          <BrandingProvider>
-            <CustomerProvider>
-              <FormBuilderProvider>
-                <MainAppContent />
-              </FormBuilderProvider>
-            </CustomerProvider>
-          </BrandingProvider>
-        </AuthProvider>
+        <TestingModeProvider>
+          <AuthProvider>
+            <BrandingProvider>
+              <CustomerProvider>
+                <FormBuilderProvider>
+                  <MainAppContent />
+                </FormBuilderProvider>
+              </CustomerProvider>
+            </BrandingProvider>
+          </AuthProvider>
+        </TestingModeProvider>
       </ToastProvider>
     </ErrorBoundary>
   );

@@ -472,8 +472,8 @@ export const CustomerListTable = ({ onAddCustomer, onEditCustomer, onViewCustome
                 const rawQuotation = data.quotationValue !== undefined && data.quotationValue !== null && data.quotationValue !== ''
                   ? Number(data.quotationValue)
                   : data.tileBudget !== undefined && data.tileBudget !== null && data.tileBudget !== ''
-                  ? Number(data.tileBudget)
-                  : null;
+                    ? Number(data.tileBudget)
+                    : null;
 
                 const quotationFormatted = rawQuotation !== null && !isNaN(rawQuotation)
                   ? `₹${rawQuotation.toLocaleString('en-IN')}`
@@ -856,7 +856,7 @@ export const CustomerListTable = ({ onAddCustomer, onEditCustomer, onViewCustome
         <ColumnSettingsModal
           allFields={customFields}
           visibleColumnKeys={['customerId', 'customerName', 'phone', 'customerType', 'houseStage', 'status', 'quotationValue', 'nextFollowUp', 'salesperson']}
-          setVisibleColumnKeys={() => {}}
+          setVisibleColumnKeys={() => { }}
           onClose={() => setShowColumnModal(false)}
         />
       )}

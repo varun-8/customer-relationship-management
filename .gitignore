@@ -21,20 +21,33 @@ mobile/.env
 # Production & Build Outputs
 dist/
 desktop/dist/
+desktop/dist-exe/
 build/
 desktop/build/
+backend/bin/
 out/
 web-build/
 desktop/src-tauri/target/
 src-tauri/target/
 
-# Expo / React Native
+# Expo / React Native & Android Native Builds
 .expo/
 .expo-shared/
 .expo-export-check/
 mobile/.expo/
 mobile/.expo-export-check/
+mobile/android/.cxx/
+mobile/android/app/.cxx/
+mobile/android/.kotlin/
+mobile/android/app/.kotlin/
+mobile/android/build/
+mobile/android/app/build/
+mobile/android/.gradle/
+mobile/android/app/src/main/assets/index.android.bundle
+*.apk
+*.aab
 *.jks
+*.keystore
 *.p8
 *.p12
 *.key
@@ -78,7 +91,7 @@ ehthumbs.db
 Thumbs.db
 [Dd]esktop.ini
 
-# Temporary files
+# Temporary & AI Scratch Files
 .temp/
 tmp/
 scratch/

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, RefreshCw, Wifi, WifiOff, Cloud, QrCode, Smartphone } from 'lucide-react';
+import { Plus, RefreshCw, Wifi, WifiOff, Cloud, QrCode, Smartphone, SlidersHorizontal } from 'lucide-react';
 import { api } from '../../services/api';
+import { useTestingMode } from '../../context/TestingModeContext';
 
 export const Header = ({
   title,

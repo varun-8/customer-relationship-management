@@ -1,0 +1,31 @@
+node_modules/
+.expo/
+.expo-export-check/
+dist/
+web-build/
+
+# Environment Variables & Secrets
+.env
+.env.*
+!.env.example
+
+# Android build outputs & caches
+android/build/
+android/app/build/
+android/.cxx/
+android/app/.cxx/
+android/.kotlin/
+android/app/.kotlin/
+android/.gradle/
+android/app/src/main/assets/index.android.bundle
+
+# Native build binaries & temp logs
+*.apk
+*.aab
+*.jks
+*.keystore
+*.log
+*.tar.gz
+*.zip
+.temp/
+scratch/

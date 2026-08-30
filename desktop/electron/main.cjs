@@ -1,7 +1,78 @@
-const { app, BrowserWindow, Menu, shell } = require('electron');
+const { app, BrowserWindow, Menu, shell, dialog } = require('electron');
 const path = require('path');
+const http = require('http');
 
-let mainWindow;
+let mainWindow = null;
+let backendProcess = null;
+
+// Helper to check if backend server health check endpoint is responding
+function checkBackendHealth(url = 'http://127.0.0.1:5000/api/health', timeoutMs = 1500) {
+  return new Promise((resolve) => {
+    const req = http.get(url, (res) => {
+      resolve(res.statusCode >= 200 && res.statusCode < 400);
+    });
+    req.on('error', () => resolve(false));
+    req.setTimeout(timeoutMs, () => {
+      req.destroy();
+      resolve(false);
+    });
+  });
+}
+
+// Wait for backend server to complete startup & database connection
+async function waitForBackend(maxAttempts = 30, delayMs = 500) {
+  for (let i = 0; i < maxAttempts; i++) {
+    const isHealthy = await checkBackendHealth();
+    if (isHealthy) return true;
+    await new Promise((r) => setTimeout(r, delayMs));
+  }
+  return false;
+}
+
+// Start backend server internally if app is packaged into production installer
+async function startEmbeddedBackend() {
+  const isDev = !app.isPackaged || process.env.NODE_ENV === 'development';
+  if (isDev) {
+    console.log('[Electron Main] Running in Dev Mode — assuming external backend process.');
+    return true;
+  }
+
+  const isAlreadyAlive = await checkBackendHealth();
+  if (isAlreadyAlive) {
+    console.log('[Electron Main] Backend is already running on http://127.0.0.1:5000');
+    return true;
+  }
+
+  console.log('[Electron Main] Starting embedded Express backend server & database engine...');
+  try {
+    const fs = require('fs');
+    const appPath = app.getAppPath();
+    let backendServerPath = path.join(appPath, 'backend/src/server.js');
+    if (!fs.existsSync(backendServerPath)) {
+      backendServerPath = path.resolve(__dirname, '../../backend/src/server.js');
+    }
+    
+    process.env.PORT = process.env.PORT || '5000';
+    process.env.NODE_ENV = 'production';
+
+    // Require and start Express server in process
+    require(backendServerPath);
+
+    const isReady = await waitForBackend(40, 500);
+    if (!isReady) {
+      throw new Error('Backend server did not respond to health check within 20 seconds.');
+    }
+    console.log('[Electron Main] Embedded Express backend & database connected successfully.');
+    return true;
+  } catch (err) {
+    console.error('[Electron Main Error] Failed to launch embedded backend:', err);
+    dialog.showErrorBox(
+      'Vasantham CRM — Database Connection Warning',
+      `Failed to start backend database server:\n${err.message}\n\nPlease verify network settings or restart the application.`
+    );
+    return false;
+  }
+}
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -14,30 +85,37 @@ function createWindow() {
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
-      webSecurity: true,
+      webSecurity: false,
     },
-    show: false, // Don't show until ready-to-show to prevent flicker
+    show: false,
   });
 
-  // Set window title explicitly
   mainWindow.setTitle('Vasantham Tiles & Sanitary Wares — Customer CRM');
 
   const devUrl = process.env.VITE_DEV_SERVER_URL || 'http://localhost:5173';
   const isDev = !app.isPackaged || process.env.NODE_ENV === 'development';
 
+  // Error listener for web page load failures
+  mainWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription, validatedURL) => {
+    console.error(`[Electron Main] Web content failed to load (${errorCode}): ${errorDescription} at ${validatedURL}`);
+    dialog.showErrorBox(
+      'Vasantham CRM — Loading Error',
+      `Failed to load application interface:\n${errorDescription} (code: ${errorCode})\nURL: ${validatedURL}`
+    );
+  });
+
   if (isDev) {
     mainWindow.loadURL(devUrl);
   } else {
-    mainWindow.loadFile(path.join(__dirname, '../dist/index.html'));
+    const indexPath = path.join(__dirname, '../dist/index.html');
+    mainWindow.loadFile(indexPath);
   }
 
-  // Graceful show when DOM is loaded
   mainWindow.once('ready-to-show', () => {
     mainWindow.show();
     mainWindow.focus();
   });
 
-  // Open external links in default OS browser
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
     if (url.startsWith('http:') || url.startsWith('https:')) {
       shell.openExternal(url);
@@ -46,7 +124,6 @@ function createWindow() {
     return { action: 'allow' };
   });
 
-  // Remove default menu bar for clean app appearance, keep shortcuts
   Menu.setApplicationMenu(null);
 
   mainWindow.on('closed', () => {
@@ -54,7 +131,8 @@ function createWindow() {
   });
 }
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
+  await startEmbeddedBackend();
   createWindow();
 
   app.on('activate', () => {
