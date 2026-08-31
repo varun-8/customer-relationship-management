@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -6,9 +6,15 @@ import {
   TouchableOpacity,
   StyleSheet,
   Platform,
+  Modal,
+  ScrollView,
+  FlatList,
 } from 'react-native';
 
 export const DynamicFieldRenderer = ({ field, value, onChange, error }) => {
+  const [modalVisible, setModalVisible] = useState(false);
+  const [searchText, setSearchText] = useState('');
+
   if (!field || !field.active) {
     return null;
   }
@@ -86,10 +92,13 @@ export const DynamicFieldRenderer = ({ field, value, onChange, error }) => {
     handleChange(updated);
   };
 
-  // Check if options are a binary Yes/No pair
+  // Binary choice check (Yes/No pair)
   const isBinaryChoice = normalizedOptions.length === 2 &&
     normalizedOptions.some((o) => String(o.label).toLowerCase() === 'yes') &&
     normalizedOptions.some((o) => String(o.label).toLowerCase() === 'no');
+
+  // Active selected option object
+  const selectedOptionObj = normalizedOptions.find((o) => isOptionSelected(o));
 
   const renderInput = () => {
     switch (type) {
@@ -174,7 +183,7 @@ export const DynamicFieldRenderer = ({ field, value, onChange, error }) => {
               ) : null}
             </View>
 
-            {/* Quick Amount Suggestion Pills for Easy 1-Tap Entry */}
+            {/* Quick Amount Suggestion Pills */}
             <View style={styles.quickAmountRow}>
               {[
                 { label: '+25k', val: 25000 },
@@ -310,7 +319,6 @@ export const DynamicFieldRenderer = ({ field, value, onChange, error }) => {
         );
       }
 
-      // Checkbox Card Component
       case 'checkbox': {
         const isChecked = Boolean(value);
         return (
@@ -334,10 +342,10 @@ export const DynamicFieldRenderer = ({ field, value, onChange, error }) => {
         );
       }
 
-      // Radio Buttons & Select Options
+      // Dropdown List Box for Single Select & Radio Buttons
       case 'radio':
       case 'select': {
-        // Render 2-column segmented control for Yes/No
+        // Binary Yes/No Choice Pill Segment
         if (isBinaryChoice) {
           return (
             <View style={styles.binaryChoiceRow}>
@@ -368,72 +376,247 @@ export const DynamicFieldRenderer = ({ field, value, onChange, error }) => {
           );
         }
 
-        // Render clean interactive grid of modern Radio Option Cards
-        return (
-          <View style={styles.radioGrid}>
-            {normalizedOptions.map((option, index) => {
-              const selected = isOptionSelected(option);
+        // Modern Mobile Dropdown List Box
+        const filteredModalOptions = normalizedOptions.filter((opt) =>
+          opt.label.toLowerCase().includes(searchText.toLowerCase())
+        );
 
-              return (
-                <TouchableOpacity
-                  key={`${name}-${option.value}-${index}`}
-                  activeOpacity={0.75}
+        return (
+          <View>
+            {/* Dropdown Trigger Box */}
+            <TouchableOpacity
+              style={[
+                styles.dropdownTriggerBox,
+                selectedOptionObj && styles.dropdownTriggerBoxActive,
+                error && styles.inputContainerError,
+              ]}
+              onPress={() => {
+                setSearchText('');
+                setModalVisible(true);
+              }}
+              activeOpacity={0.8}
+            >
+              <View style={styles.dropdownTriggerLeftGroup}>
+                <Text style={styles.dropdownIconText}>
+                  {name.includes('Type') ? '🏢' : name.includes('Source') ? '📢' : name.includes('status') || name.includes('Stage') ? '📋' : name.includes('person') ? '👤' : '📑'}
+                </Text>
+                <Text
                   style={[
-                    styles.radioCard,
-                    selected && styles.radioCardActive,
+                    styles.dropdownTriggerValueText,
+                    !selectedOptionObj && styles.dropdownTriggerPlaceholderText,
                   ]}
-                  onPress={() => handleChange(option.value)}
+                  numberOfLines={1}
                 >
-                  <View style={[styles.radioDotCircle, selected && styles.radioDotCircleActive]}>
-                    {selected && <View style={styles.radioDotInner} />}
+                  {selectedOptionObj ? selectedOptionObj.label : placeholder || `Select ${label}...`}
+                </Text>
+              </View>
+              <View style={styles.dropdownTriggerChevronBox}>
+                <Text style={styles.dropdownChevronText}>▼</Text>
+              </View>
+            </TouchableOpacity>
+
+            {/* Dropdown Option List Modal Sheet */}
+            <Modal
+              visible={modalVisible}
+              transparent
+              animationType="slide"
+              onRequestClose={() => setModalVisible(false)}
+            >
+              <View style={styles.modalBackdrop}>
+                <View style={styles.modalSheetCard}>
+                  {/* Top Handle */}
+                  <View style={styles.modalHandleWrapper}>
+                    <View style={styles.modalHandle} />
                   </View>
-                  <Text style={[styles.radioCardText, selected && styles.radioCardTextActive]}>
-                    {option.label}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
+
+                  {/* Header */}
+                  <View style={styles.modalSheetHeader}>
+                    <Text style={styles.modalSheetTitle}>Select {label}</Text>
+                    <TouchableOpacity
+                      onPress={() => setModalVisible(false)}
+                      style={styles.modalCloseBtn}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={styles.modalCloseBtnText}>✕</Text>
+                    </TouchableOpacity>
+                  </View>
+
+                  {/* Search Input for List Box */}
+                  {normalizedOptions.length > 5 && (
+                    <View style={styles.modalSearchBox}>
+                      <Text style={{ fontSize: 14, marginRight: 8 }}>🔍</Text>
+                      <TextInput
+                        style={styles.modalSearchInput}
+                        placeholder={`Search ${label.toLowerCase()}...`}
+                        placeholderTextColor="#94A3B8"
+                        value={searchText}
+                        onChangeText={setSearchText}
+                      />
+                      {searchText ? (
+                        <TouchableOpacity onPress={() => setSearchText('')}>
+                          <Text style={{ fontSize: 12, color: '#94A3B8' }}>✕</Text>
+                        </TouchableOpacity>
+                      ) : null}
+                    </View>
+                  )}
+
+                  {/* Options List */}
+                  <ScrollView style={styles.modalOptionsList} showsVerticalScrollIndicator={false}>
+                    {filteredModalOptions.map((opt, idx) => {
+                      const selected = isOptionSelected(opt);
+                      return (
+                        <TouchableOpacity
+                          key={`${opt.value}-${idx}`}
+                          style={[styles.modalOptionItem, selected && styles.modalOptionItemActive]}
+                          onPress={() => {
+                            handleChange(opt.value);
+                            setModalVisible(false);
+                          }}
+                          activeOpacity={0.75}
+                        >
+                          <Text style={[styles.modalOptionItemText, selected && styles.modalOptionItemTextActive]}>
+                            {opt.label}
+                          </Text>
+                          {selected && (
+                            <View style={styles.modalCheckmarkBadge}>
+                              <Text style={styles.modalCheckmarkText}>✓</Text>
+                            </View>
+                          )}
+                        </TouchableOpacity>
+                      );
+                    })}
+
+                    {filteredModalOptions.length === 0 && (
+                      <View style={{ padding: 20, alignItems: 'center' }}>
+                        <Text style={{ fontSize: 13, color: '#94A3B8' }}>No options match "{searchText}"</Text>
+                      </View>
+                    )}
+                  </ScrollView>
+                </View>
+              </View>
+            </Modal>
           </View>
         );
       }
 
-      // Multi-Select Options with Clean Checkboxes
-      case 'multiselect':
+      // Multi-Select Dropdown Box
+      case 'multiselect': {
+        const filteredModalOptions = normalizedOptions.filter((opt) =>
+          opt.label.toLowerCase().includes(searchText.toLowerCase())
+        );
+
         return (
           <View>
-            {multiSelectedValues.length > 0 && (
-              <View style={styles.multiSummaryBanner}>
-                <Text style={styles.multiSummaryText}>
-                  ✓ <Text style={{ fontWeight: '900' }}>{multiSelectedValues.length}</Text> {multiSelectedValues.length === 1 ? 'item selected' : 'items selected'}
+            {/* Multi-Select Trigger Box */}
+            <TouchableOpacity
+              style={[
+                styles.dropdownTriggerBox,
+                multiSelectedValues.length > 0 && styles.dropdownTriggerBoxActive,
+                error && styles.inputContainerError,
+              ]}
+              onPress={() => {
+                setSearchText('');
+                setModalVisible(true);
+              }}
+              activeOpacity={0.8}
+            >
+              <View style={styles.dropdownTriggerLeftGroup}>
+                <Text style={styles.dropdownIconText}>🎨</Text>
+                <Text
+                  style={[
+                    styles.dropdownTriggerValueText,
+                    multiSelectedValues.length === 0 && styles.dropdownTriggerPlaceholderText,
+                  ]}
+                  numberOfLines={1}
+                >
+                  {multiSelectedValues.length > 0
+                    ? `${multiSelectedValues.length} categories selected`
+                    : placeholder || `Select ${label.toLowerCase()}...`}
                 </Text>
               </View>
-            )}
-            <View style={styles.multiSelectGrid}>
-              {normalizedOptions.map((option, index) => {
-                const selected = isMultiOptionSelected(option);
+              <View style={styles.dropdownTriggerChevronBox}>
+                <Text style={styles.dropdownChevronText}>▼</Text>
+              </View>
+            </TouchableOpacity>
 
-                return (
-                  <TouchableOpacity
-                    key={`${name}-${option.value}-${index}`}
-                    activeOpacity={0.75}
-                    style={[
-                      styles.multiSelectCard,
-                      selected && styles.multiSelectCardActive,
-                    ]}
-                    onPress={() => handleToggleMultiItem(option)}
-                  >
-                    <View style={[styles.multiCheckboxBox, selected && styles.multiCheckboxBoxActive]}>
-                      {selected && <Text style={styles.multiCheckboxIcon}>✓</Text>}
+            {/* Selected Tags Display */}
+            {multiSelectedValues.length > 0 && (
+              <View style={styles.multiTagsRow}>
+                {multiSelectedValues.map((v, i) => (
+                  <View key={i} style={styles.multiTagPill}>
+                    <Text style={styles.multiTagText}>{v}</Text>
+                  </View>
+                ))}
+              </View>
+            )}
+
+            {/* Multi-Select Modal Sheet */}
+            <Modal
+              visible={modalVisible}
+              transparent
+              animationType="slide"
+              onRequestClose={() => setModalVisible(false)}
+            >
+              <View style={styles.modalBackdrop}>
+                <View style={styles.modalSheetCard}>
+                  {/* Top Handle */}
+                  <View style={styles.modalHandleWrapper}>
+                    <View style={styles.modalHandle} />
+                  </View>
+
+                  {/* Header */}
+                  <View style={styles.modalSheetHeader}>
+                    <Text style={styles.modalSheetTitle}>Select {label}</Text>
+                    <TouchableOpacity
+                      onPress={() => setModalVisible(false)}
+                      style={styles.modalCloseBtn}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={styles.modalCloseBtnText}>Done ✓</Text>
+                    </TouchableOpacity>
+                  </View>
+
+                  {/* Search Input for Multi-Select */}
+                  {normalizedOptions.length > 5 && (
+                    <View style={styles.modalSearchBox}>
+                      <Text style={{ fontSize: 14, marginRight: 8 }}>🔍</Text>
+                      <TextInput
+                        style={styles.modalSearchInput}
+                        placeholder={`Search ${label.toLowerCase()}...`}
+                        placeholderTextColor="#94A3B8"
+                        value={searchText}
+                        onChangeText={setSearchText}
+                      />
                     </View>
-                    <Text style={[styles.multiSelectCardText, selected && styles.multiSelectCardTextActive]}>
-                      {option.label}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
+                  )}
+
+                  {/* Options List */}
+                  <ScrollView style={styles.modalOptionsList} showsVerticalScrollIndicator={false}>
+                    {filteredModalOptions.map((opt, idx) => {
+                      const selected = isMultiOptionSelected(opt);
+                      return (
+                        <TouchableOpacity
+                          key={`${opt.value}-${idx}`}
+                          style={[styles.modalOptionItem, selected && styles.modalOptionItemActive]}
+                          onPress={() => handleToggleMultiItem(opt)}
+                          activeOpacity={0.75}
+                        >
+                          <View style={[styles.multiCheckboxSquare, selected && styles.multiCheckboxSquareActive]}>
+                            {selected && <Text style={styles.multiCheckboxCheck}>✓</Text>}
+                          </View>
+                          <Text style={[styles.modalOptionItemText, selected && styles.modalOptionItemTextActive]}>
+                            {opt.label}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </ScrollView>
+                </View>
+              </View>
+            </Modal>
           </View>
         );
+      }
 
       case 'auto_number':
         return (
@@ -480,7 +663,7 @@ export const DynamicFieldRenderer = ({ field, value, onChange, error }) => {
           </View>
         ) : type === 'radio' || type === 'select' ? (
           <View style={styles.typeBadgeContainer}>
-            <Text style={styles.typeBadgeSingle}>Select One</Text>
+            <Text style={styles.typeBadgeSingle}>Dropdown</Text>
           </View>
         ) : required ? (
           <View style={styles.typeBadgeContainer}>
@@ -585,7 +768,6 @@ const styles = StyleSheet.create({
   inputBodyWrapper: {
     marginTop: 1,
   },
-  // Standard Text Input Box
   inputContainer: {
     backgroundColor: '#FFFFFF',
     borderWidth: 1.2,
@@ -595,216 +777,190 @@ const styles = StyleSheet.create({
     paddingVertical: Platform.OS === 'ios' ? 12 : 9,
     flexDirection: 'row',
     alignItems: 'center',
-    shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.02,
-    shadowRadius: 2,
-    elevation: 1,
   },
   inputContainerError: {
-    borderColor: '#F87171',
-    backgroundColor: '#FFF1F2',
+    borderColor: '#EF4444',
+    backgroundColor: '#FEF2F2',
   },
   textInput: {
     flex: 1,
     fontSize: 13.5,
-    fontWeight: '600',
     color: '#0F172A',
-    padding: 0,
+    fontWeight: '600',
+  },
+  textareaContainer: {
+    paddingVertical: 10,
+    minHeight: 90,
+  },
+  textareaInput: {
+    minHeight: 80,
+    textAlignVertical: 'top',
   },
   clearBtn: {
     padding: 4,
     marginLeft: 6,
   },
   clearBtnText: {
-    fontSize: 12,
+    fontSize: 13,
     color: '#94A3B8',
-    fontWeight: '800',
-  },
-  textareaContainer: {
-    minHeight: 88,
-    paddingVertical: 10,
-    alignItems: 'flex-start',
-  },
-  textareaInput: {
-    minHeight: 68,
-    textAlignVertical: 'top',
+    fontWeight: '700',
   },
   // Currency Input
   currencyInputBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1.2,
-    borderColor: '#A7F3D0',
-    borderRadius: 13,
-    overflow: 'hidden',
-    shadowColor: '#059669',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 3,
-    elevation: 1,
-  },
-  currencySymbolBadge: {
-    backgroundColor: '#ECFDF5',
-    paddingHorizontal: 13,
-    paddingVertical: 11,
-    borderRightWidth: 1.2,
-    borderRightColor: '#A7F3D0',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  currencySymbolText: {
-    fontSize: 16,
-    fontWeight: '900',
-    color: '#059669',
-  },
-  currencyTextInput: {
-    flex: 1,
-    fontSize: 14.5,
-    fontWeight: '800',
-    color: '#0F172A',
-    paddingHorizontal: 12,
-    paddingVertical: Platform.OS === 'ios' ? 11 : 8,
-  },
-  quickAmountRow: {
-    flexDirection: 'row',
-    gap: 6,
-    marginTop: 6,
-    flexWrap: 'wrap',
-  },
-  quickAmountPill: {
-    backgroundColor: '#F0FDF4',
-    borderWidth: 1,
-    borderColor: '#BBF7D0',
-    paddingHorizontal: 9,
-    paddingVertical: 3.5,
-    borderRadius: 7,
-  },
-  quickAmountPillText: {
-    fontSize: 11,
-    fontWeight: '800',
-    color: '#059669',
-  },
-  // Phone Input
-  phoneInputBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
     backgroundColor: '#FFFFFF',
     borderWidth: 1.2,
     borderColor: '#CBD5E1',
     borderRadius: 13,
+    flexDirection: 'row',
+    alignItems: 'center',
     overflow: 'hidden',
-    shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.02,
-    shadowRadius: 2,
-    elevation: 1,
+  },
+  currencySymbolBadge: {
+    backgroundColor: '#F1F5F9',
+    borderRightWidth: 1,
+    borderRightColor: '#CBD5E1',
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  currencySymbolText: {
+    fontSize: 15,
+    fontWeight: '900',
+    color: '#0F172A',
+  },
+  currencyTextInput: {
+    flex: 1,
+    paddingHorizontal: 12,
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#0F172A',
+  },
+  quickAmountRow: {
+    flexDirection: 'row',
+    gap: 6,
+    marginTop: 8,
+  },
+  quickAmountPill: {
+    backgroundColor: '#EFF6FF',
+    borderWidth: 1,
+    borderColor: '#BFDBFE',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
+  },
+  quickAmountPillText: {
+    fontSize: 11.5,
+    fontWeight: '800',
+    color: '#2563EB',
+  },
+  // Phone Input
+  phoneInputBox: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1.2,
+    borderColor: '#CBD5E1',
+    borderRadius: 13,
+    flexDirection: 'row',
+    alignItems: 'center',
+    overflow: 'hidden',
   },
   phonePrefixBadge: {
     backgroundColor: '#F8FAFC',
-    paddingHorizontal: 12,
-    paddingVertical: 11,
-    borderRightWidth: 1.2,
+    borderRightWidth: 1,
     borderRightColor: '#CBD5E1',
-    alignItems: 'center',
-    justifyContent: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 12,
   },
   phonePrefixText: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '800',
     color: '#334155',
   },
   phoneTextInput: {
     flex: 1,
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#0F172A',
     paddingHorizontal: 12,
-    paddingVertical: Platform.OS === 'ios' ? 11 : 8,
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#0F172A',
+    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
   },
   // Date Input
   dateInputBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
     backgroundColor: '#FFFFFF',
     borderWidth: 1.2,
     borderColor: '#CBD5E1',
     borderRadius: 13,
     paddingHorizontal: 12,
-    paddingVertical: Platform.OS === 'ios' ? 11 : 8,
-    gap: 8,
+    paddingVertical: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   dateIconText: {
-    fontSize: 14,
+    fontSize: 15,
+    marginRight: 8,
   },
   dateTextInput: {
     flex: 1,
     fontSize: 13.5,
     fontWeight: '700',
     color: '#0F172A',
-    padding: 0,
   },
   quickDatesRow: {
     flexDirection: 'row',
     gap: 6,
-    marginTop: 6,
+    marginTop: 8,
   },
   quickDatePill: {
-    backgroundColor: '#F1F5F9',
+    backgroundColor: '#F8FAFC',
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: '#CBD5E1',
     paddingHorizontal: 10,
-    paddingVertical: 4.5,
+    paddingVertical: 5,
     borderRadius: 8,
   },
   quickDatePillActive: {
     backgroundColor: '#EFF6FF',
-    borderColor: '#BFDBFE',
+    borderColor: '#2563EB',
   },
   quickDatePillText: {
-    fontSize: 11,
-    fontWeight: '800',
+    fontSize: 11.5,
+    fontWeight: '700',
     color: '#475569',
   },
   quickDatePillTextActive: {
     color: '#2563EB',
+    fontWeight: '900',
   },
-  // Checkbox Card Design
+  // Checkbox Card
   checkboxCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
     backgroundColor: '#FFFFFF',
-    borderRadius: 13,
     borderWidth: 1.2,
     borderColor: '#CBD5E1',
-    paddingHorizontal: 14,
-    paddingVertical: 11,
+    borderRadius: 13,
+    padding: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 12,
   },
   checkboxCardChecked: {
-    backgroundColor: '#F0FDF4',
-    borderColor: '#86EFAC',
+    backgroundColor: '#ECFDF5',
+    borderColor: '#10B981',
   },
   checkboxSquare: {
-    width: 22,
-    height: 22,
+    width: 20,
+    height: 20,
     borderRadius: 6,
-    borderWidth: 2,
+    borderWidth: 1.5,
     borderColor: '#94A3B8',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FFFFFF',
   },
   checkboxSquareChecked: {
-    borderColor: '#10B981',
     backgroundColor: '#10B981',
+    borderColor: '#10B981',
   },
   checkboxCheckmark: {
     color: '#FFFFFF',
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '900',
-    lineHeight: 15,
   },
   checkboxTextContent: {
     flex: 1,
@@ -812,52 +968,40 @@ const styles = StyleSheet.create({
   checkboxLabel: {
     fontSize: 13.5,
     fontWeight: '700',
-    color: '#1E293B',
+    color: '#0F172A',
   },
   checkboxLabelChecked: {
-    color: '#065F46',
-    fontWeight: '800',
+    color: '#047857',
   },
   checkboxSubtext: {
     fontSize: 11,
     color: '#64748B',
     marginTop: 2,
   },
-  // Binary Choice (Yes / No)
+  // Binary Yes/No Choice
   binaryChoiceRow: {
     flexDirection: 'row',
     gap: 10,
   },
   binaryChoiceBtn: {
     flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
     backgroundColor: '#FFFFFF',
     borderWidth: 1.2,
     borderColor: '#CBD5E1',
     borderRadius: 13,
-    paddingVertical: 11,
-    paddingHorizontal: 14,
+    paddingVertical: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
   },
   binaryChoiceBtnYes: {
     backgroundColor: '#ECFDF5',
     borderColor: '#10B981',
-    shadowColor: '#10B981',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
-    elevation: 2,
   },
   binaryChoiceBtnNo: {
-    backgroundColor: '#FFF1F2',
-    borderColor: '#F43F5E',
-    shadowColor: '#F43F5E',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
-    elevation: 2,
+    backgroundColor: '#FEF2F2',
+    borderColor: '#EF4444',
   },
   binaryChoiceText: {
     fontSize: 13.5,
@@ -865,58 +1009,20 @@ const styles = StyleSheet.create({
     color: '#475569',
   },
   binaryChoiceTextActive: {
+    fontWeight: '900',
     color: '#0F172A',
-    fontWeight: '900',
-  },
-  // Radio Buttons Grid
-  radioGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 7,
-  },
-  radioCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1.2,
-    borderColor: '#CBD5E1',
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 9.5,
-    minHeight: 42,
-  },
-  radioCardActive: {
-    backgroundColor: '#EFF6FF',
-    borderColor: '#2563EB',
-    shadowColor: '#2563EB',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.10,
-    shadowRadius: 3,
-    elevation: 1,
-  },
-  radioCardText: {
-    fontSize: 12.5,
-    fontWeight: '700',
-    color: '#334155',
-  },
-  radioCardTextActive: {
-    color: '#1D4ED8',
-    fontWeight: '900',
   },
   radioDotCircle: {
-    width: 17,
-    height: 17,
-    borderRadius: 8.5,
-    borderWidth: 1.8,
-    borderColor: '#CBD5E1',
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    borderWidth: 1.5,
+    borderColor: '#94A3B8',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FFFFFF',
   },
   radioDotCircleActive: {
     borderColor: '#2563EB',
-    backgroundColor: '#FFFFFF',
   },
   radioDotInner: {
     width: 8,
@@ -924,85 +1030,203 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     backgroundColor: '#2563EB',
   },
-  // Multi-Select Grid
-  multiSummaryBanner: {
-    backgroundColor: '#EFF6FF',
-    borderWidth: 1,
-    borderColor: '#BFDBFE',
-    borderRadius: 7,
-    paddingHorizontal: 9,
-    paddingVertical: 3.5,
-    marginBottom: 7,
-    alignSelf: 'flex-start',
-  },
-  multiSummaryText: {
-    fontSize: 11,
-    fontWeight: '800',
-    color: '#1D4ED8',
-  },
-  multiSelectGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 7,
-  },
-  multiSelectCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+
+  // Dropdown List Box Component Styles
+  dropdownTriggerBox: {
     backgroundColor: '#FFFFFF',
     borderWidth: 1.2,
     borderColor: '#CBD5E1',
+    borderRadius: 13,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  dropdownTriggerBoxActive: {
+    borderColor: '#2563EB',
+    backgroundColor: '#F8FAFC',
+  },
+  dropdownTriggerLeftGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    flex: 1,
+  },
+  dropdownIconText: {
+    fontSize: 16,
+  },
+  dropdownTriggerValueText: {
+    fontSize: 13.5,
+    fontWeight: '800',
+    color: '#0F172A',
+    flex: 1,
+  },
+  dropdownTriggerPlaceholderText: {
+    color: '#94A3B8',
+    fontWeight: '600',
+  },
+  dropdownTriggerChevronBox: {
+    paddingLeft: 8,
+  },
+  dropdownChevronText: {
+    fontSize: 11,
+    color: '#64748B',
+  },
+
+  // Multi-Select Tags
+  multiTagsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginTop: 8,
+  },
+  multiTagPill: {
+    backgroundColor: '#ECFDF5',
+    borderWidth: 1,
+    borderColor: '#A7F3D0',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  multiTagText: {
+    fontSize: 11.5,
+    fontWeight: '800',
+    color: '#059669',
+  },
+
+  // Dropdown Modal Sheet
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(15, 23, 42, 0.6)',
+    justifyContent: 'flex-end',
+  },
+  modalSheetCard: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingHorizontal: 20,
+    paddingBottom: Platform.OS === 'ios' ? 40 : 24,
+    maxHeight: '75%',
+  },
+  modalHandleWrapper: {
+    alignItems: 'center',
+    paddingVertical: 10,
+  },
+  modalHandle: {
+    width: 38,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#CBD5E1',
+  },
+  modalSheetHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+  },
+  modalSheetTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#0F172A',
+  },
+  modalCloseBtn: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+    backgroundColor: '#F1F5F9',
+  },
+  modalCloseBtnText: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#2563EB',
+  },
+  modalSearchBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
     borderRadius: 12,
     paddingHorizontal: 12,
-    paddingVertical: 9.5,
-    minHeight: 42,
+    height: 40,
+    marginVertical: 12,
   },
-  multiSelectCardActive: {
+  modalSearchInput: {
+    flex: 1,
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#0F172A',
+  },
+  modalOptionsList: {
+    maxHeight: 350,
+  },
+  modalOptionItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 14,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    marginBottom: 4,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F8FAFC',
+  },
+  modalOptionItemActive: {
     backgroundColor: '#EFF6FF',
-    borderColor: '#2563EB',
-    shadowColor: '#2563EB',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.10,
-    shadowRadius: 3,
-    elevation: 1,
   },
-  multiSelectCardText: {
-    fontSize: 12.5,
+  modalOptionItemText: {
+    fontSize: 14,
     fontWeight: '700',
     color: '#334155',
+    flex: 1,
   },
-  multiSelectCardTextActive: {
+  modalOptionItemTextActive: {
     color: '#1D4ED8',
+    fontWeight: '800',
+  },
+  modalCheckmarkBadge: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: '#2563EB',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalCheckmarkText: {
+    color: '#FFFFFF',
+    fontSize: 12,
     fontWeight: '900',
   },
-  multiCheckboxBox: {
-    width: 17,
-    height: 17,
-    borderRadius: 4.5,
-    borderWidth: 1.8,
+  multiCheckboxSquare: {
+    width: 20,
+    height: 20,
+    borderRadius: 6,
+    borderWidth: 1.5,
     borderColor: '#CBD5E1',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FFFFFF',
+    marginRight: 12,
   },
-  multiCheckboxBoxActive: {
-    borderColor: '#2563EB',
-    backgroundColor: '#2563EB',
+  multiCheckboxSquareActive: {
+    backgroundColor: '#059669',
+    borderColor: '#059669',
   },
-  multiCheckboxIcon: {
+  multiCheckboxCheck: {
     color: '#FFFFFF',
-    fontSize: 10.5,
+    fontSize: 12,
     fontWeight: '900',
-    lineHeight: 12,
   },
+
   // Auto Number Box
   autoNumberBox: {
     backgroundColor: '#F8FAFC',
-    borderWidth: 1.2,
-    borderColor: '#CBD5E1',
-    borderStyle: 'dashed',
-    borderRadius: 13,
-    padding: 13,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 12,
+    padding: 12,
   },
   autoNumberHeader: {
     flexDirection: 'row',
@@ -1020,19 +1244,19 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   autoNumberValue: {
-    fontSize: 13.5,
+    fontSize: 14,
     fontWeight: '800',
-    color: '#0F766E',
+    color: '#0F172A',
     fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
   },
-  // Error Message Alert
+
   errorAlertBox: {
-    marginTop: 5,
-    paddingHorizontal: 2,
+    marginTop: 6,
+    paddingHorizontal: 8,
   },
   errorAlertText: {
     fontSize: 11.5,
-    fontWeight: '800',
+    fontWeight: '700',
     color: '#DC2626',
   },
 });

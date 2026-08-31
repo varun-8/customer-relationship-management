@@ -449,6 +449,7 @@ export const EmployeeFormModal = ({ employee, onClose, onSuccess }) => {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
                 {/* Option 1: Sales Staff */}
                 <div
+                  className="role-option-card"
                   onClick={() => setRole('employee')}
                   style={{
                     padding: '16px',
@@ -459,7 +460,7 @@ export const EmployeeFormModal = ({ employee, onClose, onSuccess }) => {
                     display: 'flex',
                     flexDirection: 'column',
                     gap: '6px',
-                    transition: 'all 0.2s ease',
+                    transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
                     boxShadow: role === 'employee' ? '0 4px 14px rgba(37, 99, 235, 0.1)' : 'none',
                   }}
                 >
@@ -479,6 +480,7 @@ export const EmployeeFormModal = ({ employee, onClose, onSuccess }) => {
 
                 {/* Option 2: Showroom Owner */}
                 <div
+                  className="role-option-card"
                   onClick={() => setRole('owner')}
                   style={{
                     padding: '16px',
@@ -489,7 +491,7 @@ export const EmployeeFormModal = ({ employee, onClose, onSuccess }) => {
                     display: 'flex',
                     flexDirection: 'column',
                     gap: '6px',
-                    transition: 'all 0.2s ease',
+                    transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
                     boxShadow: role === 'owner' ? '0 4px 14px rgba(124, 58, 237, 0.1)' : 'none',
                   }}
                 >

@@ -47,6 +47,8 @@ export function MobileFollowupLogModal({
 
   const [outcome, setOutcome] = useState('Spoke with Customer / Positive Interest');
   const [leadTemperature, setLeadTemperature] = useState(followUp.leadTemperature || 'Hot');
+  const [customerName, setCustomerName] = useState(followUp.customerName || '');
+  const [phone, setPhone] = useState(followUp.phone || '');
   const [nextFollowUp, setNextFollowUp] = useState(
     followUp.nextFollowUp || tomorrow.toISOString().split('T')[0]
   );
@@ -55,6 +57,9 @@ export function MobileFollowupLogModal({
     followUp.quotationValue !== undefined ? String(followUp.quotationValue) : ''
   );
   const [submitting, setSubmitting] = useState(false);
+  const [outcomeModalVisible, setOutcomeModalVisible] = useState(false);
+
+  const selectedOutcomeObj = OUTCOMES.find((o) => o.label === outcome) || OUTCOMES[0];
 
   const handleQuickDays = (days) => {
     const d = new Date();
@@ -83,6 +88,8 @@ export function MobileFollowupLogModal({
     try {
       const res = await apiClient.logFollowupActivity(followUp._id, {
         outcome,
+        customerName: customerName.trim(),
+        phone: phone.trim(),
         discussionNotes: discussionNotes.trim(),
         nextFollowUp,
         leadTemperature,
@@ -91,7 +98,7 @@ export function MobileFollowupLogModal({
       });
 
       if (res && res.success) {
-        Alert.alert('✓ Activity Logged', `Follow-up updated for ${followUp.customerName}!`);
+        Alert.alert('✓ Activity Logged', `Follow-up updated for ${customerName || 'Customer'}!`);
         if (onSaved) onSaved();
         onClose();
       } else {
@@ -122,28 +129,42 @@ export function MobileFollowupLogModal({
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <View style={styles.modalOverlay}>
         <View style={styles.modalCard}>
-          {/* Top Sheet Drag Handle */}
+          {/* Top Drag Handle */}
           <View style={styles.sheetHandleWrapper}>
             <View style={styles.sheetHandle} />
           </View>
 
-          {/* Clean Light Header */}
+          {/* Header Bar with Editable Customer Info */}
           <View style={styles.headerLight}>
             <View style={styles.headerIconBoxLight}>
               <Text style={{ fontSize: 18 }}>📞</Text>
             </View>
-            <View style={{ flex: 1 }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                <Text style={styles.headerTitleLight}>Log Follow-up Activity</Text>
+            <View style={{ flex: 1, gap: 4 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <TextInput
+                  style={[styles.headerTitleLight, { flex: 1, borderWidth: 1, borderColor: '#CBD5E1', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 2, backgroundColor: '#FFFFFF' }]}
+                  value={customerName}
+                  onChangeText={setCustomerName}
+                  placeholder="Customer Name"
+                  placeholderTextColor="#94A3B8"
+                />
                 {followUp.customerId && (
                   <View style={styles.headerIdBadgeLight}>
                     <Text style={styles.headerIdBadgeTextLight}>#{followUp.customerId}</Text>
                   </View>
                 )}
               </View>
-              <Text style={styles.headerSubtitleLight} numberOfLines={1}>
-                {followUp.customerName} {followUp.phone ? `• 📱 ${followUp.phone}` : ''}
-              </Text>
+
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <Text style={{ fontSize: 12, color: '#64748B' }}>📱</Text>
+                <TextInput
+                  style={{ fontSize: 12, color: '#334155', fontWeight: '700', flex: 1, borderWidth: 1, borderColor: '#CBD5E1', borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2, backgroundColor: '#FFFFFF' }}
+                  value={phone}
+                  onChangeText={setPhone}
+                  placeholder="Mobile Phone"
+                  placeholderTextColor="#94A3B8"
+                />
+              </View>
             </View>
             <TouchableOpacity onPress={onClose} style={styles.headerCloseBtnLight} activeOpacity={0.7}>
               <Text style={styles.headerCloseBtnTextLight}>✕</Text>
@@ -151,46 +172,84 @@ export function MobileFollowupLogModal({
           </View>
 
           <ScrollView showsVerticalScrollIndicator={false} style={styles.scroll} contentContainerStyle={{ padding: 16 }}>
-            {/* 1. Discussion Outcome */}
+            {/* 1. Discussion Outcome Dropdown List Box */}
             <View style={styles.sectionCard}>
               <Text style={styles.sectionHeading}>1. Call Outcome *</Text>
-              <View style={styles.outcomeGrid}>
-                {OUTCOMES.map((o) => {
-                  const isSelected = outcome === o.label;
-                  const isLost = o.label === 'Deal Lost / Postponed';
+              
+              {/* Outcome Dropdown Trigger Box */}
+              <TouchableOpacity
+                style={[
+                  styles.dropdownTriggerBox,
+                  { backgroundColor: selectedOutcomeObj.bg, borderColor: selectedOutcomeObj.border },
+                ]}
+                onPress={() => setOutcomeModalVisible(true)}
+                activeOpacity={0.8}
+              >
+                <View style={styles.dropdownTriggerLeftGroup}>
+                  <Text style={{ fontSize: 18 }}>{selectedOutcomeObj.icon}</Text>
+                  <Text style={[styles.dropdownTriggerValueText, { color: selectedOutcomeObj.color }]} numberOfLines={1}>
+                    {selectedOutcomeObj.label}
+                  </Text>
+                </View>
+                <View style={styles.dropdownTriggerChevronBox}>
+                  <Text style={{ fontSize: 11, color: selectedOutcomeObj.color }}>▼</Text>
+                </View>
+              </TouchableOpacity>
 
-                  return (
-                    <TouchableOpacity
-                      key={o.label}
-                      style={[
-                        styles.outcomeCard,
-                        isSelected && {
-                          backgroundColor: isLost ? '#FEF2F2' : o.bg,
-                          borderColor: isLost ? '#DC2626' : o.color,
-                          borderWidth: 1.5,
-                        },
-                      ]}
-                      onPress={() => setOutcome(o.label)}
-                      activeOpacity={0.75}
-                    >
-                      <View style={[styles.outcomeIconCircle, { backgroundColor: isSelected ? '#FFFFFF' : '#F1F5F9' }]}>
-                        <Text style={{ fontSize: 13 }}>{o.icon}</Text>
-                      </View>
-                      <Text
-                        style={[
-                          styles.outcomeCardText,
-                          isSelected && { color: isLost ? '#DC2626' : o.color, fontWeight: '800' },
-                        ]}
-                        numberOfLines={1}
-                      >
-                        {o.shortLabel}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
+              {/* Outcome Selection Modal Sheet */}
+              <Modal
+                visible={outcomeModalVisible}
+                transparent
+                animationType="slide"
+                onRequestClose={() => setOutcomeModalVisible(false)}
+              >
+                <View style={styles.outcomeModalBackdrop}>
+                  <View style={styles.outcomeModalSheet}>
+                    <View style={styles.modalHandleWrapper}>
+                      <View style={styles.modalHandle} />
+                    </View>
 
-              {/* Lead Priority Temperature Integrated Inside Section 1 */}
+                    <View style={styles.outcomeModalHeader}>
+                      <Text style={styles.outcomeModalTitle}>Select Call Outcome</Text>
+                      <TouchableOpacity onPress={() => setOutcomeModalVisible(false)} style={styles.modalCloseBtn}>
+                        <Text style={styles.modalCloseBtnText}>✕ Close</Text>
+                      </TouchableOpacity>
+                    </View>
+
+                    <ScrollView style={{ maxHeight: 360 }} showsVerticalScrollIndicator={false}>
+                      {OUTCOMES.map((o) => {
+                        const isSelected = outcome === o.label;
+                        return (
+                          <TouchableOpacity
+                            key={o.label}
+                            style={[
+                              styles.outcomeListItem,
+                              isSelected && { backgroundColor: o.bg, borderColor: o.border },
+                            ]}
+                            onPress={() => {
+                              setOutcome(o.label);
+                              setOutcomeModalVisible(false);
+                            }}
+                            activeOpacity={0.75}
+                          >
+                            <Text style={{ fontSize: 18, marginRight: 12 }}>{o.icon}</Text>
+                            <Text style={[styles.outcomeListItemText, isSelected && { color: o.color, fontWeight: '800' }]}>
+                              {o.label}
+                            </Text>
+                            {isSelected && (
+                              <View style={[styles.outcomeCheckmarkBadge, { backgroundColor: o.color }]}>
+                                <Text style={{ color: '#FFFFFF', fontSize: 11, fontWeight: '900' }}>✓</Text>
+                              </View>
+                            )}
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </ScrollView>
+                  </View>
+                </View>
+              </Modal>
+
+              {/* Lead Priority Temperature Selector */}
               <View style={styles.subHeadingRow}>
                 <Text style={styles.subHeadingLabel}>Lead Priority</Text>
               </View>
@@ -296,7 +355,6 @@ export function MobileFollowupLogModal({
             <View style={styles.sectionCard}>
               <Text style={styles.sectionHeading}>3. Discussion Notes & Remarks</Text>
               
-              {/* Quick Snippet Chips placed directly above textarea */}
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6, paddingBottom: 8 }}>
                 {QUICK_SNIPPETS.map((snip, idx) => (
                   <TouchableOpacity
@@ -353,152 +411,195 @@ export function MobileFollowupLogModal({
 const styles = StyleSheet.create({
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(15, 23, 42, 0.70)',
+    backgroundColor: 'rgba(15, 23, 42, 0.65)',
     justifyContent: 'flex-end',
   },
   modalCard: {
     backgroundColor: '#F8FAFC',
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
-    overflow: 'hidden',
-    paddingBottom: Platform.OS === 'ios' ? 34 : 20,
-    maxHeight: '92%',
-    shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: -6 },
-    shadowOpacity: 0.16,
-    shadowRadius: 16,
-    elevation: 16,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    maxHeight: '90%',
   },
   sheetHandleWrapper: {
     alignItems: 'center',
-    paddingTop: 10,
-    paddingBottom: 4,
-    backgroundColor: '#FFFFFF',
+    paddingVertical: 8,
   },
   sheetHandle: {
-    width: 40,
+    width: 38,
     height: 4,
     borderRadius: 2,
     backgroundColor: '#CBD5E1',
   },
   headerLight: {
-    backgroundColor: '#FFFFFF',
-    paddingHorizontal: 18,
-    paddingTop: 6,
-    paddingBottom: 14,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    paddingHorizontal: 16,
+    paddingBottom: 12,
     borderBottomWidth: 1,
     borderBottomColor: '#E2E8F0',
+    gap: 12,
   },
   headerIconBoxLight: {
-    width: 38,
-    height: 38,
-    borderRadius: 10,
+    width: 40,
+    height: 40,
+    borderRadius: 12,
     backgroundColor: '#EFF6FF',
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: '#DBEAFE',
   },
   headerTitleLight: {
     fontSize: 16,
-    fontWeight: '900',
+    fontWeight: '800',
     color: '#0F172A',
-    letterSpacing: -0.3,
-  },
-  headerSubtitleLight: {
-    fontSize: 11.5,
-    color: '#64748B',
-    marginTop: 2,
-    fontWeight: '500',
   },
   headerIdBadgeLight: {
     backgroundColor: '#F1F5F9',
     paddingHorizontal: 6,
-    paddingVertical: 1.5,
+    paddingVertical: 1,
     borderRadius: 5,
   },
   headerIdBadgeTextLight: {
-    fontSize: 10,
-    fontWeight: '800',
+    fontSize: 11,
+    fontWeight: '700',
     color: '#475569',
+    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+  },
+  headerSubtitleLight: {
+    fontSize: 12,
+    color: '#64748B',
+    marginTop: 2,
   },
   headerCloseBtnLight: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
+    padding: 6,
+    borderRadius: 8,
     backgroundColor: '#F1F5F9',
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   headerCloseBtnTextLight: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '800',
     color: '#64748B',
   },
   scroll: {
-    marginVertical: 0,
+    flexGrow: 0,
   },
   sectionCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
     padding: 14,
+    marginBottom: 14,
     borderWidth: 1,
     borderColor: '#E2E8F0',
-    marginBottom: 12,
-    shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.02,
-    shadowRadius: 2,
-    elevation: 1,
   },
   sectionHeading: {
-    fontSize: 12.5,
+    fontSize: 13,
     fontWeight: '800',
     color: '#0F172A',
-    marginBottom: 10,
-    letterSpacing: -0.2,
+    marginBottom: 12,
+    textTransform: 'uppercase',
+    letterSpacing: 0.3,
   },
-  subHeadingRow: {
-    marginTop: 12,
-    marginBottom: 6,
-  },
-  subHeadingLabel: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#475569',
-  },
-  outcomeGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 7,
-  },
-  outcomeCard: {
-    width: '48.6%',
+  dropdownTriggerBox: {
+    borderWidth: 1.5,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 9,
-    paddingVertical: 9.5,
-    borderRadius: 12,
-    borderWidth: 1.2,
-    borderColor: '#E2E8F0',
-    backgroundColor: '#F8FAFC',
-    gap: 7,
+    justifyContent: 'space-between',
+    marginBottom: 14,
   },
-  outcomeIconCircle: {
-    width: 24,
-    height: 24,
+  dropdownTriggerLeftGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    flex: 1,
+  },
+  dropdownTriggerValueText: {
+    fontSize: 13.5,
+    fontWeight: '800',
+    flex: 1,
+  },
+  dropdownTriggerChevronBox: {
+    paddingLeft: 8,
+  },
+  outcomeModalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(15, 23, 42, 0.6)',
+    justifyContent: 'flex-end',
+  },
+  outcomeModalSheet: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingHorizontal: 16,
+    paddingBottom: Platform.OS === 'ios' ? 40 : 20,
+  },
+  modalHandleWrapper: {
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  modalHandle: {
+    width: 38,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#CBD5E1',
+  },
+  outcomeModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+    marginBottom: 10,
+  },
+  outcomeModalTitle: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#0F172A',
+  },
+  modalCloseBtn: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+    backgroundColor: '#F1F5F9',
+  },
+  modalCloseBtnText: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#2563EB',
+  },
+  outcomeListItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 12,
     borderRadius: 12,
+    marginBottom: 6,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+  },
+  outcomeListItemText: {
+    fontSize: 13.5,
+    fontWeight: '700',
+    color: '#334155',
+    flex: 1,
+  },
+  outcomeCheckmarkBadge: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  outcomeCardText: {
-    fontSize: 11.5,
-    fontWeight: '800',
-    color: '#334155',
-    flex: 1,
+  subHeadingRow: {
+    marginTop: 4,
+    marginBottom: 8,
+  },
+  subHeadingLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#64748B',
   },
   tempRow: {
     flexDirection: 'row',
@@ -506,162 +607,142 @@ const styles = StyleSheet.create({
   },
   tempBtn: {
     flex: 1,
-    flexDirection: 'row',
-    paddingVertical: 10,
-    borderRadius: 13,
-    borderWidth: 1.5,
-    borderColor: '#E2E8F0',
     backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 10,
+    paddingVertical: 8,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
-    shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.03,
-    shadowRadius: 2,
-    elevation: 1,
+    gap: 2,
   },
   tempBtnText: {
-    fontSize: 12,
-    fontWeight: '900',
-    color: '#334155',
-    letterSpacing: -0.2,
+    fontSize: 11.5,
+    fontWeight: '700',
+    color: '#475569',
   },
   scheduleRowHeader: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    justifyContent: 'space-between',
     marginBottom: 6,
   },
   quickDayBtn: {
-    paddingHorizontal: 8.5,
-    paddingVertical: 3.5,
-    borderRadius: 7,
     backgroundColor: '#EFF6FF',
-    borderWidth: 1.2,
+    borderWidth: 1,
     borderColor: '#BFDBFE',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
   },
   quickDayText: {
-    fontSize: 10.5,
-    fontWeight: '900',
-    color: '#1D4ED8',
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#2563EB',
   },
   dateInputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#FFFFFF',
     borderWidth: 1.2,
     borderColor: '#CBD5E1',
     borderRadius: 12,
     paddingHorizontal: 12,
-    paddingVertical: 9,
+    height: 42,
   },
   dateTextInput: {
     flex: 1,
-    fontSize: 13,
-    color: '#0F172A',
+    fontSize: 13.5,
     fontWeight: '700',
-    paddingVertical: 0,
+    color: '#0F172A',
   },
   quoteValueInputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#FFFFFF',
     borderWidth: 1.2,
-    borderColor: '#A7F3D0',
+    borderColor: '#CBD5E1',
     borderRadius: 12,
     overflow: 'hidden',
+    height: 42,
   },
   currencyPrefixBadgeEmerald: {
     backgroundColor: '#ECFDF5',
+    borderRightWidth: 1,
+    borderRightColor: '#CBD5E1',
     paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderRightWidth: 1.2,
-    borderRightColor: '#A7F3D0',
+    height: '100%',
     alignItems: 'center',
     justifyContent: 'center',
   },
   currencyPrefixTextEmerald: {
     fontSize: 15,
     fontWeight: '900',
-    color: '#059669',
+    color: '#047857',
   },
   quoteTextInput: {
-    paddingHorizontal: 10,
-    paddingVertical: 9,
+    paddingHorizontal: 12,
     fontSize: 14,
-    color: '#059669',
-    fontWeight: '900',
+    fontWeight: '800',
+    color: '#0F172A',
   },
   snippetChip: {
+    backgroundColor: '#F1F5F9',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
     paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingVertical: 5,
     borderRadius: 8,
-    backgroundColor: '#FFFBEB',
-    borderWidth: 1.2,
-    borderColor: '#FDE68A',
   },
   snippetChipText: {
-    fontSize: 11,
-    fontWeight: '800',
-    color: '#92400E',
+    fontSize: 11.5,
+    fontWeight: '700',
+    color: '#475569',
   },
   notesTextInput: {
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#FFFFFF',
     borderWidth: 1.2,
     borderColor: '#CBD5E1',
     borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
+    padding: 12,
     fontSize: 13,
     color: '#0F172A',
-    height: 78,
+    fontWeight: '500',
+    minHeight: 80,
     textAlignVertical: 'top',
   },
   footerRow: {
     flexDirection: 'row',
     gap: 10,
-    paddingHorizontal: 16,
-    paddingTop: 12,
+    padding: 16,
+    backgroundColor: '#FFFFFF',
     borderTopWidth: 1,
     borderTopColor: '#E2E8F0',
-    backgroundColor: '#FFFFFF',
   },
   cancelBtn: {
     flex: 1,
-    paddingVertical: 13,
-    borderRadius: 10,
+    backgroundColor: '#F1F5F9',
+    borderRadius: 12,
+    paddingVertical: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#F8FAFC',
-    borderWidth: 1.5,
-    borderColor: '#CBD5E1',
   },
   cancelBtnText: {
     fontSize: 13,
     fontWeight: '800',
-    color: '#334155',
-    letterSpacing: -0.2,
+    color: '#475569',
   },
   saveBtn: {
     flex: 2,
-    paddingVertical: 13,
-    borderRadius: 10,
+    backgroundColor: '#2563EB',
+    borderRadius: 12,
+    paddingVertical: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#2563EB',
-    borderWidth: 1,
-    borderColor: '#1D4ED8',
-    shadowColor: '#2563EB',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
-    elevation: 2,
   },
   saveBtnText: {
-    fontSize: 13.5,
-    fontWeight: '900',
+    fontSize: 13,
+    fontWeight: '800',
     color: '#FFFFFF',
-    letterSpacing: -0.2,
   },
 });

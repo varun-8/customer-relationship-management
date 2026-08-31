@@ -179,6 +179,44 @@ export const LostSalesView = () => {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', animation: 'tabFadeInUp 0.3s ease' }}>
+      {/* Top Page Header Bar */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px', paddingBottom: '4px' }}>
+        <div>
+          <h2 style={{ fontSize: '20px', fontWeight: '900', color: '#0F172A', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span>Lost Sales Intelligence</span>
+          </h2>
+          <p style={{ margin: '3px 0 0', fontSize: '13px', color: '#64748B' }}>
+            Analyze lost opportunities, competitor pricing gaps, and customer win-back intelligence.
+          </p>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => {
+            setEditingRecord(null);
+            setShowModal(true);
+          }}
+          style={{
+            backgroundColor: '#DC2626',
+            color: '#FFFFFF',
+            border: 'none',
+            borderRadius: '12px',
+            padding: '10px 18px',
+            fontSize: '13.5px',
+            fontWeight: '800',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            boxShadow: '0 4px 14px rgba(220, 38, 38, 0.25)',
+            transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+          }}
+        >
+          <Plus size={16} />
+          <span>Log Lost Sale</span>
+        </button>
+      </div>
+
       {/* 1. Minimalist Executive Metric Scorecards */}
       <div
         style={{
@@ -425,13 +463,11 @@ export const LostSalesView = () => {
       {/* 3. Aesthetic Minimalist Control Toolbar */}
       <div
         style={{
-          background: 'rgba(255, 255, 255, 0.98)',
-          backdropFilter: 'blur(12px)',
-          WebkitBackdropFilter: 'blur(12px)',
+          background: '#FFFFFF',
           borderRadius: '16px',
           border: '1px solid #E2E8F0',
-          boxShadow: '0 2px 12px rgba(15, 23, 42, 0.04)',
-          padding: '12px 18px',
+          boxShadow: '0 2px 10px rgba(15, 23, 42, 0.03)',
+          padding: '14px 18px',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
@@ -439,10 +475,10 @@ export const LostSalesView = () => {
           gap: '14px',
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
           {/* Search Input */}
           <form onSubmit={handleSearchSubmit} style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-            <Search size={14} style={{ position: 'absolute', left: '12px', color: '#94A3B8' }} />
+            <Search size={15} style={{ position: 'absolute', left: '12px', color: '#94A3B8' }} />
             <input
               type="text"
               placeholder="Search lost deals, competitors..."
@@ -451,14 +487,14 @@ export const LostSalesView = () => {
               style={{
                 paddingLeft: '34px',
                 paddingRight: search ? '30px' : '12px',
-                height: '36px',
-                borderRadius: '10px',
-                border: '1px solid #E2E8F0',
+                height: '38px',
+                borderRadius: '12px',
+                border: '1px solid #CBD5E1',
                 background: '#F8FAFC',
-                fontSize: '12.5px',
+                fontSize: '13px',
                 color: '#0F172A',
                 fontWeight: '500',
-                width: '250px',
+                width: '260px',
                 outline: 'none',
                 transition: 'all 0.2s ease',
               }}
@@ -474,29 +510,48 @@ export const LostSalesView = () => {
             )}
           </form>
 
-          {/* Product Category Segmented Pills */}
-          <div style={{ display: 'flex', gap: '3px', background: '#F1F5F9', padding: '3.5px', borderRadius: '10px' }}>
-            {['all', 'Tile', 'Sanitary', 'CP', 'Adhesive'].map((p) => {
-              const isSelected = productFilter === p;
+          {/* Product Category Segmented Filter Tabs */}
+          <div
+            style={{
+              display: 'flex',
+              gap: '4px',
+              background: '#F1F5F9',
+              padding: '4px',
+              borderRadius: '12px',
+              border: '1px solid #E2E8F0',
+            }}
+          >
+            {[
+              { id: 'all', label: 'All Categories', icon: '📊' },
+              { id: 'Tile', label: 'Tiles', icon: '🧱' },
+              { id: 'Sanitary', label: 'Sanitary', icon: '🚿' },
+              { id: 'CP', label: 'CP Fittings', icon: '🚰' },
+              { id: 'Adhesive', label: 'Adhesives', icon: '🧪' },
+            ].map((p) => {
+              const isSelected = productFilter === p.id;
               return (
                 <button
-                  key={p}
+                  key={p.id}
                   type="button"
-                  onClick={() => setProductFilter(p)}
+                  onClick={() => setProductFilter(p.id)}
                   style={{
-                    padding: '5px 12px',
-                    borderRadius: '8px',
+                    padding: '6px 14px',
+                    borderRadius: '9px',
                     border: 'none',
                     background: isSelected ? '#FFFFFF' : 'transparent',
                     color: isSelected ? '#2563EB' : '#64748B',
                     fontWeight: isSelected ? '800' : '600',
-                    fontSize: '12px',
+                    fontSize: '12.5px',
                     cursor: 'pointer',
-                    boxShadow: isSelected ? '0 2px 6px rgba(15, 23, 42, 0.08)' : 'none',
-                    transition: 'all 0.18s cubic-bezier(0.4, 0, 0.2, 1)',
+                    boxShadow: isSelected ? '0 2px 8px rgba(37, 99, 235, 0.12), 0 1px 3px rgba(0,0,0,0.06)' : 'none',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '5px',
+                    transition: 'all 0.18s cubic-bezier(0.16, 1, 0.3, 1)',
                   }}
                 >
-                  {p === 'all' ? 'All Products' : p}
+                  <span style={{ fontSize: '11px' }}>{p.icon}</span>
+                  <span>{p.label}</span>
                 </button>
               );
             })}
@@ -506,19 +561,32 @@ export const LostSalesView = () => {
         {/* Right Filter & Action Group */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
           {/* Sales Staff Select */}
-          <select
-            value={staffFilter}
-            onChange={(e) => setStaffFilter(e.target.value)}
-            className="filter-select"
-            style={{ height: '36px', minWidth: '150px' }}
-          >
-            <option value="all">All Sales Staff</option>
-            {staffList.map((name) => (
-              <option key={name} value={name}>
-                {name}
-              </option>
-            ))}
-          </select>
+          <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+            <select
+              value={staffFilter}
+              onChange={(e) => setStaffFilter(e.target.value)}
+              style={{
+                height: '38px',
+                minWidth: '160px',
+                padding: '0 12px',
+                borderRadius: '12px',
+                border: '1px solid #CBD5E1',
+                background: '#FFFFFF',
+                fontSize: '12.5px',
+                color: '#0F172A',
+                fontWeight: '700',
+                outline: 'none',
+                cursor: 'pointer',
+              }}
+            >
+              <option value="all">All Sales Staff</option>
+              {staffList.map((name) => (
+                <option key={name} value={name}>
+                  {name}
+                </option>
+              ))}
+            </select>
+          </div>
 
           {/* Month Selector */}
           <input
@@ -526,17 +594,16 @@ export const LostSalesView = () => {
             value={selectedMonth}
             onChange={(e) => setSelectedMonth(e.target.value)}
             style={{
-              height: '36px',
-              borderRadius: '8px',
-              border: '1px solid #E2E8F0',
+              height: '38px',
+              borderRadius: '12px',
+              border: '1px solid #CBD5E1',
               background: '#FFFFFF',
               fontSize: '12.5px',
-              padding: '0 10px',
-              color: '#334155',
-              fontWeight: '600',
+              padding: '0 12px',
+              color: '#0F172A',
+              fontWeight: '700',
               outline: 'none',
               cursor: 'pointer',
-              boxShadow: '0 1px 2px rgba(15, 23, 42, 0.04)',
             }}
           />
 
@@ -545,21 +612,22 @@ export const LostSalesView = () => {
             onClick={fetchData}
             title="Refresh Intelligence Data"
             style={{
-              height: '36px',
-              width: '36px',
-              borderRadius: '8px',
-              border: '1px solid #E2E8F0',
-              background: '#FFFFFF',
-              color: '#64748B',
+              height: '38px',
+              padding: '0 14px',
+              borderRadius: '12px',
+              border: '1px solid #CBD5E1',
+              background: '#F8FAFC',
+              color: '#475569',
+              fontSize: '12.5px',
+              fontWeight: '700',
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'center',
-              boxShadow: '0 1px 2px rgba(15, 23, 42, 0.04)',
-              transition: 'all 0.15s ease',
+              gap: '6px',
             }}
           >
             <RefreshCw size={14} className={loading ? 'spin' : ''} />
+            <span>Refresh</span>
           </button>
 
           <button

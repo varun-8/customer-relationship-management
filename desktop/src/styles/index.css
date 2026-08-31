@@ -3241,12 +3241,22 @@ button:focus-visible {
 
 /* Staff Profile Card Hover Effects */
 .staff-profile-card {
-  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.2s ease;
+  transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.22s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.22s ease;
 }
 
 .staff-profile-card:hover {
   transform: translateY(-3px);
-  box-shadow: 0 12px 28px -6px rgba(15, 23, 42, 0.08), 0 4px 12px rgba(37, 99, 235, 0.04) !important;
+  box-shadow: 0 16px 32px -8px rgba(15, 23, 42, 0.08), 0 4px 14px rgba(37, 99, 235, 0.06) !important;
+  border-color: #CBD5E1 !important;
+}
+
+.staff-stat-card {
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.staff-stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 24px -4px rgba(15, 23, 42, 0.06) !important;
   border-color: #CBD5E1 !important;
 }
 
@@ -3254,4 +3264,50 @@ button:focus-visible {
   transform: translateY(-1.5px);
   box-shadow: 0 8px 24px rgba(37, 99, 235, 0.45) !important;
 }
+
+@keyframes modalCardScaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.role-option-card {
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.role-option-card:hover {
+  border-color: #3B82F6 !important;
+  background-color: #F8FAFC !important;
+}
+
+.status-dot-pulse {
+  position: relative;
+}
+
+.status-dot-pulse::after {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: 50%;
+  background: inherit;
+  opacity: 0.4;
+  animation: pulseDot 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulseDot {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.4;
+  }
+  50% {
+    transform: scale(1.6);
+    opacity: 0;
+  }
+}
+
 

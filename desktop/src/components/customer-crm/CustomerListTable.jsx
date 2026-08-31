@@ -50,6 +50,35 @@ export const CustomerListTable = ({ onAddCustomer, onEditCustomer, onViewCustome
     deleteCustomer,
   } = useCustomer();
 
+  const DEFAULT_COLUMNS = [
+    'customerId',
+    'customerName',
+    'phone',
+    'customerType',
+    'houseStage',
+    'status',
+    'quotationValue',
+    'nextFollowUp',
+    'salesperson',
+  ];
+
+  const [visibleColumnKeys, setVisibleColumnKeys] = useState(() => {
+    try {
+      const saved = localStorage.getItem('vasantham_crm_visible_columns');
+      return saved ? JSON.parse(saved) : DEFAULT_COLUMNS;
+    } catch (e) {
+      return DEFAULT_COLUMNS;
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('vasantham_crm_visible_columns', JSON.stringify(visibleColumnKeys));
+    } catch (e) {
+      console.warn('Failed to save column visibility:', e);
+    }
+  }, [visibleColumnKeys]);
+
   const [showTypeDropdown, setShowTypeDropdown] = useState(false);
   const [showStatusDropdown, setShowStatusDropdown] = useState(false);
   const [showColumnModal, setShowColumnModal] = useState(false);
@@ -89,7 +118,7 @@ export const CustomerListTable = ({ onAddCustomer, onEditCustomer, onViewCustome
     setTimeout(() => setCopiedId(null), 2000);
   };
 
-  // Real MongoDB Atlas Data Metrics Computation
+  // Metrics Computation
   const totalCount = pagination.total || customers.length;
 
   const buildingOwnersCount = customers.filter((c) => {
@@ -99,36 +128,28 @@ export const CustomerListTable = ({ onAddCustomer, onEditCustomer, onViewCustome
 
   const totalQuotationsValue = customers.reduce((acc, c) => {
     const d = c.data instanceof Map ? Object.fromEntries(c.data) : (c.data || {});
-    const val = Number(d.quotationValue) || Number(d.tileBudget) || Number(d.orderValue) || 0;
-    return acc + val;
+    const val = Number(d.quotationValue || d.tileBudget || 0);
+    return acc + (isNaN(val) ? 0 : val);
   }, 0);
 
-  // Real calculation: Created this month
-  const currentMonth = new Date().getMonth();
-  const currentYear = new Date().getFullYear();
-  const thisMonthCount = customers.filter((c) => {
-    if (!c.createdAt) return false;
-    const d = new Date(c.createdAt);
-    return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
-  }).length;
-
-  // Real calculation: Pending follow-ups
-  const pendingFollowUpsCount = customers.filter((c) => {
+  const activeFollowupsCount = customers.filter((c) => {
     const d = c.data instanceof Map ? Object.fromEntries(c.data) : (c.data || {});
-    return Boolean(d.nextFollowUp) || d.status === 'Follow-up';
+    return d.status === 'Follow-up' || d.status === 'In Progress';
   }).length;
 
-  // Avatar styles
+  const confirmedOrdersCount = customers.filter((c) => {
+    const d = c.data instanceof Map ? Object.fromEntries(c.data) : (c.data || {});
+    return d.status === 'Order Confirmed';
+  }).length;
+
   const getAvatarStyle = (name = '') => {
-    const char = (name.trim().charAt(0) || 'C').toUpperCase();
+    const char = (name.charAt(0) || 'C').toUpperCase();
     switch (char) {
-      case 'M': return { bg: '#EFF6FF', text: '#2563EB', char };
-      case 'D': return { bg: '#ECFDF5', text: '#059669', char };
-      case 'E': return { bg: '#F5F3FF', text: '#7C3AED', char };
-      case 'S': return { bg: '#FFFBEB', text: '#D97706', char };
-      case 'P': return { bg: '#FFF1F2', text: '#E11D48', char };
-      case 'K': return { bg: '#EFF6FF', text: '#1D4ED8', char };
-      case 'R': return { bg: '#F0FDFA', text: '#0F766E', char };
+      case 'A': case 'B': case 'C': return { bg: '#EFF6FF', text: '#2563EB', char };
+      case 'D': case 'E': case 'F': return { bg: '#ECFDF5', text: '#059669', char };
+      case 'G': case 'H': case 'I': return { bg: '#FFFBEB', text: '#D97706', char };
+      case 'J': case 'K': case 'L': return { bg: '#F5F3FF', text: '#7C3AED', char };
+      case 'M': case 'N': case 'O': return { bg: '#FEF2F2', text: '#DC2626', char };
       default: return { bg: '#F1F5F9', text: '#475569', char };
     }
   };
@@ -178,14 +199,13 @@ export const CustomerListTable = ({ onAddCustomer, onEditCustomer, onViewCustome
     }
   };
 
-  // Real Pagination offsets
+  // Pagination offsets
   const pageNumber = pagination.page || 1;
   const limitNumber = pagination.limit || 15;
   const totalPages = pagination.pages || Math.ceil(totalCount / limitNumber) || 1;
   const fromIndex = totalCount === 0 ? 0 : (pageNumber - 1) * limitNumber + 1;
   const toIndex = Math.min(totalCount, pageNumber * limitNumber);
 
-  // Generate page numbers
   const getPageNumbers = () => {
     const pages = [];
     for (let i = 1; i <= Math.min(totalPages, 5); i++) {
@@ -200,7 +220,6 @@ export const CustomerListTable = ({ onAddCustomer, onEditCustomer, onViewCustome
     <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
       {/* 5 Real Metric Cards */}
       <div className="metrics-row-5">
-        {/* 1. Total Customers */}
         <div className="metric-card-item">
           <div className="metric-icon-box" style={{ background: '#EFF6FF', color: '#2563EB' }}>
             <Users size={18} />
@@ -211,7 +230,6 @@ export const CustomerListTable = ({ onAddCustomer, onEditCustomer, onViewCustome
           </div>
         </div>
 
-        {/* 2. Active Customers */}
         <div className="metric-card-item">
           <div className="metric-icon-box" style={{ background: '#ECFDF5', color: '#10B981' }}>
             <UserCheck size={18} />
@@ -222,141 +240,249 @@ export const CustomerListTable = ({ onAddCustomer, onEditCustomer, onViewCustome
           </div>
         </div>
 
-        {/* 3. Total Quotations */}
         <div className="metric-card-item">
-          <div className="metric-icon-box" style={{ background: '#FFFBEB', color: '#F59E0B' }}>
+          <div className="metric-icon-box" style={{ background: '#FEF3C7', color: '#D97706' }}>
             <FileText size={18} />
           </div>
           <div>
-            <div className="metric-value">₹{totalQuotationsValue.toLocaleString('en-IN')}</div>
-            <div className="metric-label">Total Pipeline (₹)</div>
+            <div className="metric-value">₹{(totalQuotationsValue / 100000).toFixed(2)}L</div>
+            <div className="metric-label">Quotes Value</div>
           </div>
         </div>
 
-        {/* 4. This Month */}
         <div className="metric-card-item">
-          <div className="metric-icon-box" style={{ background: '#F5F3FF', color: '#8B5CF6' }}>
+          <div className="metric-icon-box" style={{ background: '#EFF6FF', color: '#3B82F6' }}>
             <Clock size={18} />
           </div>
           <div>
-            <div className="metric-value">{thisMonthCount}</div>
-            <div className="metric-label">This Month</div>
+            <div className="metric-value">{activeFollowupsCount}</div>
+            <div className="metric-label">Active Follow-ups</div>
           </div>
         </div>
 
-        {/* 5. Pending Follow-ups */}
         <div className="metric-card-item">
-          <div className="metric-icon-box" style={{ background: '#F0FDFA', color: '#0D9488' }}>
+          <div className="metric-icon-box" style={{ background: '#ECFDF5', color: '#059669' }}>
             <Calendar size={18} />
           </div>
           <div>
-            <div className="metric-value">{pendingFollowUpsCount}</div>
-            <div className="metric-label">Pending Follow-ups</div>
+            <div className="metric-value">{confirmedOrdersCount}</div>
+            <div className="metric-label">Confirmed Orders</div>
           </div>
         </div>
       </div>
 
-      {/* Filter Toolbar */}
-      <div className="toolbar-row">
-        {/* Search Input */}
-        <div className="search-input-wrapper">
-          <Search size={15} className="search-icon-pos" />
-          <input
-            type="text"
-            className="search-input-field"
-            placeholder="Search by name, mobile, location, or customer ID..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-          {search && (
-            <button
-              onClick={() => setSearch('')}
+      {/* Control Filter Bar */}
+      <div
+        className="control-bar-container"
+        style={{
+          backgroundColor: '#FFFFFF',
+          borderRadius: '16px',
+          border: '1px solid #E2E8F0',
+          boxShadow: '0 2px 10px rgba(15, 23, 42, 0.03)',
+          padding: '12px 16px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: '12px',
+          transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, minWidth: 0, flexWrap: 'wrap' }}>
+          {/* Enhanced Search Input */}
+          <div style={{ position: 'relative', width: '280px', flexShrink: 0 }}>
+            <Search size={15} style={{ position: 'absolute', left: '12px', top: '11px', color: '#94A3B8' }} />
+            <input
+              type="text"
+              placeholder="Search by customer name, ID, phone..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
               style={{
-                position: 'absolute',
-                right: '12px',
-                top: '50%',
-                transform: 'translateY(-50%)',
-                background: 'none',
-                border: 'none',
-                color: 'var(--text-muted)',
-                cursor: 'pointer',
-                fontSize: '12px',
+                width: '100%',
+                paddingLeft: '36px',
+                paddingRight: search ? '32px' : '14px',
+                paddingTop: '9px',
+                paddingBottom: '9px',
+                backgroundColor: '#F8FAFC',
+                border: '1.2px solid #CBD5E1',
+                borderRadius: '11px',
+                fontSize: '13px',
+                fontWeight: '600',
+                color: '#0F172A',
+                outline: 'none',
+                transition: 'all 0.2s ease',
               }}
-            >
-              ✕
-            </button>
-          )}
-        </div>
+            />
+            {search && (
+              <button
+                onClick={() => setSearch('')}
+                style={{
+                  position: 'absolute',
+                  right: '10px',
+                  top: '9px',
+                  background: 'none',
+                  border: 'none',
+                  color: '#94A3B8',
+                  cursor: 'pointer',
+                  fontSize: '12px',
+                }}
+              >
+                ✕
+              </button>
+            )}
+          </div>
 
-        {/* Filter Dropdowns & Buttons */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          {/* All Types Dropdown */}
-          <div style={{ position: 'relative' }} ref={typeDropdownRef}>
+          {/* Customer Type Dropdown */}
+          <div className="dropdown-wrapper" ref={typeDropdownRef} style={{ position: 'relative' }}>
             <button
               onClick={() => setShowTypeDropdown(!showTypeDropdown)}
-              className="dropdown-filter-btn"
+              style={{
+                backgroundColor: customerType !== 'all' ? '#EFF6FF' : '#FFFFFF',
+                border: `1.2px solid ${customerType !== 'all' ? '#BFDBFE' : '#CBD5E1'}`,
+                borderRadius: '11px',
+                padding: '9px 14px',
+                fontSize: '13px',
+                fontWeight: '700',
+                color: customerType !== 'all' ? '#1D4ED8' : '#334155',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+              }}
             >
-              <span>{customerType === 'all' ? 'All Types' : customerType}</span>
-              <ChevronDown size={14} color="var(--text-muted)" />
+              <span>🏢 {customerType === 'all' ? 'All Customer Types' : customerType}</span>
+              <ChevronDown size={14} color={customerType !== 'all' ? '#1D4ED8' : '#64748B'} />
             </button>
             {showTypeDropdown && (
-              <div className="dropdown-menu-popover" style={{ minWidth: '160px' }}>
-                {['all', 'Building Owner', 'Mason', 'Architect', 'Engineer', 'Contractor', 'Builder', 'Referral', 'Other'].map((t) => (
+              <div
+                className="dropdown-menu"
+                style={{
+                  position: 'absolute',
+                  top: '100%',
+                  left: 0,
+                  zIndex: 20,
+                  marginTop: '6px',
+                  backgroundColor: '#FFFFFF',
+                  border: '1px solid #E2E8F0',
+                  borderRadius: '12px',
+                  boxShadow: '0 10px 25px -5px rgba(0,0,0,0.1)',
+                  minWidth: '200px',
+                  padding: '6px',
+                }}
+              >
+                {['all', 'Building Owner', 'Contractor', 'Architect', 'Engineer', 'Mason'].map((t) => (
                   <div
                     key={t}
                     onClick={() => {
                       setCustomerType(t);
                       setShowTypeDropdown(false);
                     }}
-                    className={`dropdown-menu-item ${customerType === t ? 'selected' : ''}`}
+                    style={{
+                      padding: '8px 12px',
+                      borderRadius: '8px',
+                      fontSize: '13px',
+                      fontWeight: customerType === t ? '800' : '600',
+                      color: customerType === t ? '#2563EB' : '#334155',
+                      backgroundColor: customerType === t ? '#EFF6FF' : 'transparent',
+                      cursor: 'pointer',
+                    }}
                   >
-                    <span>{t === 'all' ? 'All Types' : t}</span>
-                    {customerType === t && <span style={{ color: '#2563EB', fontSize: '11px' }}>✓</span>}
+                    {t === 'all' ? 'All Customer Types' : t}
                   </div>
                 ))}
               </div>
             )}
           </div>
 
-          {/* All Status Dropdown */}
-          <div style={{ position: 'relative' }} ref={statusDropdownRef}>
+          {/* Status Dropdown */}
+          <div className="dropdown-wrapper" ref={statusDropdownRef} style={{ position: 'relative' }}>
             <button
               onClick={() => setShowStatusDropdown(!showStatusDropdown)}
-              className="dropdown-filter-btn"
+              style={{
+                backgroundColor: status !== 'all' ? '#ECFDF5' : '#FFFFFF',
+                border: `1.2px solid ${status !== 'all' ? '#A7F3D0' : '#CBD5E1'}`,
+                borderRadius: '11px',
+                padding: '9px 14px',
+                fontSize: '13px',
+                fontWeight: '700',
+                color: status !== 'all' ? '#047857' : '#334155',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+              }}
             >
-              <span>{status === 'all' ? 'All Status' : status}</span>
-              <ChevronDown size={14} color="var(--text-muted)" />
+              <span>📋 {status === 'all' ? 'All Statuses' : status}</span>
+              <ChevronDown size={14} color={status !== 'all' ? '#047857' : '#64748B'} />
             </button>
             {showStatusDropdown && (
-              <div className="dropdown-menu-popover" style={{ minWidth: '180px' }}>
-                {['all', 'Newly Contacted', 'Walk-in', 'Quotation', 'Follow-up', 'Negotiation', 'Order Confirmed', 'Lost', 'Future Requirement'].map((s) => (
+              <div
+                className="dropdown-menu"
+                style={{
+                  position: 'absolute',
+                  top: '100%',
+                  left: 0,
+                  zIndex: 20,
+                  marginTop: '6px',
+                  backgroundColor: '#FFFFFF',
+                  border: '1px solid #E2E8F0',
+                  borderRadius: '12px',
+                  boxShadow: '0 10px 25px -5px rgba(0,0,0,0.1)',
+                  minWidth: '190px',
+                  padding: '6px',
+                }}
+              >
+                {['all', 'Follow-up', 'Quotation', 'Negotiation', 'Order Confirmed', 'Lost'].map((s) => (
                   <div
                     key={s}
                     onClick={() => {
                       setStatus(s);
                       setShowStatusDropdown(false);
                     }}
-                    className={`dropdown-menu-item ${status === s ? 'selected' : ''}`}
+                    style={{
+                      padding: '8px 12px',
+                      borderRadius: '8px',
+                      fontSize: '13px',
+                      fontWeight: status === s ? '800' : '600',
+                      color: status === s ? '#059669' : '#334155',
+                      backgroundColor: status === s ? '#ECFDF5' : 'transparent',
+                      cursor: 'pointer',
+                    }}
                   >
-                    <span>{s === 'all' ? 'All Status' : s}</span>
-                    {status === s && <span style={{ color: '#2563EB', fontSize: '11px' }}>✓</span>}
+                    {s === 'all' ? 'All Statuses' : s}
                   </div>
                 ))}
               </div>
             )}
           </div>
+        </div>
 
-          {/* Column Customizer / Filter Button */}
+        {/* Right Action Buttons */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <button
-            className="dropdown-filter-btn"
             onClick={() => setShowColumnModal(true)}
-            title="Configure Visible Columns"
+            style={{
+              backgroundColor: '#F8FAFC',
+              border: '1.2px solid #CBD5E1',
+              borderRadius: '11px',
+              padding: '9px 14px',
+              fontSize: '13px',
+              fontWeight: '700',
+              color: '#334155',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              cursor: 'pointer',
+              transition: 'all 0.2s ease',
+            }}
+            title="Configure Table Columns"
           >
-            <SlidersHorizontal size={14} color="var(--text-muted)" />
-            <span>Columns</span>
+            <SlidersHorizontal size={14} />
+            <span>Columns ({visibleColumnKeys.length})</span>
           </button>
 
-          {/* Primary Add Button */}
           <button
             onClick={onAddCustomer}
             className="btn btn-primary"
@@ -368,72 +494,123 @@ export const CustomerListTable = ({ onAddCustomer, onEditCustomer, onViewCustome
         </div>
       </div>
 
-      {/* Real Data Table Container */}
+      {/* Table Container */}
       <div className="table-card-container">
         <table className="buildcrm-table">
           <thead>
             <tr>
-              <th onClick={() => handleSort('customerId')} style={{ width: '110px', cursor: 'pointer', whiteSpace: 'nowrap' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  <span>CUSTOMER ID</span>
-                  <ArrowUpDown size={11} color="var(--text-light)" />
-                </div>
-              </th>
-              <th onClick={() => handleSort('data.customerName')} style={{ minWidth: '220px', cursor: 'pointer', whiteSpace: 'nowrap' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  <span>CUSTOMER NAME</span>
-                  <ArrowUpDown size={11} color="var(--text-light)" />
-                </div>
-              </th>
-              <th style={{ width: '125px', whiteSpace: 'nowrap' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  <span>MOBILE</span>
-                  <ArrowUpDown size={11} color="var(--text-light)" />
-                </div>
-              </th>
-              <th style={{ width: '130px', whiteSpace: 'nowrap' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  <span>CUSTOMER TYPE</span>
-                  <ArrowUpDown size={11} color="var(--text-light)" />
-                </div>
-              </th>
-              <th style={{ width: '115px', whiteSpace: 'nowrap' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  <span>HOUSE STAGE</span>
-                  <ArrowUpDown size={11} color="var(--text-light)" />
-                </div>
-              </th>
-              <th style={{ width: '135px', whiteSpace: 'nowrap' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  <span>STATUS</span>
-                  <ArrowUpDown size={11} color="var(--text-light)" />
-                </div>
-              </th>
-              <th style={{ width: '125px', whiteSpace: 'nowrap' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  <span>QUOTATION VALUE</span>
-                  <ArrowUpDown size={11} color="var(--text-light)" />
-                </div>
-              </th>
-              <th style={{ width: '125px', whiteSpace: 'nowrap' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  <span>NEXT FOLLOW-UP</span>
-                  <ArrowUpDown size={11} color="var(--text-light)" />
-                </div>
-              </th>
-              <th style={{ width: '135px', whiteSpace: 'nowrap' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  <span>SALESPERSON</span>
-                  <ArrowUpDown size={11} color="var(--text-light)" />
-                </div>
-              </th>
+              {visibleColumnKeys.includes('customerId') && (
+                <th onClick={() => handleSort('customerId')} style={{ width: '110px', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <span>CUSTOMER ID</span>
+                    <ArrowUpDown size={11} color="var(--text-light)" />
+                  </div>
+                </th>
+              )}
+
+              {visibleColumnKeys.includes('customerName') && (
+                <th onClick={() => handleSort('data.customerName')} style={{ minWidth: '220px', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <span>CUSTOMER NAME</span>
+                    <ArrowUpDown size={11} color="var(--text-light)" />
+                  </div>
+                </th>
+              )}
+
+              {visibleColumnKeys.includes('phone') && (
+                <th style={{ width: '125px', whiteSpace: 'nowrap' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <span>MOBILE</span>
+                    <ArrowUpDown size={11} color="var(--text-light)" />
+                  </div>
+                </th>
+              )}
+
+              {visibleColumnKeys.includes('customerType') && (
+                <th style={{ width: '130px', whiteSpace: 'nowrap' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <span>CUSTOMER TYPE</span>
+                    <ArrowUpDown size={11} color="var(--text-light)" />
+                  </div>
+                </th>
+              )}
+
+              {visibleColumnKeys.includes('houseStage') && (
+                <th style={{ width: '115px', whiteSpace: 'nowrap' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <span>HOUSE STAGE</span>
+                    <ArrowUpDown size={11} color="var(--text-light)" />
+                  </div>
+                </th>
+              )}
+
+              {visibleColumnKeys.includes('status') && (
+                <th style={{ width: '135px', whiteSpace: 'nowrap' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <span>STATUS</span>
+                    <ArrowUpDown size={11} color="var(--text-light)" />
+                  </div>
+                </th>
+              )}
+
+              {visibleColumnKeys.includes('quotationValue') && (
+                <th style={{ width: '125px', whiteSpace: 'nowrap' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <span>QUOTATION VALUE</span>
+                    <ArrowUpDown size={11} color="var(--text-light)" />
+                  </div>
+                </th>
+              )}
+
+              {visibleColumnKeys.includes('nextFollowUp') && (
+                <th style={{ width: '125px', whiteSpace: 'nowrap' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <span>NEXT FOLLOW-UP</span>
+                    <ArrowUpDown size={11} color="var(--text-light)" />
+                  </div>
+                </th>
+              )}
+
+              {visibleColumnKeys.includes('salesperson') && (
+                <th style={{ width: '135px', whiteSpace: 'nowrap' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <span>SALESPERSON</span>
+                    <ArrowUpDown size={11} color="var(--text-light)" />
+                  </div>
+                </th>
+              )}
+
+              {visibleColumnKeys.includes('createdAt') && (
+                <th onClick={() => handleSort('createdAt')} style={{ width: '125px', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <span>CREATED DATE</span>
+                    <ArrowUpDown size={11} color="var(--text-light)" />
+                  </div>
+                </th>
+              )}
+
+              {visibleColumnKeys.includes('createdBy') && (
+                <th style={{ width: '125px', whiteSpace: 'nowrap' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <span>CREATED BY</span>
+                    <ArrowUpDown size={11} color="var(--text-light)" />
+                  </div>
+                </th>
+              )}
+
+              {customFields.map((f) => visibleColumnKeys.includes(f.name) && (
+                <th key={f.name} style={{ width: '130px', whiteSpace: 'nowrap' }}>
+                  <span>{f.label.toUpperCase()}</span>
+                </th>
+              ))}
+
               <th style={{ width: '85px', textAlign: 'center', whiteSpace: 'nowrap' }}>ACTIONS</th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={10} style={{ textAlign: 'center', padding: '50px 20px' }}>
+                <td colSpan={visibleColumnKeys.length + 1} style={{ textAlign: 'center', padding: '50px 20px' }}>
                   <div style={{ display: 'inline-flex', alignItems: 'center', gap: '10px', color: '#2563EB' }}>
                     <div className="spin" style={{ width: '20px', height: '20px', border: '2px solid #2563EB', borderTopColor: 'transparent', borderRadius: '50%' }} />
                     <span style={{ fontWeight: '600' }}>Fetching real customer records from MongoDB Atlas...</span>
@@ -442,7 +619,7 @@ export const CustomerListTable = ({ onAddCustomer, onEditCustomer, onViewCustome
               </tr>
             ) : fetchError && customers.length === 0 ? (
               <tr>
-                <td colSpan={10} style={{ padding: '30px 20px' }}>
+                <td colSpan={visibleColumnKeys.length + 1} style={{ padding: '30px 20px' }}>
                   <ConnectionErrorState
                     title="Unable to Reach CRM Server"
                     message={fetchError}
@@ -452,7 +629,7 @@ export const CustomerListTable = ({ onAddCustomer, onEditCustomer, onViewCustome
               </tr>
             ) : customers.length === 0 ? (
               <tr>
-                <td colSpan={10} style={{ textAlign: 'center', padding: '60px 20px' }}>
+                <td colSpan={visibleColumnKeys.length + 1} style={{ textAlign: 'center', padding: '60px 20px' }}>
                   <div style={{ fontSize: '15px', fontWeight: '700', color: 'var(--text-primary)' }}>
                     No customer records found
                   </div>
@@ -468,7 +645,6 @@ export const CustomerListTable = ({ onAddCustomer, onEditCustomer, onViewCustome
                 const typeStyle = getTypeStyle(data.customerType);
                 const statusStyle = getStatusStyle(data.status);
 
-                // Real quotation value or currency
                 const rawQuotation = data.quotationValue !== undefined && data.quotationValue !== null && data.quotationValue !== ''
                   ? Number(data.quotationValue)
                   : data.tileBudget !== undefined && data.tileBudget !== null && data.tileBudget !== ''
@@ -479,7 +655,6 @@ export const CustomerListTable = ({ onAddCustomer, onEditCustomer, onViewCustome
                   ? `₹${rawQuotation.toLocaleString('en-IN')}`
                   : '—';
 
-                // Real follow up date formatting
                 let followUpFormatted = '—';
                 if (data.nextFollowUp) {
                   try {
@@ -499,6 +674,9 @@ export const CustomerListTable = ({ onAddCustomer, onEditCustomer, onViewCustome
                 }
 
                 const salesperson = data.salesperson || '—';
+                const createdDateFormatted = c.createdAt
+                  ? new Date(c.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+                  : '—';
 
                 return (
                   <tr
@@ -507,190 +685,232 @@ export const CustomerListTable = ({ onAddCustomer, onEditCustomer, onViewCustome
                     style={{ cursor: 'pointer', transition: 'background-color 0.15s ease' }}
                     className="customer-table-row"
                   >
-                    <td style={{ whiteSpace: 'nowrap' }}>
-                      <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                        <span
-                          className="id-badge"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onViewCustomer(c);
-                          }}
-                          title="View Customer Profile"
-                        >
-                          {c.customerId || 'CUS-NEW'}
-                        </span>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            copyId(c.customerId, e);
-                          }}
-                          className="btn-icon"
-                          style={{ padding: '2px' }}
-                          title="Copy ID"
-                        >
-                          {copiedId === c.customerId ? (
-                            <Check size={11} color="var(--emerald-600)" />
-                          ) : (
-                            <Copy size={11} color="var(--text-light)" />
-                          )}
-                        </button>
-                      </div>
-                    </td>
-
-                    <td style={{ minWidth: '220px', whiteSpace: 'nowrap' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <div
-                          className="avatar-initial"
-                          style={{ backgroundColor: avatar.bg, color: avatar.text }}
-                        >
-                          {avatar.char}
+                    {visibleColumnKeys.includes('customerId') && (
+                      <td style={{ whiteSpace: 'nowrap' }}>
+                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                          <span
+                            className="id-badge"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onViewCustomer(c);
+                            }}
+                            title="View Customer Profile"
+                          >
+                            {c.customerId || 'CUS-NEW'}
+                          </span>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              copyId(c.customerId, e);
+                            }}
+                            className="btn-icon"
+                            style={{ padding: '2px' }}
+                            title="Copy ID"
+                          >
+                            {copiedId === c.customerId ? (
+                              <Check size={11} color="var(--emerald-600)" />
+                            ) : (
+                              <Copy size={11} color="var(--text-light)" />
+                            )}
+                          </button>
                         </div>
-                        <div style={{ whiteSpace: 'nowrap' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <span
+                      </td>
+                    )}
+
+                    {visibleColumnKeys.includes('customerName') && (
+                      <td style={{ minWidth: '220px', whiteSpace: 'nowrap' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <div
+                            className="avatar-initial"
+                            style={{ backgroundColor: avatar.bg, color: avatar.text }}
+                          >
+                            {avatar.char}
+                          </div>
+                          <div style={{ whiteSpace: 'nowrap' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              <span
+                                style={{
+                                  fontWeight: '700',
+                                  color: 'var(--text-primary)',
+                                  fontSize: '13px',
+                                  whiteSpace: 'nowrap',
+                                }}
+                              >
+                                {data.customerName || 'Unnamed Customer'}
+                              </span>
+                              {(data.leadSource === 'Existing Customer' || data.isRepeatCustomer) && (
+                                <span style={{ fontSize: '9.5px', fontWeight: '800', background: '#FEF3C7', color: '#B45309', border: '1px solid #FDE68A', padding: '1px 5px', borderRadius: '4px' }}>
+                                  🔄 Repeat
+                                </span>
+                              )}
+                            </div>
+                            {data.location ? (
+                              <div style={{ fontSize: '11.5px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '3px', marginTop: '1px', whiteSpace: 'nowrap' }}>
+                                <MapPin size={10} color="var(--text-light)" />
+                                <span>{data.location}</span>
+                              </div>
+                            ) : null}
+                          </div>
+                        </div>
+                      </td>
+                    )}
+
+                    {visibleColumnKeys.includes('phone') && (
+                      <td style={{ whiteSpace: 'nowrap' }}>
+                        {data.phone ? (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12.5px' }}>
+                            <a
+                              href={`tel:${data.phone}`}
+                              onClick={(e) => e.stopPropagation()}
+                              style={{ color: 'var(--text-secondary)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '4px' }}
+                              className="mono"
+                            >
+                              <Phone size={11} color="var(--text-light)" />
+                              {data.phone}
+                            </a>
+                            <a
+                              href={getWhatsAppUrl(data.phone, data)}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              onClick={(e) => e.stopPropagation()}
+                              title="Chat on WhatsApp"
                               style={{
+                                padding: '1px 5px',
+                                borderRadius: '4px',
+                                background: '#DCFCE7',
+                                color: '#15803D',
+                                fontSize: '10px',
                                 fontWeight: '700',
-                                color: 'var(--text-primary)',
-                                fontSize: '13px',
-                                whiteSpace: 'nowrap',
+                                textDecoration: 'none',
+                                border: '1px solid #86EFAC',
                               }}
                             >
-                              {data.customerName || 'Unnamed Customer'}
-                            </span>
-                            {(data.leadSource === 'Existing Customer' || data.isRepeatCustomer) && (
-                              <span style={{ fontSize: '9.5px', fontWeight: '800', background: '#FEF3C7', color: '#B45309', border: '1px solid #FDE68A', padding: '1px 5px', borderRadius: '4px' }}>
-                                🔄 Repeat
-                              </span>
-                            )}
+                              WA
+                            </a>
                           </div>
-                          {data.location ? (
-                            <div style={{ fontSize: '11.5px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '3px', marginTop: '1px', whiteSpace: 'nowrap' }}>
-                              <MapPin size={10} color="var(--text-light)" />
-                              <span>{data.location}</span>
-                            </div>
-                          ) : null}
-                        </div>
-                      </div>
-                    </td>
+                        ) : (
+                          <span style={{ color: 'var(--text-light)' }}>—</span>
+                        )}
+                      </td>
+                    )}
 
-                    <td style={{ whiteSpace: 'nowrap' }}>
-                      {data.phone ? (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12.5px' }}>
-                          <a
-                            href={`tel:${data.phone}`}
-                            onClick={(e) => e.stopPropagation()}
-                            style={{ color: 'var(--text-secondary)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '4px' }}
-                            className="mono"
+                    {visibleColumnKeys.includes('customerType') && (
+                      <td style={{ whiteSpace: 'nowrap' }}>
+                        {data.customerType ? (
+                          <span
+                            className="type-capsule"
+                            style={{ backgroundColor: typeStyle.bg, color: typeStyle.text }}
                           >
-                            <Phone size={11} color="var(--text-light)" />
-                            {data.phone}
-                          </a>
-                          <a
-                            href={getWhatsAppUrl(data.phone, data)}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            onClick={(e) => e.stopPropagation()}
-                            title="Chat on WhatsApp"
-                            style={{
-                              padding: '1px 5px',
-                              borderRadius: '4px',
-                              background: '#DCFCE7',
-                              color: '#15803D',
-                              fontSize: '10px',
-                              fontWeight: '700',
-                              textDecoration: 'none',
-                              border: '1px solid #86EFAC',
-                            }}
-                          >
-                            WA
-                          </a>
-                        </div>
-                      ) : (
-                        <span style={{ color: 'var(--text-light)' }}>—</span>
-                      )}
-                    </td>
-
-                    <td style={{ whiteSpace: 'nowrap' }}>
-                      {data.customerType ? (
-                        <span
-                          className="type-capsule"
-                          style={{ backgroundColor: typeStyle.bg, color: typeStyle.text }}
-                        >
-                          {String(data.customerType).toUpperCase()}
-                        </span>
-                      ) : (
-                        <span style={{ color: 'var(--text-light)' }}>—</span>
-                      )}
-                    </td>
-
-                    <td style={{ whiteSpace: 'nowrap' }}>
-                      {data.houseStage ? (
-                        <span style={{ fontSize: '12.5px', color: 'var(--text-secondary)', fontWeight: '500' }}>
-                          {data.houseStage}
-                        </span>
-                      ) : (
-                        <span style={{ color: 'var(--text-light)' }}>—</span>
-                      )}
-                    </td>
-
-                    <td style={{ whiteSpace: 'nowrap' }}>
-                      {data.status ? (
-                        <span
-                          className="status-dot-capsule"
-                          style={{ backgroundColor: statusStyle.bg, color: statusStyle.text }}
-                        >
-                          <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: statusStyle.dot }} />
-                          <span>{String(data.status).toUpperCase()}</span>
-                        </span>
-                      ) : (
-                        <span style={{ color: 'var(--text-light)' }}>—</span>
-                      )}
-                    </td>
-
-                    <td style={{ whiteSpace: 'nowrap' }}>
-                      <span style={{ fontWeight: '800', color: quotationFormatted !== '—' ? 'var(--text-primary)' : 'var(--text-light)', fontSize: '13px' }}>
-                        {quotationFormatted}
-                      </span>
-                    </td>
-
-                    <td style={{ whiteSpace: 'nowrap' }}>
-                      {followUpFormatted !== '—' ? (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '5px', color: '#059669', fontSize: '12px', fontWeight: '500' }}>
-                          <Calendar size={12} color="#10B981" />
-                          <span>{followUpFormatted}</span>
-                        </div>
-                      ) : (
-                        <span style={{ color: 'var(--text-light)' }}>—</span>
-                      )}
-                    </td>
-
-                    <td style={{ whiteSpace: 'nowrap' }}>
-                      {salesperson !== '—' ? (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <div
-                            style={{
-                              width: '20px',
-                              height: '20px',
-                              borderRadius: '50%',
-                              backgroundColor: '#F1F5F9',
-                              color: 'var(--text-secondary)',
-                              fontSize: '10px',
-                              fontWeight: '700',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                            }}
-                          >
-                            {salesperson.charAt(0)}
-                          </div>
-                          <span style={{ fontSize: '12.5px', color: 'var(--text-secondary)', fontWeight: '500' }}>
-                            {salesperson}
+                            {String(data.customerType).toUpperCase()}
                           </span>
-                        </div>
-                      ) : (
-                        <span style={{ color: 'var(--text-light)' }}>—</span>
-                      )}
-                    </td>
+                        ) : (
+                          <span style={{ color: 'var(--text-light)' }}>—</span>
+                        )}
+                      </td>
+                    )}
+
+                    {visibleColumnKeys.includes('houseStage') && (
+                      <td style={{ whiteSpace: 'nowrap' }}>
+                        {data.houseStage ? (
+                          <span style={{ fontSize: '12.5px', color: 'var(--text-secondary)', fontWeight: '500' }}>
+                            {data.houseStage}
+                          </span>
+                        ) : (
+                          <span style={{ color: 'var(--text-light)' }}>—</span>
+                        )}
+                      </td>
+                    )}
+
+                    {visibleColumnKeys.includes('status') && (
+                      <td style={{ whiteSpace: 'nowrap' }}>
+                        {data.status ? (
+                          <span
+                            className="status-dot-capsule"
+                            style={{ backgroundColor: statusStyle.bg, color: statusStyle.text }}
+                          >
+                            <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: statusStyle.dot }} />
+                            <span>{String(data.status).toUpperCase()}</span>
+                          </span>
+                        ) : (
+                          <span style={{ color: 'var(--text-light)' }}>—</span>
+                        )}
+                      </td>
+                    )}
+
+                    {visibleColumnKeys.includes('quotationValue') && (
+                      <td style={{ whiteSpace: 'nowrap' }}>
+                        <span style={{ fontWeight: '800', color: quotationFormatted !== '—' ? 'var(--text-primary)' : 'var(--text-light)', fontSize: '13px' }}>
+                          {quotationFormatted}
+                        </span>
+                      </td>
+                    )}
+
+                    {visibleColumnKeys.includes('nextFollowUp') && (
+                      <td style={{ whiteSpace: 'nowrap' }}>
+                        {followUpFormatted !== '—' ? (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '5px', color: '#059669', fontSize: '12px', fontWeight: '500' }}>
+                            <Calendar size={12} color="#10B981" />
+                            <span>{followUpFormatted}</span>
+                          </div>
+                        ) : (
+                          <span style={{ color: 'var(--text-light)' }}>—</span>
+                        )}
+                      </td>
+                    )}
+
+                    {visibleColumnKeys.includes('salesperson') && (
+                      <td style={{ whiteSpace: 'nowrap' }}>
+                        {salesperson !== '—' ? (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <div
+                              style={{
+                                width: '20px',
+                                height: '20px',
+                                borderRadius: '50%',
+                                backgroundColor: '#F1F5F9',
+                                color: 'var(--text-secondary)',
+                                fontSize: '10px',
+                                fontWeight: '700',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                              }}
+                            >
+                              {salesperson.charAt(0)}
+                            </div>
+                            <span style={{ fontSize: '12.5px', color: 'var(--text-secondary)', fontWeight: '500' }}>
+                              {salesperson}
+                            </span>
+                          </div>
+                        ) : (
+                          <span style={{ color: 'var(--text-light)' }}>—</span>
+                        )}
+                      </td>
+                    )}
+
+                    {visibleColumnKeys.includes('createdAt') && (
+                      <td style={{ whiteSpace: 'nowrap' }}>
+                        <span style={{ fontSize: '12.5px', color: 'var(--text-secondary)', fontWeight: '500' }}>
+                          {createdDateFormatted}
+                        </span>
+                      </td>
+                    )}
+
+                    {visibleColumnKeys.includes('createdBy') && (
+                      <td style={{ whiteSpace: 'nowrap' }}>
+                        <span style={{ fontSize: '12.5px', color: 'var(--text-secondary)', fontWeight: '500' }}>
+                          {c.createdBy?.name || 'System'}
+                        </span>
+                      </td>
+                    )}
+
+                    {customFields.map((f) => visibleColumnKeys.includes(f.name) && (
+                      <td key={f.name} style={{ whiteSpace: 'nowrap' }}>
+                        <span style={{ fontSize: '12.5px', color: 'var(--text-secondary)' }}>
+                          {data[f.name] !== undefined && data[f.name] !== null ? String(data[f.name]) : '—'}
+                        </span>
+                      </td>
+                    ))}
 
                     <td style={{ textAlign: 'center', whiteSpace: 'nowrap' }}>
                       <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
@@ -737,13 +957,13 @@ export const CustomerListTable = ({ onAddCustomer, onEditCustomer, onViewCustome
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            if (confirm(`Delete customer ${c.customerId}?`)) {
-                              deleteCustomer(c._id);
+                            if (window.confirm(`Delete customer record for "${data.customerName || 'Unnamed'}"?`)) {
+                              deleteCustomer(c._id || c.customerId);
                             }
                           }}
                           className="btn-icon"
-                          title="Delete Customer"
-                          style={{ color: '#64748B', padding: '4px' }}
+                          title="Delete Record"
+                          style={{ color: '#EF4444', padding: '4px' }}
                         >
                           <Trash2 size={15} />
                         </button>
@@ -757,14 +977,13 @@ export const CustomerListTable = ({ onAddCustomer, onEditCustomer, onViewCustome
         </table>
       </div>
 
-      {/* Real Dynamic Pagination Footer */}
+      {/* Dynamic Pagination Footer */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '4px 2px' }}>
         <div style={{ fontSize: '12.5px', color: 'var(--text-muted)' }}>
-          Showing {fromIndex} to {toIndex} of {totalCount} customers
+          Showing <strong>{fromIndex}</strong> to <strong>{toIndex}</strong> of <strong>{totalCount}</strong> customer records
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-          {/* Prev Button */}
           <button
             onClick={() => setPagination((prev) => ({ ...prev, page: Math.max(1, prev.page - 1) }))}
             disabled={pageNumber <= 1}
@@ -784,52 +1003,30 @@ export const CustomerListTable = ({ onAddCustomer, onEditCustomer, onViewCustome
             <ChevronLeft size={13} />
           </button>
 
-          {/* Dynamic Page Buttons */}
-          {getPageNumbers().map((p) => {
-            const isCurrent = p === pageNumber;
-            return (
-              <button
-                key={p}
-                onClick={() => setPagination((prev) => ({ ...prev, page: p }))}
-                style={{
-                  width: '30px',
-                  height: '30px',
-                  borderRadius: '6px',
-                  border: isCurrent ? 'none' : '1px solid var(--border-default)',
-                  background: isCurrent ? '#2563EB' : '#FFFFFF',
-                  color: isCurrent ? '#FFFFFF' : 'var(--text-secondary)',
-                  fontWeight: isCurrent ? '700' : '500',
-                  fontSize: '12px',
-                  cursor: 'pointer',
-                }}
-              >
-                {p}
-              </button>
-            );
-          })}
-
-          {totalPages > 5 && <span style={{ color: 'var(--text-muted)', padding: '0 3px', fontSize: '12px' }}>...</span>}
-
-          {totalPages > 5 && (
+          {getPageNumbers().map((p) => (
             <button
-              onClick={() => setPagination((prev) => ({ ...prev, page: totalPages }))}
+              key={p}
+              onClick={() => setPagination((prev) => ({ ...prev, page: p }))}
               style={{
-                width: '34px',
+                width: '30px',
                 height: '30px',
                 borderRadius: '6px',
-                border: totalPages === pageNumber ? 'none' : '1px solid var(--border-default)',
-                background: totalPages === pageNumber ? '#2563EB' : '#FFFFFF',
-                color: totalPages === pageNumber ? '#FFFFFF' : 'var(--text-secondary)',
-                fontWeight: totalPages === pageNumber ? '700' : '500',
-                fontSize: '12px',
+                border: pageNumber === p ? 'none' : '1px solid var(--border-default)',
+                background: pageNumber === p ? 'var(--primary-600)' : '#FFFFFF',
+                color: pageNumber === p ? '#FFFFFF' : 'var(--text-secondary)',
+                fontWeight: pageNumber === p ? '700' : '500',
+                fontSize: '12.5px',
                 cursor: 'pointer',
               }}
             >
-              {totalPages}
+              {p}
             </button>
+          ))}
+
+          {totalPages > 5 && (
+            <span style={{ fontSize: '12px', color: 'var(--text-light)', padding: '0 4px' }}>...</span>
           )}
 
-          {/* Next Button */}
           <button
             onClick={() => setPagination((prev) => ({ ...prev, page: Math.min(totalPages, prev.page + 1) }))}
             disabled={pageNumber >= totalPages}
@@ -855,8 +1052,8 @@ export const CustomerListTable = ({ onAddCustomer, onEditCustomer, onViewCustome
       {showColumnModal && (
         <ColumnSettingsModal
           allFields={customFields}
-          visibleColumnKeys={['customerId', 'customerName', 'phone', 'customerType', 'houseStage', 'status', 'quotationValue', 'nextFollowUp', 'salesperson']}
-          setVisibleColumnKeys={() => {}}
+          visibleColumnKeys={visibleColumnKeys}
+          setVisibleColumnKeys={setVisibleColumnKeys}
           onClose={() => setShowColumnModal(false)}
         />
       )}
@@ -868,7 +1065,6 @@ export const CustomerListTable = ({ onAddCustomer, onEditCustomer, onViewCustome
           onClose={() => setMarkingLostCustomer(null)}
           onSaved={() => {
             setMarkingLostCustomer(null);
-            // Refresh customer list
             if (pagination?.fetchCustomers) pagination.fetchCustomers();
           }}
         />
