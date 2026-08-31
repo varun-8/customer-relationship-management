@@ -5,11 +5,28 @@ const http = require('http');
 let mainWindow = null;
 let backendProcess = null;
 
-// Helper to check if backend server health check endpoint is responding
-function checkBackendHealth(url = 'http://127.0.0.1:5000/api/health', timeoutMs = 1500) {
+// Helper to check if backend server health check endpoint is responding and database is connected
+function checkBackendHealth(url = 'http://127.0.0.1:5000/api/health', requireDb = true, timeoutMs = 1500) {
   return new Promise((resolve) => {
     const req = http.get(url, (res) => {
-      resolve(res.statusCode >= 200 && res.statusCode < 400);
+      let body = '';
+      res.on('data', (chunk) => { body += chunk; });
+      res.on('end', () => {
+        if (res.statusCode >= 200 && res.statusCode < 400) {
+          try {
+            const data = JSON.parse(body);
+            if (requireDb) {
+              resolve(data.online !== false && data.dbConnected === true);
+            } else {
+              resolve(data.online !== false);
+            }
+          } catch (e) {
+            resolve(true);
+          }
+        } else {
+          resolve(false);
+        }
+      });
     });
     req.on('error', () => resolve(false));
     req.setTimeout(timeoutMs, () => {
@@ -20,9 +37,9 @@ function checkBackendHealth(url = 'http://127.0.0.1:5000/api/health', timeoutMs 
 }
 
 // Wait for backend server to complete startup & database connection
-async function waitForBackend(maxAttempts = 30, delayMs = 500) {
+async function waitForBackend(maxAttempts = 40, delayMs = 500) {
   for (let i = 0; i < maxAttempts; i++) {
-    const isHealthy = await checkBackendHealth();
+    const isHealthy = await checkBackendHealth('http://127.0.0.1:5000/api/health', true);
     if (isHealthy) return true;
     await new Promise((r) => setTimeout(r, delayMs));
   }
@@ -46,10 +63,19 @@ async function startEmbeddedBackend() {
   console.log('[Electron Main] Starting embedded Express backend server & database engine...');
   try {
     const fs = require('fs');
-    const appPath = app.getAppPath();
-    let backendServerPath = path.join(appPath, 'backend/src/server.js');
+    const resourcesPath = process.resourcesPath || path.resolve(__dirname, '../..');
+    
+    // Check extraResources production path first, then appPath, then dev fallback
+    let backendServerPath = path.join(resourcesPath, 'backend/src/server.js');
+    if (!fs.existsSync(backendServerPath)) {
+      backendServerPath = path.join(app.getAppPath(), 'backend/src/server.js');
+    }
     if (!fs.existsSync(backendServerPath)) {
       backendServerPath = path.resolve(__dirname, '../../backend/src/server.js');
+    }
+
+    if (!fs.existsSync(backendServerPath)) {
+      throw new Error(`Cannot locate backend server at path: ${backendServerPath}`);
     }
     
     process.env.PORT = process.env.PORT || '5000';

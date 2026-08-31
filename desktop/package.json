@@ -15,6 +15,7 @@
     "build:testing": "vite build --mode testing",
     "dev:testing": "vite --mode testing",
     "dist:exe": "node ../scripts/update-ip.js && vite build && electron-builder --win",
+    "build:exe": "npm run dist:exe",
     "dist:testing-exe": "vite build --mode testing && electron-builder --win",
     "preview": "vite preview"
   },
@@ -57,18 +58,19 @@
     },
     "extraResources": [
       {
-        "from": "../backend/bin",
-        "to": "bin",
+        "from": "../backend",
+        "to": "backend",
         "filter": [
-          "mongod.exe"
+          "src/**/*",
+          "node_modules/**/*",
+          "bin/**/*",
+          "package.json"
         ]
       }
     ],
     "files": [
       "dist/**/*",
-      "electron/**/*",
-      "../backend/**/*",
-      "!../backend/node_modules/.cache/**/*"
+      "electron/**/*"
     ]
   }
 }

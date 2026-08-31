@@ -3,11 +3,34 @@ const path = require('path');
 const fs = require('fs');
 const { spawn } = require('child_process');
 
+const net = require('net');
+
 const DEFAULT_LOCAL_URI = 'mongodb://127.0.0.1:27017/vasantham_crm';
 
 let isConnecting = false;
 let retryInterval = null;
 let spawnedMongoProcess = null;
+
+// Helper to check if TCP port is accepting connections
+const isMongoPortOpen = (port = 27017, host = '127.0.0.1', timeoutMs = 800) => {
+  return new Promise((resolve) => {
+    const socket = new net.Socket();
+    socket.setTimeout(timeoutMs);
+    socket.once('connect', () => {
+      socket.destroy();
+      resolve(true);
+    });
+    socket.once('timeout', () => {
+      socket.destroy();
+      resolve(false);
+    });
+    socket.once('error', () => {
+      socket.destroy();
+      resolve(false);
+    });
+    socket.connect(port, host);
+  });
+};
 
 // Resolve path to persistent db data folder in %APPDATA%/Vasantham CRM/mongodb-data
 const getPersistentDbPath = () => {
@@ -24,12 +47,14 @@ const getBundledMongodExePath = () => {
   const resourcesDir = process.resourcesPath || '';
   const possiblePaths = [
     // 1. Packaged extraResources path in Electron installer
+    path.join(resourcesDir, 'backend', 'bin', 'mongod.exe'),
     path.join(resourcesDir, 'bin', 'mongod.exe'),
     path.join(resourcesDir, 'app.asar.unpacked', 'backend', 'bin', 'mongod.exe'),
     // 2. Relative path in backend/bin/mongod.exe
     path.join(__dirname, '../../bin/mongod.exe'),
     path.join(__dirname, '../bin/mongod.exe'),
     path.resolve(__dirname, '../../../backend/bin/mongod.exe'),
+    path.join(process.cwd(), 'resources', 'backend', 'bin', 'mongod.exe'),
     path.join(process.cwd(), 'resources', 'bin', 'mongod.exe'),
     path.join(process.cwd(), 'backend', 'bin', 'mongod.exe'),
     // 3. System installed Mongo binary fallback
@@ -49,7 +74,8 @@ const getBundledMongodExePath = () => {
 
 // Spawn bundled mongod.exe daemon on port 27017
 const launchBundledMongoDaemon = async () => {
-  if (spawnedMongoProcess) return true;
+  const isOpenAlready = await isMongoPortOpen(27017, '127.0.0.1', 400);
+  if (isOpenAlready) return true;
 
   const mongodExe = getBundledMongodExePath();
   if (!mongodExe) {
@@ -62,6 +88,10 @@ const launchBundledMongoDaemon = async () => {
   console.log(`📁 [Bundled MongoDB] Persistent storage directory: ${dbPath}`);
 
   try {
+    if (!fs.existsSync(dbPath)) {
+      fs.mkdirSync(dbPath, { recursive: true });
+    }
+
     spawnedMongoProcess = spawn(mongodExe, [
       '--dbpath', dbPath,
       '--port', '27017',
@@ -81,8 +111,16 @@ const launchBundledMongoDaemon = async () => {
       spawnedMongoProcess = null;
     });
 
-    // Wait 1.5s for mongod daemon to initialize database engine
-    await new Promise((r) => setTimeout(r, 1500));
+    // Poll port 27017 for up to 6 seconds until daemon is listening
+    for (let i = 0; i < 12; i++) {
+      await new Promise((r) => setTimeout(r, 500));
+      const isOpen = await isMongoPortOpen(27017, '127.0.0.1', 300);
+      if (isOpen) {
+        console.log('✅ [Bundled MongoDB] Database engine is active and listening on 127.0.0.1:27017');
+        return true;
+      }
+    }
+    console.warn('[Bundled MongoDB Warning] Daemon spawned, proceeding to connection attempts.');
     return true;
   } catch (err) {
     console.error('[Bundled MongoDB] Failed to spawn daemon:', err.message);
@@ -101,9 +139,18 @@ const connectDB = async () => {
   const mongoUri = process.env.MONGODB_URI || DEFAULT_LOCAL_URI;
   const isLocal = mongoUri.includes('127.0.0.1') || mongoUri.includes('localhost');
 
+  // Proactively check if local MongoDB port is open; if closed, spawn bundled engine immediately
+  if (isLocal) {
+    const isPortOpen = await isMongoPortOpen(27017, '127.0.0.1');
+    if (!isPortOpen) {
+      console.log('⚡ [Bundled MongoDB Engine] Port 27017 closed. Launching bundled MongoDB engine immediately...');
+      await launchBundledMongoDaemon();
+    }
+  }
+
   try {
     const conn = await mongoose.connect(mongoUri, {
-      serverSelectionTimeoutMS: 3000,
+      serverSelectionTimeoutMS: 4000,
     });
     const dbType = isLocal ? 'Local MongoDB' : 'MongoDB Atlas Cloud';
     console.log(`[${dbType}] Connected successfully: ${conn.connection.host} / ${conn.connection.name}`);

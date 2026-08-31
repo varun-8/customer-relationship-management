@@ -374,11 +374,14 @@ export const MobilePairingView = ({ isModal = false, onClose = null }) => {
                         backgroundColor: '#FFFFFF',
                       }}
                     >
-                      {pairingData?.networkInterfaces?.map((net, idx) => (
-                        <option key={idx} value={net.address}>
-                          {net.address} ({net.name || 'Network'})
-                        </option>
-                      ))}
+                      {pairingData?.networkInterfaces?.map((net, idx) => {
+                        const targetIp = net.ip || net.address;
+                        return (
+                          <option key={idx} value={targetIp}>
+                            {targetIp} ({net.name || 'Network'})
+                          </option>
+                        );
+                      })}
                       {!pairingData?.networkInterfaces?.length && (
                         <option value="127.0.0.1">127.0.0.1 (Localhost)</option>
                       )}

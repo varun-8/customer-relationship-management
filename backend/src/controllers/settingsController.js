@@ -100,6 +100,7 @@ exports.getMobilePairingInfo = async (req, res) => {
           networkInterfaces.push({
             name: ifaceName,
             ip: iface.address,
+            address: iface.address,
             mac: iface.mac,
             isVirtual,
           });
