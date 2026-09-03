@@ -37,7 +37,7 @@ if (process.env.NODE_ENV !== 'production') {
 app.get('/api/health', (req, res) => {
   const mongoose = require('mongoose');
   res.json({
-    status: 'online',
+    status: 'ok',
     online: true,
     dbConnected: mongoose.connection.readyState === 1,
     service: 'Vasantham Tiles & Sanitary Wares CRM Backend',

@@ -66,6 +66,13 @@
           "bin/**/*",
           "package.json"
         ]
+      },
+      {
+        "from": "../backend/bin",
+        "to": "mongodb",
+        "filter": [
+          "**/*"
+        ]
       }
     ],
     "files": [

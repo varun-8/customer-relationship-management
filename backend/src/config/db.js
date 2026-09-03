@@ -46,7 +46,8 @@ const getPersistentDbPath = () => {
 const getBundledMongodExePath = () => {
   const resourcesDir = process.resourcesPath || '';
   const possiblePaths = [
-    // 1. Packaged extraResources path in Electron installer
+    // 1. Packaged extraResources paths
+    path.join(resourcesDir, 'mongodb', 'mongod.exe'),
     path.join(resourcesDir, 'backend', 'bin', 'mongod.exe'),
     path.join(resourcesDir, 'bin', 'mongod.exe'),
     path.join(resourcesDir, 'app.asar.unpacked', 'backend', 'bin', 'mongod.exe'),
@@ -54,6 +55,7 @@ const getBundledMongodExePath = () => {
     path.join(__dirname, '../../bin/mongod.exe'),
     path.join(__dirname, '../bin/mongod.exe'),
     path.resolve(__dirname, '../../../backend/bin/mongod.exe'),
+    path.join(process.cwd(), 'resources', 'mongodb', 'mongod.exe'),
     path.join(process.cwd(), 'resources', 'backend', 'bin', 'mongod.exe'),
     path.join(process.cwd(), 'resources', 'bin', 'mongod.exe'),
     path.join(process.cwd(), 'backend', 'bin', 'mongod.exe'),
@@ -98,8 +100,14 @@ const launchBundledMongoDaemon = async () => {
       '--bind_ip', '127.0.0.1',
     ], {
       detached: false,
-      stdio: 'ignore',
+      stdio: ['ignore', 'pipe', 'pipe'],
     });
+
+    if (spawnedMongoProcess.stderr) {
+      spawnedMongoProcess.stderr.on('data', (d) => {
+        console.error('[Bundled MongoDB stderr]', d.toString().trim());
+      });
+    }
 
     spawnedMongoProcess.on('error', (err) => {
       console.error('[Bundled MongoDB Error]', err.message);
@@ -111,8 +119,8 @@ const launchBundledMongoDaemon = async () => {
       spawnedMongoProcess = null;
     });
 
-    // Poll port 27017 for up to 6 seconds until daemon is listening
-    for (let i = 0; i < 12; i++) {
+    // Poll port 27017 for up to 20 seconds until daemon is listening
+    for (let i = 0; i < 40; i++) {
       await new Promise((r) => setTimeout(r, 500));
       const isOpen = await isMongoPortOpen(27017, '127.0.0.1', 300);
       if (isOpen) {
