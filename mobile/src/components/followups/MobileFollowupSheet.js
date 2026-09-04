@@ -16,7 +16,7 @@ import {
 
 const formatRelativeUrgency = (nextFollowUp) => {
   if (!nextFollowUp) {
-    return { label: 'No Date', color: '#64748B', bg: '#F1F5F9', border: '#E2E8F0', dot: '#94A3B8', icon: '📅', isOverdue: false, isToday: false };
+    return { label: 'No Date', color: '#64748B', bg: '#F1F5F9', border: '#E2E8F0', dot: '#94A3B8', isOverdue: false, isToday: false };
   }
   try {
     const today = new Date();
@@ -32,7 +32,6 @@ const formatRelativeUrgency = (nextFollowUp) => {
         bg: '#FEF2F2',
         border: '#FECDD3',
         dot: '#EF4444',
-        icon: '⚠️',
         accent: '#EF4444',
         isOverdue: true,
         isToday: false,
@@ -45,7 +44,6 @@ const formatRelativeUrgency = (nextFollowUp) => {
         bg: '#EFF6FF',
         border: '#BFDBFE',
         dot: '#2563EB',
-        icon: '⚡',
         accent: '#2563EB',
         isOverdue: false,
         isToday: true,
@@ -58,7 +56,6 @@ const formatRelativeUrgency = (nextFollowUp) => {
         bg: '#ECFDF5',
         border: '#A7F3D0',
         dot: '#10B981',
-        icon: '🟢',
         accent: '#10B981',
         isOverdue: false,
         isToday: false,
@@ -70,22 +67,21 @@ const formatRelativeUrgency = (nextFollowUp) => {
       bg: '#F8FAFC',
       border: '#E2E8F0',
       dot: '#64748B',
-      icon: '📅',
       accent: '#64748B',
       isOverdue: false,
       isToday: false,
     };
   } catch (e) {
-    return { label: nextFollowUp, color: '#64748B', bg: '#F1F5F9', border: '#E2E8F0', dot: '#94A3B8', icon: '📅', accent: '#CBD5E1', isOverdue: false, isToday: false };
+    return { label: nextFollowUp, color: '#64748B', bg: '#F1F5F9', border: '#E2E8F0', dot: '#94A3B8', accent: '#CBD5E1', isOverdue: false, isToday: false };
   }
 };
 
 const getCustomerTypeColors = (type) => {
   switch (type) {
-    case 'Building Owner': return { bg: '#ECFDF5', text: '#047857', border: '#A7F3D0', icon: '🏢' };
-    case 'Architect': return { bg: '#EFF6FF', text: '#1D4ED8', border: '#BFDBFE', icon: '📐' };
-    case 'Mason': return { bg: '#FAF5FF', text: '#7E22CE', border: '#DDD6FE', icon: '🧱' };
-    default: return { bg: '#FFFBEB', text: '#B45309', border: '#FDE68A', icon: '👤' };
+    case 'Building Owner': return { bg: '#ECFDF5', text: '#047857', border: '#A7F3D0' };
+    case 'Architect': return { bg: '#EFF6FF', text: '#1D4ED8', border: '#BFDBFE' };
+    case 'Mason': return { bg: '#FAF5FF', text: '#7E22CE', border: '#DDD6FE' };
+    default: return { bg: '#FFFBEB', text: '#B45309', border: '#FDE68A' };
   }
 };
 
@@ -252,7 +248,7 @@ export function MobileFollowupSheet({
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
               <View style={styles.headerIconBadge}>
-                <Text style={{ fontSize: 16 }}>⚡</Text>
+                <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#0F766E' }} />
               </View>
               <View>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
@@ -265,7 +261,7 @@ export function MobileFollowupSheet({
                 </View>
                 <Text style={styles.sheetTopSubtitle}>
                   {isEmployee
-                    ? `Your active callback queue & scheduled reminders`
+                    ? `Active callback queue & scheduled reminders`
                     : 'Showroom active customer follow-ups & callbacks'}
                 </Text>
               </View>
@@ -273,7 +269,7 @@ export function MobileFollowupSheet({
 
             {isEmployee && (
               <View style={styles.employeeIdentityChip}>
-                <Text style={styles.employeeIdentityChipText}>👤 {currentProfile?.name}</Text>
+                <Text style={styles.employeeIdentityChipText}>{currentProfile?.name}</Text>
               </View>
             )}
           </View>
@@ -282,19 +278,16 @@ export function MobileFollowupSheet({
         {/* 3 Executive Stat Tiles */}
         <View style={styles.headerStatRow}>
           <View style={[styles.headerStatCard, { backgroundColor: '#EFF6FF', borderColor: '#BFDBFE' }]}>
-            <Text style={styles.headerStatEmoji}>🎯</Text>
             <Text style={[styles.headerStatVal, { color: '#1E40AF' }]}>{activeCounts?.today || 0}</Text>
             <Text style={styles.headerStatLabel}>Due Today</Text>
           </View>
 
           <View style={[styles.headerStatCard, (activeCounts?.overdue || 0) > 0 ? { backgroundColor: '#FEF2F2', borderColor: '#FECACA' } : { backgroundColor: '#F8FAFC', borderColor: '#E2E8F0' }]}>
-            <Text style={styles.headerStatEmoji}>{(activeCounts?.overdue || 0) > 0 ? '⚠️' : '✅'}</Text>
             <Text style={[styles.headerStatVal, (activeCounts?.overdue || 0) > 0 ? { color: '#DC2626' } : { color: '#475569' }]}>{activeCounts?.overdue || 0}</Text>
             <Text style={styles.headerStatLabel}>Overdue</Text>
           </View>
 
           <View style={[styles.headerStatCard, { backgroundColor: '#F0FDF4', borderColor: '#BBF7D0' }]}>
-            <Text style={styles.headerStatEmoji}>📅</Text>
             <Text style={[styles.headerStatVal, { color: '#166534' }]}>{activeCounts?.upcoming || 0}</Text>
             <Text style={styles.headerStatLabel}>Next 7 Days</Text>
           </View>
@@ -304,7 +297,6 @@ export function MobileFollowupSheet({
       {/* 1. In-List Search Toolbar */}
       <View style={styles.filterToolbar}>
         <View style={styles.searchBar}>
-          <Text style={{ fontSize: 13 }}>🔍</Text>
           <TextInput
             style={styles.searchInput}
             placeholder="Search follow-ups by customer name, phone or ID..."
@@ -328,10 +320,10 @@ export function MobileFollowupSheet({
           contentContainerStyle={styles.filterTabBarContent}
         >
           {[
-            { id: 'today', label: 'Today', icon: '🎯', count: activeCounts?.today || 0 },
-            { id: 'upcoming', label: '7 Days', icon: '📅', count: activeCounts?.upcoming || 0 },
-            { id: 'overdue', label: 'Overdue', icon: '⚠️', count: activeCounts?.overdue || 0 },
-            { id: 'all', label: 'All', icon: '📋', count: activeCounts?.total || 0 },
+            { id: 'today', label: 'Today', count: activeCounts?.today || 0 },
+            { id: 'upcoming', label: '7 Days', count: activeCounts?.upcoming || 0 },
+            { id: 'overdue', label: 'Overdue', count: activeCounts?.overdue || 0 },
+            { id: 'all', label: 'All', count: activeCounts?.total || 0 },
           ].map((tab) => {
             const isSelected = activeTab === tab.id;
             return (
@@ -341,7 +333,6 @@ export function MobileFollowupSheet({
                 style={[styles.filterTab, isSelected && styles.filterTabActive]}
                 activeOpacity={0.75}
               >
-                <Text style={{ fontSize: 12, marginRight: 4 }}>{tab.icon}</Text>
                 <Text style={[styles.filterTabText, isSelected && styles.filterTabTextActive]}>
                   {tab.label}
                 </Text>
@@ -374,7 +365,6 @@ export function MobileFollowupSheet({
           }
           ListEmptyComponent={
             <View style={styles.emptyBox}>
-              <Text style={{ fontSize: 32, marginBottom: 8 }}>✨</Text>
               <Text style={styles.emptyTitle}>
                 {localSearch
                   ? 'No matching leads found'
@@ -433,13 +423,13 @@ export function MobileFollowupSheet({
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 2 }}>
                         {item.phone ? (
                           <Text style={styles.metaPhone} numberOfLines={1}>
-                            📞 {item.phone}
+                            {item.phone}
                           </Text>
                         ) : null}
                         {item.phone && item.location ? <Text style={styles.metaDot}>•</Text> : null}
                         {item.location ? (
                           <Text style={styles.metaLocation} numberOfLines={1}>
-                            📍 {item.location}
+                            {item.location}
                           </Text>
                         ) : null}
                       </View>
@@ -448,7 +438,6 @@ export function MobileFollowupSheet({
 
                   {/* Relative Urgency Pill */}
                   <View style={[styles.urgencyBadge, { backgroundColor: urgency.bg, borderColor: urgency.border }]}>
-                    <Text style={{ fontSize: 10 }}>{urgency.icon}</Text>
                     <Text style={[styles.urgencyLabel, { color: urgency.color }]}>
                       {urgency.label}
                     </Text>
@@ -459,7 +448,6 @@ export function MobileFollowupSheet({
                 <View style={styles.cardMiddleRow}>
                   {item.customerType ? (
                     <View style={[styles.cardTypePill, { backgroundColor: typeColors.bg, borderColor: typeColors.border }]}>
-                      <Text style={{ fontSize: 10 }}>{typeColors.icon}</Text>
                       <Text style={[styles.cardTypePillText, { color: typeColors.text }]}>
                         {item.customerType}
                       </Text>
@@ -469,7 +457,7 @@ export function MobileFollowupSheet({
                   {item.requirement ? (
                     <View style={styles.cardReqTag}>
                       <Text style={styles.cardReqTagText} numberOfLines={1}>
-                        📐 {Array.isArray(item.requirement) ? item.requirement.join(', ') : item.requirement}
+                        {Array.isArray(item.requirement) ? item.requirement.join(', ') : item.requirement}
                       </Text>
                     </View>
                   ) : null}
@@ -540,14 +528,13 @@ export function MobileFollowupSheet({
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 3, flexWrap: 'wrap' }}>
                       {fullDetailItem?.customerType && (
                         <View style={[styles.dHeroTypePill, { backgroundColor: detailTypeColors?.bg, borderColor: detailTypeColors?.border }]}>
-                          <Text style={{ fontSize: 10 }}>{detailTypeColors?.icon}</Text>
                           <Text style={[styles.dHeroTypePillText, { color: detailTypeColors?.text }]}>
                             {fullDetailItem.customerType}
                           </Text>
                         </View>
                       )}
                       {fullDetailItem?.location && (
-                        <Text style={styles.dHeroLocation}>📍 {fullDetailItem.location}</Text>
+                        <Text style={styles.dHeroLocation}>{fullDetailItem.location}</Text>
                       )}
                     </View>
                   </View>
@@ -567,7 +554,7 @@ export function MobileFollowupSheet({
                   <View style={[styles.dStatusRibbon, { backgroundColor: detailUrgency.bg, borderColor: detailUrgency.border }]}>
                     <View style={[styles.dStatusDot, { backgroundColor: detailUrgency.dot || detailUrgency.accent }]} />
                     <Text style={[styles.dStatusText, { color: detailUrgency.color }]}>
-                      {detailUrgency.icon} {detailUrgency.label}
+                      {detailUrgency.label}
                     </Text>
                     {fullDetailItem?.nextFollowUp && (
                       <Text style={[styles.dStatusDateText, { color: detailUrgency.color }]}>
@@ -586,7 +573,6 @@ export function MobileFollowupSheet({
                     onPress={() => Linking.openURL(`tel:${fullDetailItem.phone}`)}
                     activeOpacity={0.75}
                   >
-                    <Text style={styles.dContactCallIcon}>📞</Text>
                     <View style={{ flex: 1 }}>
                       <Text style={styles.dContactCallLabel}>Call Now</Text>
                       <Text style={styles.dContactCallNumber}>{fullDetailItem.phone}</Text>
@@ -598,7 +584,6 @@ export function MobileFollowupSheet({
                     onPress={() => openWhatsApp(fullDetailItem)}
                     activeOpacity={0.75}
                   >
-                    <Text style={styles.dContactWaIcon}>💬</Text>
                     <View style={{ flex: 1 }}>
                       <Text style={styles.dContactWaLabel}>WhatsApp</Text>
                       <Text style={styles.dContactWaSub}>Send Quote</Text>
@@ -628,7 +613,7 @@ export function MobileFollowupSheet({
                 <View style={styles.dInfoTile}>
                   <Text style={styles.dInfoTileLabel}>Lead Priority</Text>
                   <Text style={styles.dInfoTileValue}>
-                    {fullDetailItem?.leadTemperature === 'Hot' ? '🔥 Hot' : fullDetailItem?.leadTemperature === 'Warm' ? '☀️ Warm' : '⏳ Future'}
+                    {fullDetailItem?.leadTemperature || 'Hot'}
                   </Text>
                 </View>
 
@@ -643,7 +628,6 @@ export function MobileFollowupSheet({
               {/* ── Material & Project Specifications ── */}
               <View style={styles.dSection}>
                 <View style={styles.dSectionHead}>
-                  <Text style={styles.dSectionIcon}>📐</Text>
                   <Text style={styles.dSectionTitle}>Material & Project Specifications</Text>
                 </View>
                 
@@ -684,7 +668,6 @@ export function MobileFollowupSheet({
               {/* ── Site Progress & Assignment Details ── */}
               <View style={styles.dSection}>
                 <View style={styles.dSectionHead}>
-                  <Text style={styles.dSectionIcon}>🏗️</Text>
                   <Text style={styles.dSectionTitle}>Site Progress & Identity</Text>
                 </View>
 
@@ -705,7 +688,7 @@ export function MobileFollowupSheet({
                 {fullDetailItem?.salesperson ? (
                   <View style={styles.dSectionMetaRow}>
                     <Text style={styles.dSectionMetaLabel}>Assigned Staff:</Text>
-                    <Text style={styles.dSectionMetaVal}>👤 {fullDetailItem.salesperson}</Text>
+                    <Text style={styles.dSectionMetaVal}>{fullDetailItem.salesperson}</Text>
                   </View>
                 ) : null}
 
@@ -720,7 +703,6 @@ export function MobileFollowupSheet({
               {/* ── Activity Timeline (Vertical History List) ── */}
               <View style={styles.dSection}>
                 <View style={styles.dSectionHead}>
-                  <Text style={styles.dSectionIcon}>⏳</Text>
                   <Text style={styles.dSectionTitle}>Activity Timeline</Text>
                 </View>
 
@@ -752,7 +734,7 @@ export function MobileFollowupSheet({
                               </Text>
                               {act.date ? (
                                 <Text style={styles.timelineDate}>
-                                  🕒 {formatTimelineDate(act.date)}
+                                  {formatTimelineDate(act.date)}
                                 </Text>
                               ) : null}
                             </View>
@@ -772,7 +754,7 @@ export function MobileFollowupSheet({
 
                 {fullDetailItem?.lastReason && fullDetailItem.lastReason.trim() !== '' && (
                   <View style={styles.timelineObjectiveBox}>
-                    <Text style={styles.timelineObjectiveLabel}>🎯 Latest Target Objective:</Text>
+                    <Text style={styles.timelineObjectiveLabel}>Latest Target Objective:</Text>
                     <Text style={styles.timelineObjectiveVal}>
                       {fullDetailItem.lastReason.split(': ').slice(1).join(': ') || fullDetailItem.lastReason}
                     </Text>
@@ -793,7 +775,6 @@ export function MobileFollowupSheet({
                 }}
                 activeOpacity={0.85}
               >
-                <Text style={styles.dLogActivityIcon}>📝</Text>
                 <Text style={styles.dLogActivityText}>Log Activity</Text>
               </TouchableOpacity>
 

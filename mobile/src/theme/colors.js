@@ -1,13 +1,13 @@
 export const colors = {
-  background: '#F3F6FA',
+  background: '#F8FAFC',
   surface: '#FFFFFF',
-  surfaceElevated: '#F8FAFC',
-  surfaceSoft: '#EEF3F8',
+  surfaceElevated: '#FFFFFF',
+  surfaceSoft: '#F1F5F9',
   card: '#FFFFFF',
   cardHover: '#F8FAFC',
   inputBg: '#FFFFFF',
 
-  border: '#DCE4ED',
+  border: '#E2E8F0',
   borderHover: '#CBD5E1',
   borderActive: '#0F766E',
 
@@ -40,5 +40,5 @@ export const colors = {
   textSecondary: '#334155',
   textMuted: '#64748B',
   textLight: '#94A3B8',
-  shadow: 'rgba(15, 23, 42, 0.10)',
+  shadow: 'rgba(15, 23, 42, 0.06)',
 };

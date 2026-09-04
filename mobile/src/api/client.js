@@ -2,7 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform, NativeModules } from 'react-native';
 
 // Current active development host
-const CURRENT_LAN_IP = '10.169.195.189';
+const CURRENT_LAN_IP = '10.97.47.58';
 const DEFAULT_HOST = `http://${CURRENT_LAN_IP}:5000/api`;
 const HOST_STORAGE_KEY = 'vasantham_api_host_url';
 const TOKEN_KEY = 'vasantham_mobile_jwt';
@@ -331,9 +331,10 @@ export const apiClient = {
     return null;
   },
 
-  // Check if mobile app is already paired & desktop server is reachable
+  // Check if mobile app is already paired & desktop server is reachable with automatic IP self-healing
   async checkIsPairedAndOnline() {
     try {
+      // 1. Try stored host first
       const storedHost = await AsyncStorage.getItem(HOST_STORAGE_KEY);
       if (storedHost && storedHost.trim() !== '') {
         const cleanHost = storedHost.trim().replace(/\/+$/, '');
@@ -341,7 +342,7 @@ export const apiClient = {
         const healthUrl = `${baseApi}/health`;
 
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 3500);
+        const timeoutId = setTimeout(() => controller.abort(), 2500);
 
         try {
           const res = await fetch(healthUrl, { signal: controller.signal });
@@ -357,6 +358,18 @@ export const apiClient = {
         } catch (fetchErr) {
           clearTimeout(timeoutId);
         }
+      }
+
+      // 2. Self-Healing: Try auto-discovering candidate hosts (Metro bundle URL, ENV IP, LAN defaults)
+      const testResult = await this.testConnection();
+      if (testResult && testResult.success) {
+        return { isPaired: true, host: testResult.host, data: testResult.data };
+      }
+
+      // 3. Subnet Auto-Detection: Scan local network subnets automatically
+      const autoResult = await this.autoDetectServer();
+      if (autoResult && autoResult.success) {
+        return { isPaired: true, host: autoResult.host, data: autoResult.data };
       }
     } catch (e) {}
 
@@ -438,12 +451,11 @@ export const apiClient = {
     return { success: false, error: 'Cannot connect to backend API server. Verify backend is running.' };
   },
 
-  // Auto-detect Desktop CRM Server across local subnets
+  // Auto-detect Desktop CRM Server across local subnets with dynamic subnet extraction
   async autoDetectServer(onProgress) {
-    // Collect seed subnet roots
     const candidateSubnets = [];
 
-    // Check scriptURL if running on physical device via Metro
+    // 1. Extract subnet from React Native Metro scriptURL if running on device
     const scriptURL = NativeModules.SourceCode?.scriptURL;
     if (scriptURL) {
       const match = scriptURL.match(/https?:\/\/(\d+\.\d+\.\d+)\.\d+/);
@@ -452,17 +464,26 @@ export const apiClient = {
       }
     }
 
-    // Default common LAN subnets
-    candidateSubnets.push('10.169.195', '192.168.1', '192.168.0', '192.168.29', '192.168.137', '172.20.10');
-    const uniqueSubnets = [...new Set(candidateSubnets)];
+    // 2. Extract subnet from DEFAULT_HOST or stored host
+    try {
+      const stored = await AsyncStorage.getItem(HOST_STORAGE_KEY);
+      if (stored) {
+        const match = stored.match(/https?:\/\/(\d+\.\d+\.\d+)\.\d+/);
+        if (match && match[1]) candidateSubnets.push(match[1]);
+      }
+    } catch (e) {}
+
+    // 3. Default common LAN subnets
+    candidateSubnets.push('10.97.47', '10.169.195', '192.168.1', '192.168.0', '192.168.29', '192.168.137', '172.20.10');
+    const uniqueSubnets = [...new Set(candidateSubnets.filter(Boolean))];
 
     for (const subnet of uniqueSubnets) {
       if (onProgress) onProgress(`Scanning ${subnet}.* for Desktop CRM...`);
 
-      // Scan common static IP allocations in batches
+      // Fast concurrent batches covering static/DHCP ranges
       const ipBatches = [
-        [189, 176, 237, 152, 222, 100, 101, 102, 103, 104, 105],
-        [1, 2, 3, 4, 5, 10, 20, 50],
+        [58, 189, 176, 237, 152, 222, 100, 101, 102, 103, 104, 105],
+        [1, 2, 3, 4, 5, 10, 15, 20, 25, 30, 40, 50, 100, 110, 120, 150, 200],
       ];
 
       for (const batch of ipBatches) {
@@ -476,7 +497,7 @@ export const apiClient = {
               clearTimeout(tid);
               if (r.ok) {
                 const data = await r.json();
-                if (data.status === 'ok' || data.uptime !== undefined) {
+                if (data.online || data.status === 'online' || data.status === 'ok' || data.service) {
                   resolve({ success: true, host: targetUrl, data });
                   return;
                 }

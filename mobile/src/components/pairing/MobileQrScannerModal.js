@@ -184,179 +184,185 @@ export const MobileQrScannerModal = ({
 
   if (!visible) return null;
 
-  return (
-    <Modal visible={visible} animationType="fade" transparent={false} onRequestClose={onClose}>
-      <View style={styles.container}>
-        {/* Top Header */}
-        <View style={styles.header}>
-          <View style={{ flex: 1 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-              <Text style={styles.headerTitle}>Pair Desktop CRM</Text>
-              <View style={styles.liveTag}>
-                <View style={styles.liveDot} />
-                <Text style={styles.liveTagText}>SCANNER</Text>
-              </View>
+  const content = (
+    <View style={styles.container}>
+      {/* Top Header */}
+      <View style={styles.header}>
+        <View style={{ flex: 1 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <Text style={styles.headerTitle}>Pair Desktop CRM</Text>
+            <View style={styles.liveTag}>
+              <View style={styles.liveDot} />
+              <Text style={styles.liveTagText}>SCANNER</Text>
             </View>
-            <Text style={styles.headerSubtitle}>
-              Scan the QR code on your Desktop CRM screen
-            </Text>
           </View>
-
-          {!isMainScreen && onClose && (
-            <TouchableOpacity style={styles.closeBtn} onPress={onClose} activeOpacity={0.75}>
-              <Text style={styles.closeBtnText}>✕</Text>
-            </TouchableOpacity>
-          )}
+          <Text style={styles.headerSubtitle}>
+            Scan the QR code on your Desktop CRM screen
+          </Text>
         </View>
 
-        {/* Camera Viewport / Permission Handling */}
-        {!permission ? (
-          <View style={styles.centerBox}>
-            <ActivityIndicator size="small" color="#3B82F6" />
-            <Text style={styles.statusText}>Checking camera...</Text>
+        {!isMainScreen && onClose && (
+          <TouchableOpacity style={styles.closeBtn} onPress={onClose} activeOpacity={0.75}>
+            <Text style={styles.closeBtnText}>✕</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+
+      {/* Camera Viewport / Permission Handling */}
+      {!permission ? (
+        <View style={styles.centerBox}>
+          <ActivityIndicator size="small" color="#0F766E" />
+          <Text style={styles.statusText}>Checking camera...</Text>
+        </View>
+      ) : !permission.granted ? (
+        <View style={styles.permissionBox}>
+          <View style={styles.permissionIconBadge}>
+            <View style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: '#0F766E' }} />
           </View>
-        ) : !permission.granted ? (
-          <View style={styles.permissionBox}>
-            <View style={styles.permissionIconBadge}>
-              <Text style={{ fontSize: 24 }}>📷</Text>
+          <Text style={styles.permissionTitle}>Camera Access Required</Text>
+          <Text style={styles.permissionDesc}>
+            Vasantham CRM uses the camera to scan your Desktop screen for automatic 1-second server pairing.
+          </Text>
+
+          <TouchableOpacity style={styles.grantBtn} onPress={requestPermission} activeOpacity={0.85}>
+            <Text style={styles.grantBtnText}>Grant Camera Access</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.secondaryBtn}
+            onPress={() => setShowManualInput(!showManualInput)}
+            activeOpacity={0.85}
+          >
+            <Text style={styles.secondaryBtnText}>Enter IP Address Manually</Text>
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <View style={styles.cameraWrapper}>
+          <CameraView
+            style={StyleSheet.absoluteFillObject}
+            barcodeScannerSettings={{
+              barcodeTypes: ['qr'],
+            }}
+            onBarcodeScanned={scanned ? undefined : handleBarcodeScanned}
+          />
+
+          {/* Viewfinder Target Mask */}
+          <View style={styles.overlay}>
+            <View style={styles.scanTarget}>
+              {/* 4 Corner Markers */}
+              <View style={[styles.corner, styles.topLeft]} />
+              <View style={[styles.corner, styles.topRight]} />
+              <View style={[styles.corner, styles.bottomLeft]} />
+              <View style={[styles.corner, styles.bottomRight]} />
+
+              {/* Animated Laser Scanning Line */}
+              {!scanned && !connecting && (
+                <Animated.View
+                  style={[
+                    styles.laserLine,
+                    {
+                      transform: [
+                        {
+                          translateY: scanLaserAnim.interpolate({
+                            inputRange: [0, 1],
+                            outputRange: [6, SCAN_FRAME_SIZE - 8],
+                          }),
+                        },
+                      ],
+                    },
+                  ]}
+                />
+              )}
             </View>
-            <Text style={styles.permissionTitle}>Camera Access Required</Text>
-            <Text style={styles.permissionDesc}>
-              Vasantham CRM uses the camera to scan your Desktop screen for automatic 1-second server pairing.
-            </Text>
+          </View>
 
-            <TouchableOpacity style={styles.grantBtn} onPress={requestPermission} activeOpacity={0.85}>
-              <Text style={styles.grantBtnText}>Grant Camera Access</Text>
-            </TouchableOpacity>
+          {/* Status / Connecting Notification Banner */}
+          {(connecting || autoDetecting) && (
+            <View style={styles.connectingBanner}>
+              <ActivityIndicator size="small" color="#0F766E" style={{ marginRight: 8 }} />
+              <Text style={styles.connectingText}>{statusMessage || 'Verifying Connection...'}</Text>
+            </View>
+          )}
+        </View>
+      )}
 
+      {/* Bottom Control & Help Deck */}
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={styles.footerDeck}
+      >
+        {showManualInput ? (
+          <View style={styles.manualInputCard}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+              <Text style={styles.manualLabel}>ENTER DESKTOP API URL</Text>
+              <TouchableOpacity onPress={() => setShowManualInput(false)}>
+                <Text style={{ fontSize: 12, color: '#94A3B8', fontWeight: '700' }}>Cancel</Text>
+              </TouchableOpacity>
+            </View>
+            <TextInput
+              style={styles.manualTextInput}
+              value={manualHost}
+              onChangeText={setManualHost}
+              placeholder="http://192.168.1.xxx:5000/api"
+              placeholderTextColor="#94A3B8"
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
             <TouchableOpacity
-              style={styles.secondaryBtn}
-              onPress={() => setShowManualInput(!showManualInput)}
+              style={styles.manualConnectBtn}
+              onPress={handleManualConnect}
+              disabled={connecting}
               activeOpacity={0.85}
             >
-              <Text style={styles.secondaryBtnText}>Enter IP Address Manually</Text>
+              {connecting ? (
+                <ActivityIndicator size="small" color="#FFFFFF" />
+              ) : (
+                <Text style={styles.manualConnectBtnText}>Connect to Server</Text>
+              )}
             </TouchableOpacity>
           </View>
         ) : (
-          <View style={styles.cameraWrapper}>
-            <CameraView
-              style={StyleSheet.absoluteFillObject}
-              barcodeScannerSettings={{
-                barcodeTypes: ['qr'],
-              }}
-              onBarcodeScanned={scanned ? undefined : handleBarcodeScanned}
-            />
-
-            {/* Viewfinder Target Mask */}
-            <View style={styles.overlay}>
-              <View style={styles.scanTarget}>
-                {/* 4 Corner Markers */}
-                <View style={[styles.corner, styles.topLeft]} />
-                <View style={[styles.corner, styles.topRight]} />
-                <View style={[styles.corner, styles.bottomLeft]} />
-                <View style={[styles.corner, styles.bottomRight]} />
-
-                {/* Animated Laser Scanning Line */}
-                {!scanned && !connecting && (
-                  <Animated.View
-                    style={[
-                      styles.laserLine,
-                      {
-                        transform: [
-                          {
-                            translateY: scanLaserAnim.interpolate({
-                              inputRange: [0, 1],
-                              outputRange: [6, SCAN_FRAME_SIZE - 8],
-                            }),
-                          },
-                        ],
-                      },
-                    ]}
-                  />
-                )}
-              </View>
+          <View style={styles.footerContent}>
+            <View style={styles.instructionBadge}>
+              <Text style={styles.instructionText}>
+                In Desktop CRM, click <Text style={{ fontWeight: '800', color: '#0F172A' }}>"Pair Mobile"</Text> at the top to display the pairing QR code.
+              </Text>
             </View>
 
-            {/* Status / Connecting Notification Banner */}
-            {(connecting || autoDetecting) && (
-              <View style={styles.connectingBanner}>
-                <ActivityIndicator size="small" color="#FFFFFF" style={{ marginRight: 8 }} />
-                <Text style={styles.connectingText}>{statusMessage || 'Verifying Connection...'}</Text>
-              </View>
-            )}
-          </View>
-        )}
-
-        {/* Bottom Control & Help Deck */}
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          style={styles.footerDeck}
-        >
-          {showManualInput ? (
-            <View style={styles.manualInputCard}>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                <Text style={styles.manualLabel}>ENTER DESKTOP API URL</Text>
-                <TouchableOpacity onPress={() => setShowManualInput(false)}>
-                  <Text style={{ fontSize: 12, color: '#94A3B8', fontWeight: '700' }}>Cancel</Text>
-                </TouchableOpacity>
-              </View>
-              <TextInput
-                style={styles.manualTextInput}
-                value={manualHost}
-                onChangeText={setManualHost}
-                placeholder="http://192.168.1.xxx:5000/api"
-                placeholderTextColor="#64748B"
-                autoCapitalize="none"
-                autoCorrect={false}
-              />
+            {/* Action Buttons */}
+            <View style={styles.actionRow}>
               <TouchableOpacity
-                style={styles.manualConnectBtn}
-                onPress={handleManualConnect}
-                disabled={connecting}
-                activeOpacity={0.85}
+                style={styles.actionChip}
+                onPress={handleAutoDetect}
+                disabled={autoDetecting}
+                activeOpacity={0.75}
               >
-                {connecting ? (
-                  <ActivityIndicator size="small" color="#FFFFFF" />
-                ) : (
-                  <Text style={styles.manualConnectBtnText}>Connect to Server</Text>
-                )}
+                <Text style={styles.actionChipText}>
+                  {autoDetecting ? 'Scanning Wi-Fi...' : 'Auto-Detect Wi-Fi'}
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.actionChip}
+                onPress={() => setShowManualInput(true)}
+                activeOpacity={0.75}
+              >
+                <Text style={styles.actionChipText}>Manual IP</Text>
               </TouchableOpacity>
             </View>
-          ) : (
-            <View style={styles.footerContent}>
-              <View style={styles.instructionBadge}>
-                <Text style={styles.instructionText}>
-                  💡 In Desktop CRM, click <Text style={{ fontWeight: '800', color: '#FFFFFF' }}>"📱 Pair Mobile"</Text> at the top to display the pairing QR code.
-                </Text>
-              </View>
+          </View>
+        )}
+      </KeyboardAvoidingView>
+    </View>
+  );
 
-              {/* Action Buttons */}
-              <View style={styles.actionRow}>
-                <TouchableOpacity
-                  style={styles.actionChip}
-                  onPress={handleAutoDetect}
-                  disabled={autoDetecting}
-                  activeOpacity={0.75}
-                >
-                  <Text style={{ fontSize: 13 }}>📡</Text>
-                  <Text style={styles.actionChipText}>
-                    {autoDetecting ? 'Scanning Wi-Fi...' : 'Auto-Detect Wi-Fi'}
-                  </Text>
-                </TouchableOpacity>
+  if (isMainScreen) {
+    return content;
+  }
 
-                <TouchableOpacity
-                  style={styles.actionChip}
-                  onPress={() => setShowManualInput(true)}
-                  activeOpacity={0.75}
-                >
-                  <Text style={{ fontSize: 13 }}>⌨️</Text>
-                  <Text style={styles.actionChipText}>Manual IP</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          )}
-        </KeyboardAvoidingView>
-      </View>
+  return (
+    <Modal visible={visible} animationType="fade" transparent={false} onRequestClose={onClose}>
+      {content}
     </Modal>
   );
 };
@@ -364,51 +370,51 @@ export const MobileQrScannerModal = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#090D16',
+    backgroundColor: '#F8FAFC',
   },
   header: {
     paddingTop: Platform.OS === 'ios' ? 56 : 40,
     paddingHorizontal: 20,
     paddingBottom: 14,
-    backgroundColor: '#0F172A',
+    backgroundColor: '#FFFFFF',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.08)',
+    borderBottomColor: '#E2E8F0',
   },
   headerTitle: {
     fontSize: 17,
     fontWeight: '900',
-    color: '#FFFFFF',
+    color: '#0F172A',
     letterSpacing: -0.3,
   },
   liveTag: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: 'rgba(37, 99, 235, 0.2)',
+    backgroundColor: '#ECFEF8',
     paddingHorizontal: 6,
     paddingVertical: 1.5,
     borderRadius: 4,
     borderWidth: 1,
-    borderColor: 'rgba(37, 99, 235, 0.4)',
+    borderColor: '#CCFBF1',
   },
   liveDot: {
     width: 4,
     height: 4,
     borderRadius: 2,
-    backgroundColor: '#3B82F6',
+    backgroundColor: '#0F766E',
   },
   liveTagText: {
     fontSize: 8.5,
     fontWeight: '900',
-    color: '#93C5FD',
+    color: '#0F766E',
     letterSpacing: 0.6,
   },
   headerSubtitle: {
     fontSize: 11,
-    color: '#94A3B8',
+    color: '#64748B',
     marginTop: 2,
     fontWeight: '500',
   },
@@ -416,13 +422,13 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: '#F1F5F9',
     alignItems: 'center',
     justifyContent: 'center',
   },
   closeBtnText: {
     fontSize: 13,
-    color: '#E2E8F0',
+    color: '#475569',
     fontWeight: '800',
   },
   cameraWrapper: {
@@ -432,7 +438,7 @@ const styles = StyleSheet.create({
   },
   overlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(9, 13, 22, 0.55)',
+    backgroundColor: 'rgba(15, 23, 42, 0.35)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -443,13 +449,13 @@ const styles = StyleSheet.create({
     position: 'relative',
     backgroundColor: 'transparent',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.15)',
+    borderColor: 'rgba(255, 255, 255, 0.50)',
   },
   corner: {
     position: 'absolute',
     width: 22,
     height: 22,
-    borderColor: '#3B82F6',
+    borderColor: '#0F766E',
   },
   topLeft: {
     top: -1,
@@ -483,9 +489,9 @@ const styles = StyleSheet.create({
     height: 2.5,
     width: SCAN_FRAME_SIZE - 20,
     alignSelf: 'center',
-    backgroundColor: '#38BDF8',
+    backgroundColor: '#0F766E',
     borderRadius: 1.5,
-    shadowColor: '#38BDF8',
+    shadowColor: '#0F766E',
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.9,
     shadowRadius: 8,
@@ -496,7 +502,7 @@ const styles = StyleSheet.create({
     bottom: 24,
     left: 20,
     right: 20,
-    backgroundColor: '#0F172A',
+    backgroundColor: '#FFFFFF',
     borderRadius: 12,
     paddingVertical: 12,
     paddingHorizontal: 16,
@@ -504,17 +510,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(59, 130, 246, 0.4)',
-    shadowColor: '#000',
+    borderColor: '#CBD5E1',
+    shadowColor: '#0F172A',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.1,
     shadowRadius: 8,
-    elevation: 6,
+    elevation: 4,
   },
   connectingText: {
     fontSize: 12.5,
     fontWeight: '800',
-    color: '#FFFFFF',
+    color: '#0F172A',
   },
   centerBox: {
     flex: 1,
@@ -524,7 +530,7 @@ const styles = StyleSheet.create({
   },
   statusText: {
     fontSize: 12,
-    color: '#94A3B8',
+    color: '#64748B',
     fontWeight: '600',
   },
   permissionBox: {
@@ -532,45 +538,44 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 28,
+    backgroundColor: '#F8FAFC',
   },
   permissionIconBadge: {
     width: 60,
     height: 60,
     borderRadius: 20,
-    backgroundColor: 'rgba(37, 99, 235, 0.15)',
+    backgroundColor: '#ECFEF8',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: 'rgba(37, 99, 235, 0.3)',
+    borderColor: '#CCFBF1',
   },
   permissionTitle: {
     fontSize: 18,
     fontWeight: '900',
-    color: '#FFFFFF',
+    color: '#0F172A',
     marginBottom: 8,
     textAlign: 'center',
   },
   permissionDesc: {
     fontSize: 12.5,
-    color: '#94A3B8',
+    color: '#64748B',
     textAlign: 'center',
     lineHeight: 18,
     marginBottom: 20,
   },
   grantBtn: {
-    backgroundColor: '#2563EB',
+    backgroundColor: '#0F766E',
     paddingVertical: 14,
     paddingHorizontal: 24,
     borderRadius: 14,
     width: '100%',
     alignItems: 'center',
     marginBottom: 10,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.15)',
-    shadowColor: '#2563EB',
+    shadowColor: '#0F766E',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.35,
+    shadowOpacity: 0.2,
     shadowRadius: 8,
     elevation: 4,
   },
@@ -581,25 +586,25 @@ const styles = StyleSheet.create({
     letterSpacing: -0.2,
   },
   secondaryBtn: {
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    backgroundColor: '#F1F5F9',
     paddingVertical: 13,
     paddingHorizontal: 20,
     borderRadius: 14,
     width: '100%',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.12)',
+    borderColor: '#E2E8F0',
   },
   secondaryBtnText: {
     fontSize: 13,
     fontWeight: '800',
-    color: '#E2E8F0',
+    color: '#334155',
     letterSpacing: -0.2,
   },
   footerDeck: {
-    backgroundColor: '#0F172A',
+    backgroundColor: '#FFFFFF',
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255, 255, 255, 0.08)',
+    borderTopColor: '#E2E8F0',
     paddingHorizontal: 16,
     paddingTop: 12,
     paddingBottom: Platform.OS === 'ios' ? 32 : 16,
@@ -608,16 +613,16 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   instructionBadge: {
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    backgroundColor: '#F8FAFC',
     borderRadius: 12,
     paddingHorizontal: 13,
     paddingVertical: 9,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderColor: '#E2E8F0',
   },
   instructionText: {
     fontSize: 12,
-    color: '#94A3B8',
+    color: '#475569',
     lineHeight: 17,
     textAlign: 'center',
   },
@@ -627,7 +632,7 @@ const styles = StyleSheet.create({
   },
   actionChip: {
     flex: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    backgroundColor: '#F1F5F9',
     borderRadius: 13,
     paddingVertical: 12,
     paddingHorizontal: 14,
@@ -636,50 +641,48 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 8,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.14)',
+    borderColor: '#E2E8F0',
   },
   actionChipText: {
     fontSize: 12.5,
     fontWeight: '900',
-    color: '#F8FAFC',
+    color: '#0F172A',
     letterSpacing: -0.2,
   },
   manualInputCard: {
-    backgroundColor: '#1E293B',
+    backgroundColor: '#F8FAFC',
     borderRadius: 16,
     padding: 15,
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: '#E2E8F0',
   },
   manualLabel: {
     fontSize: 10.5,
     fontWeight: '900',
-    color: '#94A3B8',
+    color: '#64748B',
     letterSpacing: 0.6,
   },
   manualTextInput: {
-    backgroundColor: '#0F172A',
+    backgroundColor: '#FFFFFF',
     borderWidth: 1.2,
-    borderColor: '#475569',
+    borderColor: '#CBD5E1',
     borderRadius: 12,
     paddingHorizontal: 13,
     paddingVertical: 10,
     fontSize: 13.5,
-    color: '#FFFFFF',
+    color: '#0F172A',
     fontWeight: '700',
     marginBottom: 11,
   },
   manualConnectBtn: {
-    backgroundColor: '#2563EB',
+    backgroundColor: '#0F766E',
     borderRadius: 12,
     paddingVertical: 12.5,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.15)',
-    shadowColor: '#2563EB',
+    shadowColor: '#0F766E',
     shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.2,
     shadowRadius: 6,
     elevation: 3,
   },

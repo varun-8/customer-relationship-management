@@ -20,6 +20,7 @@ mobile/.env
 
 # Production & Build Outputs
 dist/
+dist-*/
 desktop/dist/
 desktop/dist-exe/
 build/
@@ -29,6 +30,8 @@ out/
 web-build/
 desktop/src-tauri/target/
 src-tauri/target/
+.turbo/
+.next/
 
 # Expo / React Native & Android Native Builds
 .expo/
@@ -36,6 +39,9 @@ src-tauri/target/
 .expo-export-check/
 mobile/.expo/
 mobile/.expo-export-check/
+mobile/dist/
+mobile/dist-*/
+mobile/web-build/
 mobile/android/.cxx/
 mobile/android/app/.cxx/
 mobile/android/.kotlin/
@@ -90,6 +96,12 @@ coverage/
 ehthumbs.db
 Thumbs.db
 [Dd]esktop.ini
+
+# Archives & Bundle Dumps
+*.tar.gz
+*.zip
+*.7z
+*.rar
 
 # Temporary & Scratch Files
 .temp/

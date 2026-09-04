@@ -14,13 +14,13 @@ import {
 import { apiClient } from '../../api/client';
 
 const OUTCOMES = [
-  { label: 'Spoke with Customer / Positive Interest', shortLabel: 'Positive Interest', icon: '🤝', color: '#1D4ED8', bg: '#EFF6FF', border: '#BFDBFE' },
-  { label: 'Customer Visiting Showroom Today / Soon', shortLabel: 'Visiting Showroom', icon: '🏢', color: '#047857', bg: '#ECFDF5', border: '#A7F3D0' },
-  { label: 'Sent Revised Quotation / Discount Provided', shortLabel: 'Sent Revised Quote', icon: '📄', color: '#7E22CE', bg: '#FAF5FF', border: '#DDD6FE' },
-  { label: 'No Answer / Customer Busy / Callback Requested', shortLabel: 'No Answer / Busy', icon: '📵', color: '#B45309', bg: '#FFFBEB', border: '#FDE68A' },
-  { label: 'Negotiating Final Price / Competitor Comparison', shortLabel: 'Price Negotiation', icon: '💰', color: '#0369A1', bg: '#F0F9FF', border: '#BAE6FD' },
-  { label: 'Site Measurement Scheduled', shortLabel: 'Site Measurement', icon: '📐', color: '#4338CA', bg: '#EEF2FF', border: '#C7D2FE' },
-  { label: 'Order Confirmed / Ready for Billing', shortLabel: 'Order Confirmed', icon: '🛒', color: '#059669', bg: '#D1FAE5', border: '#6EE7B7' },
+  { label: 'Spoke with Customer / Positive Interest', shortLabel: 'Positive Interest', icon: '✓', color: '#1D4ED8', bg: '#EFF6FF', border: '#BFDBFE' },
+  { label: 'Customer Visiting Showroom Today / Soon', shortLabel: 'Visiting Showroom', icon: '→', color: '#047857', bg: '#ECFDF5', border: '#A7F3D0' },
+  { label: 'Sent Revised Quotation / Discount Provided', shortLabel: 'Sent Revised Quote', icon: '•', color: '#7E22CE', bg: '#FAF5FF', border: '#DDD6FE' },
+  { label: 'No Answer / Customer Busy / Callback Requested', shortLabel: 'No Answer / Busy', icon: '!', color: '#B45309', bg: '#FFFBEB', border: '#FDE68A' },
+  { label: 'Negotiating Final Price / Competitor Comparison', shortLabel: 'Price Negotiation', icon: '₹', color: '#0369A1', bg: '#F0F9FF', border: '#BAE6FD' },
+  { label: 'Site Measurement Scheduled', shortLabel: 'Site Measurement', icon: '✦', color: '#4338CA', bg: '#EEF2FF', border: '#C7D2FE' },
+  { label: 'Order Confirmed / Ready for Billing', shortLabel: 'Order Confirmed', icon: '★', color: '#059669', bg: '#D1FAE5', border: '#6EE7B7' },
   { label: 'Deal Lost / Postponed', shortLabel: 'Deal Lost / Postponed', icon: '✕', color: '#DC2626', bg: '#FEF2F2', border: '#FECACA' },
 ];
 
@@ -98,7 +98,7 @@ export function MobileFollowupLogModal({
       });
 
       if (res && res.success) {
-        Alert.alert('✓ Activity Logged', `Follow-up updated for ${customerName || 'Customer'}!`);
+        Alert.alert('Activity Logged', `Follow-up updated for ${customerName || 'Customer'}!`);
         if (onSaved) onSaved();
         onClose();
       } else {
@@ -137,7 +137,7 @@ export function MobileFollowupLogModal({
           {/* Header Bar with Editable Customer Info */}
           <View style={styles.headerLight}>
             <View style={styles.headerIconBoxLight}>
-              <Text style={{ fontSize: 18 }}>📞</Text>
+              <Text style={{ fontSize: 13, fontWeight: '800', color: '#0F766E' }}>LOG</Text>
             </View>
             <View style={{ flex: 1, gap: 4 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
@@ -156,7 +156,7 @@ export function MobileFollowupLogModal({
               </View>
 
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                <Text style={{ fontSize: 12, color: '#64748B' }}>📱</Text>
+                <Text style={{ fontSize: 11, fontWeight: '700', color: '#64748B' }}>PH:</Text>
                 <TextInput
                   style={{ fontSize: 12, color: '#334155', fontWeight: '700', flex: 1, borderWidth: 1, borderColor: '#CBD5E1', borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2, backgroundColor: '#FFFFFF' }}
                   value={phone}
@@ -186,7 +186,7 @@ export function MobileFollowupLogModal({
                 activeOpacity={0.8}
               >
                 <View style={styles.dropdownTriggerLeftGroup}>
-                  <Text style={{ fontSize: 18 }}>{selectedOutcomeObj.icon}</Text>
+                  <Text style={{ fontSize: 14, fontWeight: '800', color: selectedOutcomeObj.color }}>{selectedOutcomeObj.icon}</Text>
                   <Text style={[styles.dropdownTriggerValueText, { color: selectedOutcomeObj.color }]} numberOfLines={1}>
                     {selectedOutcomeObj.label}
                   </Text>
@@ -212,7 +212,7 @@ export function MobileFollowupLogModal({
                     <View style={styles.outcomeModalHeader}>
                       <Text style={styles.outcomeModalTitle}>Select Call Outcome</Text>
                       <TouchableOpacity onPress={() => setOutcomeModalVisible(false)} style={styles.modalCloseBtn}>
-                        <Text style={styles.modalCloseBtnText}>✕ Close</Text>
+                        <Text style={styles.modalCloseBtnText}>Close</Text>
                       </TouchableOpacity>
                     </View>
 
@@ -232,7 +232,7 @@ export function MobileFollowupLogModal({
                             }}
                             activeOpacity={0.75}
                           >
-                            <Text style={{ fontSize: 18, marginRight: 12 }}>{o.icon}</Text>
+                            <Text style={{ fontSize: 14, fontWeight: '800', marginRight: 10, color: o.color }}>{o.icon}</Text>
                             <Text style={[styles.outcomeListItemText, isSelected && { color: o.color, fontWeight: '800' }]}>
                               {o.label}
                             </Text>
@@ -262,7 +262,6 @@ export function MobileFollowupLogModal({
                   onPress={() => setLeadTemperature('Hot')}
                   activeOpacity={0.75}
                 >
-                  <Text style={{ fontSize: 15 }}>🔥</Text>
                   <Text style={[styles.tempBtnText, leadTemperature === 'Hot' && { color: '#DC2626', fontWeight: '900' }]}>
                     Hot Deal
                   </Text>
@@ -276,7 +275,6 @@ export function MobileFollowupLogModal({
                   onPress={() => setLeadTemperature('Warm')}
                   activeOpacity={0.75}
                 >
-                  <Text style={{ fontSize: 15 }}>☀️</Text>
                   <Text style={[styles.tempBtnText, leadTemperature === 'Warm' && { color: '#D97706', fontWeight: '900' }]}>
                     Warm Lead
                   </Text>
@@ -290,7 +288,6 @@ export function MobileFollowupLogModal({
                   onPress={() => setLeadTemperature('Future')}
                   activeOpacity={0.75}
                 >
-                  <Text style={{ fontSize: 15 }}>⏳</Text>
                   <Text style={[styles.tempBtnText, leadTemperature === 'Future' && { color: '#2563EB', fontWeight: '900' }]}>
                     Future
                   </Text>
@@ -322,7 +319,7 @@ export function MobileFollowupLogModal({
               </View>
 
               <View style={styles.dateInputWrapper}>
-                <Text style={{ fontSize: 14, marginRight: 8 }}>📅</Text>
+                <Text style={{ fontSize: 11, fontWeight: '700', color: '#64748B', marginRight: 8 }}>DATE</Text>
                 <TextInput
                   style={styles.dateTextInput}
                   value={nextFollowUp}
@@ -397,7 +394,7 @@ export function MobileFollowupLogModal({
                 <ActivityIndicator size="small" color="#FFFFFF" />
               ) : (
                 <Text style={styles.saveBtnText}>
-                  {outcome === 'Deal Lost / Postponed' ? '✕ Record Lost Deal' : '✓ Save Follow-up Activity'}
+                  {outcome === 'Deal Lost / Postponed' ? 'Record Lost Deal' : 'Save Follow-up Activity'}
                 </Text>
               )}
             </TouchableOpacity>

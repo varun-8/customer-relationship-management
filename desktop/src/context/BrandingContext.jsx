@@ -40,9 +40,9 @@ export const BrandingProvider = ({ children }) => {
       appName: 'Vasantham Tiles & Sanitary Wares',
       appShortName: 'Vasantham CRM',
       tagline: 'Tiles, Sanitary Wares, CP Fittings & Adhesives',
-      logoType: 'icon',
+      logoType: 'image',
       logoIcon: 'Box',
-      logoImage: '',
+      logoImage: '/logo.png',
       primaryColor: '#2563EB',
     };
   });
@@ -89,10 +89,14 @@ export const BrandingProvider = ({ children }) => {
 
   // Render brand logo component
   const renderLogo = (size = 20, color = '#FFFFFF') => {
-    if (branding.logoType === 'image' && branding.logoImage) {
+    const logoSrc = (branding.logoType === 'image' && branding.logoImage)
+      ? branding.logoImage
+      : '/logo.png';
+
+    if (logoSrc) {
       return (
         <img
-          src={branding.logoImage}
+          src={logoSrc}
           alt={branding.appName || 'Showroom Logo'}
           style={{
             width: typeof size === 'number' ? `${size}px` : size,
@@ -100,7 +104,7 @@ export const BrandingProvider = ({ children }) => {
             maxWidth: '100%',
             maxHeight: '100%',
             objectFit: 'contain',
-            borderRadius: '4px',
+            borderRadius: '6px',
             display: 'block',
           }}
         />

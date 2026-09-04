@@ -79,3 +79,6 @@ npm start            # Runs Expo development server
 13. Currency Amount (₹ Indian Rupee with customizable symbol)
 14. Website / URL
 15. Auto-Generated Number (Backend atomic increment)
+
+
+in the mobile form while adding new customer make sure there is no too much emoji as it look clumsy. make in a minimistic in clear way to enter data.  make the setings page look minimistic and with good colour that look professionall. also make the shift kpi look minimilistic in dessign with less emoji. dont use too dark colours

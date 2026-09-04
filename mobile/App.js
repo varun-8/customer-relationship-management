@@ -19,6 +19,7 @@ import {
   Dimensions,
   KeyboardAvoidingView,
   AppState,
+  Easing,
 } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { colors } from './src/theme/colors';
@@ -34,6 +35,8 @@ import { MobileQrScannerModal } from './src/components/pairing/MobileQrScannerMo
 import { RoleSelectLoginScreen } from './src/components/auth/RoleSelectLoginScreen';
 import { CustomerPortalView } from './src/components/customer-portal/CustomerPortalView';
 import { MobileSettingsModal } from './src/components/settings/MobileSettingsModal';
+
+const APP_LOGO = require('./assets/logo.png');
 
 const CONFETTI_COLORS = ['#10B981', '#3B82F6', '#F59E0B', '#EC4899', '#8B5CF6', '#F97316', '#EAB308', '#06B6D4'];
 const CONFETTI_PIECES = Array.from({ length: 26 }).map((_, i) => ({
@@ -222,28 +225,24 @@ const SECTIONS = [
     id: 'contact',
     title: 'Profile & Contact',
     shortTitle: '1. Contact',
-    icon: '👤',
     fieldNames: ['customerId', 'entryDate', 'customerName', 'phone', 'location', 'leadSource', 'salesperson', 'customerType'],
   },
   {
     id: 'requirements',
     title: 'Project Requirements',
     shortTitle: '2. Project',
-    icon: '📐',
     fieldNames: ['houseStage', 'requirement', 'approxQuantity', 'tileBudget', 'sanitaryRequirement', 'adhesiveRequirement'],
   },
   {
     id: 'quotation',
     title: 'Quotation & Financials',
     shortTitle: '3. Quotation',
-    icon: '💰',
     fieldNames: ['quotationValue', 'quotationDate', 'status', 'orderValue', 'crossSell'],
   },
   {
     id: 'followup',
     title: 'Follow-up & Notes',
     shortTitle: '4. Follow-up',
-    icon: '📅',
     fieldNames: ['nextFollowUp', 'lastFollowUp', 'followUpCount', 'lastReason'],
   },
 ];
@@ -450,10 +449,10 @@ export default function App() {
   const [formSection, setFormSection] = useState('contact');
   const [formSchema, setFormSchema] = useState(FALLBACK_SCHEMA);
   const [branding, setBranding] = useState({
-    appName: 'BuildCRM',
-    appShortName: 'BuildCRM',
+    appName: 'Vasantham CRM',
+    appShortName: 'Vasantham',
     tagline: 'Tiles & Sanitary Wares CRM',
-    logoType: 'icon',
+    logoType: 'image',
     logoIcon: 'Box',
     logoImage: '',
     primaryColor: '#2563EB',
@@ -1294,52 +1293,64 @@ export default function App() {
   // 1. Loading check on app startup
   if (isPairedState === null) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#F8FAFC' }}>
-        <ActivityIndicator size="large" color="#2563EB" />
-        <Text style={{ marginTop: 14, fontSize: 14, fontWeight: '700', color: '#475569' }}>
-          Checking Desktop Server Connection...
-        </Text>
-      </View>
+      <SafeAreaProvider>
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#F8FAFC' }}>
+          <ActivityIndicator size="large" color="#0F766E" />
+          <Text style={{ marginTop: 14, fontSize: 14, fontWeight: '700', color: '#475569' }}>
+            Connecting to Vasantham CRM Desktop...
+          </Text>
+        </View>
+      </SafeAreaProvider>
     );
   }
 
   // 2. If NOT paired/connected to Desktop -> Show Minimalist QR Scanner Directly
   if (isPairedState === false) {
     return (
-      <MobileQrScannerModal
-        visible={true}
-        isMainScreen={true}
-        onConnected={handleConnectedServer}
-      />
+      <SafeAreaProvider>
+        <View style={{ flex: 1, backgroundColor: '#F8FAFC' }}>
+          <MobileQrScannerModal
+            visible={true}
+            isMainScreen={true}
+            onConnected={handleConnectedServer}
+          />
+        </View>
+      </SafeAreaProvider>
     );
   }
 
   // 3. If Paired but NO Role Selected -> Show Role Select / Login Gate
   if (authRoleState === null) {
     return (
-      <>
-        <RoleSelectLoginScreen
-          onSelectRole={handleSelectRole}
-          onDisconnectServer={handleDisconnectServer}
-          serverHost={serverHost}
-        />
-        <MobileQrScannerModal
-          visible={showQrScanner}
-          onClose={() => setShowQrScanner(false)}
-          onConnected={handleConnectedServer}
-        />
-      </>
+      <SafeAreaProvider>
+        <View style={{ flex: 1, backgroundColor: '#F8FAFC' }}>
+          <RoleSelectLoginScreen
+            onSelectRole={handleSelectRole}
+            onDisconnectServer={handleDisconnectServer}
+            serverHost={serverHost}
+          />
+          <MobileQrScannerModal
+            visible={showQrScanner}
+            onClose={() => setShowQrScanner(false)}
+            onConnected={handleConnectedServer}
+          />
+        </View>
+      </SafeAreaProvider>
     );
   }
 
   // 4. Customer Role -> Render Customer Portal View
   if (authRoleState === 'customer') {
     return (
-      <CustomerPortalView
-        customerInfo={customerUserSession}
-        onLogoutRole={handleLogoutRole}
-        branding={branding}
-      />
+      <SafeAreaProvider>
+        <View style={{ flex: 1, backgroundColor: '#F8FAFC' }}>
+          <CustomerPortalView
+            customerInfo={customerUserSession}
+            onLogoutRole={handleLogoutRole}
+            branding={branding}
+          />
+        </View>
+      </SafeAreaProvider>
     );
   }
 
@@ -1372,22 +1383,18 @@ export default function App() {
           <View
             style={[
               styles.brandBadge,
-              branding.logoImage && branding.logoImage.trim() !== ''
-                ? { backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E2E8F0', padding: 2 }
-                : { backgroundColor: branding.primaryColor || '#0F172A' },
+              { backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E2E8F0', padding: 2 },
             ]}
           >
-            {branding.logoImage && branding.logoImage.trim() !== '' ? (
-              <Image
-                source={{ uri: branding.logoImage }}
-                style={styles.brandBadgeLogoImage}
-                resizeMode="contain"
-              />
-            ) : (
-              <Text style={styles.brandBadgeText}>
-                {getBrandingIconEmoji(branding.logoIcon)}
-              </Text>
-            )}
+            <Image
+              source={
+                branding.logoImage && branding.logoImage.trim() !== ''
+                  ? { uri: branding.logoImage }
+                  : APP_LOGO
+              }
+              style={styles.brandBadgeLogoImage}
+              resizeMode="contain"
+            />
           </View>
 
           {/* Brand Title & Live Online Status Capsule */}
@@ -1747,14 +1754,17 @@ export default function App() {
         >
           <View style={styles.screenBody}>
             {/* Top Form Header Bar */}
+            {/* Top Form Header Bar */}
             <View style={styles.formTopHeaderBar}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
                 <View style={styles.formHeaderIconCircle}>
-                  <Text style={{ fontSize: 14 }}>📝</Text>
+                  <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#0F766E' }} />
                 </View>
                 <View>
                   <Text style={styles.formHeaderTitle}>Add New Customer</Text>
-                  <Text style={styles.formHeaderSub}>{branding.appName || 'Vasantham CRM'} • Step {currentSectionIndex + 1} of {SECTIONS.length}</Text>
+                  <Text style={styles.formHeaderSub}>
+                    {branding.appName || 'Vasantham CRM'} • Step {currentSectionIndex + 1} of {SECTIONS.length} ({Math.round(((currentSectionIndex + 1) / SECTIONS.length) * 100)}%)
+                  </Text>
                 </View>
               </View>
 
@@ -1819,29 +1829,31 @@ export default function App() {
               {/* Banner of Active Section */}
               <View style={styles.sectionBannerBox}>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <Text style={styles.sectionBannerTitle}>
-                    {SECTIONS[currentSectionIndex]?.icon}{' '}
-                    {SECTIONS[currentSectionIndex]?.title}
-                  </Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.sectionBannerTitle}>
+                        {SECTIONS[currentSectionIndex]?.title}
+                      </Text>
+                      <Text style={styles.sectionBannerSubtitle}>
+                        Section {currentSectionIndex + 1} of {SECTIONS.length} • {Math.round(((currentSectionIndex + 1) / SECTIONS.length) * 100)}% Complete
+                      </Text>
+                    </View>
+                  </View>
                   <View style={styles.sectionStepCounterBadge}>
                     <Text style={styles.sectionStepCounterText}>
-                      Step {currentSectionIndex + 1} of {SECTIONS.length}
+                      Step {currentSectionIndex + 1}/{SECTIONS.length}
                     </Text>
                   </View>
                 </View>
-                <Text style={styles.sectionBannerSubtitle}>
-                  Please fill the required details below to record this lead.
-                </Text>
               </View>
 
               {/* Real-time Existing Customer Auto-Detection Banner */}
               {existingCustomerAlert && (
                 <View style={styles.existingCustomerBanner}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
-                    <Text style={{ fontSize: 22 }}>🔄</Text>
                     <View style={{ flex: 1 }}>
                       <Text style={styles.existingCustomerBannerTitle}>
-                        Existing Customer Detected!
+                        Existing Customer Detected
                       </Text>
                       <Text style={styles.existingCustomerBannerSubtitle} numberOfLines={1}>
                         {existingCustomerAlert.customerName} (#{existingCustomerAlert.customerId}) • {existingCustomerAlert.customerType}
@@ -1864,7 +1876,7 @@ export default function App() {
                     }}
                     activeOpacity={0.8}
                   >
-                    <Text style={styles.autoFillProfileBtnText}>⚡ Auto-fill</Text>
+                    <Text style={styles.autoFillProfileBtnText}>Auto-fill Profile</Text>
                   </TouchableOpacity>
                 </View>
               )}
@@ -1900,6 +1912,7 @@ export default function App() {
                   <TouchableOpacity
                     style={styles.prevSectionBtn}
                     onPress={() => setFormSection(SECTIONS[currentSectionIndex - 1].id)}
+                    activeOpacity={0.75}
                   >
                     <Text style={styles.prevSectionBtnText}>← Previous</Text>
                   </TouchableOpacity>
@@ -1909,6 +1922,7 @@ export default function App() {
                   <TouchableOpacity
                     style={styles.nextSectionBtn}
                     onPress={() => setFormSection(SECTIONS[currentSectionIndex + 1].id)}
+                    activeOpacity={0.8}
                   >
                     <Text style={styles.nextSectionBtnText}>Next Section →</Text>
                   </TouchableOpacity>
@@ -1917,9 +1931,10 @@ export default function App() {
                     style={styles.submitFinalBtn}
                     onPress={handleCreateCustomer}
                     disabled={submitting}
+                    activeOpacity={0.8}
                   >
                     <Text style={styles.submitFinalBtnText}>
-                      {submitting ? 'Saving to MongoDB Atlas...' : '✓ Register Customer'}
+                      {submitting ? 'Saving Customer...' : 'Save & Register Customer'}
                     </Text>
                   </TouchableOpacity>
                 )}
@@ -3147,35 +3162,37 @@ const styles = StyleSheet.create({
     color: '#475569',
   },
   progressBarWrapper: {
-    height: 3.5,
+    height: 4.5,
     backgroundColor: '#E2E8F0',
+    overflow: 'hidden',
   },
   progressBarFill: {
     height: '100%',
     backgroundColor: '#2563EB',
+    borderRadius: 2,
   },
   sectionTabBar: {
     backgroundColor: '#FFFFFF',
-    paddingVertical: 9,
+    paddingVertical: 10,
     borderBottomWidth: 1,
     borderBottomColor: '#E2E8F0',
   },
   sectionTabChip: {
     paddingHorizontal: 13,
-    paddingVertical: 6.5,
-    borderRadius: 10,
+    paddingVertical: 7,
+    borderRadius: 12,
     backgroundColor: '#F8FAFC',
     borderWidth: 1.2,
     borderColor: '#E2E8F0',
   },
   sectionTabChipActive: {
-    backgroundColor: '#EFF6FF',
-    borderColor: '#2563EB',
+    backgroundColor: '#2563EB',
+    borderColor: '#1D4ED8',
     shadowColor: '#2563EB',
-    shadowOffset: { width: 0, height: 1.5 },
-    shadowOpacity: 0.12,
-    shadowRadius: 3,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.18,
+    shadowRadius: 4,
+    elevation: 3,
   },
   sectionTabChipCompleted: {
     backgroundColor: '#ECFDF5',
@@ -3187,7 +3204,7 @@ const styles = StyleSheet.create({
     color: '#64748B',
   },
   sectionTabChipTextActive: {
-    color: '#1D4ED8',
+    color: '#FFFFFF',
     fontWeight: '900',
   },
   sectionTabChipTextCompleted: {
@@ -3200,16 +3217,28 @@ const styles = StyleSheet.create({
   },
   sectionBannerBox: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 14,
+    borderRadius: 16,
     borderWidth: 1.2,
     borderColor: '#E2E8F0',
+    borderLeftWidth: 4,
+    borderLeftColor: '#2563EB',
     padding: 14,
     marginBottom: 12,
     shadowColor: '#0F172A',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.03,
-    shadowRadius: 4,
-    elevation: 1,
+    shadowOpacity: 0.04,
+    shadowRadius: 5,
+    elevation: 2,
+  },
+  sectionBannerIconCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: '#EFF6FF',
+    borderWidth: 1,
+    borderColor: '#DBEAFE',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   sectionBannerTitle: {
     fontSize: 15.5,
@@ -3221,9 +3250,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#EFF6FF',
     borderWidth: 1,
     borderColor: '#BFDBFE',
-    paddingHorizontal: 8,
-    paddingVertical: 2.5,
-    borderRadius: 6,
+    paddingHorizontal: 9,
+    paddingVertical: 3.5,
+    borderRadius: 8,
   },
   sectionStepCounterText: {
     fontSize: 10.5,
@@ -3233,19 +3262,19 @@ const styles = StyleSheet.create({
   sectionBannerSubtitle: {
     fontSize: 11.5,
     color: '#64748B',
-    marginTop: 4,
-    fontWeight: '500',
+    marginTop: 2,
+    fontWeight: '600',
   },
   inputsCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 16,
+    borderRadius: 18,
     borderWidth: 1.2,
     borderColor: '#E2E8F0',
-    padding: 16,
+    padding: 18,
     shadowColor: '#0F172A',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 6,
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
     elevation: 2,
   },
   formNavButtonsRow: {
@@ -3258,8 +3287,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#F8FAFC',
     borderWidth: 1.5,
     borderColor: '#CBD5E1',
-    paddingVertical: 13,
-    borderRadius: 10,
+    paddingVertical: 14,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -3272,17 +3301,17 @@ const styles = StyleSheet.create({
   nextSectionBtn: {
     flex: 1,
     backgroundColor: '#2563EB',
-    paddingVertical: 13,
-    borderRadius: 10,
+    paddingVertical: 14,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
     borderColor: '#1D4ED8',
     shadowColor: '#2563EB',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.12,
-    shadowRadius: 4,
-    elevation: 2,
+    shadowOpacity: 0.16,
+    shadowRadius: 5,
+    elevation: 3,
   },
   nextSectionBtnText: {
     color: '#FFFFFF',
@@ -3293,17 +3322,17 @@ const styles = StyleSheet.create({
   submitFinalBtn: {
     flex: 1,
     backgroundColor: '#059669',
-    paddingVertical: 13,
-    borderRadius: 10,
+    paddingVertical: 14,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
     borderColor: '#047857',
     shadowColor: '#059669',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.12,
-    shadowRadius: 4,
-    elevation: 2,
+    shadowOpacity: 0.16,
+    shadowRadius: 5,
+    elevation: 3,
   },
   submitFinalBtnText: {
     color: '#FFFFFF',
