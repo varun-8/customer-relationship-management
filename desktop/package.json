@@ -41,6 +41,7 @@
       "output": "dist-exe"
     },
     "win": {
+      "icon": "public/logo.png",
       "target": [
         "nsis",
         "portable"

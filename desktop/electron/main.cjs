@@ -167,12 +167,14 @@ function cleanupProcesses() {
 }
 
 function createWindow() {
+  const iconPath = path.join(__dirname, '../public/logo.png');
   mainWindow = new BrowserWindow({
     width: 1380,
     height: 900,
     minWidth: 1024,
     minHeight: 700,
     title: 'Vasantham Tiles & Sanitary Wares — Customer CRM',
+    icon: fs.existsSync(iconPath) ? iconPath : undefined,
     backgroundColor: '#0f172a',
     webPreferences: {
       nodeIntegration: false,
