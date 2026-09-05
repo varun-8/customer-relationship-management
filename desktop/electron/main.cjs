@@ -102,14 +102,14 @@ async function startBundledMongoDB() {
       console.error('❌ [MongoDB Error] Failed to launch mongod.exe:', err.message);
     });
 
-    // Wait for MongoDB port to become active
-    for (let i = 0; i < 25; i++) {
-      await new Promise((r) => setTimeout(r, 300));
+    // Wait for MongoDB port to become active (up to 30 seconds)
+    for (let i = 0; i < 60; i++) {
       const active = await isPortOpen(27017);
       if (active) {
         console.log('🎉 [MongoDB 6.0] Server started and listening on port 27017!');
         break;
       }
+      await new Promise((r) => setTimeout(r, 500));
     }
   } catch (err) {
     console.error('❌ [MongoDB Exception]', err.message);
@@ -245,9 +245,9 @@ app.whenReady().then(async () => {
     // 2. Start Express Backend
     await startEmbeddedBackend();
 
-    // 3. Wait for Backend API readiness
+    // 3. Wait for Backend API readiness (up to 30 seconds)
     try {
-      await waitForUrl('http://127.0.0.1:5000/api/health', 15000);
+      await waitForUrl('http://127.0.0.1:5000/api/health', 30000);
     } catch (e) {
       console.warn('⚠️ API healthcheck timeout, opening UI...');
     }

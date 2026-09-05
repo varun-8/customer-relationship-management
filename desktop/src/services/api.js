@@ -18,7 +18,7 @@ const API_BASE = getApiBaseUrl();
 const getAuthHeaders = async (forceRefresh = false) => {
   let token = forceRefresh ? null : localStorage.getItem('vasantham_crm_token');
   if (!token) {
-    for (let attempt = 0; attempt < 5; attempt++) {
+    for (let attempt = 0; attempt < 8; attempt++) {
       try {
         const res = await fetch(`${API_BASE}/auth/login`, {
           method: 'POST',
@@ -36,7 +36,7 @@ const getAuthHeaders = async (forceRefresh = false) => {
       } catch (e) {
         console.warn(`Auto auth attempt ${attempt + 1} warning:`, e.message || e);
       }
-      if (attempt < 4) {
+      if (attempt < 7) {
         await new Promise((r) => setTimeout(r, 1000));
       }
     }
@@ -52,7 +52,7 @@ const getAuthHeaders = async (forceRefresh = false) => {
  */
 const request = async (endpoint, options = {}) => {
   const url = `${API_BASE}${endpoint}`;
-  const timeoutMs = options.timeout || 12000;
+  const timeoutMs = options.timeout || 30000;
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
@@ -116,7 +116,7 @@ export const api = {
   // Health Diagnostic
   async checkHealth() {
     try {
-      const data = await request('/health', { timeout: 4000, skipAuth: true });
+      const data = await request('/health', { timeout: 10000, skipAuth: true });
       return { online: true, data };
     } catch (e) {
       return { online: false, message: e.message };
