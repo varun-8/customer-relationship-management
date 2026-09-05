@@ -18,20 +18,13 @@ backend/.env
 desktop/.env
 mobile/.env
 
-# Production & Build Outputs
-dist/
-dist-*/
-desktop/dist/
-desktop/dist-exe/
-build/
-desktop/build/
-backend/bin/
-out/
-web-build/
-desktop/src-tauri/target/
-src-tauri/target/
-.turbo/
-.next/
+# Production & Build Outputs (Build outputs included as requested)
+!desktop/dist-exe/
+!desktop/dist-exe/**
+!backend/bin/
+!backend/bin/**
+!*.exe
+!*.apk
 
 # Expo / React Native & Android Native Builds
 .expo/
@@ -46,11 +39,8 @@ mobile/android/.cxx/
 mobile/android/app/.cxx/
 mobile/android/.kotlin/
 mobile/android/app/.kotlin/
-mobile/android/build/
-mobile/android/app/build/
 mobile/android/.gradle/
 mobile/android/app/src/main/assets/index.android.bundle
-*.apk
 *.aab
 *.jks
 *.keystore
