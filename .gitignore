@@ -18,16 +18,31 @@ backend/.env
 desktop/.env
 mobile/.env
 
-# Production & Build Outputs (Build outputs included as requested)
-!desktop/dist-exe/
-!desktop/dist-exe/**
-!backend/bin/
-!backend/bin/**
-!*.exe
-!*.apk
+# Production & Build Outputs
+dist/
+dist-*/
+desktop/dist/
+desktop/dist-exe/
+build/
+desktop/build/
+backend/data/
+out/
+web-build/
+desktop/src-tauri/target/
+src-tauri/target/
+.turbo/
+.next/
+
+# Executables & Binaries
+*.exe
+*.apk
+*.aab
+*.msi
+
+# Backend Binaries & Temp Download Archives
 backend/bin/*.zip
 backend/bin/temp_extract/
-backend/data/
+!backend/bin/mongodb/
 
 # Expo / React Native & Android Native Builds
 .expo/
@@ -42,9 +57,11 @@ mobile/android/.cxx/
 mobile/android/app/.cxx/
 mobile/android/.kotlin/
 mobile/android/app/.kotlin/
+mobile/android/build/
+mobile/android/app/build/
 mobile/android/.gradle/
+mobile/android/local.properties
 mobile/android/app/src/main/assets/index.android.bundle
-*.aab
 *.jks
 *.keystore
 *.p8

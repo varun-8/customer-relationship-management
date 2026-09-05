@@ -20,7 +20,7 @@ android/.gradle/
 android/app/src/main/assets/index.android.bundle
 
 # Native build binaries & temp logs
-!*.apk
+*.apk
 *.aab
 *.jks
 *.keystore
