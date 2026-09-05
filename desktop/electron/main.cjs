@@ -116,6 +116,23 @@ async function startBundledMongoDB() {
   }
 }
 
+function ensureWindowsFirewallRules() {
+  if (process.platform !== 'win32') return;
+  const ports = [5000, 27017];
+  ports.forEach((port) => {
+    try {
+      const ruleName = `Vasantham CRM Port ${port}`;
+      const checkCmd = `netsh advfirewall firewall show rule name="${ruleName}"`;
+      exec(checkCmd, (err, stdout) => {
+        if (err || !stdout || !stdout.includes(ruleName)) {
+          const addCmd = `netsh advfirewall firewall add rule name="${ruleName}" dir=in action=allow protocol=TCP localport=${port} profile=any`;
+          exec(addCmd, () => {});
+        }
+      });
+    } catch (e) {}
+  });
+}
+
 // 2. Auto-Start Express Backend Server
 async function startEmbeddedBackend() {
   const isBackendRunning = await isPortOpen(5000);
@@ -144,6 +161,9 @@ async function startEmbeddedBackend() {
   console.log(`🚀 [Backend API] Launching Express server from: ${backendServerPath}`);
   process.env.MONGODB_URI = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/vasantham_crm';
   process.env.PORT = process.env.PORT || '5000';
+  process.env.JWT_SECRET = process.env.JWT_SECRET || 'vasantham_jwt_secret_key_2026';
+  process.env.DEV_KEY = process.env.DEV_KEY || 'vasantham_dev_secret_wipe_key_2026';
+  process.env.NODE_ENV = 'production';
 
   try {
     require(backendServerPath);
@@ -230,6 +250,8 @@ function createWindow() {
 
 app.whenReady().then(async () => {
   try {
+    // 0. Register Windows Firewall Rules for Ports 5000 & 27017
+    ensureWindowsFirewallRules();
     // Run IP Auto-Sync & Firewall rule registration
     let updateIpScript = '';
     if (app.isPackaged) {

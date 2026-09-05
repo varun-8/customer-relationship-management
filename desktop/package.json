@@ -42,6 +42,7 @@
     },
     "win": {
       "icon": "public/logo.png",
+      "requestedExecutionLevel": "requireAdministrator",
       "target": [
         "nsis",
         "portable"
@@ -49,6 +50,7 @@
     },
     "nsis": {
       "oneClick": false,
+      "allowElevation": true,
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
