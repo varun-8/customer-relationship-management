@@ -5,16 +5,22 @@
   "type": "module",
   "main": "electron/main.cjs",
   "scripts": {
-    "dev": "node start-desktop.js",
-    "dev:browser": "concurrently -k -n \"BACKEND,DESKTOP\" -c \"bgBlue.bold,bgMagenta.bold\" \"npm --prefix ../backend run dev\" \"vite\"",
+    "update-ip": "node ../scripts/update-ip.js",
+    "dev": "node ../scripts/update-ip.js && node start-desktop.js",
+    "dev:browser": "node ../scripts/update-ip.js && concurrently -k -n \"BACKEND,DESKTOP\" -c \"bgBlue.bold,bgMagenta.bold\" \"npm --prefix ../backend run dev\" \"vite\"",
     "dev:frontend": "vite",
     "dev:backend": "npm --prefix ../backend run dev",
     "dev:electron": "electron .",
-    "build": "vite build",
-    "dist:exe": "vite build && electron-builder --win",
+    "build": "node ../scripts/update-ip.js && vite build",
+    "build:testing": "vite build --mode testing",
+    "dev:testing": "vite --mode testing",
+    "dist:exe": "node ../scripts/update-ip.js && vite build && electron-builder --win",
+    "build:exe": "npm run dist:exe",
+    "dist:testing-exe": "vite build --mode testing && electron-builder --win",
     "preview": "vite preview"
   },
   "dependencies": {
+    "install": "^0.13.0",
     "jspdf": "^4.2.1",
     "jspdf-autotable": "^5.0.8",
     "lucide-react": "^0.383.0",
@@ -40,10 +46,38 @@
     },
     "win": {
       "target": [
-        "nsis",
-        "portable"
+        "nsis"
       ]
     },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Vasantham CRM",
+      "uninstallDisplayName": "Vasantham CRM"
+    },
+    "extraResources": [
+      {
+        "from": "../backend",
+        "to": "backend",
+        "filter": [
+          "src/**/*",
+          "node_modules/**/*",
+          "bin/**/*",
+          "package.json",
+          ".env",
+          ".env.example"
+        ]
+      },
+      {
+        "from": "../backend/bin",
+        "to": "mongodb",
+        "filter": [
+          "**/*"
+        ]
+      }
+    ],
     "files": [
       "dist/**/*",
       "electron/**/*"

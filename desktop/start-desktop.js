@@ -110,6 +110,13 @@ async function main() {
       shell: true,
     });
     processes.push(backendProc);
+
+    try {
+      await waitForUrl('http://localhost:5000/api/health', 30000);
+      console.log('✅ Backend API Server is ready on http://localhost:5000');
+    } catch (err) {
+      throw new Error(`Backend API Server did not become ready: ${err.message}`);
+    }
   }
 
   // 2. Vite Dev Server Check & Launch
