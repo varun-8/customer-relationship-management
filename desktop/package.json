@@ -46,6 +46,15 @@
         "portable"
       ]
     },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Vasantham CRM",
+      "uninstallDisplayName": "Vasantham CRM",
+      "deleteAppDataOnUninstall": false
+    },
     "files": [
       "dist/**/*",
       "electron/**/*",

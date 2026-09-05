@@ -15,8 +15,16 @@ const User = require('../models/User');
 const DEFAULT_BACKUP_DIR = path.join(process.env.USERPROFILE || 'C:\\', 'Vasantham_CRM_Backups');
 const MAX_BACKUPS_RETAINED = 30;
 
-// Config file path to persist custom storage location
-const CONFIG_FILE_PATH = path.join(__dirname, '..', '..', 'backup_config.json');
+// User AppData directory for persistent runtime config
+const USER_DATA_DIR = process.env.APPDATA 
+  ? path.join(process.env.APPDATA, 'vasantham-crm-desktop')
+  : path.join(process.env.USERPROFILE || 'C:\\', 'Vasantham_CRM_Data');
+
+if (!fs.existsSync(USER_DATA_DIR)) {
+  try { fs.mkdirSync(USER_DATA_DIR, { recursive: true }); } catch (e) {}
+}
+
+const CONFIG_FILE_PATH = path.join(USER_DATA_DIR, 'backup_config.json');
 
 const getBackupConfig = () => {
   try {
