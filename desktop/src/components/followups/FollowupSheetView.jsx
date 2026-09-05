@@ -27,9 +27,11 @@ import { api } from '../../services/api';
 import { FollowupLogModal } from './FollowupLogModal';
 import { LostSaleModal } from '../lost-sales/LostSaleModal';
 import { ConnectionErrorState } from '../common/ConnectionErrorState';
+import { useToneDown } from '../../context/ToneDownContext';
 import { getWhatsAppUrl } from '../../utils/whatsappHelper';
 
 export const FollowupSheetView = ({ onEditCustomer }) => {
+  const { isToneDown } = useToneDown();
   const [activeTab, setActiveTab] = useState('today'); // 'today', 'upcoming', 'overdue', 'all'
   const [temperatureFilter, setTemperatureFilter] = useState('all'); // 'Hot', 'Warm', 'Future', 'all'
   const [salespersonFilter, setSalespersonFilter] = useState('all');

@@ -152,9 +152,14 @@ exports.getLostSalesList = async (req, res) => {
     if (lostReason && lostReason !== 'all') {
       query.lostReason = lostReason;
     }
-    if (salesperson && salesperson !== 'all') {
+    
+    // Role-based salesperson scoping
+    if (req.user && req.user.role === 'employee') {
+      query.salesperson = req.user.name;
+    } else if (salesperson && salesperson !== 'all') {
       query.salesperson = salesperson;
     }
+
     if (status && status !== 'all') {
       query.status = status;
     }
@@ -370,6 +375,14 @@ exports.updateLostSale = async (req, res) => {
 exports.deleteLostSale = async (req, res) => {
   try {
     const { id } = req.params;
+
+    if (req.user && req.user.role === 'employee') {
+      return res.status(403).json({
+        success: false,
+        message: 'Access Denied: Employees are not permitted to delete lost sales records.',
+      });
+    }
+
     const deleted = await LostSale.findByIdAndDelete(id);
 
     if (!deleted) {

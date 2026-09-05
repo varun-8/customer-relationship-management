@@ -7,38 +7,11 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Initialize or login default owner for showroom demo
+  // Always require fresh login when app is opened
   useEffect(() => {
-    const initAuth = async () => {
-      const token = localStorage.getItem('vasantham_crm_token');
-      if (token) {
-        try {
-          const res = await api.getMe();
-          if (res.success && res.data) {
-            setUser(res.data);
-            setLoading(false);
-            return;
-          }
-        } catch (e) {
-          console.warn('Auto auth failed, logging in default owner:', e);
-        }
-      }
-
-      // Default quick-login as Owner
-      try {
-        const res = await api.login('owner@vasantham.com', 'admin123');
-        if (res.success && res.data) {
-          localStorage.setItem('vasantham_crm_token', res.data.token);
-          setUser(res.data);
-        }
-      } catch (err) {
-        console.error('Initial login error:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    initAuth();
+    localStorage.removeItem('vasantham_crm_token');
+    setUser(null);
+    setLoading(false);
   }, []);
 
   const login = async (email, password) => {

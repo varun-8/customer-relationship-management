@@ -117,6 +117,20 @@ async function run() {
       }
     });
 
+    // Copy any runtime DLLs from backend/bin into backend/bin/mongodb/
+    const binDir = path.join(ROOT_DIR, 'backend', 'bin');
+    if (fs.existsSync(binDir)) {
+      const binFiles = fs.readdirSync(binDir);
+      binFiles.forEach((file) => {
+        if (file.toLowerCase().endsWith('.dll')) {
+          const srcDll = path.join(binDir, file);
+          const destDll = path.join(BUNDLE_TARGET_DIR, file);
+          fs.copyFileSync(srcDll, destDll);
+          console.log(`   ✓ Bundled DLL ${file}`);
+        }
+      });
+    }
+
     // Cleanup temp zip and folder
     if (fs.existsSync(TEMP_ZIP_PATH)) {
       fs.unlinkSync(TEMP_ZIP_PATH);

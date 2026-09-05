@@ -14,6 +14,8 @@ import {
 import { api } from '../services/api';
 import { useToast } from './ToastContext';
 
+import logoImg from '../assets/logo.png';
+
 const BrandingContext = createContext(null);
 
 export const BRAND_ICONS = {
@@ -40,9 +42,12 @@ export const BrandingProvider = ({ children }) => {
       appName: 'Vasantham Tiles & Sanitary Wares',
       appShortName: 'Vasantham CRM',
       tagline: 'Tiles, Sanitary Wares, CP Fittings & Adhesives',
+      address: '124, Bypass Road, Near Bus Stand, Madurai, Tamil Nadu - 625001',
+      phone: '+91 98401 23456',
+      gstin: '33AAAAA0000A1Z5',
       logoType: 'image',
       logoIcon: 'Box',
-      logoImage: '/logo.png',
+      logoImage: logoImg,
       primaryColor: '#2563EB',
     };
   });
@@ -122,10 +127,13 @@ export const BrandingProvider = ({ children }) => {
         updateBranding,
         fetchBranding,
         loading,
-        appName: branding.appName || 'BuildCRM',
-        appShortName: branding.appShortName || 'BuildCRM',
+        appName: branding.appName || 'Vasantham Tiles & Sanitary Wares',
+        appShortName: branding.appShortName || 'Vasantham CRM',
         tagline: branding.tagline || 'Tiles & Sanitary Wares CRM',
-        logoType: branding.logoType || 'icon',
+        address: branding.address || '124, Bypass Road, Near Bus Stand, Madurai, Tamil Nadu - 625001',
+        phone: branding.phone || '+91 98401 23456',
+        gstin: branding.gstin || '33AAAAA0000A1Z5',
+        logoType: branding.logoType || 'image',
         logoIcon: branding.logoIcon || 'Box',
         logoImage: branding.logoImage || '',
         primaryColor: branding.primaryColor || '#2563EB',

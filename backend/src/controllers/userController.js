@@ -45,10 +45,13 @@ const createUser = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Password must be at least 6 characters' });
     }
 
-    const normalizedEmail = email.trim().toLowerCase();
+    const normalizedEmail = email.includes('@')
+      ? email.trim().toLowerCase()
+      : `${email.trim().toLowerCase()}@vasantham.com`;
+
     const existing = await User.findOne({ email: normalizedEmail });
     if (existing) {
-      return res.status(400).json({ success: false, message: `A user with email "${normalizedEmail}" already exists` });
+      return res.status(400).json({ success: false, message: `A user with email/username "${normalizedEmail}" already exists` });
     }
 
     const newUser = await User.create({
@@ -65,7 +68,7 @@ const createUser = async (req, res) => {
 
     res.status(201).json({
       success: true,
-      message: `Employee "${newUser.name}" registered successfully with mobile login credentials`,
+      message: `Employee "${newUser.name}" registered successfully with login credentials`,
       data: userObj,
     });
   } catch (error) {
@@ -93,11 +96,14 @@ const updateUser = async (req, res) => {
 
     if (name) user.name = newName;
     if (email) {
-      const normalizedEmail = email.trim().toLowerCase();
+      const normalizedEmail = email.includes('@')
+        ? email.trim().toLowerCase()
+        : `${email.trim().toLowerCase()}@vasantham.com`;
+
       if (normalizedEmail !== user.email) {
         const existing = await User.findOne({ email: normalizedEmail, _id: { $ne: id } });
         if (existing) {
-          return res.status(400).json({ success: false, message: `Email "${normalizedEmail}" is already in use by another user` });
+          return res.status(400).json({ success: false, message: `Email/username "${normalizedEmail}" is already in use by another user` });
         }
         user.email = normalizedEmail;
       }

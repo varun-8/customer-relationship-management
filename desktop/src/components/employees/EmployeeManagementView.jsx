@@ -9,8 +9,6 @@ import {
   RefreshCw,
   Mail,
   Phone,
-  LayoutGrid,
-  List,
   Copy,
   Check,
   Crown,
@@ -27,7 +25,6 @@ export const EmployeeManagementView = () => {
   const [error, setError] = useState('');
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
-  const [viewMode, setViewMode] = useState('grid'); // 'grid' | 'table'
   const [copiedId, setCopiedId] = useState(null);
 
   const [showModal, setShowModal] = useState(false);
@@ -135,10 +132,10 @@ export const EmployeeManagementView = () => {
       {/* Minimalist Top Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
         <div>
-          <h1 style={{ fontSize: '22px', fontWeight: '800', color: '#0F172A', margin: 0, letterSpacing: '-0.02em' }}>
-            Showroom Staff
-          </h1>
-          <p style={{ fontSize: '13px', color: '#64748B', margin: '4px 0 0', fontWeight: '500' }}>
+          <div style={{ fontSize: '16px', fontWeight: '800', color: '#0F172A', margin: 0, letterSpacing: '-0.01em' }}>
+            Team Directory
+          </div>
+          <p style={{ fontSize: '12.5px', color: '#64748B', margin: '3px 0 0', fontWeight: '500' }}>
             {totalUsers} team members • {activeUsers} active mobile logins
           </p>
         </div>
@@ -266,45 +263,6 @@ export const EmployeeManagementView = () => {
               </button>
             ))}
           </div>
-
-          <div style={{ display: 'flex', gap: '2px', background: '#F1F5F9', padding: '3px', borderRadius: '8px' }}>
-            <button
-              type="button"
-              onClick={() => setViewMode('grid')}
-              style={{
-                padding: '5px 9px',
-                borderRadius: '6px',
-                border: 'none',
-                background: viewMode === 'grid' ? '#FFFFFF' : 'transparent',
-                color: viewMode === 'grid' ? '#0F172A' : '#64748B',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                boxShadow: viewMode === 'grid' ? '0 1px 3px rgba(0,0,0,0.06)' : 'none',
-              }}
-              title="Cards View"
-            >
-              <LayoutGrid size={15} />
-            </button>
-            <button
-              type="button"
-              onClick={() => setViewMode('table')}
-              style={{
-                padding: '5px 9px',
-                borderRadius: '6px',
-                border: 'none',
-                background: viewMode === 'table' ? '#FFFFFF' : 'transparent',
-                color: viewMode === 'table' ? '#0F172A' : '#64748B',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                boxShadow: viewMode === 'table' ? '0 1px 3px rgba(0,0,0,0.06)' : 'none',
-              }}
-              title="Table View"
-            >
-              <List size={15} />
-            </button>
-          </div>
         </div>
       </div>
 
@@ -387,178 +345,6 @@ export const EmployeeManagementView = () => {
               Reset Filters
             </button>
           )}
-        </div>
-      ) : viewMode === 'grid' ? (
-        /* MINIMALIST GRID CARD VIEW */
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(290px, 1fr))',
-            gap: '14px',
-          }}
-        >
-          {filteredUsers.map((u) => {
-            const isOwner = u.role === 'owner';
-            const isPrimaryAdmin = u.email === 'owner@vasantham.com';
-            const isActive = u.active !== false;
-            const initial = (u.name || 'S').charAt(0).toUpperCase();
-
-            return (
-              <div
-                key={u._id}
-                style={{
-                  background: '#FFFFFF',
-                  borderRadius: '14px',
-                  border: '1px solid #E2E8F0',
-                  padding: '16px',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  justifyContent: 'space-between',
-                  gap: '12px',
-                  transition: 'border-color 0.15s ease',
-                }}
-              >
-                {/* Header Row */}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <div
-                      style={{
-                        width: '38px',
-                        height: '38px',
-                        borderRadius: '50%',
-                        background: isOwner ? '#F5F3FF' : '#EFF6FF',
-                        color: isOwner ? '#7C3AED' : '#2563EB',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontWeight: '700',
-                        fontSize: '15px',
-                        flexShrink: 0,
-                      }}
-                    >
-                      {initial}
-                    </div>
-
-                    <div>
-                      <div style={{ fontSize: '14px', fontWeight: '700', color: '#0F172A', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        <span>{u.name}</span>
-                        {isOwner ? (
-                          <Crown size={13} color="#7C3AED" />
-                        ) : (
-                          <Briefcase size={13} color="#2563EB" />
-                        )}
-                      </div>
-                      <div style={{ fontSize: '12px', color: isOwner ? '#7C3AED' : '#2563EB', fontWeight: '600' }}>
-                        {isOwner ? 'Showroom Owner' : 'Sales Executive'}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Active Toggle Status Button */}
-                  <button
-                    type="button"
-                    onClick={() => handleToggleStatus(u)}
-                    style={{
-                      background: isActive ? '#ECFDF5' : '#F1F5F9',
-                      border: 'none',
-                      color: isActive ? '#059669' : '#64748B',
-                      padding: '4px 9px',
-                      borderRadius: '12px',
-                      fontSize: '11.5px',
-                      fontWeight: '700',
-                      cursor: 'pointer',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '5px',
-                    }}
-                    title="Toggle active status"
-                  >
-                    <span
-                      style={{
-                        width: '6px',
-                        height: '6px',
-                        borderRadius: '50%',
-                        background: isActive ? '#10B981' : '#94A3B8',
-                      }}
-                    />
-                    <span>{isActive ? 'Active' : 'Inactive'}</span>
-                  </button>
-                </div>
-
-                {/* Contact Credentials Info */}
-                <div style={{ backgroundColor: '#F8FAFC', borderRadius: '10px', padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '12.5px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0, flex: 1 }}>
-                      <Mail size={13} color="#94A3B8" style={{ flexShrink: 0 }} />
-                      <span style={{ color: '#334155', fontWeight: '500', fontFamily: 'monospace', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                        {u.email}
-                      </span>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => handleCopyText(u.email, `email_${u._id}`)}
-                      style={{ border: 'none', background: 'none', color: copiedId === `email_${u._id}` ? '#059669' : '#94A3B8', cursor: 'pointer', padding: 0 }}
-                      title="Copy Email"
-                    >
-                      {copiedId === `email_${u._id}` ? <Check size={12} /> : <Copy size={12} />}
-                    </button>
-                  </div>
-
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12.5px', color: '#64748B' }}>
-                    <Phone size={13} color="#94A3B8" style={{ flexShrink: 0 }} />
-                    <span>{u.phone || 'No phone linked'}</span>
-                  </div>
-                </div>
-
-                {/* Actions Footer */}
-                <div
-                  style={{
-                    paddingTop: '8px',
-                    borderTop: '1px solid #F1F5F9',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'flex-end',
-                    gap: '10px',
-                  }}
-                >
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setEditingEmployee(u);
-                      setShowModal(true);
-                    }}
-                    style={{
-                      background: 'none',
-                      border: 'none',
-                      color: '#2563EB',
-                      fontSize: '12.5px',
-                      fontWeight: '700',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    Edit
-                  </button>
-
-                  {!isPrimaryAdmin && (
-                    <button
-                      type="button"
-                      onClick={() => handleDeleteUser(u)}
-                      style={{
-                        background: 'none',
-                        border: 'none',
-                        color: '#DC2626',
-                        fontSize: '12.5px',
-                        fontWeight: '600',
-                        cursor: 'pointer',
-                      }}
-                    >
-                      Remove
-                    </button>
-                  )}
-                </div>
-              </div>
-            );
-          })}
         </div>
       ) : (
         /* MINIMALIST TABLE VIEW */

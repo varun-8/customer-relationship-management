@@ -20,6 +20,7 @@ import {
 import { api } from '../../services/api';
 import { useBranding } from '../../context/BrandingContext';
 import { useToast } from '../../context/ToastContext';
+import { useToneDown } from '../../context/ToneDownContext';
 import { generatePdfReport, exportToCSV } from '../../utils/reportPdfGenerator';
 
 // Comprehensive Helper Functions to Extract Customer Fields across all MongoDB Schema & Mongoose Map variants
@@ -151,6 +152,7 @@ const DATE_PRESETS = [
 
 export const ReportsView = () => {
   const { branding } = useBranding();
+  const { isToneDown } = useToneDown();
   const toast = useToast();
 
   const [activeReportId, setActiveReportId] = useState('executive');

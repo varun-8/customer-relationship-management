@@ -6,6 +6,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { CustomerProvider, useCustomer } from './context/CustomerContext';
 import { FormBuilderProvider } from './context/FormBuilderContext';
 import { BrandingProvider } from './context/BrandingContext';
+import { ToneDownProvider, useToneDown } from './context/ToneDownContext';
 import { Sidebar } from './components/layout/Sidebar';
 import { Header } from './components/layout/Header';
 import { CustomerListTable } from './components/customer-crm/CustomerListTable';
@@ -22,20 +23,63 @@ import { FollowupSheetView } from './components/followups/FollowupSheetView';
 import { EmployeeManagementView } from './components/employees/EmployeeManagementView';
 import { MobilePairingView } from './components/mobile-pairing/MobilePairingView';
 import { ReportsView } from './components/reports/ReportsView';
+import { AppLoadingScreen } from './components/common/AppLoadingScreen';
+import { LoginPage } from './components/auth/LoginPage';
 import { api } from './services/api';
 
 const MainAppContent = () => {
   const toast = useToast();
+  const { user, isEmployee, loading: authLoading } = useAuth();
+  const [initialLoading, setInitialLoading] = useState(true);
+  const [loadTakingLong, setLoadTakingLong] = useState(false);
+
   const [activeTab, setActiveTab] = useState('dashboard');
   const [showMobileSimulator, setShowMobileSimulator] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState(null);
   const [viewingCustomer, setViewingCustomer] = useState(null);
   const [showAddCustomerModal, setShowAddCustomerModal] = useState(false);
 
+  // Automatically enforce allowed tab for employees
+  useEffect(() => {
+    if (isEmployee) {
+      const allowed = ['customers', 'followups', 'mobile-pairing', 'lost'];
+      if (!allowed.includes(activeTab)) {
+        setActiveTab('customers');
+      }
+    }
+  }, [isEmployee, activeTab]);
+
   // Server health monitoring
   const [isOnline, setIsOnline] = useState(true);
   const [isCheckingServer, setIsCheckingServer] = useState(false);
   const { deleteCustomer } = useCustomer();
+
+  // Manage smooth initial app loading transition
+  useEffect(() => {
+    const minTimer = setTimeout(() => {
+      if (!authLoading) {
+        setInitialLoading(false);
+      }
+    }, 800);
+
+    const longTimer = setTimeout(() => {
+      setLoadTakingLong(true);
+    }, 6000);
+
+    return () => {
+      clearTimeout(minTimer);
+      clearTimeout(longTimer);
+    };
+  }, [authLoading]);
+
+  useEffect(() => {
+    if (!authLoading) {
+      const timer = setTimeout(() => {
+        setInitialLoading(false);
+      }, 400);
+      return () => clearTimeout(timer);
+    }
+  }, [authLoading]);
 
   const verifyServerConnection = useCallback(async (isManualRetry = false) => {
     setIsCheckingServer(true);
@@ -135,6 +179,25 @@ const MainAppContent = () => {
   };
 
   const headerInfo = getHeaderInfo();
+
+  if (initialLoading || authLoading) {
+    return (
+      <AppLoadingScreen
+        statusMessage={
+          isOnline
+            ? 'Connecting to Vasantham CRM database...'
+            : 'Starting local database & CRM services...'
+        }
+        isTakingLong={loadTakingLong}
+        onRetry={() => verifyServerConnection(true)}
+        onBypass={() => setInitialLoading(false)}
+      />
+    );
+  }
+
+  if (!user) {
+    return <LoginPage />;
+  }
 
   return (
     <div className="app-container">
@@ -242,17 +305,19 @@ const MainAppContent = () => {
 export default function App() {
   return (
     <ErrorBoundary>
-      <ToastProvider>
-        <AuthProvider>
-          <BrandingProvider>
-            <CustomerProvider>
-              <FormBuilderProvider>
-                <MainAppContent />
-              </FormBuilderProvider>
-            </CustomerProvider>
-          </BrandingProvider>
-        </AuthProvider>
-      </ToastProvider>
+      <ToneDownProvider>
+        <ToastProvider>
+          <AuthProvider>
+            <BrandingProvider>
+              <CustomerProvider>
+                <FormBuilderProvider>
+                  <MainAppContent />
+                </FormBuilderProvider>
+              </CustomerProvider>
+            </BrandingProvider>
+          </AuthProvider>
+        </ToastProvider>
+      </ToneDownProvider>
     </ErrorBoundary>
   );
 }

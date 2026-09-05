@@ -3310,4 +3310,270 @@ button:focus-visible {
   }
 }
 
+/* ==========================================================================
+   TONE DOWN MODE (RAW BLACK & WHITE MINIMAL / BRUTALIST DESIGN)
+/* ==========================================================================
+   TONE DOWN MODE (CLEAN MONOCHROME BLACK & WHITE WITH HIGH CONTRAST)
+   ========================================================================== */
+body.tone-down-mode {
+  background-color: #F8FAFC !important;
+  color: #0F172A !important;
+  filter: grayscale(100%) !important;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif !important;
+}
 
+body.tone-down-mode * {
+  transition: none !important;
+  animation: none !important;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif !important;
+}
+
+body.tone-down-mode .app-container {
+  background-color: #F8FAFC !important;
+  color: #0F172A !important;
+}
+
+/* Reduced & Minimalist Nav Bar in Tone Down Mode */
+body.tone-down-mode .app-sidebar,
+body.tone-down-mode aside {
+  width: 210px !important;
+  min-width: 210px !important;
+  background-color: #FFFFFF !important;
+  border-right: 1px solid #CBD5E1 !important;
+  color: #0F172A !important;
+}
+
+body.tone-down-mode .app-sidebar.app-sidebar-collapsed,
+body.tone-down-mode aside.app-sidebar-collapsed {
+  width: 64px !important;
+  min-width: 64px !important;
+}
+
+body.tone-down-mode .sidebar-brand-wrapper {
+  padding: 10px 12px !important;
+  background-color: #FFFFFF !important;
+  border-bottom: 1px solid #E2E8F0 !important;
+}
+
+body.tone-down-mode .sidebar-brand-logo {
+  width: 28px !important;
+  height: 28px !important;
+  border-radius: 6px !important;
+  background: #0F172A !important;
+  box-shadow: none !important;
+}
+
+body.tone-down-mode .sidebar-brand-title {
+  font-size: 13px !important;
+  font-weight: 700 !important;
+}
+
+body.tone-down-mode .sidebar-brand-tagline {
+  display: none !important;
+}
+
+body.tone-down-mode .sidebar-nav-group {
+  margin-bottom: 8px !important;
+  padding: 0 6px !important;
+}
+
+body.tone-down-mode .sidebar-group-heading {
+  font-size: 9.5px !important;
+  padding: 4px 6px !important;
+  margin-bottom: 2px !important;
+  color: #94A3B8 !important;
+}
+
+body.tone-down-mode .sidebar-nav-item {
+  padding: 6px 10px !important;
+  font-size: 12px !important;
+  gap: 8px !important;
+  margin-bottom: 2px !important;
+  border-radius: 6px !important;
+  color: #334155 !important;
+}
+
+body.tone-down-mode .sidebar-nav-item svg {
+  width: 15px !important;
+  height: 15px !important;
+}
+
+body.tone-down-mode .sidebar-nav-item:hover {
+  background-color: #F1F5F9 !important;
+  color: #000000 !important;
+}
+
+body.tone-down-mode .sidebar-nav-item.active,
+body.tone-down-mode .sidebar-nav-item-active {
+  background-color: #0F172A !important;
+  color: #FFFFFF !important;
+  font-weight: 600 !important;
+}
+
+body.tone-down-mode .sidebar-nav-item.active svg,
+body.tone-down-mode .sidebar-nav-item-active svg {
+  color: #FFFFFF !important;
+}
+
+body.tone-down-mode .sidebar-nav-item-indicator {
+  display: none !important;
+}
+
+body.tone-down-mode .sidebar-bottom-toggle-btn {
+  padding: 5px 8px !important;
+  font-size: 11px !important;
+}
+
+body.tone-down-mode .sidebar-footer-wrapper {
+  padding: 6px 8px !important;
+}
+
+body.tone-down-mode .sidebar-profile-card {
+  padding: 6px 8px !important;
+  border: 1px solid #E2E8F0 !important;
+  border-radius: 8px !important;
+}
+
+body.tone-down-mode .sidebar-avatar-circle {
+  width: 26px !important;
+  height: 26px !important;
+  font-size: 10px !important;
+}
+
+body.tone-down-mode .sidebar-profile-name {
+  font-size: 11.5px !important;
+}
+
+body.tone-down-mode .sidebar-profile-role {
+  font-size: 9.5px !important;
+}
+
+/* Header in Tone Down */
+body.tone-down-mode .app-header,
+body.tone-down-mode header {
+  padding: 8px 16px !important;
+  background-color: #FFFFFF !important;
+  border-bottom: 1px solid #CBD5E1 !important;
+  color: #0F172A !important;
+}
+
+/* Clear Monochrome Tables */
+body.tone-down-mode table,
+body.tone-down-mode .buildcrm-table,
+body.tone-down-mode .custom-table-container table {
+  width: 100% !important;
+  border-collapse: collapse !important;
+  background-color: #FFFFFF !important;
+  border: 1px solid #CBD5E1 !important;
+}
+
+body.tone-down-mode th,
+body.tone-down-mode .buildcrm-table th {
+  background-color: #F1F5F9 !important;
+  color: #0F172A !important;
+  font-weight: 700 !important;
+  border-bottom: 2px solid #94A3B8 !important;
+  border-right: 1px solid #E2E8F0 !important;
+  padding: 10px 14px !important;
+  font-size: 11.5px !important;
+  letter-spacing: 0.03em !important;
+  text-transform: uppercase !important;
+}
+
+body.tone-down-mode td,
+body.tone-down-mode .buildcrm-table td {
+  padding: 10px 14px !important;
+  border-bottom: 1px solid #E2E8F0 !important;
+  border-right: 1px solid #F1F5F9 !important;
+  color: #0F172A !important;
+  font-size: 13px !important;
+}
+
+body.tone-down-mode tr:nth-child(even) td,
+body.tone-down-mode .buildcrm-table tbody tr:nth-child(even) td {
+  background-color: #F8FAFC !important;
+}
+
+body.tone-down-mode tr:hover td,
+body.tone-down-mode .buildcrm-table tbody tr:hover td {
+  background-color: #F1F5F9 !important;
+}
+
+body.tone-down-mode .table-card-container {
+  border: 1px solid #CBD5E1 !important;
+  background: #FFFFFF !important;
+  border-radius: 10px !important;
+  overflow: hidden !important;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04) !important;
+}
+
+/* Badges & Status Pills */
+body.tone-down-mode .lead-pill,
+body.tone-down-mode .status-badge,
+body.tone-down-mode .table-badge {
+  background-color: #F1F5F9 !important;
+  color: #0F172A !important;
+  border: 1px solid #94A3B8 !important;
+  font-weight: 700 !important;
+  border-radius: 6px !important;
+  padding: 3px 8px !important;
+}
+
+/* Clean Form Controls */
+body.tone-down-mode input,
+body.tone-down-mode select,
+body.tone-down-mode textarea {
+  background-color: #FFFFFF !important;
+  color: #0F172A !important;
+  border: 1px solid #CBD5E1 !important;
+  border-radius: 8px !important;
+  padding: 8px 12px !important;
+}
+
+body.tone-down-mode input:focus,
+body.tone-down-mode select:focus,
+body.tone-down-mode textarea:focus {
+  border-color: #000000 !important;
+  outline: none !important;
+}
+
+/* Clean Action Buttons */
+body.tone-down-mode button {
+  border-radius: 6px !important;
+  font-weight: 600 !important;
+}
+
+/* Dashboard Cards & Layout */
+body.tone-down-mode .workspace-section,
+body.tone-down-mode .app-content {
+  background-color: #F8FAFC !important;
+  color: #0F172A !important;
+}
+
+body.tone-down-mode .executive-dashboard-root {
+  gap: 12px !important;
+}
+
+body.tone-down-mode .dash-toolbar-card,
+body.tone-down-mode .dash-kpi-card,
+body.tone-down-mode .dash-table-card,
+body.tone-down-mode .dash-side-panel {
+  border: 1px solid #CBD5E1 !important;
+  border-radius: 8px !important;
+  background-color: #FFFFFF !important;
+  box-shadow: none !important;
+}
+
+body.tone-down-mode .dash-toolbar-card {
+  padding: 10px 14px !important;
+}
+
+body.tone-down-mode .dash-kpi-card,
+body.tone-down-mode .dash-side-panel {
+  padding: 12px 14px !important;
+}
+
+body.tone-down-mode .dash-table-card table th,
+body.tone-down-mode .dash-table-card table td {
+  padding: 8px 12px !important;
+}

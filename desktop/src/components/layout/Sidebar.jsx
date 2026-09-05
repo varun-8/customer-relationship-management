@@ -18,22 +18,26 @@ import {
 import { useAuth } from '../../context/AuthContext';
 import { useBranding } from '../../context/BrandingContext';
 import { useCustomer } from '../../context/CustomerContext';
+import { useToneDown } from '../../context/ToneDownContext';
 
 export const Sidebar = ({
   activeTab,
   setActiveTab,
   onOpenMobileSimulator,
 }) => {
-  const { user, isOwner, logout } = useAuth();
+  const { user, isOwner, isEmployee, logout } = useAuth();
   const { branding, appShortName, tagline, primaryColor, renderLogo } = useBranding();
   const { customers, pagination } = useCustomer();
+  const { isToneDown } = useToneDown();
 
   const [isCollapsed, setIsCollapsed] = useState(false);
 
   // Dynamic customer count badge
   const totalCustomers = pagination?.total || customers?.length || 0;
 
-  const navigationGroups = [
+  const allowedEmployeeTabIds = ['customers', 'followups', 'mobile-pairing', 'lost'];
+
+  const rawNavigationGroups = [
     {
       groupTitle: 'Core Workspace',
       items: [
@@ -49,7 +53,7 @@ export const Sidebar = ({
           shortLabel: 'Customers',
           icon: Users,
           badge: totalCustomers > 0 ? totalCustomers : null,
-          badgeColor: '#2563EB',
+          badgeColor: isToneDown ? '#000000' : '#2563EB',
         },
         {
           id: 'reports',
@@ -101,6 +105,15 @@ export const Sidebar = ({
       ],
     },
   ];
+
+  const navigationGroups = isEmployee
+    ? rawNavigationGroups
+        .map((group) => ({
+          ...group,
+          items: group.items.filter((item) => allowedEmployeeTabIds.includes(item.id)),
+        }))
+        .filter((group) => group.items.length > 0)
+    : rawNavigationGroups;
 
   // User Initials
   const userName = user?.name || (isOwner ? 'Vasantham Admin' : 'Showroom Staff');

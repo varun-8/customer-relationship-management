@@ -37,24 +37,25 @@ export const generatePdfReport = ({
   // 1. Company Brand Header Left
   const companyName = branding.appName || 'Vasantham Tiles & Sanitary Wares';
   const companySub = branding.tagline || 'Premium Showroom & Customer CRM';
-  const companyAddress = branding.address || 'Main Showroom Road, Tamil Nadu, India';
-  const companyPhone = branding.phone || '+91 98765 43210';
+  const companyAddress = branding.address || '124, Bypass Road, Near Bus Stand, Madurai, Tamil Nadu - 625001';
+  const companyPhone = branding.phone || '+91 98401 23456';
+  const companyGstin = branding.gstin ? ` • GSTIN: ${branding.gstin}` : '';
 
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(14);
+  doc.setFontSize(13);
   doc.setTextColor(15, 23, 42); // #0F172A
   doc.text(companyName, marginX, startY);
 
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(8);
+  doc.setFontSize(7.8);
   doc.setTextColor(100, 116, 139); // #64748B
-  doc.text(companySub, marginX, startY + 5);
-  doc.text(`${companyAddress} | Ph: ${companyPhone}`, marginX, startY + 9);
+  doc.text(companySub, marginX, startY + 4.5);
+  doc.text(`${companyAddress} • Ph: ${companyPhone}${companyGstin}`, marginX, startY + 8.5);
 
   // 2. Report Title & Filter Info Right Aligned
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(12);
-  doc.setTextColor(37, 99, 235); // #2563EB
+  doc.setFontSize(11);
+  doc.setTextColor(15, 23, 42); // #0F172A
   doc.text(reportTitle.toUpperCase(), pageWidth - marginX, startY, { align: 'right' });
 
   const now = new Date();
@@ -71,26 +72,26 @@ export const generatePdfReport = ({
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(7.5);
   doc.setTextColor(100, 116, 139);
-  doc.text(`Generated: ${dateFormatted} ${timeFormatted}`, pageWidth - marginX, startY + 5, {
+  doc.text(`Generated: ${dateFormatted} ${timeFormatted}`, pageWidth - marginX, startY + 4.5, {
     align: 'right',
   });
-  doc.text(`Criteria: ${filtersText}`, pageWidth - marginX, startY + 9, { align: 'right' });
+  doc.text(`Filters: ${filtersText}`, pageWidth - marginX, startY + 8.5, { align: 'right' });
 
-  startY += 15;
+  startY += 13;
 
   // 3. Hairline Divider Line
-  doc.setDrawColor(226, 232, 240); // #E2E8F0
+  doc.setDrawColor(203, 213, 225); // #CBD5E1
   doc.setLineWidth(0.3);
   doc.line(marginX, startY, pageWidth - marginX, startY);
 
-  startY += 6;
+  startY += 5;
 
   // 4. Key Metric Summary Cards
   if (summaryCards && summaryCards.length > 0) {
     const cardGap = 3.5;
     const totalGap = cardGap * (summaryCards.length - 1);
     const cardWidth = (printableWidth - totalGap) / summaryCards.length;
-    const cardHeight = 15;
+    const cardHeight = 14;
 
     summaryCards.forEach((card, index) => {
       const cardX = marginX + index * (cardWidth + cardGap);
@@ -102,25 +103,25 @@ export const generatePdfReport = ({
 
       // Top Color Accent Strip
       doc.setFillColor(card.color || primaryBlue);
-      doc.rect(cardX, startY, cardWidth, 1, 'F');
+      doc.rect(cardX, startY, cardWidth, 0.8, 'F');
 
       // Card Label
       doc.setFont('helvetica', 'bold');
-      doc.setFontSize(7);
+      doc.setFontSize(6.5);
       doc.setTextColor(100, 116, 139);
-      doc.text(String(card.label).toUpperCase(), cardX + 3.5, startY + 5.8);
+      doc.text(String(card.label).toUpperCase(), cardX + 3, startY + 5.2);
 
       // Card Value
       doc.setFont('helvetica', 'bold');
-      doc.setFontSize(10);
+      doc.setFontSize(9.5);
       doc.setTextColor(15, 23, 42);
-      doc.text(String(card.value), cardX + 3.5, startY + 11.8);
+      doc.text(String(card.value), cardX + 3, startY + 10.8);
     });
 
-    startY += cardHeight + 8;
+    startY += cardHeight + 6;
   }
 
-  // 5. Calculate Dynamic Proportional Column Widths to fill printableWidth (186mm) exactly
+  // 5. Calculate Dynamic Proportional Column Widths to fill printableWidth (186mm) exactly with zero overflow
   const totalGivenWidth = columns.reduce((acc, col) => acc + (col.width || 25), 0);
   const columnStylesMap = columns.reduce((acc, col, idx) => {
     const proportionalWidth = Math.round(((col.width || 25) / totalGivenWidth) * printableWidth * 10) / 10;
@@ -148,26 +149,29 @@ export const generatePdfReport = ({
     theme: 'grid',
     styles: {
       font: 'helvetica',
-      fontSize: 8,
-      cellPadding: 2.5,
-      textColor: [51, 65, 85], // #334155
+      fontSize: 7.5,
+      cellPadding: 2,
+      textColor: [30, 41, 59], // #1E293B
       lineColor: [226, 232, 240], // #E2E8F0
       lineWidth: 0.15,
       valign: 'middle',
       overflow: 'linebreak',
+      minCellHeight: 5.5,
     },
     headStyles: {
-      fillColor: [30, 58, 138], // Dark Navy Blue (#1E3A8A) for professional contrast
+      fillColor: [15, 23, 42], // Deep Charcoal (#0F172A) for authoritative executive contrast
       textColor: [255, 255, 255],
       fontStyle: 'bold',
-      fontSize: 8.5,
+      fontSize: 8,
       halign: 'center',
+      cellPadding: 2.5,
     },
     footStyles: {
       fillColor: [241, 245, 249],
       textColor: [15, 23, 42],
       fontStyle: 'bold',
-      fontSize: 8.5,
+      fontSize: 8,
+      cellPadding: 2.5,
     },
     alternateRowStyles: {
       fillColor: [248, 250, 252], // Subtle alternating row tint

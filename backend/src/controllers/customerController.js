@@ -64,6 +64,25 @@ const getCustomers = async (req, res) => {
       ];
     }
 
+    // Role-based record scoping for employees (view only their own records)
+    if (req.user && req.user.role === 'employee') {
+      const firstName = req.user.name ? req.user.name.split(' ')[0] : '';
+      const employeeFilter = {
+        $or: [
+          { 'createdBy.userId': req.user._id },
+          { 'data.salesperson': req.user.name },
+          ...(firstName ? [{ 'data.salesperson': new RegExp(firstName, 'i') }] : []),
+        ],
+      };
+
+      if (query.$or) {
+        query.$and = [{ $or: query.$or }, employeeFilter];
+        delete query.$or;
+      } else {
+        query.$or = employeeFilter.$or;
+      }
+    }
+
     // Build sort
     const sort = {};
     const direction = sortOrder === 'asc' ? 1 : -1;
@@ -221,6 +240,14 @@ const updateCustomer = async (req, res) => {
 const deleteCustomer = async (req, res) => {
   try {
     const { id } = req.params;
+
+    // Check if user is an employee - employees are forbidden from deleting records
+    if (req.user && req.user.role === 'employee') {
+      return res.status(403).json({
+        success: false,
+        message: 'Access Denied: Showroom salespersons and employees are not permitted to delete customer records.',
+      });
+    }
 
     const customer = await Customer.findOneAndDelete({
       $or: [{ _id: id.match(/^[0-9a-fA-F]{24}$/) ? id : null }, { customerId: id }],

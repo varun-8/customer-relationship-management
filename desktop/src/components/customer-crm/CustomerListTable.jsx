@@ -22,12 +22,14 @@ import {
   FileX,
 } from 'lucide-react';
 import { useCustomer } from '../../context/CustomerContext';
+import { useToneDown } from '../../context/ToneDownContext';
 import { ColumnSettingsModal } from './ColumnSettingsModal';
 import { LostSaleModal } from '../lost-sales/LostSaleModal';
 import { ConnectionErrorState } from '../common/ConnectionErrorState';
 import { getWhatsAppUrl } from '../../utils/whatsappHelper';
 
 export const CustomerListTable = ({ onAddCustomer, onEditCustomer, onViewCustomer }) => {
+  const { isToneDown } = useToneDown();
   const [markingLostCustomer, setMarkingLostCustomer] = useState(null);
   const {
     customers,

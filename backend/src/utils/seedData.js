@@ -9,23 +9,43 @@ const { DEFAULT_INITIAL_FIELDS } = require('../controllers/formController');
 const runSeedingLogic = async () => {
   console.log('[Seed] Initializing Vasantham CRM default database records...');
 
-  // 1. Seed Users
-  let owner = await User.findOne({ email: 'owner@vasantham.com' });
+  const adminUsername = (process.env.ADMIN_USERNAME || 'vasantham').trim().toLowerCase();
+  const adminPassword = process.env.ADMIN_PASSWORD || 'vasantham@2026';
+  const adminEmail = `${adminUsername}@vasantham.com`;
+
+  // 1. Seed / Sync Admin Owner User
+  let owner = await User.findOne({
+    $or: [
+      { email: adminEmail },
+      { email: 'owner@vasantham.com' },
+      { name: 'Vasantham Admin' },
+      { role: 'owner' },
+    ],
+  });
+
   if (!owner) {
     owner = await User.create({
-      name: 'Vasantham Admin & Owner',
-      email: 'owner@vasantham.com',
-      password: 'admin123',
+      name: 'Vasantham Admin',
+      email: adminEmail,
+      password: adminPassword,
       role: 'owner',
       phone: '9840123456',
     });
-    console.log(`[Seed] Created default Owner account (${owner.email})`);
+    console.log(`[Seed] Created default Admin account (${owner.email})`);
+  } else {
+    // Update password & email to ensure credentials in .env always work
+    owner.password = adminPassword;
+    if (!owner.email.includes(adminUsername)) {
+      owner.email = adminEmail;
+    }
+    await owner.save();
+    console.log(`[Seed] Synchronized Admin account (${owner.email}) with configured .env password`);
   }
 
   let employee = await User.findOne({ email: 'employee@vasantham.com' });
   if (!employee) {
     employee = await User.create({
-      name: 'Karthik Raja (Showroom Executive)',
+      name: 'Karthik Raja',
       email: 'employee@vasantham.com',
       password: 'employee123',
       role: 'employee',

@@ -114,9 +114,16 @@ exports.getFollowupsList = async (req, res) => {
       });
     });
 
-    // Apply Salesperson Filter (BEFORE calculating counts if specific salesperson is requested)
+    // Apply Salesperson / Employee Role Scoping
     let scopedFollowups = allFollowups;
-    if (salesperson && salesperson !== 'all') {
+    if (req.user && req.user.role === 'employee') {
+      const empName = (req.user.name || '').trim().toLowerCase();
+      const empFirstName = empName.split(' ')[0];
+      scopedFollowups = allFollowups.filter((f) => {
+        const staff = (f.salesperson || '').trim().toLowerCase();
+        return staff === empName || staff.includes(empFirstName) || empName.includes(staff);
+      });
+    } else if (salesperson && salesperson !== 'all') {
       const target = salesperson.trim().toLowerCase();
       scopedFollowups = allFollowups.filter((f) => {
         const staff = (f.salesperson || '').trim().toLowerCase();
