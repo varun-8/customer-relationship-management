@@ -17,4 +17,7 @@ router.get('/connected-devices', settingsController.getConnectedDevices);
 // DELETE /api/settings/connected-devices/:deviceId
 router.delete('/connected-devices/:deviceId', settingsController.disconnectDevice);
 
+// POST /api/settings/fix-firewall
+router.post('/fix-firewall', settingsController.fixWindowsFirewall);
+
 module.exports = router;

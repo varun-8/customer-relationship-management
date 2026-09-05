@@ -12,13 +12,13 @@ import {
   Platform,
   TextInput,
   KeyboardAvoidingView,
-  ScrollView,
 } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { apiClient } from '../../api/client';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const SCAN_FRAME_SIZE = Math.min(SCREEN_WIDTH * 0.68, 260);
+const BARCODE_SETTINGS = { barcodeTypes: ['qr'] };
 
 export const MobileQrScannerModal = ({
   visible,
@@ -31,6 +31,8 @@ export const MobileQrScannerModal = ({
   const [connecting, setConnecting] = useState(false);
   const [statusMessage, setStatusMessage] = useState('');
   const [scanLaserAnim] = useState(new Animated.Value(0));
+  const [cameraError, setCameraError] = useState(false);
+  const [cameraErrorMessage, setCameraErrorMessage] = useState('');
 
   // Manual IP & Auto-detect state
   const [showManualInput, setShowManualInput] = useState(false);
@@ -39,7 +41,7 @@ export const MobileQrScannerModal = ({
 
   // Laser animation effect
   useEffect(() => {
-    if (visible && !scanned && !connecting) {
+    if (visible && !scanned && !connecting && !cameraError) {
       Animated.loop(
         Animated.sequence([
           Animated.timing(scanLaserAnim, {
@@ -57,7 +59,7 @@ export const MobileQrScannerModal = ({
     } else {
       scanLaserAnim.setValue(0);
     }
-  }, [visible, scanned, connecting]);
+  }, [visible, scanned, connecting, cameraError]);
 
   // Reset scan state on reopen
   useEffect(() => {
@@ -66,18 +68,27 @@ export const MobileQrScannerModal = ({
       setConnecting(false);
       setStatusMessage('');
       setShowManualInput(false);
+      setCameraError(false);
+      setCameraErrorMessage('');
       apiClient.getApiBase().then((base) => {
         if (base) setManualHost(base);
       });
     }
   }, [visible]);
 
+  // Auto request camera permission if available
+  useEffect(() => {
+    if (visible && permission && !permission.granted && permission.canAskAgain) {
+      requestPermission().catch(() => {});
+    }
+  }, [visible, permission]);
+
   const handleBarcodeScanned = async ({ data }) => {
     if (scanned || connecting) return;
     setScanned(true);
 
-    const parsedApiUrl = apiClient.parsePairingPayload(data);
-    if (!parsedApiUrl) {
+    const parsedPayload = apiClient.parsePairingPayload(data);
+    if (!parsedPayload) {
       Alert.alert(
         'Invalid QR Code',
         'This QR code does not contain a valid Vasantham CRM server payload.',
@@ -86,22 +97,32 @@ export const MobileQrScannerModal = ({
       return;
     }
 
+    const targetUrl = typeof parsedPayload === 'object' ? (parsedPayload.primaryUrl || '') : parsedPayload;
     setConnecting(true);
-    setStatusMessage(`Connecting to ${parsedApiUrl}...`);
+    setStatusMessage(`Verifying Desktop Server at ${targetUrl}...`);
 
     try {
-      const testRes = await apiClient.testConnection(parsedApiUrl);
-      if (testRes.success) {
-        setStatusMessage('Connected to Desktop Server');
+      const testRes = await apiClient.testConnection(parsedPayload);
+      if (testRes.success && testRes.host) {
+        setStatusMessage('Connected to Desktop Server!');
         setTimeout(() => {
-          if (onConnected) onConnected(parsedApiUrl);
+          if (onConnected) onConnected(testRes.host);
           if (onClose) onClose();
         }, 500);
       } else {
         Alert.alert(
           'Connection Failed',
-          `Could not reach Desktop CRM at:\n${parsedApiUrl}\n\n1. Ensure phone and PC are on the same Wi-Fi network.\n2. Ensure Desktop CRM is running.`,
+          `Could not reach Desktop CRM server at:\n${targetUrl}\n\n1. Ensure phone and PC are on the same Wi-Fi network.\n2. Ensure Desktop CRM app is open on your PC.`,
           [
+            {
+              text: 'Try Auto-Detect',
+              onPress: () => {
+                setScanned(false);
+                setConnecting(false);
+                setStatusMessage('');
+                handleAutoDetect();
+              },
+            },
             {
               text: 'Scan Again',
               onPress: () => {
@@ -184,179 +205,219 @@ export const MobileQrScannerModal = ({
 
   if (!visible) return null;
 
-  return (
-    <Modal visible={visible} animationType="fade" transparent={false} onRequestClose={onClose}>
-      <View style={styles.container}>
-        {/* Top Header */}
-        <View style={styles.header}>
-          <View style={{ flex: 1 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-              <Text style={styles.headerTitle}>Pair Desktop CRM</Text>
-              <View style={styles.liveTag}>
-                <View style={styles.liveDot} />
-                <Text style={styles.liveTagText}>SCANNER</Text>
-              </View>
+  const content = (
+    <View style={styles.container}>
+      {/* Top Header */}
+      <View style={styles.header}>
+        <View style={{ flex: 1 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <Text style={styles.headerTitle}>Pair Desktop CRM</Text>
+            <View style={styles.liveTag}>
+              <View style={styles.liveDot} />
+              <Text style={styles.liveTagText}>SCANNER</Text>
             </View>
-            <Text style={styles.headerSubtitle}>
-              Scan the QR code on your Desktop CRM screen
-            </Text>
           </View>
-
-          {!isMainScreen && onClose && (
-            <TouchableOpacity style={styles.closeBtn} onPress={onClose} activeOpacity={0.75}>
-              <Text style={styles.closeBtnText}>✕</Text>
-            </TouchableOpacity>
-          )}
+          <Text style={styles.headerSubtitle}>
+            Scan the QR code on your Desktop CRM screen
+          </Text>
         </View>
 
-        {/* Camera Viewport / Permission Handling */}
-        {!permission ? (
-          <View style={styles.centerBox}>
-            <ActivityIndicator size="small" color="#3B82F6" />
-            <Text style={styles.statusText}>Checking camera...</Text>
+        {!isMainScreen && onClose && (
+          <TouchableOpacity style={styles.closeBtn} onPress={onClose} activeOpacity={0.75}>
+            <Text style={styles.closeBtnText}>✕</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+
+      {/* Camera Viewport / Permission Handling / Error Handling */}
+      {!permission ? (
+        <View style={styles.centerBox}>
+          <ActivityIndicator size="small" color="#3B82F6" />
+          <Text style={styles.statusText}>Checking camera...</Text>
+        </View>
+      ) : !permission.granted ? (
+        <View style={styles.permissionBox}>
+          <View style={styles.permissionIconBadge}>
+            <Text style={{ fontSize: 24 }}>📷</Text>
           </View>
-        ) : !permission.granted ? (
-          <View style={styles.permissionBox}>
-            <View style={styles.permissionIconBadge}>
-              <Text style={{ fontSize: 24 }}>📷</Text>
+          <Text style={styles.permissionTitle}>Camera Access Required</Text>
+          <Text style={styles.permissionDesc}>
+            Vasantham CRM uses the camera to scan your Desktop screen for automatic server pairing.
+          </Text>
+
+          <TouchableOpacity style={styles.grantBtn} onPress={requestPermission} activeOpacity={0.85}>
+            <Text style={styles.grantBtnText}>Grant Camera Access</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.secondaryBtn}
+            onPress={() => setShowManualInput(!showManualInput)}
+            activeOpacity={0.85}
+          >
+            <Text style={styles.secondaryBtnText}>Enter IP Address Manually</Text>
+          </TouchableOpacity>
+        </View>
+      ) : cameraError ? (
+        <View style={styles.permissionBox}>
+          <View style={styles.permissionIconBadge}>
+            <Text style={{ fontSize: 24 }}>⚠️</Text>
+          </View>
+          <Text style={styles.permissionTitle}>Camera Initialization Error</Text>
+          <Text style={styles.permissionDesc}>
+            {cameraErrorMessage || 'Unable to start camera scanner on this device.'}
+          </Text>
+
+          <TouchableOpacity
+            style={styles.grantBtn}
+            onPress={() => {
+              setCameraError(false);
+              setCameraErrorMessage('');
+            }}
+            activeOpacity={0.85}
+          >
+            <Text style={styles.grantBtnText}>Retry Camera</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.secondaryBtn}
+            onPress={() => setShowManualInput(true)}
+            activeOpacity={0.85}
+          >
+            <Text style={styles.secondaryBtnText}>Enter IP Address Manually</Text>
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <View style={styles.cameraWrapper}>
+          <CameraView
+            style={StyleSheet.absoluteFillObject}
+            barcodeScannerSettings={BARCODE_SETTINGS}
+            onBarcodeScanned={handleBarcodeScanned}
+            onMountError={(err) => {
+              console.warn('Camera mount error:', err);
+              setCameraError(true);
+              setCameraErrorMessage(err?.message || 'Camera failed to mount.');
+            }}
+          />
+
+          {/* Viewfinder Target Mask */}
+          <View style={styles.overlay}>
+            <View style={styles.scanTarget}>
+              {/* 4 Corner Markers */}
+              <View style={[styles.corner, styles.topLeft]} />
+              <View style={[styles.corner, styles.topRight]} />
+              <View style={[styles.corner, styles.bottomLeft]} />
+              <View style={[styles.corner, styles.bottomRight]} />
+
+              {/* Animated Laser Scanning Line */}
+              {!scanned && !connecting && (
+                <Animated.View
+                  style={[
+                    styles.laserLine,
+                    {
+                      transform: [
+                        {
+                          translateY: scanLaserAnim.interpolate({
+                            inputRange: [0, 1],
+                            outputRange: [6, SCAN_FRAME_SIZE - 8],
+                          }),
+                        },
+                      ],
+                    },
+                  ]}
+                />
+              )}
             </View>
-            <Text style={styles.permissionTitle}>Camera Access Required</Text>
-            <Text style={styles.permissionDesc}>
-              Vasantham CRM uses the camera to scan your Desktop screen for automatic 1-second server pairing.
-            </Text>
+          </View>
 
-            <TouchableOpacity style={styles.grantBtn} onPress={requestPermission} activeOpacity={0.85}>
-              <Text style={styles.grantBtnText}>Grant Camera Access</Text>
-            </TouchableOpacity>
+          {/* Status / Connecting Notification Banner */}
+          {(connecting || autoDetecting) && (
+            <View style={styles.connectingBanner}>
+              <ActivityIndicator size="small" color="#FFFFFF" style={{ marginRight: 8 }} />
+              <Text style={styles.connectingText}>{statusMessage || 'Verifying Connection...'}</Text>
+            </View>
+          )}
+        </View>
+      )}
 
+      {/* Bottom Control & Help Deck */}
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={styles.footerDeck}
+      >
+        {showManualInput ? (
+          <View style={styles.manualInputCard}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+              <Text style={styles.manualLabel}>ENTER DESKTOP API URL</Text>
+              <TouchableOpacity onPress={() => setShowManualInput(false)}>
+                <Text style={{ fontSize: 12, color: '#94A3B8', fontWeight: '700' }}>Cancel</Text>
+              </TouchableOpacity>
+            </View>
+            <TextInput
+              style={styles.manualTextInput}
+              value={manualHost}
+              onChangeText={setManualHost}
+              placeholder="http://192.168.1.xxx:5000/api"
+              placeholderTextColor="#64748B"
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
             <TouchableOpacity
-              style={styles.secondaryBtn}
-              onPress={() => setShowManualInput(!showManualInput)}
+              style={styles.manualConnectBtn}
+              onPress={handleManualConnect}
+              disabled={connecting}
               activeOpacity={0.85}
             >
-              <Text style={styles.secondaryBtnText}>Enter IP Address Manually</Text>
+              {connecting ? (
+                <ActivityIndicator size="small" color="#FFFFFF" />
+              ) : (
+                <Text style={styles.manualConnectBtnText}>Connect to Server</Text>
+              )}
             </TouchableOpacity>
           </View>
         ) : (
-          <View style={styles.cameraWrapper}>
-            <CameraView
-              style={StyleSheet.absoluteFillObject}
-              barcodeScannerSettings={{
-                barcodeTypes: ['qr'],
-              }}
-              onBarcodeScanned={scanned ? undefined : handleBarcodeScanned}
-            />
-
-            {/* Viewfinder Target Mask */}
-            <View style={styles.overlay}>
-              <View style={styles.scanTarget}>
-                {/* 4 Corner Markers */}
-                <View style={[styles.corner, styles.topLeft]} />
-                <View style={[styles.corner, styles.topRight]} />
-                <View style={[styles.corner, styles.bottomLeft]} />
-                <View style={[styles.corner, styles.bottomRight]} />
-
-                {/* Animated Laser Scanning Line */}
-                {!scanned && !connecting && (
-                  <Animated.View
-                    style={[
-                      styles.laserLine,
-                      {
-                        transform: [
-                          {
-                            translateY: scanLaserAnim.interpolate({
-                              inputRange: [0, 1],
-                              outputRange: [6, SCAN_FRAME_SIZE - 8],
-                            }),
-                          },
-                        ],
-                      },
-                    ]}
-                  />
-                )}
-              </View>
+          <View style={styles.footerContent}>
+            <View style={styles.instructionBadge}>
+              <Text style={styles.instructionText}>
+                💡 In Desktop CRM, click <Text style={{ fontWeight: '800', color: '#FFFFFF' }}>"📱 Pair Mobile"</Text> at the top to display the pairing QR code.
+              </Text>
             </View>
 
-            {/* Status / Connecting Notification Banner */}
-            {(connecting || autoDetecting) && (
-              <View style={styles.connectingBanner}>
-                <ActivityIndicator size="small" color="#FFFFFF" style={{ marginRight: 8 }} />
-                <Text style={styles.connectingText}>{statusMessage || 'Verifying Connection...'}</Text>
-              </View>
-            )}
-          </View>
-        )}
-
-        {/* Bottom Control & Help Deck */}
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          style={styles.footerDeck}
-        >
-          {showManualInput ? (
-            <View style={styles.manualInputCard}>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                <Text style={styles.manualLabel}>ENTER DESKTOP API URL</Text>
-                <TouchableOpacity onPress={() => setShowManualInput(false)}>
-                  <Text style={{ fontSize: 12, color: '#94A3B8', fontWeight: '700' }}>Cancel</Text>
-                </TouchableOpacity>
-              </View>
-              <TextInput
-                style={styles.manualTextInput}
-                value={manualHost}
-                onChangeText={setManualHost}
-                placeholder="http://192.168.1.xxx:5000/api"
-                placeholderTextColor="#64748B"
-                autoCapitalize="none"
-                autoCorrect={false}
-              />
+            {/* Action Buttons */}
+            <View style={styles.actionRow}>
               <TouchableOpacity
-                style={styles.manualConnectBtn}
-                onPress={handleManualConnect}
-                disabled={connecting}
-                activeOpacity={0.85}
+                style={styles.actionChip}
+                onPress={handleAutoDetect}
+                disabled={autoDetecting}
+                activeOpacity={0.75}
               >
-                {connecting ? (
-                  <ActivityIndicator size="small" color="#FFFFFF" />
-                ) : (
-                  <Text style={styles.manualConnectBtnText}>Connect to Server</Text>
-                )}
+                <Text style={{ fontSize: 13 }}>📡</Text>
+                <Text style={styles.actionChipText}>
+                  {autoDetecting ? 'Scanning Wi-Fi...' : 'Auto-Detect Wi-Fi'}
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.actionChip}
+                onPress={() => setShowManualInput(true)}
+                activeOpacity={0.75}
+              >
+                <Text style={{ fontSize: 13 }}>⌨️</Text>
+                <Text style={styles.actionChipText}>Manual IP</Text>
               </TouchableOpacity>
             </View>
-          ) : (
-            <View style={styles.footerContent}>
-              <View style={styles.instructionBadge}>
-                <Text style={styles.instructionText}>
-                  💡 In Desktop CRM, click <Text style={{ fontWeight: '800', color: '#FFFFFF' }}>"📱 Pair Mobile"</Text> at the top to display the pairing QR code.
-                </Text>
-              </View>
+          </View>
+        )}
+      </KeyboardAvoidingView>
+    </View>
+  );
 
-              {/* Action Buttons */}
-              <View style={styles.actionRow}>
-                <TouchableOpacity
-                  style={styles.actionChip}
-                  onPress={handleAutoDetect}
-                  disabled={autoDetecting}
-                  activeOpacity={0.75}
-                >
-                  <Text style={{ fontSize: 13 }}>📡</Text>
-                  <Text style={styles.actionChipText}>
-                    {autoDetecting ? 'Scanning Wi-Fi...' : 'Auto-Detect Wi-Fi'}
-                  </Text>
-                </TouchableOpacity>
+  if (isMainScreen) {
+    return content;
+  }
 
-                <TouchableOpacity
-                  style={styles.actionChip}
-                  onPress={() => setShowManualInput(true)}
-                  activeOpacity={0.75}
-                >
-                  <Text style={{ fontSize: 13 }}>⌨️</Text>
-                  <Text style={styles.actionChipText}>Manual IP</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          )}
-        </KeyboardAvoidingView>
-      </View>
+  return (
+    <Modal visible={visible} animationType="fade" transparent={false} onRequestClose={onClose}>
+      {content}
     </Modal>
   );
 };

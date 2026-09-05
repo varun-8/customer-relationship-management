@@ -16,6 +16,7 @@ import {
   Linking,
   Image,
   Animated,
+  Easing,
   Dimensions,
   KeyboardAvoidingView,
   AppState,
@@ -429,7 +430,42 @@ function OrderConfirmedCelebrationModal({ visible, customer, orderValue, onClose
   );
 }
 
-export default function App() {
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+  componentDidCatch(error, errorInfo) {
+    console.error('App ErrorBoundary caught error:', error, errorInfo);
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <View style={{ flex: 1, backgroundColor: '#0F172A', justifyContent: 'center', alignItems: 'center', padding: 24 }}>
+          <Text style={{ fontSize: 36, marginBottom: 12 }}>⚠️</Text>
+          <Text style={{ fontSize: 20, fontWeight: '800', color: '#FFFFFF', marginBottom: 8, textAlign: 'center' }}>
+            Application Encountered an Error
+          </Text>
+          <Text style={{ fontSize: 13, color: '#94A3B8', textAlign: 'center', marginBottom: 20, lineHeight: 18 }}>
+            {this.state.error?.message || 'An unexpected error occurred.'}
+          </Text>
+          <TouchableOpacity
+            style={{ backgroundColor: '#2563EB', paddingHorizontal: 24, paddingVertical: 12, borderRadius: 12 }}
+            onPress={() => this.setState({ hasError: false, error: null })}
+          >
+            <Text style={{ color: '#FFFFFF', fontWeight: '800', fontSize: 14 }}>Reload Application</Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+function AppContent() {
   // Mobile Startup Connection & Role Authentication State
   const [isPairedState, setIsPairedState] = useState(null); // null (checking) | true | false
   const [authRoleState, setAuthRoleState] = useState(null); // null (role select) | 'sales_executive' | 'customer'
@@ -535,24 +571,8 @@ export default function App() {
           return;
         }
 
-        // If stored host is unreachable, try background auto-detection across local Wi-Fi
-        const autoDetected = await apiClient.autoDetectServer();
-        if (autoDetected && autoDetected.success && autoDetected.host) {
-          if (isMounted) {
-            setServerHost(autoDetected.host);
-            setIsPairedState(true);
-            setIsOnline(true);
-            setShowQrScanner(false);
-          }
-          const savedRole = await apiClient.getSavedAuthRole();
-          if (savedRole && isMounted) {
-            setAuthRoleState(savedRole);
-          }
-          await initData(true);
-          return;
-        }
-
-        // If auto-detect fails, open scanner
+        // The pairing check already performs one automatic network discovery attempt.
+        // If it fails, open scanner/manual pairing without repeating the full scan.
         if (isMounted) {
           setIsPairedState(false);
           setIsOnline(false);
@@ -1313,18 +1333,20 @@ export default function App() {
   // 2. If NOT paired/connected to Desktop -> Show Minimalist QR Scanner Directly
   if (isPairedState === false) {
     return (
-      <MobileQrScannerModal
-        visible={true}
-        isMainScreen={true}
-        onConnected={handleConnectedServer}
-      />
+      <View style={{ flex: 1, backgroundColor: '#090D16' }}>
+        <MobileQrScannerModal
+          visible={true}
+          isMainScreen={true}
+          onConnected={handleConnectedServer}
+        />
+      </View>
     );
   }
 
   // 3. If Paired but NO Role Selected -> Show Role Select / Login Gate
   if (authRoleState === null) {
     return (
-      <>
+      <View style={{ flex: 1, backgroundColor: '#F8FAFC' }}>
         <RoleSelectLoginScreen
           onSelectRole={handleSelectRole}
           onDisconnectServer={handleDisconnectServer}
@@ -1335,25 +1357,26 @@ export default function App() {
           onClose={() => setShowQrScanner(false)}
           onConnected={handleConnectedServer}
         />
-      </>
+      </View>
     );
   }
 
   // 4. Customer Role -> Render Customer Portal View
   if (authRoleState === 'customer') {
     return (
-      <CustomerPortalView
-        customerInfo={customerUserSession}
-        onLogoutRole={handleLogoutRole}
-        branding={branding}
-      />
+      <View style={{ flex: 1, backgroundColor: '#F8FAFC' }}>
+        <CustomerPortalView
+          customerInfo={customerUserSession}
+          onLogoutRole={handleLogoutRole}
+          branding={branding}
+        />
+      </View>
     );
   }
 
   // 5. Sales Executive Role -> Render Full CRM Application
   return (
-    <SafeAreaProvider>
-      <View style={styles.safeArea}>
+    <View style={styles.safeArea}>
         <StatusBar
           barStyle="dark-content"
           backgroundColor="#FFFFFF"
@@ -2382,7 +2405,16 @@ export default function App() {
         </View>
       )}
       </View>
-    </SafeAreaProvider>
+  );
+}
+
+export default function App() {
+  return (
+    <ErrorBoundary>
+      <SafeAreaProvider>
+        <AppContent />
+      </SafeAreaProvider>
+    </ErrorBoundary>
   );
 }
 

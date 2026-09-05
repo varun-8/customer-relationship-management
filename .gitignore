@@ -24,6 +24,7 @@ desktop/dist/
 desktop/dist-exe/
 build/
 desktop/build/
+mobile/dist/
 backend/bin/
 out/
 web-build/
@@ -44,6 +45,7 @@ mobile/android/build/
 mobile/android/app/build/
 mobile/android/.gradle/
 mobile/android/app/src/main/assets/index.android.bundle
+mobile/android/app/src/main/assets/index.android.bundle.map
 *.apk
 *.aab
 *.jks

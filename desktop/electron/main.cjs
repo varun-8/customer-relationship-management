@@ -101,6 +101,8 @@ async function ensureMongoDBStarted() {
   log(`📁 [MongoDB] Storage directory: ${dbPath}`);
 
   let mongoStderr = '';
+  let processExited = false;
+  let exitCode = null;
   try {
     spawnedMongoProcess = spawn(mongodExe, [
       '--dbpath', dbPath,
@@ -127,17 +129,29 @@ async function ensureMongoDBStarted() {
 
     spawnedMongoProcess.on('error', (err) => {
       log(`[MongoDB Process Error] ${err.message}`);
+      processExited = true;
       spawnedMongoProcess = null;
     });
 
     spawnedMongoProcess.on('exit', (code, signal) => {
+      processExited = true;
+      exitCode = code;
       log(`[MongoDB Process Exit] Code: ${code}, Signal: ${signal}`);
+      if (code === 3221225781 || code === 0xC0000135) {
+        log(`[MongoDB Fatal Error] Exit code ${code} indicates STATUS_DLL_NOT_FOUND (Missing C++ Runtime DLLs).`);
+      }
       spawnedMongoProcess = null;
     });
 
     // Poll TCP port 27017 for up to 30 seconds (60 * 500ms)
     log('[MongoDB] Waiting for database engine to accept connections on 127.0.0.1:27017...');
     for (let i = 0; i < 60; i++) {
+      if (processExited) {
+        const detail = exitCode === 3221225781
+          ? 'STATUS_DLL_NOT_FOUND (Missing Microsoft C++ Redistributable DLLs)'
+          : `Exit code ${exitCode}`;
+        throw new Error(`MongoDB engine exited unexpectedly during startup (${detail}).\nStderr: ${mongoStderr.slice(-400)}`);
+      }
       await new Promise((r) => setTimeout(r, 500));
       const isOpen = await isPortOpen(27017, '127.0.0.1', 400);
       if (isOpen) {
@@ -194,9 +208,35 @@ async function waitForBackend(maxAttempts = 40, delayMs = 500) {
   return false;
 }
 
+function ensureWindowsFirewallRule(port = '5000') {
+  if (process.platform !== 'win32') return;
+  try {
+    const ruleName = 'Vasantham CRM Mobile Pairing';
+    const checkCmd = `netsh advfirewall firewall show rule name="${ruleName}"`;
+    try {
+      execSync(checkCmd, { stdio: 'ignore' });
+      log(`[Firewall] Windows Firewall rule "${ruleName}" is already configured.`);
+      return;
+    } catch (e) {
+      // Rule missing, proceed to add
+    }
+
+    log(`[Firewall] Registering Windows Firewall rule for incoming TCP port ${port}...`);
+    const addCmd = `netsh advfirewall firewall add rule name="${ruleName}" dir=in action=allow protocol=TCP localport=${port} profile=any`;
+    execSync(addCmd, { stdio: 'ignore' });
+    log(`✅ [Firewall] Rule "${ruleName}" created successfully.`);
+  } catch (err) {
+    log(`[Firewall Notice] Firewall rule auto-configuration: ${err.message}`);
+  }
+}
+
 // Start embedded backend server sequentially after MongoDB is confirmed ready
 async function startEmbeddedBackend() {
   const isDev = !app.isPackaged || process.env.NODE_ENV === 'development';
+
+  // Ensure Windows Firewall rule is registered on packaged startup
+  ensureWindowsFirewallRule(process.env.PORT || '5000');
+
   if (isDev) {
     log('[Electron Main] Running in Dev Mode — using external backend process if available.');
     return true;
@@ -238,8 +278,10 @@ async function startEmbeddedBackend() {
       throw new Error(`Cannot locate backend server at path: ${backendServerPath}`);
     }
     
-    process.env.MONGODB_URI = 'mongodb://127.0.0.1:27017/vasantham_crm';
+    process.env.MONGODB_URI = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/vasantham_crm';
     process.env.PORT = process.env.PORT || '5000';
+    process.env.JWT_SECRET = process.env.JWT_SECRET || 'vasantham_jwt_secret_key_2026';
+    process.env.DEV_KEY = process.env.DEV_KEY || 'vasantham_dev_secret_wipe_key_2026';
     process.env.NODE_ENV = 'production';
 
     // Require and start Express server in process
@@ -308,11 +350,54 @@ function createWindow() {
     );
   });
 
-  if (isDev) {
+  // Prefer loading a packaged/built UI if available. If not present, fall back
+  // to the dev server only when running in development scenarios or when the
+  // dev server is reachable. This avoids attempts to load localhost:5173 in
+  // environments where the dev server is not running (causing ERR_CONNECTION_REFUSED).
+  const indexCandidates = [
+    path.join(__dirname, '../dist/index.html'),
+    path.join(process.resourcesPath || '', 'dist', 'index.html'),
+    path.join(process.resourcesPath || '', 'app.asar', 'dist', 'index.html'),
+    path.join(process.resourcesPath || '', 'app.asar.unpacked', 'dist', 'index.html'),
+    path.join(process.cwd(), 'dist', 'index.html'),
+  ];
+
+  let resolvedIndex = null;
+  for (const cand of indexCandidates) {
+    try {
+      if (cand && fs.existsSync(cand)) {
+        resolvedIndex = cand;
+        break;
+      }
+    } catch (e) {}
+  }
+
+  if (resolvedIndex) {
+    log(`[Electron Main] Loading packaged UI from: ${resolvedIndex}`);
+    try {
+      mainWindow.loadFile(resolvedIndex);
+    } catch (e) {
+      log(`[Electron Main] Failed to load packaged UI file: ${e.message}`);
+      dialog.showErrorBox('Vasantham CRM — Loading Error', `Unable to open UI file:\n${resolvedIndex}\n${e.message}`);
+    }
+  } else if (isDev) {
+    log(`[Electron Main] No packaged UI found — loading dev server URL: ${devUrl}`);
     mainWindow.loadURL(devUrl);
   } else {
-    const indexPath = path.join(__dirname, '../dist/index.html');
-    mainWindow.loadFile(indexPath);
+    // Final fallback: try contacting the dev server once before erroring.
+    log('[Electron Main] No packaged UI available; attempting to probe dev server as fallback.');
+    const probe = http.get(devUrl, (res) => {
+      log(`[Electron Main] Dev server responded (status ${res.statusCode}), loading: ${devUrl}`);
+      try { mainWindow.loadURL(devUrl); } catch (e) { log(e.message); }
+    });
+    probe.on('error', (err) => {
+      log(`[Electron Main] Dev server probe failed: ${err.message}`);
+      dialog.showErrorBox(
+        'Vasantham CRM — Loading Error',
+        `Application UI not found inside the packaged app and the development server is not reachable (tried ${devUrl}).\n\nPlease ensure you either run the app in development with the dev server, or build the desktop app so the UI assets are bundled.`
+      );
+    });
+    probe.setTimeout(2000, () => { try { probe.destroy(); } catch (e) {} });
   }
 
   mainWindow.once('ready-to-show', () => {

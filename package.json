@@ -5,8 +5,8 @@
   "private": true,
   "scripts": {
     "update-ip": "node scripts/update-ip.js",
-    "dev": "node scripts/update-ip.js && npm --prefix desktop run dev",
-    "dev:desktop": "node scripts/update-ip.js && npm --prefix desktop run dev",
+    "dev": "npm --prefix desktop run dev",
+    "dev:desktop": "npm --prefix desktop run dev",
     "dev:browser": "node scripts/update-ip.js && concurrently -k -n \"BACKEND,DESKTOP\" -c \"bgBlue.bold,bgMagenta.bold\" \"npm --prefix backend run dev\" \"npm --prefix desktop run dev:frontend\"",
     "dev:backend": "node scripts/update-ip.js && npm --prefix backend run dev",
     "dev:frontend": "npm --prefix desktop run dev:frontend",

@@ -463,4 +463,10 @@ export const api = {
       body: JSON.stringify({ force }),
     });
   },
+
+  async fixWindowsFirewall() {
+    return request('/settings/fix-firewall', {
+      method: 'POST',
+    });
+  },
 };

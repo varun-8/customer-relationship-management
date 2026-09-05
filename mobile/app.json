@@ -11,12 +11,16 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.vasantham.crm"
+      "bundleIdentifier": "com.vasantham.crm",
+      "infoPlist": {
+        "NSAppTransportSecurity": {
+          "NSAllowsArbitraryLoads": true
+        }
+      }
     },
     "android": {
       "package": "com.vasantham.crm",
       "versionCode": 2,
-      "usesCleartextTraffic": true,
       "permissions": [
         "CAMERA",
         "INTERNET",
@@ -28,6 +32,22 @@
         "backgroundColor": "#FFFFFF"
       }
     },
+    "plugins": [
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow Vasantham CRM to access camera to scan Desktop pairing QR code."
+        }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "usesCleartextTraffic": true
+          }
+        }
+      ]
+    ],
     "extra": {
       "eas": {
         "projectId": "fbff3ac0-94e2-4072-b59e-abbbc942f0f9"

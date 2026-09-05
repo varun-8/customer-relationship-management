@@ -20,6 +20,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "install": "^0.13.0",
     "jspdf": "^4.2.1",
     "jspdf-autotable": "^5.0.8",
     "lucide-react": "^0.383.0",
@@ -64,7 +65,9 @@
           "src/**/*",
           "node_modules/**/*",
           "bin/**/*",
-          "package.json"
+          "package.json",
+          ".env",
+          ".env.example"
         ]
       },
       {

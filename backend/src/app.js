@@ -39,6 +39,8 @@ app.get('/api/health', (req, res) => {
   res.json({
     status: 'ok',
     online: true,
+    appId: 'vasantham-crm',
+    appName: 'Vasantham CRM',
     dbConnected: mongoose.connection.readyState === 1,
     service: 'Vasantham Tiles & Sanitary Wares CRM Backend',
     timestamp: new Date(),

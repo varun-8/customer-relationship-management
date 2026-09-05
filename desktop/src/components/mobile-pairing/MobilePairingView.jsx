@@ -91,12 +91,14 @@ export const MobilePairingView = ({ isModal = false, onClose = null }) => {
   }, []);
 
   const currentApiUrl = `http://${selectedIp || '127.0.0.1'}:${customPort || 5000}/api`;
+  const allAvailableIps = pairingData?.allIps || pairingData?.networkInterfaces?.map((n) => n.ip) || [selectedIp || '127.0.0.1'];
 
   const dynamicQrPayload = JSON.stringify({
     type: 'VASANTHAM_CRM_PAIR',
     v: 1,
     appName: 'Vasantham CRM',
     serverIp: selectedIp || '127.0.0.1',
+    allIps: [...new Set([selectedIp, ...allAvailableIps].filter(Boolean))],
     port: Number(customPort) || 5000,
     apiBaseUrl: currentApiUrl,
     healthUrl: `http://${selectedIp || '127.0.0.1'}:${customPort || 5000}/api/health`,
@@ -109,8 +111,51 @@ export const MobilePairingView = ({ isModal = false, onClose = null }) => {
     setTimeout(() => setCopied(false), 2500);
   };
 
+  const [firewallStatus, setFirewallStatus] = useState(null);
+
+  const handleFixFirewall = async () => {
+    try {
+      setFirewallStatus('Launching elevation prompt...');
+      const res = await api.fixWindowsFirewall();
+      setFirewallStatus(res.message || 'Click "Yes" on your PC screen to allow phone Wi-Fi connection.');
+      setTimeout(() => setFirewallStatus(null), 8000);
+    } catch (err) {
+      alert('Firewall fix warning: ' + (err.message || 'Could not launch firewall prompt.'));
+      setFirewallStatus(null);
+    }
+  };
+
   return (
     <div style={{ width: '100%', maxWidth: '1200px', margin: '0 auto', paddingBottom: '24px' }}>
+      {/* Toast alert if firewall setup clicked */}
+      {firewallStatus && (
+        <div
+          style={{
+            backgroundColor: '#EFF6FF',
+            border: '1px solid #BFDBFE',
+            borderRadius: '12px',
+            padding: '12px 18px',
+            marginBottom: '20px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px',
+            color: '#1E40AF',
+            fontWeight: '600',
+            fontSize: '13px',
+          }}
+        >
+          <ShieldCheck size={18} color="#2563EB" />
+          <span style={{ flex: 1 }}>{firewallStatus}</span>
+          <button
+            type="button"
+            onClick={() => setFirewallStatus(null)}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#1E40AF', fontSize: '14px' }}
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
       {/* Toast alert if a new device pairs */}
       {newPairAlert && (
         <div
@@ -216,26 +261,49 @@ export const MobilePairingView = ({ isModal = false, onClose = null }) => {
                   </p>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={fetchPairingInfo}
-                  style={{
-                    backgroundColor: '#F8FAFC',
-                    border: '1px solid #E2E8F0',
-                    color: '#64748B',
-                    borderRadius: '8px',
-                    padding: '6px 10px',
-                    fontSize: '11.5px',
-                    fontWeight: '600',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '5px',
-                    cursor: 'pointer',
-                  }}
-                  title="Refresh network interfaces"
-                >
-                  <RefreshCw size={13} /> Refresh
-                </button>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <button
+                    type="button"
+                    onClick={handleFixFirewall}
+                    style={{
+                      backgroundColor: '#EFF6FF',
+                      border: '1px solid #BFDBFE',
+                      color: '#2563EB',
+                      borderRadius: '8px',
+                      padding: '6px 10px',
+                      fontSize: '11.5px',
+                      fontWeight: '700',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '5px',
+                      cursor: 'pointer',
+                    }}
+                    title="Allow incoming phone connections in Windows Firewall"
+                  >
+                    <ShieldCheck size={13} color="#2563EB" /> Fix Firewall
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={fetchPairingInfo}
+                    style={{
+                      backgroundColor: '#F8FAFC',
+                      border: '1px solid #E2E8F0',
+                      color: '#64748B',
+                      borderRadius: '8px',
+                      padding: '6px 10px',
+                      fontSize: '11.5px',
+                      fontWeight: '600',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '5px',
+                      cursor: 'pointer',
+                    }}
+                    title="Refresh network interfaces"
+                  >
+                    <RefreshCw size={13} /> Refresh
+                  </button>
+                </div>
               </div>
 
               {/* Minimalist Centered QR Code Container */}

@@ -14,12 +14,15 @@
     "web": "expo start --web",
     "build": "node ../scripts/update-ip.js && expo export",
     "build:apk": "node ../scripts/update-ip.js && eas build --platform android --profile preview",
-    "build:apk:local": "node ../scripts/update-ip.js && cd android && gradlew.bat assembleRelease"
+    "build:apk:local": "node ../scripts/update-ip.js && expo prebuild --platform android && cd android && gradlew.bat assembleRelease"
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "^2.1.0",
     "expo": "~54.0.37",
+    "expo-build-properties": "~1.0.10",
     "expo-camera": "~17.0.10",
+    "expo-constants": "~18.0.14",
+    "expo-network": "~8.0.8",
     "expo-status-bar": "~3.0.9",
     "react": "19.1.0",
     "react-native": "0.81.5",

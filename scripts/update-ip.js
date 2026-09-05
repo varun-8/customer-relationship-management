@@ -4,42 +4,62 @@ const os = require('os');
 
 function getActiveSystemIp() {
   const interfaces = os.networkInterfaces();
-  let preferredIp = null;
-  let fallbackIp = null;
+  const validCandidates = [];
+
+  const isVirtualName = (nameStr) => {
+    const lower = String(nameStr || '').toLowerCase();
+    return (
+      lower.includes('virtual') ||
+      lower.includes('vethernet') ||
+      lower.includes('loopback') ||
+      lower.includes('wsl') ||
+      lower.includes('vmware') ||
+      lower.includes('vbox') ||
+      lower.includes('virtualbox') ||
+      lower.includes('docker') ||
+      lower.includes('hyper-v') ||
+      lower.includes('tailscale') ||
+      lower.includes('zerotier') ||
+      lower.includes('bluetooth') ||
+      lower.includes('npcap')
+    );
+  };
 
   for (const name of Object.keys(interfaces)) {
     for (const iface of interfaces[name]) {
-      if (iface.family === 'IPv4' && !iface.internal) {
+      if (iface.family === 'IPv4' && !iface.internal && !iface.address.startsWith('169.254.')) {
         const lowerName = name.toLowerCase();
-        const isVirtual =
-          lowerName.includes('virtual') ||
-          lowerName.includes('vethernet') ||
-          lowerName.includes('loopback') ||
-          lowerName.includes('wsl') ||
-          lowerName.includes('vmware') ||
-          lowerName.includes('vbox') ||
-          lowerName.includes('docker') ||
-          lowerName.includes('hyper-v');
+        const isVirtual = isVirtualName(name);
+        const ip = iface.address;
+
+        let rankScore = 0;
+        if (isVirtual) {
+          rankScore -= 500;
+        } else {
+          if (lowerName.includes('wi-fi') || lowerName.includes('wireless') || lowerName.includes('wlan')) {
+            rankScore += 100;
+          } else if (lowerName.includes('ethernet') || lowerName.includes('eth0') || lowerName.includes('en0')) {
+            rankScore += 50;
+          }
+
+          if (ip.startsWith('192.168.')) {
+            rankScore += 30;
+          } else if (ip.startsWith('10.')) {
+            rankScore += 20;
+          } else if (ip.startsWith('172.')) {
+            rankScore += 10;
+          }
+        }
 
         if (!isVirtual) {
-          if (
-            lowerName.includes('wi-fi') ||
-            lowerName.includes('wireless') ||
-            lowerName.includes('wlan') ||
-            lowerName.includes('ethernet') ||
-            lowerName.includes('en0') ||
-            lowerName.includes('eth0')
-          ) {
-            preferredIp = iface.address;
-          } else if (!fallbackIp) {
-            fallbackIp = iface.address;
-          }
+          validCandidates.push({ ip, rankScore });
         }
       }
     }
   }
 
-  return preferredIp || fallbackIp || '127.0.0.1';
+  validCandidates.sort((a, b) => b.rankScore - a.rankScore);
+  return validCandidates.length > 0 ? validCandidates[0].ip : '127.0.0.1';
 }
 
 function parseEnv(filePath) {
@@ -93,7 +113,7 @@ function updateAllEnvs() {
   const desktopEnvPath = path.join(rootDir, 'desktop', '.env');
   const desktopEnv = parseEnv(desktopEnvPath);
   desktopEnv.VITE_SERVER_IP = systemIp;
-  desktopEnv.VITE_API_URL = backendEnv.VITE_API_URL || `http://127.0.0.1:${backendEnv.PORT}/api`;
+  desktopEnv.VITE_API_URL = `http://${systemIp}:${backendEnv.PORT}/api`;
   writeEnv(desktopEnvPath, desktopEnv);
   console.log(`   ✓ Updated desktop/.env (VITE_SERVER_IP=${systemIp})`);
 
@@ -102,8 +122,29 @@ function updateAllEnvs() {
   const mobileEnv = parseEnv(mobileEnvPath);
   mobileEnv.EXPO_PUBLIC_SERVER_IP = systemIp;
   mobileEnv.EXPO_PUBLIC_API_URL = `http://${systemIp}:${backendEnv.PORT}/api`;
+  mobileEnv.REACT_NATIVE_PACKAGER_HOSTNAME = systemIp;
   writeEnv(mobileEnvPath, mobileEnv);
-  console.log(`   ✓ Updated mobile/.env (EXPO_PUBLIC_SERVER_IP=${systemIp}, EXPO_PUBLIC_API_URL=${mobileEnv.EXPO_PUBLIC_API_URL})`);
+  console.log(`   ✓ Updated mobile/.env (EXPO_PUBLIC_SERVER_IP=${systemIp}, REACT_NATIVE_PACKAGER_HOSTNAME=${systemIp})`);
+
+  tryEnsureWindowsFirewall(backendEnv.PORT || '5000');
+}
+
+function tryEnsureWindowsFirewall(port = '5000') {
+  if (process.platform !== 'win32') return;
+  try {
+    const { execSync } = require('child_process');
+    const ruleName = 'Vasantham CRM Mobile Pairing';
+    const checkCmd = `powershell -Command "Get-NetFirewallRule -DisplayName '*Vasantham*' -ErrorAction SilentlyContinue"`;
+    const result = execSync(checkCmd, { encoding: 'utf8' }).trim();
+
+    if (!result) {
+      console.log(`🛡️ [Firewall Setup] Registering Windows Defender Firewall rule for port ${port}...`);
+      const psCmd = `powershell -Command "Start-Process netsh -ArgumentList 'advfirewall firewall add rule name=\\\"Vasantham CRM Mobile Pairing\\\" dir=in action=allow protocol=TCP localport=${port} profile=any' -Verb RunAs"`;
+      execSync(psCmd, { stdio: 'ignore' });
+    } else {
+      console.log(`   ✓ Windows Firewall rule is active for TCP port ${port}`);
+    }
+  } catch (e) {}
 }
 
 updateAllEnvs();
