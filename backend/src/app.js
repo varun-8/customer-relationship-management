@@ -43,6 +43,26 @@ app.get('/api/health', (req, res) => {
     service: 'Vasantham Tiles & Sanitary Wares CRM Backend',
     timestamp: new Date(),
   });
+// Database Connection Guard Middleware (Prevents 'User.find() buffering timed out')
+app.use(async (req, res, next) => {
+  if (req.path === '/api/health') return next();
+
+  const mongoose = require('mongoose');
+  if (mongoose.connection.readyState !== 1) {
+    const connectDB = require('./config/db');
+    try {
+      await connectDB();
+    } catch (e) {}
+  }
+
+  if (mongoose.connection.readyState !== 1) {
+    return res.status(503).json({
+      success: false,
+      message: 'Database server is initializing. Please retry in a moment.',
+      isDbConnecting: true,
+    });
+  }
+  next();
 });
 
 // API Routes

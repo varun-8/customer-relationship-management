@@ -219,6 +219,10 @@ const runSeedingLogic = async () => {
 
 const autoSeedIfEmpty = async () => {
   try {
+    if (mongoose.connection.readyState !== 1) {
+      console.log('[Auto-Seed] Database connection not ready yet. Auto-seed deferred.');
+      return;
+    }
     const userCount = await User.countDocuments({});
     if (userCount === 0) {
       console.log('[Auto-Seed] Empty database detected. Auto-seeding initial defaults...');

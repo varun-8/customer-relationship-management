@@ -5,6 +5,8 @@ const DEFAULT_LOCAL_URI = 'mongodb://127.0.0.1:27017/vasantham_crm';
 let isConnecting = false;
 let retryInterval = null;
 
+mongoose.set('bufferTimeoutMS', 15000);
+
 const connectDB = async () => {
   if (mongoose.connection.readyState === 1) {
     return mongoose.connection;
@@ -19,6 +21,8 @@ const connectDB = async () => {
   try {
     const conn = await mongoose.connect(mongoUri, {
       serverSelectionTimeoutMS: 5000,
+      connectTimeoutMS: 5000,
+      ...(isLocal ? { directConnection: true } : {}),
     });
     const dbType = isLocal ? 'Local MongoDB' : 'MongoDB Atlas Cloud';
     console.log(`[${dbType}] Connected successfully: ${conn.connection.host} / ${conn.connection.name}`);
