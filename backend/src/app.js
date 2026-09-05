@@ -19,7 +19,7 @@ const app = express();
 app.use(cors({
   origin: '*',
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Device-Id', 'x-device-id', 'Accept'],
 }));
 
 app.use(express.json({ limit: '10mb' }));
@@ -37,8 +37,10 @@ if (process.env.NODE_ENV !== 'production') {
 app.get('/api/health', (req, res) => {
   const mongoose = require('mongoose');
   res.json({
-    status: 'online',
+    status: 'ok',
     online: true,
+    appId: 'vasantham-crm',
+    appName: 'Vasantham CRM',
     dbConnected: mongoose.connection.readyState === 1,
     service: 'Vasantham Tiles & Sanitary Wares CRM Backend',
     timestamp: new Date(),

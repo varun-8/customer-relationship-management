@@ -225,74 +225,43 @@ export const DynamicFieldInput = ({ field, value, onChange, error }) => {
           </label>
         );
 
-      case 'radio': {
-        const isBinary = options.length === 2 &&
-          options.some(o => String(o.label).toLowerCase() === 'yes') &&
-          options.some(o => String(o.label).toLowerCase() === 'no');
-
-        // Fallback to select dropdown if options > 3 to avoid cluttering forms
-        if (options.length > 3 && !isBinary) {
-          return (
-            <select
-              className="form-select"
-              value={value ?? ''}
-              onChange={(e) => handleChange(e.target.value)}
-            >
-              <option value="">{placeholder || '-- Select an option --'}</option>
-              {options.map((opt, idx) => (
-                <option key={idx} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
-          );
-        }
-
+      case 'radio':
         return (
-          <div style={{ display: 'flex', gap: '8px', padding: '2px 0' }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', padding: '2px 0' }}>
             {options.map((opt, idx) => {
               const isChecked = value === opt.value;
-              const isYes = String(opt.label).toLowerCase() === 'yes';
-              const isNo = String(opt.label).toLowerCase() === 'no';
               return (
-                <button
-                  type="button"
+                <label
                   key={idx}
-                  onClick={() => handleChange(opt.value)}
                   style={{
-                    flex: 1,
                     display: 'flex',
                     alignItems: 'center',
-                    justifyContent: 'center',
                     gap: '6px',
                     cursor: 'pointer',
-                    fontSize: '13px',
-                    color: isChecked ? (isYes ? '#047857' : isNo ? '#B91C1C' : '#1D4ED8') : '#475569',
-                    background: isChecked ? (isYes ? '#ECFDF5' : isNo ? '#FEF2F2' : '#EFF6FF') : '#F8FAFC',
-                    border: `1.5px solid ${isChecked ? (isYes ? '#10B981' : isNo ? '#EF4444' : '#3B82F6') : '#E2E8F0'}`,
-                    padding: '8px 14px',
+                    fontSize: '12.5px',
+                    color: isChecked ? '#1D4ED8' : '#334155',
+                    background: isChecked ? '#EFF6FF' : '#FFFFFF',
+                    border: `1.5px solid ${isChecked ? '#3B82F6' : '#E2E8F0'}`,
+                    padding: '7px 14px',
                     borderRadius: '8px',
-                    fontWeight: isChecked ? '700' : '600',
                     transition: 'all 0.15s ease',
+                    fontWeight: isChecked ? '700' : '500',
                   }}
                 >
-                  <span
-                    style={{
-                      width: '12px',
-                      height: '12px',
-                      borderRadius: '50%',
-                      border: `1.5px solid ${isChecked ? (isYes ? '#10B981' : isNo ? '#EF4444' : '#3B82F6') : '#94A3B8'}`,
-                      background: isChecked ? (isYes ? '#10B981' : isNo ? '#EF4444' : '#3B82F6') : 'transparent',
-                      display: 'inline-block',
-                    }}
+                  <input
+                    type="radio"
+                    name={`radio_${name}`}
+                    value={opt.value}
+                    checked={isChecked}
+                    onChange={() => handleChange(opt.value)}
+                    style={{ accentColor: '#2563EB' }}
                   />
-                  <span>{isYes ? '✓ Yes' : isNo ? '✕ No' : opt.label}</span>
-                </button>
+                  <span>{opt.label}</span>
+                </label>
               );
             })}
           </div>
         );
-      }
 
       case 'select':
         return (

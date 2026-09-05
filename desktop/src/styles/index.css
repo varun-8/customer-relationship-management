@@ -688,6 +688,7 @@ h6 {
     opacity: 0;
     transform: translateY(-6px) scale(0.98);
   }
+
   to {
     opacity: 1;
     transform: translateY(0) scale(1);
@@ -878,6 +879,7 @@ h6 {
   from {
     opacity: 0;
   }
+
   to {
     opacity: 1;
   }
@@ -888,6 +890,7 @@ h6 {
     opacity: 0;
     transform: scale(0.96) translateY(8px);
   }
+
   to {
     opacity: 1;
     transform: scale(1) translateY(0);
@@ -1098,6 +1101,7 @@ select optgroup {
   from {
     transform: rotate(0deg);
   }
+
   to {
     transform: rotate(360deg);
   }
@@ -2422,6 +2426,7 @@ select optgroup {
   from {
     opacity: 0;
   }
+
   to {
     opacity: 1;
   }
@@ -2432,6 +2437,7 @@ select optgroup {
     opacity: 0;
     transform: translateY(16px) scale(0.98);
   }
+
   to {
     opacity: 1;
     transform: translateY(0) scale(1);
@@ -2444,6 +2450,7 @@ select optgroup {
     opacity: 0;
     transform: translateY(8px);
   }
+
   100% {
     opacity: 1;
     transform: translateY(0);
@@ -3219,8 +3226,13 @@ button:focus-visible {
 }
 
 @keyframes backdropFadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
 }
 
 .modal-card {
@@ -3233,81 +3245,323 @@ button:focus-visible {
     opacity: 0;
     transform: scale(0.96) translateY(8px);
   }
+
   to {
     opacity: 1;
     transform: scale(1) translateY(0);
   }
 }
 
-/* Staff Profile Card Hover Effects */
-.staff-profile-card {
-  transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.22s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.22s ease;
+/* ==========================================================================
+   LOW-DESIGN MINIMAL TESTING MODE OVERRIDES
+   Reduces visual complexity to a clean wireframe testing design.
+   Strips shadows, gradients, rounded pills, transitions, and heavy animations.
+   ========================================================================== */
+body.low-design-mode,
+.low-design-mode {
+  --bg-app: #F4F4F6 !important;
+  --bg-surface: #FFFFFF !important;
+  --bg-card: #FFFFFF !important;
+  --sidebar-bg: #27272A !important;
+  --sidebar-border: #3F3F46 !important;
+  --sidebar-active-bg: #4B5563 !important;
+  --radius-xs: 2px !important;
+  --radius-sm: 4px !important;
+  --radius-md: 4px !important;
+  --radius-lg: 4px !important;
+  --radius-xl: 4px !important;
+  --radius-full: 4px !important;
+  --shadow-xs: none !important;
+  --shadow-sm: none !important;
+  --shadow-md: none !important;
+  --shadow-lg: none !important;
 }
 
-.staff-profile-card:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 16px 32px -8px rgba(15, 23, 42, 0.08), 0 4px 14px rgba(37, 99, 235, 0.06) !important;
-  border-color: #CBD5E1 !important;
+body.low-design-mode *,
+.low-design-mode * {
+  box-shadow: none !important;
+  text-shadow: none !important;
+  transition: none !important;
+  animation: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
 }
 
-.staff-stat-card {
-  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+body.low-design-mode div,
+body.low-design-mode section,
+body.low-design-mode article,
+body.low-design-mode button,
+body.low-design-mode input,
+body.low-design-mode select,
+body.low-design-mode table,
+body.low-design-mode th,
+body.low-design-mode td,
+body.low-design-mode header,
+body.low-design-mode aside {
+  border-radius: 4px !important;
 }
 
-.staff-stat-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 10px 24px -4px rgba(15, 23, 42, 0.06) !important;
-  border-color: #CBD5E1 !important;
+/* Tone down background gradients & glassmorphic backdrops */
+body.low-design-mode .modal-backdrop {
+  background-color: rgba(0, 0, 0, 0.4) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
 }
 
-.btn-glow-effect:hover {
-  transform: translateY(-1.5px);
-  box-shadow: 0 8px 24px rgba(37, 99, 235, 0.45) !important;
+/* ==========================================================================
+   ULTRA-SIMPLE FLAT SIDEBAR IN LOW DESIGN MODE
+   ========================================================================== */
+body.low-design-mode .app-sidebar,
+.low-design-mode .app-sidebar {
+  background: #FFFFFF !important;
+  border-right: 1px solid #D1D5DB !important;
+  box-shadow: none !important;
 }
 
-@keyframes modalCardScaleIn {
-  from {
-    opacity: 0;
-    transform: scale(0.96) translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1) translateY(0);
-  }
+body.low-design-mode .sidebar-brand-wrapper,
+.low-design-mode .sidebar-brand-wrapper {
+  border-bottom: 1px solid #E5E7EB !important;
+  padding: 12px 14px !important;
+  background: #FFFFFF !important;
 }
 
-.role-option-card {
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+body.low-design-mode .sidebar-brand-logo,
+.low-design-mode .sidebar-brand-logo {
+  background: #F3F4F6 !important;
+  border: 1px solid #D1D5DB !important;
+  box-shadow: none !important;
+  color: #111827 !important;
 }
 
-.role-option-card:hover {
-  border-color: #3B82F6 !important;
-  background-color: #F8FAFC !important;
+body.low-design-mode .sidebar-brand-title,
+.low-design-mode .sidebar-brand-title {
+  color: #111827 !important;
+  font-weight: 700 !important;
 }
 
-.status-dot-pulse {
-  position: relative;
+body.low-design-mode .sidebar-brand-tagline,
+.low-design-mode .sidebar-brand-tagline {
+  color: #6B7280 !important;
 }
 
-.status-dot-pulse::after {
-  content: '';
-  position: absolute;
-  inset: -2px;
-  border-radius: 50%;
-  background: inherit;
-  opacity: 0.4;
-  animation: pulseDot 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+body.low-design-mode .sidebar-collapse-toggle,
+.low-design-mode .sidebar-collapse-toggle {
+  background: #F3F4F6 !important;
+  border: 1px solid #D1D5DB !important;
+  color: #374151 !important;
 }
 
-@keyframes pulseDot {
-  0%, 100% {
-    transform: scale(1);
-    opacity: 0.4;
-  }
-  50% {
-    transform: scale(1.6);
-    opacity: 0;
-  }
+body.low-design-mode .sidebar-group-heading,
+.low-design-mode .sidebar-group-heading {
+  color: #6B7280 !important;
+  font-weight: 700 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.05em !important;
 }
 
+body.low-design-mode .sidebar-nav-item,
+.low-design-mode .sidebar-nav-item {
+  background: transparent !important;
+  color: #374151 !important;
+  border: 1px solid transparent !important;
+  border-radius: 4px !important;
+}
 
+body.low-design-mode .sidebar-nav-item:hover,
+.low-design-mode .sidebar-nav-item:hover {
+  background: #F3F4F6 !important;
+  color: #111827 !important;
+  border-color: #E5E7EB !important;
+}
+
+body.low-design-mode .sidebar-nav-item-active,
+.low-design-mode .sidebar-nav-item-active {
+  background: #E5E7EB !important;
+  color: #111827 !important;
+  font-weight: 800 !important;
+  border: 1px solid #9CA3AF !important;
+}
+
+body.low-design-mode .sidebar-nav-item-indicator,
+.low-design-mode .sidebar-nav-item-indicator {
+  display: none !important;
+}
+
+body.low-design-mode .sidebar-nav-icon-box,
+.low-design-mode .sidebar-nav-icon-box {
+  background: transparent !important;
+  color: inherit !important;
+}
+
+body.low-design-mode .sidebar-nav-badge,
+.low-design-mode .sidebar-nav-badge {
+  background: #F3F4F6 !important;
+  color: #374151 !important;
+  border: 1px solid #D1D5DB !important;
+}
+
+body.low-design-mode .sidebar-bottom-toggle-btn,
+.low-design-mode .sidebar-bottom-toggle-btn {
+  background: #F3F4F6 !important;
+  border: 1px solid #D1D5DB !important;
+  color: #374151 !important;
+}
+
+body.low-design-mode .sidebar-footer-wrapper,
+.low-design-mode .sidebar-footer-wrapper {
+  border-top: 1px solid #E5E7EB !important;
+  background: #FFFFFF !important;
+}
+
+body.low-design-mode .sidebar-profile-card,
+.low-design-mode .sidebar-profile-card {
+  background: #F9FAFB !important;
+  border: 1px solid #D1D5DB !important;
+  color: #111827 !important;
+}
+
+body.low-design-mode .sidebar-avatar-circle,
+.low-design-mode .sidebar-avatar-circle {
+  background: #E5E7EB !important;
+  color: #111827 !important;
+  border: 1px solid #D1D5DB !important;
+}
+
+body.low-design-mode .sidebar-profile-name,
+.low-design-mode .sidebar-profile-name {
+  color: #111827 !important;
+}
+
+body.low-design-mode .sidebar-profile-role,
+.low-design-mode .sidebar-profile-role {
+  color: #6B7280 !important;
+}
+
+body.low-design-mode .sidebar-logout-btn,
+.low-design-mode .sidebar-logout-btn {
+  background: #F3F4F6 !important;
+  color: #374151 !important;
+  border: 1px solid #D1D5DB !important;
+}
+
+/* ==========================================================================
+   SINGLE UNIFORM MONOCHROME COLOR FOR ALL STATS COMPONENTS IN LOW DESIGN MODE
+   ========================================================================== */
+body.low-design-mode .metric-card-item,
+.low-design-mode .metric-card-item {
+  background: #FFFFFF !important;
+  border: 1px solid #D1D5DB !important;
+  box-shadow: none !important;
+  border-radius: 4px !important;
+}
+
+body.low-design-mode .metric-icon-box,
+.low-design-mode .metric-icon-box {
+  background: #F3F4F6 !important;
+  color: #374151 !important;
+  border: 1px solid #D1D5DB !important;
+  border-radius: 4px !important;
+}
+
+body.low-design-mode .metric-value,
+.low-design-mode .metric-value {
+  color: #111827 !important;
+}
+
+body.low-design-mode .metric-label,
+.low-design-mode .metric-label {
+  color: #6B7280 !important;
+}
+
+body.low-design-mode .app-header {
+  background: #FFFFFF !important;
+  border-bottom: 1px solid #D1D5DB !important;
+}
+
+body.low-design-mode .tab-view-transition {
+  animation: none !important;
+}
+
+body.low-design-mode table th {
+  background: #E5E7EB !important;
+  color: #1F2937 !important;
+  border-bottom: 1px solid #D1D5DB !important;
+}
+
+body.low-design-mode table td {
+  border-bottom: 1px solid #E5E7EB !important;
+}
+
+body.low-design-mode button {
+  transform: none !important;
+}
+
+body.low-design-mode button:hover {
+  transform: none !important;
+}
+
+/* ==========================================================================
+   LOW DESIGN BUTTONS WITH LIGHT BORDERS AND BLACK TEXT FOR ALL PAGES
+   ========================================================================== */
+body.low-design-mode,
+body.low-design-mode *,
+.low-design-mode,
+.low-design-mode * {
+  color: #000000 !important;
+}
+
+body.low-design-mode button,
+.low-design-mode button,
+body.low-design-mode input[type="button"],
+body.low-design-mode input[type="submit"],
+body.low-design-mode select,
+.low-design-mode select {
+  background-color: #FFFFFF !important;
+  background: #FFFFFF !important;
+  color: #000000 !important;
+  border: 1px solid #D1D5DB !important;
+  box-shadow: none !important;
+  text-shadow: none !important;
+  border-radius: 4px !important;
+}
+
+body.low-design-mode button:hover,
+.low-design-mode button:hover,
+body.low-design-mode select:hover,
+.low-design-mode select:hover {
+  background-color: #F3F4F6 !important;
+  background: #F3F4F6 !important;
+  color: #000000 !important;
+  border-color: #9CA3AF !important;
+  transform: none !important;
+}
+
+body.low-design-mode button:active,
+.low-design-mode button:active {
+  background-color: #E5E7EB !important;
+  background: #E5E7EB !important;
+  color: #000000 !important;
+  transform: none !important;
+}
+
+/* Primary buttons in low design mode: Light gray fill with slightly firmer border */
+body.low-design-mode button.btn-primary,
+body.low-design-mode .btn-primary,
+body.low-design-mode .sidebar-action-btn {
+  background-color: #F3F4F6 !important;
+  background: #F3F4F6 !important;
+  color: #000000 !important;
+  border: 1px solid #9CA3AF !important;
+}
+
+body.low-design-mode button.btn-primary *,
+body.low-design-mode .btn-primary *,
+body.low-design-mode .sidebar-action-btn * {
+  color: #000000 !important;
+  stroke: #000000 !important;
+}
+
+body.low-design-mode button svg,
+.low-design-mode button svg {
+  stroke: currentColor !important;
+}

@@ -339,26 +339,13 @@ export const FollowupLogModal = ({ followUp: initialFollowUp, onClose, onSaved, 
                 </div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                  {/* Editable Lead Details Box */}
+                  {/* Lead Summary Banner */}
                   <div style={{ backgroundColor: '#F8FAFC', borderRadius: '16px', padding: '16px', border: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column', gap: '12px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1 }}>
-                        <input
-                          type="text"
-                          value={selectedFollowUp.customerName || ''}
-                          onChange={(e) => setSelectedFollowUp({ ...selectedFollowUp, customerName: e.target.value })}
-                          style={{
-                            fontSize: '15px',
-                            fontWeight: '800',
-                            color: '#0F172A',
-                            border: '1px solid #CBD5E1',
-                            borderRadius: '8px',
-                            padding: '4px 8px',
-                            backgroundColor: '#FFFFFF',
-                            flex: 1,
-                          }}
-                          placeholder="Customer Name"
-                        />
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <h4 style={{ margin: 0, fontSize: '16px', fontWeight: '800', color: '#0F172A' }}>
+                          {selectedFollowUp.customerName}
+                        </h4>
                         {selectedFollowUp.customerId && (
                           <span style={{ fontSize: '11px', color: '#2563EB', fontWeight: '800', fontFamily: 'monospace', backgroundColor: '#EFF6FF', border: '1px solid #DBEAFE', padding: '2px 7px', borderRadius: '6px' }}>
                             #{selectedFollowUp.customerId}
@@ -373,27 +360,21 @@ export const FollowupLogModal = ({ followUp: initialFollowUp, onClose, onSaved, 
                           rel="noopener noreferrer"
                           style={{ fontSize: '11.5px', fontWeight: '800', color: '#15803D', backgroundColor: '#DCFCE7', border: '1px solid #86EFAC', padding: '4px 10px', borderRadius: '8px', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
                         >
-                          💬 WhatsApp
+                          💬 WhatsApp Copy
                         </a>
                       )}
                     </div>
 
-                    {/* Editable Detail Grid */}
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '10px', fontSize: '12px' }}>
-                      <div style={{ backgroundColor: '#FFFFFF', padding: '8px 10px', borderRadius: '10px', border: '1px solid #E2E8F0' }}>
-                        <span style={{ fontSize: '10px', color: '#64748B', fontWeight: '700', textTransform: 'uppercase' }}>Phone Number</span>
-                        <input
-                          type="text"
-                          value={selectedFollowUp.phone || ''}
-                          onChange={(e) => setSelectedFollowUp({ ...selectedFollowUp, phone: e.target.value })}
-                          style={{ width: '100%', fontWeight: '800', color: '#0F172A', marginTop: '2px', border: 'none', outline: 'none', backgroundColor: 'transparent' }}
-                          placeholder="Phone"
-                        />
+                    {/* Detail Grid Pills */}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '10px', fontSize: '12px' }}>
+                      <div style={{ backgroundColor: '#FFFFFF', padding: '8px 12px', borderRadius: '10px', border: '1px solid #E2E8F0' }}>
+                        <span style={{ fontSize: '10.5px', color: '#64748B', fontWeight: '700', textTransform: 'uppercase' }}>Phone Number</span>
+                        <div style={{ fontWeight: '800', color: '#0F172A', marginTop: '1px' }}>📞 {selectedFollowUp.phone || 'N/A'}</div>
                       </div>
 
-                      <div style={{ backgroundColor: '#FFFFFF', padding: '8px 10px', borderRadius: '10px', border: '1px solid #E2E8F0' }}>
-                        <span style={{ fontSize: '10px', color: '#64748B', fontWeight: '700', textTransform: 'uppercase' }}>Requirements</span>
-                        <div style={{ fontWeight: '700', color: '#334155', marginTop: '2px' }}>
+                      <div style={{ backgroundColor: '#FFFFFF', padding: '8px 12px', borderRadius: '10px', border: '1px solid #E2E8F0' }}>
+                        <span style={{ fontSize: '10.5px', color: '#64748B', fontWeight: '700', textTransform: 'uppercase' }}>Requirements</span>
+                        <div style={{ fontWeight: '700', color: '#334155', marginTop: '1px' }}>
                           {Array.isArray(selectedFollowUp.requirement)
                             ? selectedFollowUp.requirement.join(', ')
                             : typeof selectedFollowUp.requirement === 'string'
@@ -402,20 +383,19 @@ export const FollowupLogModal = ({ followUp: initialFollowUp, onClose, onSaved, 
                         </div>
                       </div>
 
-                      <div style={{ backgroundColor: '#FFFFFF', padding: '8px 10px', borderRadius: '10px', border: '1px solid #E2E8F0' }}>
-                        <span style={{ fontSize: '10px', color: '#64748B', fontWeight: '700', textTransform: 'uppercase' }}>Assigned Salesperson</span>
-                        <input
-                          type="text"
-                          value={selectedFollowUp.salesperson || ''}
-                          onChange={(e) => setSelectedFollowUp({ ...selectedFollowUp, salesperson: e.target.value })}
-                          style={{ width: '100%', fontWeight: '700', color: '#0F172A', marginTop: '2px', border: 'none', outline: 'none', backgroundColor: 'transparent' }}
-                          placeholder="Salesperson"
-                        />
+                      <div style={{ backgroundColor: '#FFFFFF', padding: '8px 12px', borderRadius: '10px', border: '1px solid #E2E8F0' }}>
+                        <span style={{ fontSize: '10.5px', color: '#64748B', fontWeight: '700', textTransform: 'uppercase' }}>Approx Quantity</span>
+                        <div style={{ fontWeight: '700', color: '#334155', marginTop: '1px' }}>📦 {selectedFollowUp.approxQuantity || 'N/A'}</div>
                       </div>
 
-                      <div style={{ backgroundColor: '#FFFFFF', padding: '8px 10px', borderRadius: '10px', border: '1px solid #E2E8F0' }}>
-                        <span style={{ fontSize: '10px', color: '#64748B', fontWeight: '700', textTransform: 'uppercase' }}>Stage</span>
-                        <div style={{ fontWeight: '700', color: '#334155', marginTop: '2px' }}>🏗️ {selectedFollowUp.houseStage || 'Planning'}</div>
+                      <div style={{ backgroundColor: '#FFFFFF', padding: '8px 12px', borderRadius: '10px', border: '1px solid #E2E8F0' }}>
+                        <span style={{ fontSize: '10.5px', color: '#64748B', fontWeight: '700', textTransform: 'uppercase' }}>Salesperson</span>
+                        <div style={{ fontWeight: '700', color: '#0F172A', marginTop: '1px' }}>👤 {selectedFollowUp.salesperson || 'Staff'} ({selectedFollowUp.customerType || 'Direct Client'})</div>
+                      </div>
+
+                      <div style={{ backgroundColor: '#FFFFFF', padding: '8px 12px', borderRadius: '10px', border: '1px solid #E2E8F0' }}>
+                        <span style={{ fontSize: '10.5px', color: '#64748B', fontWeight: '700', textTransform: 'uppercase' }}>Stage</span>
+                        <div style={{ fontWeight: '700', color: '#334155', marginTop: '1px' }}>🏗️ {selectedFollowUp.houseStage || 'Planning'}</div>
                       </div>
                     </div>
 

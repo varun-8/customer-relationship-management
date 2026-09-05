@@ -475,7 +475,7 @@ export function MobileShiftKpiModal({
                       <View style={styles.heroStatDivider} />
                       <View style={styles.heroStatTile}>
                         <Text style={styles.heroStatTileLabel}>WIN RATE</Text>
-                        <Text style={[styles.heroStatTileVal, { color: teamAvgConversion > 0 ? '#059669' : '#0F172A' }]}>
+                        <Text style={[styles.heroStatTileVal, { color: teamAvgConversion > 0 ? '#059669' : '#000000' }]}>
                           {teamAvgConversion}%
                         </Text>
                       </View>
@@ -671,7 +671,7 @@ export function MobileShiftKpiModal({
                       <View style={styles.heroStatDivider} />
                       <View style={styles.heroStatTile}>
                         <Text style={styles.heroStatTileLabel}>WIN RATE</Text>
-                        <Text style={[styles.heroStatTileVal, { color: conversionRate > 0 ? '#059669' : '#0F172A' }]}>
+                        <Text style={[styles.heroStatTileVal, { color: conversionRate > 0 ? '#059669' : '#000000' }]}>
                           {conversionRate}%
                         </Text>
                       </View>
@@ -1046,8 +1046,8 @@ const styles = StyleSheet.create({
     borderColor: '#E2E8F0',
   },
   staffTabPillActive: {
-    backgroundColor: '#0F766E',
-    borderColor: '#0F766E',
+    backgroundColor: '#0F172A',
+    borderColor: '#0F172A',
   },
   miniStaffAvatar: {
     width: 18,
@@ -1112,16 +1112,11 @@ const styles = StyleSheet.create({
     color: '#1D4ED8',
   },
   heroDarkCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#F3F4F6',
     borderRadius: 18,
     padding: 16,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
-    shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
+    borderColor: '#D1D5DB',
     marginBottom: 14,
   },
   heroCardHeaderRow: {
@@ -1130,17 +1125,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   heroTagBadge: {
-    backgroundColor: '#ECFEF8',
+    backgroundColor: '#E2E8F0',
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 5,
-    borderWidth: 1,
-    borderColor: '#CCFBF1',
   },
   heroTagBadgeText: {
     fontSize: 9,
     fontWeight: '800',
-    color: '#0F766E',
+    color: '#000000',
     letterSpacing: 0.8,
   },
   heroSyncBtn: {
@@ -1150,12 +1143,12 @@ const styles = StyleSheet.create({
   heroSyncBtnText: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#2563EB',
+    color: '#1D4ED8',
   },
   heroDarkRevenueValue: {
     fontSize: 32,
     fontWeight: '900',
-    color: '#0F172A',
+    color: '#000000',
     letterSpacing: -0.8,
     marginTop: 6,
     marginBottom: 6,
@@ -1169,7 +1162,7 @@ const styles = StyleSheet.create({
   },
   darkProgressFill: {
     height: '100%',
-    backgroundColor: '#0F766E',
+    backgroundColor: '#2563EB',
     borderRadius: 3,
   },
   darkProgressLabelRow: {
@@ -1180,7 +1173,7 @@ const styles = StyleSheet.create({
   },
   darkProgressSubtext: {
     fontSize: 10.5,
-    color: '#64748B',
+    color: '#000000',
     fontWeight: '600',
   },
   darkProgressPercent: {
@@ -1192,12 +1185,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#FFFFFF',
     borderRadius: 12,
     paddingVertical: 9,
     paddingHorizontal: 12,
     borderWidth: 1,
-    borderColor: '#F1F5F9',
+    borderColor: '#E2E8F0',
   },
   heroStatTile: {
     alignItems: 'center',
@@ -1206,19 +1199,19 @@ const styles = StyleSheet.create({
   heroStatTileLabel: {
     fontSize: 8.5,
     fontWeight: '800',
-    color: '#64748B',
+    color: '#000000',
     letterSpacing: 0.5,
   },
   heroStatTileVal: {
     fontSize: 13.5,
     fontWeight: '900',
-    color: '#0F172A',
+    color: '#000000',
     marginTop: 2,
   },
   heroStatDivider: {
     width: 1,
     height: 20,
-    backgroundColor: '#E2E8F0',
+    backgroundColor: '#CBD5E1',
   },
   sectionHeadingRow: {
     flexDirection: 'row',
@@ -1331,8 +1324,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   milestonePillActive: {
-    backgroundColor: '#ECFDF5',
-    borderColor: '#A7F3D0',
+    backgroundColor: '#0F172A',
+    borderColor: '#0F172A',
   },
   milestonePillInactive: {
     backgroundColor: '#F1F5F9',
@@ -1343,7 +1336,7 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   milestonePillTextActive: {
-    color: '#047857',
+    color: '#FFFFFF',
   },
   milestonePillTextInactive: {
     color: '#64748B',
@@ -1590,9 +1583,9 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 16,
     borderRadius: 10,
-    backgroundColor: '#0F766E',
+    backgroundColor: '#0F172A',
     alignItems: 'center',
-    shadowColor: '#0F766E',
+    shadowColor: '#0F172A',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.12,
     shadowRadius: 5,

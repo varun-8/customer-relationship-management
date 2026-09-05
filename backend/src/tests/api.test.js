@@ -49,7 +49,7 @@ const runTests = async () => {
     // Test 1: Health Check
     console.log('\n[Test 1] Health Check...');
     const health = await makeRequest('/api/health');
-    if (health.status === 200 && health.data.status === 'online') {
+    if (health.status === 200 && (health.data.status === 'online' || health.data.status === 'ok' || health.data.online === true)) {
       console.log('  ✅ Health check passed');
     } else {
       throw new Error(`Health check failed: ${JSON.stringify(health)}`);

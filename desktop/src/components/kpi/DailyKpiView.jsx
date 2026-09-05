@@ -20,8 +20,10 @@ import {
 } from 'lucide-react';
 import { api } from '../../services/api';
 import { ConnectionErrorState } from '../common/ConnectionErrorState';
+import { useTestingMode } from '../../context/TestingModeContext';
 
 export const DailyKpiView = () => {
+  const { isLowDesignMode } = useTestingMode();
   const todayStr = new Date().toISOString().split('T')[0];
 
   // Selected Day for deep-dive performance analysis
@@ -240,7 +242,7 @@ export const DailyKpiView = () => {
   }, [dailyTrends]);
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+    <div className="daily-kpi-view" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
       {/* 1. Header Toolbar */}
       <div
         style={{
@@ -361,137 +363,137 @@ export const DailyKpiView = () => {
           {/* 2. Top Metric Cards (4 Cards) */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '14px' }}>
             {/* Walk-ins */}
-            <div style={{ backgroundColor: '#FFFFFF', borderRadius: '18px', border: '1px solid #E2E8F0', padding: '16px 20px', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
+            <div style={{ backgroundColor: '#FFFFFF', borderRadius: isLowDesignMode ? '4px' : '18px', border: isLowDesignMode ? '1px solid #D1D5DB' : '1px solid #E2E8F0', padding: '16px 20px', boxShadow: isLowDesignMode ? 'none' : '0 2px 8px rgba(0,0,0,0.02)' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <span style={{ fontSize: '11px', fontWeight: '800', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                <span style={{ fontSize: '11px', fontWeight: '800', color: isLowDesignMode ? '#000000' : '#64748B', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                   SHOWROOM FOOTFALL
                 </span>
-                <div style={{ width: '34px', height: '34px', borderRadius: '10px', backgroundColor: '#EFF6FF', color: '#2563EB', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div style={{ width: '34px', height: '34px', borderRadius: isLowDesignMode ? '4px' : '10px', backgroundColor: isLowDesignMode ? '#F3F4F6' : '#EFF6FF', color: isLowDesignMode ? '#000000' : '#2563EB', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <Users size={16} />
                 </div>
               </div>
-              <div style={{ fontSize: '24px', fontWeight: '900', color: '#0F172A', marginTop: '6px' }}>
-                {dayKpi.walkins?.visits ?? 0} <span style={{ fontSize: '13px', fontWeight: '600', color: '#64748B' }}>walk-ins</span>
+              <div style={{ fontSize: '24px', fontWeight: '900', color: isLowDesignMode ? '#000000' : '#0F172A', marginTop: '6px' }}>
+                {dayKpi.walkins?.visits ?? 0} <span style={{ fontSize: '13px', fontWeight: '600', color: isLowDesignMode ? '#000000' : '#64748B' }}>walk-ins</span>
               </div>
-              <div style={{ fontSize: '12px', color: '#64748B', marginTop: '4px' }}>
+              <div style={{ fontSize: '12px', color: isLowDesignMode ? '#000000' : '#64748B', marginTop: '4px' }}>
                 {isToday ? "Today's showroom visitors" : `Visits on ${selectedDay}`}
               </div>
             </div>
 
             {/* Quotes Given */}
-            <div style={{ backgroundColor: '#FFFFFF', borderRadius: '18px', border: '1px solid #E2E8F0', padding: '16px 20px', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
+            <div style={{ backgroundColor: '#FFFFFF', borderRadius: isLowDesignMode ? '4px' : '18px', border: isLowDesignMode ? '1px solid #D1D5DB' : '1px solid #E2E8F0', padding: '16px 20px', boxShadow: isLowDesignMode ? 'none' : '0 2px 8px rgba(0,0,0,0.02)' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <span style={{ fontSize: '11px', fontWeight: '800', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                <span style={{ fontSize: '11px', fontWeight: '800', color: isLowDesignMode ? '#000000' : '#64748B', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                   QUOTATIONS SHARED
                 </span>
-                <div style={{ width: '34px', height: '34px', borderRadius: '10px', backgroundColor: '#F5F3FF', color: '#7C3AED', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div style={{ width: '34px', height: '34px', borderRadius: isLowDesignMode ? '4px' : '10px', backgroundColor: isLowDesignMode ? '#F3F4F6' : '#F5F3FF', color: isLowDesignMode ? '#000000' : '#7C3AED', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <Receipt size={16} />
                 </div>
               </div>
-              <div style={{ fontSize: '24px', fontWeight: '900', color: '#7C3AED', marginTop: '6px' }}>
-                {dayKpi.walkins?.quotes ?? 0} <span style={{ fontSize: '13px', fontWeight: '600', color: '#64748B' }}>quotes ({dayKpi.quoteRate || 0}%)</span>
+              <div style={{ fontSize: '24px', fontWeight: '900', color: isLowDesignMode ? '#000000' : '#7C3AED', marginTop: '6px' }}>
+                {dayKpi.walkins?.quotes ?? 0} <span style={{ fontSize: '13px', fontWeight: '600', color: isLowDesignMode ? '#000000' : '#64748B' }}>quotes ({dayKpi.quoteRate || 0}%)</span>
               </div>
-              <div style={{ fontSize: '12px', color: '#64748B', marginTop: '4px' }}>
+              <div style={{ fontSize: '12px', color: isLowDesignMode ? '#000000' : '#64748B', marginTop: '4px' }}>
                 Formal price estimates created
               </div>
             </div>
 
             {/* Closed Revenue */}
-            <div style={{ backgroundColor: '#ECFDF5', borderRadius: '18px', border: '1.5px solid #A7F3D0', padding: '16px 20px', boxShadow: '0 2px 8px rgba(16, 185, 129, 0.08)' }}>
+            <div style={{ backgroundColor: isLowDesignMode ? '#FFFFFF' : '#ECFDF5', borderRadius: isLowDesignMode ? '4px' : '18px', border: isLowDesignMode ? '1px solid #D1D5DB' : '1.5px solid #A7F3D0', padding: '16px 20px', boxShadow: isLowDesignMode ? 'none' : '0 2px 8px rgba(16, 185, 129, 0.08)' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <span style={{ fontSize: '11px', fontWeight: '800', color: '#047857', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                <span style={{ fontSize: '11px', fontWeight: '800', color: isLowDesignMode ? '#000000' : '#047857', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                   CLOSED REVENUE & DEALS
                 </span>
-                <div style={{ width: '34px', height: '34px', borderRadius: '10px', backgroundColor: '#FFFFFF', color: '#059669', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 6px rgba(0,0,0,0.05)' }}>
+                <div style={{ width: '34px', height: '34px', borderRadius: isLowDesignMode ? '4px' : '10px', backgroundColor: isLowDesignMode ? '#F3F4F6' : '#FFFFFF', color: isLowDesignMode ? '#000000' : '#059669', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: isLowDesignMode ? 'none' : '0 2px 6px rgba(0,0,0,0.05)' }}>
                   <IndianRupee size={16} />
                 </div>
               </div>
-              <div style={{ fontSize: '22px', fontWeight: '900', color: '#059669', marginTop: '6px' }}>
+              <div style={{ fontSize: '22px', fontWeight: '900', color: isLowDesignMode ? '#000000' : '#059669', marginTop: '6px' }}>
                 ₹{(dayKpi.salesValue || 0).toLocaleString('en-IN')}
               </div>
-              <div style={{ fontSize: '12px', fontWeight: '800', color: '#047857', marginTop: '4px' }}>
+              <div style={{ fontSize: '12px', fontWeight: '800', color: isLowDesignMode ? '#000000' : '#047857', marginTop: '4px' }}>
                 🎉 {dayKpi.ordersCount || 0} {dayKpi.ordersCount === 1 ? 'deal' : 'deals'} confirmed ({dayKpi.conversionRate || 0}% conv.)
               </div>
             </div>
 
             {/* Follow-ups */}
-            <div style={{ backgroundColor: '#FFFFFF', borderRadius: '18px', border: '1px solid #E2E8F0', padding: '16px 20px', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
+            <div style={{ backgroundColor: '#FFFFFF', borderRadius: isLowDesignMode ? '4px' : '18px', border: isLowDesignMode ? '1px solid #D1D5DB' : '1px solid #E2E8F0', padding: '16px 20px', boxShadow: isLowDesignMode ? 'none' : '0 2px 8px rgba(0,0,0,0.02)' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <span style={{ fontSize: '11px', fontWeight: '800', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                <span style={{ fontSize: '11px', fontWeight: '800', color: isLowDesignMode ? '#000000' : '#64748B', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                   FOLLOW-UPS LOGGED
                 </span>
-                <div style={{ width: '34px', height: '34px', borderRadius: '10px', backgroundColor: '#F0F9FF', color: '#0284C7', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div style={{ width: '34px', height: '34px', borderRadius: isLowDesignMode ? '4px' : '10px', backgroundColor: isLowDesignMode ? '#F3F4F6' : '#F0F9FF', color: isLowDesignMode ? '#000000' : '#0284C7', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <PhoneCall size={16} />
                 </div>
               </div>
-              <div style={{ fontSize: '24px', fontWeight: '900', color: '#0284C7', marginTop: '6px' }}>
-                {dayKpi.followUpsCount || 0} <span style={{ fontSize: '13px', fontWeight: '600', color: '#64748B' }}>calls/visits</span>
+              <div style={{ fontSize: '24px', fontWeight: '900', color: isLowDesignMode ? '#000000' : '#0284C7', marginTop: '6px' }}>
+                {dayKpi.followUpsCount || 0} <span style={{ fontSize: '13px', fontWeight: '600', color: isLowDesignMode ? '#000000' : '#64748B' }}>calls/visits</span>
               </div>
-              <div style={{ fontSize: '12px', color: '#64748B', marginTop: '4px' }}>
+              <div style={{ fontSize: '12px', color: isLowDesignMode ? '#000000' : '#64748B', marginTop: '4px' }}>
                 Active pipeline nurture
               </div>
             </div>
           </div>
 
-          {/* 3. Executive Split View: Side-by-Side Leaderboard & Monthly Performance */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', alignItems: 'start' }}>
+          {/* 3. Executive View: Sales Staff Leaderboard */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '20px', alignItems: 'start' }}>
             {/* Sales Staff Performance Leaderboard */}
-            <div style={{ backgroundColor: '#FFFFFF', borderRadius: '20px', border: '1px solid #E2E8F0', padding: '20px', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
+            <div style={{ backgroundColor: '#FFFFFF', borderRadius: isLowDesignMode ? '4px' : '20px', border: isLowDesignMode ? '1px solid #D1D5DB' : '1px solid #E2E8F0', padding: '20px', boxShadow: isLowDesignMode ? 'none' : '0 2px 8px rgba(0,0,0,0.02)' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <Award size={18} color="#D97706" />
-                  <span style={{ fontSize: '14px', fontWeight: '800', color: '#0F172A' }}>
+                  <Award size={18} color={isLowDesignMode ? '#000000' : '#D97706'} />
+                  <span style={{ fontSize: '14px', fontWeight: '800', color: isLowDesignMode ? '#000000' : '#0F172A' }}>
                     Sales Executive Performance
                   </span>
                 </div>
-                <span style={{ fontSize: '11px', fontWeight: '700', backgroundColor: '#FEF3C7', color: '#B45309', padding: '2px 8px', borderRadius: '8px' }}>
+                <span style={{ fontSize: '11px', fontWeight: '700', backgroundColor: isLowDesignMode ? '#F3F4F6' : '#FEF3C7', color: isLowDesignMode ? '#000000' : '#B45309', padding: '2px 8px', borderRadius: isLowDesignMode ? '4px' : '8px', border: isLowDesignMode ? '1px solid #D1D5DB' : 'none' }}>
                   {formattedDayTitle}
                 </span>
               </div>
 
               {todayStaffPerformance.length === 0 ? (
-                <div style={{ padding: '20px', textAlign: 'center', color: '#64748B', fontSize: '13px' }}>
+                <div style={{ padding: '20px', textAlign: 'center', color: isLowDesignMode ? '#000000' : '#64748B', fontSize: '13px' }}>
                   No staff activity recorded for this date.
                 </div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                   {todayStaffPerformance.map((s, idx) => {
                     const rankBadge = idx === 0 ? '👑 #1' : idx === 1 ? '🥈 #2' : idx === 2 ? '🥉 #3' : `#${idx + 1}`;
-                    const rankBg = idx === 0 ? '#FEF3C7' : idx === 1 ? '#F1F5F9' : idx === 2 ? '#FFEDD5' : '#F1F5F9';
-                    const rankColor = idx === 0 ? '#B45309' : idx === 1 ? '#475569' : idx === 2 ? '#C2410C' : '#64748B';
+                    const rankBg = isLowDesignMode ? '#F3F4F6' : (idx === 0 ? '#FEF3C7' : idx === 1 ? '#F1F5F9' : idx === 2 ? '#FFEDD5' : '#F1F5F9');
+                    const rankColor = isLowDesignMode ? '#000000' : (idx === 0 ? '#B45309' : idx === 1 ? '#475569' : idx === 2 ? '#C2410C' : '#64748B');
 
                     return (
                       <div
                         key={s.staffName}
                         style={{
                           backgroundColor: '#F8FAFC',
-                          borderRadius: '12px',
+                          borderRadius: isLowDesignMode ? '4px' : '12px',
                           padding: '12px 14px',
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'space-between',
-                          border: '1px solid #E2E8F0',
+                          border: isLowDesignMode ? '1px solid #D1D5DB' : '1px solid #E2E8F0',
                         }}
                       >
                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                          <span style={{ fontSize: '11px', fontWeight: '800', backgroundColor: rankBg, color: rankColor, padding: '3px 8px', borderRadius: '6px' }}>
+                          <span style={{ fontSize: '11px', fontWeight: '800', backgroundColor: rankBg, color: rankColor, padding: '3px 8px', borderRadius: isLowDesignMode ? '4px' : '6px', border: isLowDesignMode ? '1px solid #D1D5DB' : 'none' }}>
                             {rankBadge}
                           </span>
                           <div>
-                            <div style={{ fontSize: '13.5px', fontWeight: '800', color: '#0F172A' }}>
+                            <div style={{ fontSize: '13.5px', fontWeight: '800', color: isLowDesignMode ? '#000000' : '#0F172A' }}>
                               {s.staffName}
                             </div>
-                            <div style={{ fontSize: '11.5px', color: '#64748B', marginTop: '1px' }}>
+                            <div style={{ fontSize: '11.5px', color: isLowDesignMode ? '#000000' : '#64748B', marginTop: '1px' }}>
                               {s.visits} visits • {s.quotes} quotes
                             </div>
                           </div>
                         </div>
 
                         <div style={{ textAlign: 'right' }}>
-                          <div style={{ fontSize: '14.5px', fontWeight: '900', color: s.salesValue > 0 ? '#059669' : '#0F172A' }}>
+                          <div style={{ fontSize: '14.5px', fontWeight: '900', color: isLowDesignMode ? '#000000' : (s.salesValue > 0 ? '#059669' : '#0F172A') }}>
                             ₹{(s.salesValue || 0).toLocaleString('en-IN')}
                           </div>
-                          <div style={{ fontSize: '11px', fontWeight: '700', color: '#2563EB', marginTop: '1px' }}>
+                          <div style={{ fontSize: '11px', fontWeight: '700', color: isLowDesignMode ? '#000000' : '#2563EB', marginTop: '1px' }}>
                             {s.ordersCount} deals ({s.conversionRate}% conv.)
                           </div>
                         </div>
@@ -500,118 +502,6 @@ export const DailyKpiView = () => {
                   })}
                 </div>
               )}
-            </div>
-
-            {/* Monthly Day-by-Day Performance Calendar & Overview */}
-            <div style={{ backgroundColor: '#FFFFFF', borderRadius: '20px', border: '1px solid #E2E8F0', padding: '20px', boxShadow: '0 2px 8px rgba(0,0,0,0.02)', display: 'flex', flexDirection: 'column', gap: '14px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <div style={{ width: '32px', height: '32px', borderRadius: '10px', backgroundColor: '#EFF6FF', color: '#2563EB', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <CalendarDays size={16} />
-                  </div>
-                  <div>
-                    <div style={{ fontSize: '14px', fontWeight: '800', color: '#0F172A' }}>
-                      Monthly Performance Days
-                    </div>
-                    <div style={{ fontSize: '11px', color: '#64748B', fontWeight: '600' }}>
-                      {new Date(selectedMonth + '-01').toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })}
-                    </div>
-                  </div>
-                </div>
-
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-                  <span style={{ fontSize: '11px', fontWeight: '700', backgroundColor: '#ECFDF5', color: '#047857', padding: '3px 8px', borderRadius: '6px', border: '1px solid #A7F3D0' }}>
-                    {monthlyMetrics.activeDaysCount} Active Days
-                  </span>
-                  <span style={{ fontSize: '11px', fontWeight: '700', backgroundColor: '#EFF6FF', color: '#1D4ED8', padding: '3px 8px', borderRadius: '6px', border: '1px solid #BFDBFE' }}>
-                    ₹{monthlyMetrics.totalRevenue.toLocaleString('en-IN')} Total
-                  </span>
-                </div>
-              </div>
-
-              {/* Day Tiles Grid */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '6px', maxHeight: '250px', overflowY: 'auto', paddingRight: '2px' }}>
-                {dailyTrends.map((t) => {
-                  const isSelected = t.date === selectedDay;
-                  const isCurrentDay = t.date === todayStr;
-                  const hasSales = Number(t.salesValue) > 0;
-                  const isHighSales = Number(t.salesValue) >= 50000;
-
-                  return (
-                    <button
-                      key={t.date}
-                      type="button"
-                      onClick={() => setSelectedDay(t.date)}
-                      style={{
-                        padding: '8px 4px',
-                        borderRadius: '12px',
-                        border: isSelected
-                          ? '2px solid #2563EB'
-                          : isHighSales
-                          ? '1px solid #6EE7B7'
-                          : hasSales
-                          ? '1px solid #A7F3D0'
-                          : '1px solid #E2E8F0',
-                        backgroundColor: isSelected
-                          ? '#EFF6FF'
-                          : isHighSales
-                          ? '#D1FAE5'
-                          : hasSales
-                          ? '#ECFDF5'
-                          : isCurrentDay
-                          ? '#FEF3C7'
-                          : '#F8FAFC',
-                        color: isSelected ? '#1D4ED8' : '#0F172A',
-                        cursor: 'pointer',
-                        textAlign: 'center',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                        gap: '2px',
-                        position: 'relative',
-                        transition: 'all 0.15s ease',
-                        boxShadow: isSelected ? '0 0 0 3px rgba(37, 99, 235, 0.15)' : 'none',
-                      }}
-                      title={`${t.date}: ₹${(t.salesValue || 0).toLocaleString('en-IN')} (${t.ordersCount || 0} orders, ${t.visits || 0} visits)`}
-                    >
-                      {isCurrentDay && (
-                        <span style={{ position: 'absolute', top: '2px', right: '3px', fontSize: '7px', fontWeight: '900', color: '#D97706' }}>
-                          ●
-                        </span>
-                      )}
-                      <span style={{ fontSize: '9.5px', fontWeight: '700', color: isSelected ? '#2563EB' : '#64748B', textTransform: 'uppercase' }}>
-                        {t.dayOfWeek}
-                      </span>
-                      <span style={{ fontSize: '13px', fontWeight: '900', color: isSelected ? '#1E40AF' : '#0F172A' }}>
-                        {t.dayNumber}
-                      </span>
-                      {hasSales ? (
-                        <span style={{ fontSize: '9.5px', fontWeight: '800', color: isHighSales ? '#047857' : '#059669' }}>
-                          ₹{Math.round(t.salesValue / 1000)}k
-                        </span>
-                      ) : (
-                        <span style={{ fontSize: '9.5px', color: '#94A3B8' }}>—</span>
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
-
-              {/* Legend Bar */}
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '6px', borderTop: '1px solid #F1F5F9', fontSize: '10.5px', color: '#64748B', fontWeight: '600' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#059669' }} /> Sales Day
-                  </span>
-                  <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#D97706' }} /> Today
-                  </span>
-                  <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#94A3B8' }} /> Rest / No Sales
-                  </span>
-                </div>
-                <span>Click day tile to load deep dive</span>
-              </div>
             </div>
           </div>
 

@@ -9,17 +9,18 @@ web-build/
 .env.*
 !.env.example
 
-# Android build outputs & caches
+# Native Build Directories (generated during Gradle / EAS builds)
 android/build/
 android/app/build/
 android/.cxx/
 android/app/.cxx/
+android/.gradle/
 android/.kotlin/
 android/app/.kotlin/
-android/.gradle/
 android/app/src/main/assets/index.android.bundle
+android/app/src/main/assets/index.android.bundle.map
 
-# Native build binaries & temp logs
+# Native Build Binaries & Temp Logs
 *.apk
 *.aab
 *.jks

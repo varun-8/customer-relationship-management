@@ -14,13 +14,13 @@ import {
 import { apiClient } from '../../api/client';
 
 const OUTCOMES = [
-  { label: 'Spoke with Customer / Positive Interest', shortLabel: 'Positive Interest', icon: '✓', color: '#1D4ED8', bg: '#EFF6FF', border: '#BFDBFE' },
-  { label: 'Customer Visiting Showroom Today / Soon', shortLabel: 'Visiting Showroom', icon: '→', color: '#047857', bg: '#ECFDF5', border: '#A7F3D0' },
-  { label: 'Sent Revised Quotation / Discount Provided', shortLabel: 'Sent Revised Quote', icon: '•', color: '#7E22CE', bg: '#FAF5FF', border: '#DDD6FE' },
-  { label: 'No Answer / Customer Busy / Callback Requested', shortLabel: 'No Answer / Busy', icon: '!', color: '#B45309', bg: '#FFFBEB', border: '#FDE68A' },
-  { label: 'Negotiating Final Price / Competitor Comparison', shortLabel: 'Price Negotiation', icon: '₹', color: '#0369A1', bg: '#F0F9FF', border: '#BAE6FD' },
-  { label: 'Site Measurement Scheduled', shortLabel: 'Site Measurement', icon: '✦', color: '#4338CA', bg: '#EEF2FF', border: '#C7D2FE' },
-  { label: 'Order Confirmed / Ready for Billing', shortLabel: 'Order Confirmed', icon: '★', color: '#059669', bg: '#D1FAE5', border: '#6EE7B7' },
+  { label: 'Spoke with Customer / Positive Interest', shortLabel: 'Positive Interest', icon: '🤝', color: '#1D4ED8', bg: '#EFF6FF', border: '#BFDBFE' },
+  { label: 'Customer Visiting Showroom Today / Soon', shortLabel: 'Visiting Showroom', icon: '🏢', color: '#047857', bg: '#ECFDF5', border: '#A7F3D0' },
+  { label: 'Sent Revised Quotation / Discount Provided', shortLabel: 'Sent Revised Quote', icon: '📄', color: '#7E22CE', bg: '#FAF5FF', border: '#DDD6FE' },
+  { label: 'No Answer / Customer Busy / Callback Requested', shortLabel: 'No Answer / Busy', icon: '📵', color: '#B45309', bg: '#FFFBEB', border: '#FDE68A' },
+  { label: 'Negotiating Final Price / Competitor Comparison', shortLabel: 'Price Negotiation', icon: '💰', color: '#0369A1', bg: '#F0F9FF', border: '#BAE6FD' },
+  { label: 'Site Measurement Scheduled', shortLabel: 'Site Measurement', icon: '📐', color: '#4338CA', bg: '#EEF2FF', border: '#C7D2FE' },
+  { label: 'Order Confirmed / Ready for Billing', shortLabel: 'Order Confirmed', icon: '🛒', color: '#059669', bg: '#D1FAE5', border: '#6EE7B7' },
   { label: 'Deal Lost / Postponed', shortLabel: 'Deal Lost / Postponed', icon: '✕', color: '#DC2626', bg: '#FEF2F2', border: '#FECACA' },
 ];
 
@@ -47,8 +47,6 @@ export function MobileFollowupLogModal({
 
   const [outcome, setOutcome] = useState('Spoke with Customer / Positive Interest');
   const [leadTemperature, setLeadTemperature] = useState(followUp.leadTemperature || 'Hot');
-  const [customerName, setCustomerName] = useState(followUp.customerName || '');
-  const [phone, setPhone] = useState(followUp.phone || '');
   const [nextFollowUp, setNextFollowUp] = useState(
     followUp.nextFollowUp || tomorrow.toISOString().split('T')[0]
   );
@@ -57,9 +55,6 @@ export function MobileFollowupLogModal({
     followUp.quotationValue !== undefined ? String(followUp.quotationValue) : ''
   );
   const [submitting, setSubmitting] = useState(false);
-  const [outcomeModalVisible, setOutcomeModalVisible] = useState(false);
-
-  const selectedOutcomeObj = OUTCOMES.find((o) => o.label === outcome) || OUTCOMES[0];
 
   const handleQuickDays = (days) => {
     const d = new Date();
@@ -88,8 +83,6 @@ export function MobileFollowupLogModal({
     try {
       const res = await apiClient.logFollowupActivity(followUp._id, {
         outcome,
-        customerName: customerName.trim(),
-        phone: phone.trim(),
         discussionNotes: discussionNotes.trim(),
         nextFollowUp,
         leadTemperature,
@@ -98,7 +91,7 @@ export function MobileFollowupLogModal({
       });
 
       if (res && res.success) {
-        Alert.alert('Activity Logged', `Follow-up updated for ${customerName || 'Customer'}!`);
+        Alert.alert('✓ Activity Logged', `Follow-up updated for ${followUp.customerName}!`);
         if (onSaved) onSaved();
         onClose();
       } else {
@@ -129,42 +122,28 @@ export function MobileFollowupLogModal({
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <View style={styles.modalOverlay}>
         <View style={styles.modalCard}>
-          {/* Top Drag Handle */}
+          {/* Top Sheet Drag Handle */}
           <View style={styles.sheetHandleWrapper}>
             <View style={styles.sheetHandle} />
           </View>
 
-          {/* Header Bar with Editable Customer Info */}
+          {/* Clean Light Header */}
           <View style={styles.headerLight}>
             <View style={styles.headerIconBoxLight}>
-              <Text style={{ fontSize: 13, fontWeight: '800', color: '#0F766E' }}>LOG</Text>
+              <Text style={{ fontSize: 18 }}>📞</Text>
             </View>
-            <View style={{ flex: 1, gap: 4 }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                <TextInput
-                  style={[styles.headerTitleLight, { flex: 1, borderWidth: 1, borderColor: '#CBD5E1', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 2, backgroundColor: '#FFFFFF' }]}
-                  value={customerName}
-                  onChangeText={setCustomerName}
-                  placeholder="Customer Name"
-                  placeholderTextColor="#94A3B8"
-                />
+            <View style={{ flex: 1 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                <Text style={styles.headerTitleLight}>Log Follow-up Activity</Text>
                 {followUp.customerId && (
                   <View style={styles.headerIdBadgeLight}>
                     <Text style={styles.headerIdBadgeTextLight}>#{followUp.customerId}</Text>
                   </View>
                 )}
               </View>
-
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                <Text style={{ fontSize: 11, fontWeight: '700', color: '#64748B' }}>PH:</Text>
-                <TextInput
-                  style={{ fontSize: 12, color: '#334155', fontWeight: '700', flex: 1, borderWidth: 1, borderColor: '#CBD5E1', borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2, backgroundColor: '#FFFFFF' }}
-                  value={phone}
-                  onChangeText={setPhone}
-                  placeholder="Mobile Phone"
-                  placeholderTextColor="#94A3B8"
-                />
-              </View>
+              <Text style={styles.headerSubtitleLight} numberOfLines={1}>
+                {followUp.customerName} {followUp.phone ? `• 📱 ${followUp.phone}` : ''}
+              </Text>
             </View>
             <TouchableOpacity onPress={onClose} style={styles.headerCloseBtnLight} activeOpacity={0.7}>
               <Text style={styles.headerCloseBtnTextLight}>✕</Text>
@@ -172,84 +151,46 @@ export function MobileFollowupLogModal({
           </View>
 
           <ScrollView showsVerticalScrollIndicator={false} style={styles.scroll} contentContainerStyle={{ padding: 16 }}>
-            {/* 1. Discussion Outcome Dropdown List Box */}
+            {/* 1. Discussion Outcome */}
             <View style={styles.sectionCard}>
               <Text style={styles.sectionHeading}>1. Call Outcome *</Text>
-              
-              {/* Outcome Dropdown Trigger Box */}
-              <TouchableOpacity
-                style={[
-                  styles.dropdownTriggerBox,
-                  { backgroundColor: selectedOutcomeObj.bg, borderColor: selectedOutcomeObj.border },
-                ]}
-                onPress={() => setOutcomeModalVisible(true)}
-                activeOpacity={0.8}
-              >
-                <View style={styles.dropdownTriggerLeftGroup}>
-                  <Text style={{ fontSize: 14, fontWeight: '800', color: selectedOutcomeObj.color }}>{selectedOutcomeObj.icon}</Text>
-                  <Text style={[styles.dropdownTriggerValueText, { color: selectedOutcomeObj.color }]} numberOfLines={1}>
-                    {selectedOutcomeObj.label}
-                  </Text>
-                </View>
-                <View style={styles.dropdownTriggerChevronBox}>
-                  <Text style={{ fontSize: 11, color: selectedOutcomeObj.color }}>▼</Text>
-                </View>
-              </TouchableOpacity>
+              <View style={styles.outcomeGrid}>
+                {OUTCOMES.map((o) => {
+                  const isSelected = outcome === o.label;
+                  const isLost = o.label === 'Deal Lost / Postponed';
 
-              {/* Outcome Selection Modal Sheet */}
-              <Modal
-                visible={outcomeModalVisible}
-                transparent
-                animationType="slide"
-                onRequestClose={() => setOutcomeModalVisible(false)}
-              >
-                <View style={styles.outcomeModalBackdrop}>
-                  <View style={styles.outcomeModalSheet}>
-                    <View style={styles.modalHandleWrapper}>
-                      <View style={styles.modalHandle} />
-                    </View>
+                  return (
+                    <TouchableOpacity
+                      key={o.label}
+                      style={[
+                        styles.outcomeCard,
+                        isSelected && {
+                          backgroundColor: isLost ? '#FEF2F2' : o.bg,
+                          borderColor: isLost ? '#DC2626' : o.color,
+                          borderWidth: 1.5,
+                        },
+                      ]}
+                      onPress={() => setOutcome(o.label)}
+                      activeOpacity={0.75}
+                    >
+                      <View style={[styles.outcomeIconCircle, { backgroundColor: isSelected ? '#FFFFFF' : '#F1F5F9' }]}>
+                        <Text style={{ fontSize: 13 }}>{o.icon}</Text>
+                      </View>
+                      <Text
+                        style={[
+                          styles.outcomeCardText,
+                          isSelected && { color: isLost ? '#DC2626' : o.color, fontWeight: '800' },
+                        ]}
+                        numberOfLines={1}
+                      >
+                        {o.shortLabel}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
 
-                    <View style={styles.outcomeModalHeader}>
-                      <Text style={styles.outcomeModalTitle}>Select Call Outcome</Text>
-                      <TouchableOpacity onPress={() => setOutcomeModalVisible(false)} style={styles.modalCloseBtn}>
-                        <Text style={styles.modalCloseBtnText}>Close</Text>
-                      </TouchableOpacity>
-                    </View>
-
-                    <ScrollView style={{ maxHeight: 360 }} showsVerticalScrollIndicator={false}>
-                      {OUTCOMES.map((o) => {
-                        const isSelected = outcome === o.label;
-                        return (
-                          <TouchableOpacity
-                            key={o.label}
-                            style={[
-                              styles.outcomeListItem,
-                              isSelected && { backgroundColor: o.bg, borderColor: o.border },
-                            ]}
-                            onPress={() => {
-                              setOutcome(o.label);
-                              setOutcomeModalVisible(false);
-                            }}
-                            activeOpacity={0.75}
-                          >
-                            <Text style={{ fontSize: 14, fontWeight: '800', marginRight: 10, color: o.color }}>{o.icon}</Text>
-                            <Text style={[styles.outcomeListItemText, isSelected && { color: o.color, fontWeight: '800' }]}>
-                              {o.label}
-                            </Text>
-                            {isSelected && (
-                              <View style={[styles.outcomeCheckmarkBadge, { backgroundColor: o.color }]}>
-                                <Text style={{ color: '#FFFFFF', fontSize: 11, fontWeight: '900' }}>✓</Text>
-                              </View>
-                            )}
-                          </TouchableOpacity>
-                        );
-                      })}
-                    </ScrollView>
-                  </View>
-                </View>
-              </Modal>
-
-              {/* Lead Priority Temperature Selector */}
+              {/* Lead Priority Temperature Integrated Inside Section 1 */}
               <View style={styles.subHeadingRow}>
                 <Text style={styles.subHeadingLabel}>Lead Priority</Text>
               </View>
@@ -262,6 +203,7 @@ export function MobileFollowupLogModal({
                   onPress={() => setLeadTemperature('Hot')}
                   activeOpacity={0.75}
                 >
+                  <Text style={{ fontSize: 15 }}>🔥</Text>
                   <Text style={[styles.tempBtnText, leadTemperature === 'Hot' && { color: '#DC2626', fontWeight: '900' }]}>
                     Hot Deal
                   </Text>
@@ -275,6 +217,7 @@ export function MobileFollowupLogModal({
                   onPress={() => setLeadTemperature('Warm')}
                   activeOpacity={0.75}
                 >
+                  <Text style={{ fontSize: 15 }}>☀️</Text>
                   <Text style={[styles.tempBtnText, leadTemperature === 'Warm' && { color: '#D97706', fontWeight: '900' }]}>
                     Warm Lead
                   </Text>
@@ -288,6 +231,7 @@ export function MobileFollowupLogModal({
                   onPress={() => setLeadTemperature('Future')}
                   activeOpacity={0.75}
                 >
+                  <Text style={{ fontSize: 15 }}>⏳</Text>
                   <Text style={[styles.tempBtnText, leadTemperature === 'Future' && { color: '#2563EB', fontWeight: '900' }]}>
                     Future
                   </Text>
@@ -319,7 +263,7 @@ export function MobileFollowupLogModal({
               </View>
 
               <View style={styles.dateInputWrapper}>
-                <Text style={{ fontSize: 11, fontWeight: '700', color: '#64748B', marginRight: 8 }}>DATE</Text>
+                <Text style={{ fontSize: 14, marginRight: 8 }}>📅</Text>
                 <TextInput
                   style={styles.dateTextInput}
                   value={nextFollowUp}
@@ -352,6 +296,7 @@ export function MobileFollowupLogModal({
             <View style={styles.sectionCard}>
               <Text style={styles.sectionHeading}>3. Discussion Notes & Remarks</Text>
               
+              {/* Quick Snippet Chips placed directly above textarea */}
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6, paddingBottom: 8 }}>
                 {QUICK_SNIPPETS.map((snip, idx) => (
                   <TouchableOpacity
@@ -394,7 +339,7 @@ export function MobileFollowupLogModal({
                 <ActivityIndicator size="small" color="#FFFFFF" />
               ) : (
                 <Text style={styles.saveBtnText}>
-                  {outcome === 'Deal Lost / Postponed' ? 'Record Lost Deal' : 'Save Follow-up Activity'}
+                  {outcome === 'Deal Lost / Postponed' ? '✕ Record Lost Deal' : '✓ Save Follow-up Activity'}
                 </Text>
               )}
             </TouchableOpacity>
@@ -408,195 +353,152 @@ export function MobileFollowupLogModal({
 const styles = StyleSheet.create({
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(15, 23, 42, 0.65)',
+    backgroundColor: 'rgba(15, 23, 42, 0.70)',
     justifyContent: 'flex-end',
   },
   modalCard: {
     backgroundColor: '#F8FAFC',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    maxHeight: '90%',
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    overflow: 'hidden',
+    paddingBottom: Platform.OS === 'ios' ? 34 : 20,
+    maxHeight: '92%',
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: -6 },
+    shadowOpacity: 0.16,
+    shadowRadius: 16,
+    elevation: 16,
   },
   sheetHandleWrapper: {
     alignItems: 'center',
-    paddingVertical: 8,
+    paddingTop: 10,
+    paddingBottom: 4,
+    backgroundColor: '#FFFFFF',
   },
   sheetHandle: {
-    width: 38,
+    width: 40,
     height: 4,
     borderRadius: 2,
     backgroundColor: '#CBD5E1',
   },
   headerLight: {
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 18,
+    paddingTop: 6,
+    paddingBottom: 14,
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingBottom: 12,
+    gap: 10,
     borderBottomWidth: 1,
     borderBottomColor: '#E2E8F0',
-    gap: 12,
   },
   headerIconBoxLight: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
+    width: 38,
+    height: 38,
+    borderRadius: 10,
     backgroundColor: '#EFF6FF',
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#DBEAFE',
   },
   headerTitleLight: {
     fontSize: 16,
-    fontWeight: '800',
+    fontWeight: '900',
     color: '#0F172A',
+    letterSpacing: -0.3,
+  },
+  headerSubtitleLight: {
+    fontSize: 11.5,
+    color: '#64748B',
+    marginTop: 2,
+    fontWeight: '500',
   },
   headerIdBadgeLight: {
     backgroundColor: '#F1F5F9',
     paddingHorizontal: 6,
-    paddingVertical: 1,
+    paddingVertical: 1.5,
     borderRadius: 5,
   },
   headerIdBadgeTextLight: {
-    fontSize: 11,
-    fontWeight: '700',
+    fontSize: 10,
+    fontWeight: '800',
     color: '#475569',
-    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
-  },
-  headerSubtitleLight: {
-    fontSize: 12,
-    color: '#64748B',
-    marginTop: 2,
   },
   headerCloseBtnLight: {
-    padding: 6,
-    borderRadius: 8,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
     backgroundColor: '#F1F5F9',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   headerCloseBtnTextLight: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '800',
     color: '#64748B',
   },
   scroll: {
-    flexGrow: 0,
+    marginVertical: 0,
   },
   sectionCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
     padding: 14,
-    marginBottom: 14,
     borderWidth: 1,
     borderColor: '#E2E8F0',
+    marginBottom: 12,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.02,
+    shadowRadius: 2,
+    elevation: 1,
   },
   sectionHeading: {
-    fontSize: 13,
+    fontSize: 12.5,
     fontWeight: '800',
     color: '#0F172A',
-    marginBottom: 12,
-    textTransform: 'uppercase',
-    letterSpacing: 0.3,
-  },
-  dropdownTriggerBox: {
-    borderWidth: 1.5,
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 14,
-  },
-  dropdownTriggerLeftGroup: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    flex: 1,
-  },
-  dropdownTriggerValueText: {
-    fontSize: 13.5,
-    fontWeight: '800',
-    flex: 1,
-  },
-  dropdownTriggerChevronBox: {
-    paddingLeft: 8,
-  },
-  outcomeModalBackdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(15, 23, 42, 0.6)',
-    justifyContent: 'flex-end',
-  },
-  outcomeModalSheet: {
-    backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    paddingHorizontal: 16,
-    paddingBottom: Platform.OS === 'ios' ? 40 : 20,
-  },
-  modalHandleWrapper: {
-    alignItems: 'center',
-    paddingVertical: 8,
-  },
-  modalHandle: {
-    width: 38,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: '#CBD5E1',
-  },
-  outcomeModalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
     marginBottom: 10,
+    letterSpacing: -0.2,
   },
-  outcomeModalTitle: {
-    fontSize: 15,
-    fontWeight: '800',
-    color: '#0F172A',
+  subHeadingRow: {
+    marginTop: 12,
+    marginBottom: 6,
   },
-  modalCloseBtn: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 8,
-    backgroundColor: '#F1F5F9',
+  subHeadingLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#475569',
   },
-  modalCloseBtnText: {
-    fontSize: 12,
-    fontWeight: '800',
-    color: '#2563EB',
+  outcomeGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 7,
   },
-  outcomeListItem: {
+  outcomeCard: {
+    width: '48.6%',
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 12,
+    paddingHorizontal: 9,
+    paddingVertical: 9.5,
     borderRadius: 12,
-    marginBottom: 6,
-    borderWidth: 1,
-    borderColor: '#F1F5F9',
+    borderWidth: 1.2,
+    borderColor: '#E2E8F0',
+    backgroundColor: '#F8FAFC',
+    gap: 7,
   },
-  outcomeListItemText: {
-    fontSize: 13.5,
-    fontWeight: '700',
-    color: '#334155',
-    flex: 1,
-  },
-  outcomeCheckmarkBadge: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
+  outcomeIconCircle: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  subHeadingRow: {
-    marginTop: 4,
-    marginBottom: 8,
-  },
-  subHeadingLabel: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#64748B',
+  outcomeCardText: {
+    fontSize: 11.5,
+    fontWeight: '800',
+    color: '#334155',
+    flex: 1,
   },
   tempRow: {
     flexDirection: 'row',
@@ -604,142 +506,162 @@ const styles = StyleSheet.create({
   },
   tempBtn: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
-    borderWidth: 1,
+    flexDirection: 'row',
+    paddingVertical: 10,
+    borderRadius: 13,
+    borderWidth: 1.5,
     borderColor: '#E2E8F0',
-    borderRadius: 10,
-    paddingVertical: 8,
+    backgroundColor: '#F8FAFC',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 2,
+    gap: 6,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.03,
+    shadowRadius: 2,
+    elevation: 1,
   },
   tempBtnText: {
-    fontSize: 11.5,
-    fontWeight: '700',
-    color: '#475569',
+    fontSize: 12,
+    fontWeight: '900',
+    color: '#334155',
+    letterSpacing: -0.2,
   },
   scheduleRowHeader: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: 6,
   },
   quickDayBtn: {
+    paddingHorizontal: 8.5,
+    paddingVertical: 3.5,
+    borderRadius: 7,
     backgroundColor: '#EFF6FF',
-    borderWidth: 1,
+    borderWidth: 1.2,
     borderColor: '#BFDBFE',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
   },
   quickDayText: {
-    fontSize: 11,
-    fontWeight: '800',
-    color: '#2563EB',
+    fontSize: 10.5,
+    fontWeight: '900',
+    color: '#1D4ED8',
   },
   dateInputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#F8FAFC',
     borderWidth: 1.2,
     borderColor: '#CBD5E1',
     borderRadius: 12,
     paddingHorizontal: 12,
-    height: 42,
+    paddingVertical: 9,
   },
   dateTextInput: {
     flex: 1,
-    fontSize: 13.5,
-    fontWeight: '700',
+    fontSize: 13,
     color: '#0F172A',
+    fontWeight: '700',
+    paddingVertical: 0,
   },
   quoteValueInputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#FFFFFF',
     borderWidth: 1.2,
-    borderColor: '#CBD5E1',
+    borderColor: '#A7F3D0',
     borderRadius: 12,
     overflow: 'hidden',
-    height: 42,
   },
   currencyPrefixBadgeEmerald: {
     backgroundColor: '#ECFDF5',
-    borderRightWidth: 1,
-    borderRightColor: '#CBD5E1',
     paddingHorizontal: 12,
-    height: '100%',
+    paddingVertical: 10,
+    borderRightWidth: 1.2,
+    borderRightColor: '#A7F3D0',
     alignItems: 'center',
     justifyContent: 'center',
   },
   currencyPrefixTextEmerald: {
     fontSize: 15,
     fontWeight: '900',
-    color: '#047857',
+    color: '#059669',
   },
   quoteTextInput: {
-    paddingHorizontal: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 9,
     fontSize: 14,
-    fontWeight: '800',
-    color: '#0F172A',
+    color: '#059669',
+    fontWeight: '900',
   },
   snippetChip: {
-    backgroundColor: '#F1F5F9',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
     paddingHorizontal: 10,
-    paddingVertical: 5,
+    paddingVertical: 6,
     borderRadius: 8,
+    backgroundColor: '#FFFBEB',
+    borderWidth: 1.2,
+    borderColor: '#FDE68A',
   },
   snippetChipText: {
-    fontSize: 11.5,
-    fontWeight: '700',
-    color: '#475569',
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#92400E',
   },
   notesTextInput: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#F8FAFC',
     borderWidth: 1.2,
     borderColor: '#CBD5E1',
     borderRadius: 12,
-    padding: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
     fontSize: 13,
     color: '#0F172A',
-    fontWeight: '500',
-    minHeight: 80,
+    height: 78,
     textAlignVertical: 'top',
   },
   footerRow: {
     flexDirection: 'row',
     gap: 10,
-    padding: 16,
-    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 16,
+    paddingTop: 12,
     borderTopWidth: 1,
     borderTopColor: '#E2E8F0',
+    backgroundColor: '#FFFFFF',
   },
   cancelBtn: {
     flex: 1,
-    backgroundColor: '#F1F5F9',
-    borderRadius: 12,
-    paddingVertical: 12,
+    paddingVertical: 13,
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1.5,
+    borderColor: '#CBD5E1',
   },
   cancelBtnText: {
     fontSize: 13,
     fontWeight: '800',
-    color: '#475569',
+    color: '#334155',
+    letterSpacing: -0.2,
   },
   saveBtn: {
     flex: 2,
-    backgroundColor: '#2563EB',
-    borderRadius: 12,
-    paddingVertical: 12,
+    paddingVertical: 13,
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: '#2563EB',
+    borderWidth: 1,
+    borderColor: '#1D4ED8',
+    shadowColor: '#2563EB',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 2,
   },
   saveBtnText: {
-    fontSize: 13,
-    fontWeight: '800',
+    fontSize: 13.5,
+    fontWeight: '900',
     color: '#FFFFFF',
+    letterSpacing: -0.2,
   },
 });

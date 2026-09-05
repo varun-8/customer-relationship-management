@@ -20,8 +20,10 @@ import { api } from '../../services/api';
 import { SalesTargetModal } from './SalesTargetModal';
 import { ConnectionErrorState } from '../common/ConnectionErrorState';
 import { getWhatsAppUrl } from '../../utils/whatsappHelper';
+import { useTestingMode } from '../../context/TestingModeContext';
 
 export const ExecutiveDashboardView = () => {
+  const { isLowDesignMode } = useTestingMode();
   const todayStr = new Date().toISOString().split('T')[0];
 
   const [metrics, setMetrics] = useState(null);
@@ -168,91 +170,62 @@ export const ExecutiveDashboardView = () => {
         />
       ) : (
         <>
-          {/* 2. Top Executive Revenue & Conversion Hero Cards */}
+          {/* 2. Top Executive Conversion Funnel & Velocity Cards */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '14px' }}>
-            {/* HERO CARD: Monthly Revenue Goal */}
-            <div style={{ backgroundColor: '#0F172A', color: '#FFFFFF', borderRadius: '20px', padding: '20px', boxShadow: '0 4px 15px rgba(0, 0, 0, 0.05)', gridColumn: 'span 2' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <span style={{ fontSize: '11px', fontWeight: '800', color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                  SHOWROOM REVENUE GOAL ({selectedMonth})
-                </span>
-                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', backgroundColor: `${achievementColor}25`, color: achievementColor, border: `1px solid ${achievementColor}40`, padding: '4px 10px', borderRadius: '10px', fontSize: '12px', fontWeight: '800' }}>
-                  <Zap size={14} />
-                  <span>{kpi.achievementPercent || 0}% Achieved</span>
-                </div>
-              </div>
-
-              <div style={{ marginTop: '10px', fontSize: '26px', fontWeight: '900', color: '#FFFFFF' }}>
-                ₹{(kpi.actualSales || 0).toLocaleString('en-IN')}{' '}
-                <span style={{ fontSize: '14px', color: '#94A3B8', fontWeight: '600' }}>
-                  / ₹{(kpi.salesTarget || 0).toLocaleString('en-IN')} target
-                </span>
-              </div>
-
-              {/* Progress Meter */}
-              <div style={{ height: '8px', backgroundColor: 'rgba(255, 255, 255, 0.1)', borderRadius: '4px', marginTop: '12px', overflow: 'hidden' }}>
-                <div style={{ height: '100%', width: `${Math.min(kpi.achievementPercent || 0, 100)}%`, backgroundColor: achievementColor, borderRadius: '4px', transition: 'width 0.3s ease' }} />
-              </div>
-
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '12px', fontSize: '12px', color: '#CBD5E1' }}>
-                <span>Remaining: <strong style={{ color: '#FFFFFF' }}>₹{Math.max((kpi.salesTarget || 0) - (kpi.actualSales || 0), 0).toLocaleString('en-IN')}</strong></span>
-                <span>Run-rate: <strong style={{ color: '#4ADE80' }}>{kpi.orders || 0} deals closed</strong></span>
-              </div>
-            </div>
 
             {/* CARD 2: Conversion Funnel */}
-            <div style={{ backgroundColor: '#FFFFFF', borderRadius: '20px', border: '1px solid #E2E8F0', padding: '20px', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
+            <div style={{ backgroundColor: '#FFFFFF', borderRadius: isLowDesignMode ? '4px' : '20px', border: isLowDesignMode ? '1px solid #D1D5DB' : '1px solid #E2E8F0', padding: '20px', boxShadow: isLowDesignMode ? 'none' : '0 2px 8px rgba(0,0,0,0.02)' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <span style={{ fontSize: '11px', fontWeight: '800', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.04em' }}>CONVERSION FUNNEL</span>
-                <div style={{ width: '34px', height: '34px', borderRadius: '10px', backgroundColor: '#EFF6FF', color: '#2563EB', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <span style={{ fontSize: '11px', fontWeight: '800', color: isLowDesignMode ? '#6B7280' : '#64748B', textTransform: 'uppercase', letterSpacing: '0.04em' }}>CONVERSION FUNNEL</span>
+                <div style={{ width: '34px', height: '34px', borderRadius: isLowDesignMode ? '4px' : '10px', backgroundColor: isLowDesignMode ? '#F3F4F6' : '#EFF6FF', color: isLowDesignMode ? '#374151' : '#2563EB', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <Users size={16} />
                 </div>
               </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#F8FAFC', borderRadius: '12px', padding: '12px', marginTop: '10px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', backgroundColor: isLowDesignMode ? '#F9FAFB' : '#F8FAFC', borderRadius: isLowDesignMode ? '4px' : '12px', padding: '12px', marginTop: '10px', border: isLowDesignMode ? '1px solid #E5E7EB' : 'none' }}>
                 <div style={{ textAlign: 'center' }}>
-                  <div style={{ fontSize: '10px', color: '#64748B', fontWeight: '700' }}>WALK-INS</div>
-                  <div style={{ fontSize: '16px', fontWeight: '900', color: '#2563EB' }}>{kpi.totalWalkins || 0}</div>
+                  <div style={{ fontSize: '10px', color: '#6B7280', fontWeight: '700' }}>WALK-INS</div>
+                  <div style={{ fontSize: '16px', fontWeight: '900', color: isLowDesignMode ? '#111827' : '#2563EB' }}>{kpi.totalWalkins || 0}</div>
                 </div>
-                <span style={{ color: '#CBD5E1' }}>➔</span>
+                <span style={{ color: '#D1D5DB' }}>➔</span>
                 <div style={{ textAlign: 'center' }}>
-                  <div style={{ fontSize: '10px', color: '#64748B', fontWeight: '700' }}>QUOTES</div>
-                  <div style={{ fontSize: '16px', fontWeight: '900', color: '#7C3AED' }}>{kpi.quotations || 0}</div>
+                  <div style={{ fontSize: '10px', color: '#6B7280', fontWeight: '700' }}>QUOTES</div>
+                  <div style={{ fontSize: '16px', fontWeight: '900', color: isLowDesignMode ? '#111827' : '#7C3AED' }}>{kpi.quotations || 0}</div>
                 </div>
-                <span style={{ color: '#CBD5E1' }}>➔</span>
+                <span style={{ color: '#D1D5DB' }}>➔</span>
                 <div style={{ textAlign: 'center' }}>
-                  <div style={{ fontSize: '10px', color: '#64748B', fontWeight: '700' }}>ORDERS</div>
-                  <div style={{ fontSize: '16px', fontWeight: '900', color: '#059669' }}>{kpi.orders || 0}</div>
+                  <div style={{ fontSize: '10px', color: '#6B7280', fontWeight: '700' }}>ORDERS</div>
+                  <div style={{ fontSize: '16px', fontWeight: '900', color: isLowDesignMode ? '#111827' : '#059669' }}>{kpi.orders || 0}</div>
                 </div>
               </div>
 
-              <div style={{ fontSize: '12px', color: '#64748B', marginTop: '10px', fontWeight: '600' }}>
-                Conversion Rate: <strong style={{ color: '#2563EB' }}>{kpi.conversionRate || 0}%</strong> (Quote Rate: {kpi.quoteRate || 0}%)
+              <div style={{ fontSize: '12px', color: '#6B7280', marginTop: '10px', fontWeight: '600' }}>
+                Conversion Rate: <strong style={{ color: isLowDesignMode ? '#111827' : '#2563EB' }}>{kpi.conversionRate || 0}%</strong> (Quote Rate: {kpi.quoteRate || 0}%)
               </div>
             </div>
 
             {/* CARD 3: Follow-up Velocity */}
-            <div style={{ backgroundColor: '#FFFFFF', borderRadius: '20px', border: '1px solid #E2E8F0', padding: '20px', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
+            <div style={{ backgroundColor: '#FFFFFF', borderRadius: isLowDesignMode ? '4px' : '20px', border: isLowDesignMode ? '1px solid #D1D5DB' : '1px solid #E2E8F0', padding: '20px', boxShadow: isLowDesignMode ? 'none' : '0 2px 8px rgba(0,0,0,0.02)' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <span style={{ fontSize: '11px', fontWeight: '800', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.04em' }}>FOLLOW-UP VELOCITY</span>
-                <div style={{ width: '34px', height: '34px', borderRadius: '10px', backgroundColor: '#FAF5FF', color: '#7C3AED', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <span style={{ fontSize: '11px', fontWeight: '800', color: isLowDesignMode ? '#6B7280' : '#64748B', textTransform: 'uppercase', letterSpacing: '0.04em' }}>FOLLOW-UP VELOCITY</span>
+                <div style={{ width: '34px', height: '34px', borderRadius: isLowDesignMode ? '4px' : '10px', backgroundColor: isLowDesignMode ? '#F3F4F6' : '#FAF5FF', color: isLowDesignMode ? '#374151' : '#7C3AED', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <PhoneCall size={16} />
                 </div>
               </div>
 
               <div style={{ display: 'flex', alignItems: 'baseline', gap: '16px', marginTop: '12px' }}>
                 <div>
-                  <div style={{ fontSize: '11px', color: '#64748B', fontWeight: '700' }}>PENDING</div>
-                  <div style={{ fontSize: '20px', fontWeight: '900', color: '#0F172A' }}>{kpi.pendingFollowups || 0}</div>
+                  <div style={{ fontSize: '11px', color: '#6B7280', fontWeight: '700' }}>PENDING</div>
+                  <div style={{ fontSize: '20px', fontWeight: '900', color: '#111827' }}>{kpi.pendingFollowups || 0}</div>
                 </div>
-                <div style={{ width: '1px', height: '24px', backgroundColor: '#E2E8F0' }} />
+                <div style={{ width: '1px', height: '24px', backgroundColor: '#E5E7EB' }} />
                 <div>
-                  <div style={{ fontSize: '11px', color: '#DC2626', fontWeight: '800' }}>OVERDUE</div>
-                  <div style={{ fontSize: '20px', fontWeight: '900', color: '#DC2626' }}>{kpi.overdueFollowups || 0}</div>
+                  <div style={{ fontSize: '11px', color: isLowDesignMode ? '#6B7280' : '#DC2626', fontWeight: '800' }}>OVERDUE</div>
+                  <div style={{ fontSize: '20px', fontWeight: '900', color: isLowDesignMode ? '#111827' : '#DC2626' }}>{kpi.overdueFollowups || 0}</div>
                 </div>
               </div>
 
-              <div style={{ fontSize: '12px', color: kpi.overdueFollowups > 0 ? '#DC2626' : '#059669', marginTop: '8px', fontWeight: '700' }}>
+              <div style={{ fontSize: '12px', color: isLowDesignMode ? '#4B5563' : (kpi.overdueFollowups > 0 ? '#DC2626' : '#059669'), marginTop: '8px', fontWeight: '700' }}>
                 {kpi.overdueFollowups > 0 ? `⚠️ ${kpi.overdueFollowups} leads need immediate follow-up!` : '✓ All scheduled follow-ups up to date'}
               </div>
             </div>

@@ -16,7 +16,7 @@ import {
 
 const formatRelativeUrgency = (nextFollowUp) => {
   if (!nextFollowUp) {
-    return { label: 'No Date', color: '#64748B', bg: '#F1F5F9', border: '#E2E8F0', dot: '#94A3B8', isOverdue: false, isToday: false };
+    return { label: 'No Date', color: '#000000', bg: '#F3F4F6', border: '#D1D5DB', dot: '#000000', icon: '', isOverdue: false, isToday: false };
   }
   try {
     const today = new Date();
@@ -28,11 +28,12 @@ const formatRelativeUrgency = (nextFollowUp) => {
     if (diffDays < 0) {
       return {
         label: `${Math.abs(diffDays)}d overdue`,
-        color: '#DC2626',
-        bg: '#FEF2F2',
-        border: '#FECDD3',
-        dot: '#EF4444',
-        accent: '#EF4444',
+        color: '#000000',
+        bg: '#F3F4F6',
+        border: '#D1D5DB',
+        dot: '#000000',
+        icon: '',
+        accent: '#000000',
         isOverdue: true,
         isToday: false,
       };
@@ -40,11 +41,12 @@ const formatRelativeUrgency = (nextFollowUp) => {
     if (diffDays === 0) {
       return {
         label: 'Today',
-        color: '#1D4ED8',
-        bg: '#EFF6FF',
-        border: '#BFDBFE',
-        dot: '#2563EB',
-        accent: '#2563EB',
+        color: '#000000',
+        bg: '#F3F4F6',
+        border: '#D1D5DB',
+        dot: '#000000',
+        icon: '',
+        accent: '#000000',
         isOverdue: false,
         isToday: true,
       };
@@ -52,37 +54,34 @@ const formatRelativeUrgency = (nextFollowUp) => {
     if (diffDays === 1) {
       return {
         label: 'Tomorrow',
-        color: '#047857',
-        bg: '#ECFDF5',
-        border: '#A7F3D0',
-        dot: '#10B981',
-        accent: '#10B981',
+        color: '#000000',
+        bg: '#F3F4F6',
+        border: '#D1D5DB',
+        dot: '#000000',
+        icon: '',
+        accent: '#000000',
         isOverdue: false,
         isToday: false,
       };
     }
     return {
       label: `In ${diffDays}d (${nextFollowUp.split('-').slice(1).join('/')})`,
-      color: '#334155',
-      bg: '#F8FAFC',
-      border: '#E2E8F0',
-      dot: '#64748B',
-      accent: '#64748B',
+      color: '#000000',
+      bg: '#F3F4F6',
+      border: '#D1D5DB',
+      dot: '#000000',
+      icon: '',
+      accent: '#000000',
       isOverdue: false,
       isToday: false,
     };
   } catch (e) {
-    return { label: nextFollowUp, color: '#64748B', bg: '#F1F5F9', border: '#E2E8F0', dot: '#94A3B8', accent: '#CBD5E1', isOverdue: false, isToday: false };
+    return { label: nextFollowUp, color: '#000000', bg: '#F3F4F6', border: '#D1D5DB', dot: '#000000', icon: '', accent: '#D1D5DB', isOverdue: false, isToday: false };
   }
 };
 
 const getCustomerTypeColors = (type) => {
-  switch (type) {
-    case 'Building Owner': return { bg: '#ECFDF5', text: '#047857', border: '#A7F3D0' };
-    case 'Architect': return { bg: '#EFF6FF', text: '#1D4ED8', border: '#BFDBFE' };
-    case 'Mason': return { bg: '#FAF5FF', text: '#7E22CE', border: '#DDD6FE' };
-    default: return { bg: '#FFFBEB', text: '#B45309', border: '#FDE68A' };
-  }
+  return { bg: '#F3F4F6', text: '#000000', border: '#D1D5DB', icon: '' };
 };
 
 export function MobileFollowupSheet({
@@ -247,9 +246,6 @@ export function MobileFollowupSheet({
         <View style={styles.sheetTopTitleRow}>
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-              <View style={styles.headerIconBadge}>
-                <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#0F766E' }} />
-              </View>
               <View>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                   <Text style={styles.sheetTopTitle}>
@@ -261,7 +257,7 @@ export function MobileFollowupSheet({
                 </View>
                 <Text style={styles.sheetTopSubtitle}>
                   {isEmployee
-                    ? `Active callback queue & scheduled reminders`
+                    ? `Your active callback queue & scheduled reminders`
                     : 'Showroom active customer follow-ups & callbacks'}
                 </Text>
               </View>
@@ -277,18 +273,18 @@ export function MobileFollowupSheet({
 
         {/* 3 Executive Stat Tiles */}
         <View style={styles.headerStatRow}>
-          <View style={[styles.headerStatCard, { backgroundColor: '#EFF6FF', borderColor: '#BFDBFE' }]}>
-            <Text style={[styles.headerStatVal, { color: '#1E40AF' }]}>{activeCounts?.today || 0}</Text>
+          <View style={styles.headerStatCard}>
+            <Text style={styles.headerStatVal}>{activeCounts?.today || 0}</Text>
             <Text style={styles.headerStatLabel}>Due Today</Text>
           </View>
 
-          <View style={[styles.headerStatCard, (activeCounts?.overdue || 0) > 0 ? { backgroundColor: '#FEF2F2', borderColor: '#FECACA' } : { backgroundColor: '#F8FAFC', borderColor: '#E2E8F0' }]}>
-            <Text style={[styles.headerStatVal, (activeCounts?.overdue || 0) > 0 ? { color: '#DC2626' } : { color: '#475569' }]}>{activeCounts?.overdue || 0}</Text>
+          <View style={styles.headerStatCard}>
+            <Text style={styles.headerStatVal}>{activeCounts?.overdue || 0}</Text>
             <Text style={styles.headerStatLabel}>Overdue</Text>
           </View>
 
-          <View style={[styles.headerStatCard, { backgroundColor: '#F0FDF4', borderColor: '#BBF7D0' }]}>
-            <Text style={[styles.headerStatVal, { color: '#166534' }]}>{activeCounts?.upcoming || 0}</Text>
+          <View style={styles.headerStatCard}>
+            <Text style={styles.headerStatVal}>{activeCounts?.upcoming || 0}</Text>
             <Text style={styles.headerStatLabel}>Next 7 Days</Text>
           </View>
         </View>
@@ -386,18 +382,10 @@ export function MobileFollowupSheet({
           renderItem={({ item }) => {
             const urgency = formatRelativeUrgency(item.nextFollowUp);
             const initial = (item.customerName || 'C').charAt(0).toUpperCase();
-            const typeColors = getCustomerTypeColors(item.customerType);
-
-            // Accent strip border color
-            const accentBorderColor = urgency.isOverdue
-              ? '#EF4444'
-              : urgency.isToday
-              ? '#2563EB'
-              : '#10B981';
 
             return (
               <TouchableOpacity
-                style={[styles.card, { borderLeftColor: accentBorderColor, borderLeftWidth: 4 }]}
+                style={styles.card}
                 activeOpacity={0.75}
                 onPress={() => setSelectedDetailItem(item)}
               >
@@ -437,8 +425,8 @@ export function MobileFollowupSheet({
                   </View>
 
                   {/* Relative Urgency Pill */}
-                  <View style={[styles.urgencyBadge, { backgroundColor: urgency.bg, borderColor: urgency.border }]}>
-                    <Text style={[styles.urgencyLabel, { color: urgency.color }]}>
+                  <View style={styles.urgencyBadge}>
+                    <Text style={styles.urgencyLabel}>
                       {urgency.label}
                     </Text>
                   </View>
@@ -447,8 +435,8 @@ export function MobileFollowupSheet({
                 {/* Middle Info Strip: Customer Type Badge & Requirement Tag */}
                 <View style={styles.cardMiddleRow}>
                   {item.customerType ? (
-                    <View style={[styles.cardTypePill, { backgroundColor: typeColors.bg, borderColor: typeColors.border }]}>
-                      <Text style={[styles.cardTypePillText, { color: typeColors.text }]}>
+                    <View style={styles.cardTypePill}>
+                      <Text style={styles.cardTypePillText}>
                         {item.customerType}
                       </Text>
                     </View>
@@ -528,13 +516,14 @@ export function MobileFollowupSheet({
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 3, flexWrap: 'wrap' }}>
                       {fullDetailItem?.customerType && (
                         <View style={[styles.dHeroTypePill, { backgroundColor: detailTypeColors?.bg, borderColor: detailTypeColors?.border }]}>
+                          <Text style={{ fontSize: 10 }}>{detailTypeColors?.icon}</Text>
                           <Text style={[styles.dHeroTypePillText, { color: detailTypeColors?.text }]}>
                             {fullDetailItem.customerType}
                           </Text>
                         </View>
                       )}
                       {fullDetailItem?.location && (
-                        <Text style={styles.dHeroLocation}>{fullDetailItem.location}</Text>
+                        <Text style={styles.dHeroLocation}>📍 {fullDetailItem.location}</Text>
                       )}
                     </View>
                   </View>
@@ -554,7 +543,7 @@ export function MobileFollowupSheet({
                   <View style={[styles.dStatusRibbon, { backgroundColor: detailUrgency.bg, borderColor: detailUrgency.border }]}>
                     <View style={[styles.dStatusDot, { backgroundColor: detailUrgency.dot || detailUrgency.accent }]} />
                     <Text style={[styles.dStatusText, { color: detailUrgency.color }]}>
-                      {detailUrgency.label}
+                      {detailUrgency.icon} {detailUrgency.label}
                     </Text>
                     {fullDetailItem?.nextFollowUp && (
                       <Text style={[styles.dStatusDateText, { color: detailUrgency.color }]}>
@@ -573,6 +562,7 @@ export function MobileFollowupSheet({
                     onPress={() => Linking.openURL(`tel:${fullDetailItem.phone}`)}
                     activeOpacity={0.75}
                   >
+                    <Text style={styles.dContactCallIcon}>📞</Text>
                     <View style={{ flex: 1 }}>
                       <Text style={styles.dContactCallLabel}>Call Now</Text>
                       <Text style={styles.dContactCallNumber}>{fullDetailItem.phone}</Text>
@@ -584,6 +574,7 @@ export function MobileFollowupSheet({
                     onPress={() => openWhatsApp(fullDetailItem)}
                     activeOpacity={0.75}
                   >
+                    <Text style={styles.dContactWaIcon}>💬</Text>
                     <View style={{ flex: 1 }}>
                       <Text style={styles.dContactWaLabel}>WhatsApp</Text>
                       <Text style={styles.dContactWaSub}>Send Quote</Text>
@@ -613,7 +604,7 @@ export function MobileFollowupSheet({
                 <View style={styles.dInfoTile}>
                   <Text style={styles.dInfoTileLabel}>Lead Priority</Text>
                   <Text style={styles.dInfoTileValue}>
-                    {fullDetailItem?.leadTemperature || 'Hot'}
+                    {fullDetailItem?.leadTemperature === 'Hot' ? '🔥 Hot' : fullDetailItem?.leadTemperature === 'Warm' ? '☀️ Warm' : '⏳ Future'}
                   </Text>
                 </View>
 
@@ -628,6 +619,7 @@ export function MobileFollowupSheet({
               {/* ── Material & Project Specifications ── */}
               <View style={styles.dSection}>
                 <View style={styles.dSectionHead}>
+                  <Text style={styles.dSectionIcon}>📐</Text>
                   <Text style={styles.dSectionTitle}>Material & Project Specifications</Text>
                 </View>
                 
@@ -668,6 +660,7 @@ export function MobileFollowupSheet({
               {/* ── Site Progress & Assignment Details ── */}
               <View style={styles.dSection}>
                 <View style={styles.dSectionHead}>
+                  <Text style={styles.dSectionIcon}>🏗️</Text>
                   <Text style={styles.dSectionTitle}>Site Progress & Identity</Text>
                 </View>
 
@@ -688,7 +681,7 @@ export function MobileFollowupSheet({
                 {fullDetailItem?.salesperson ? (
                   <View style={styles.dSectionMetaRow}>
                     <Text style={styles.dSectionMetaLabel}>Assigned Staff:</Text>
-                    <Text style={styles.dSectionMetaVal}>{fullDetailItem.salesperson}</Text>
+                    <Text style={styles.dSectionMetaVal}>👤 {fullDetailItem.salesperson}</Text>
                   </View>
                 ) : null}
 
@@ -703,6 +696,7 @@ export function MobileFollowupSheet({
               {/* ── Activity Timeline (Vertical History List) ── */}
               <View style={styles.dSection}>
                 <View style={styles.dSectionHead}>
+                  <Text style={styles.dSectionIcon}>⏳</Text>
                   <Text style={styles.dSectionTitle}>Activity Timeline</Text>
                 </View>
 
@@ -734,7 +728,7 @@ export function MobileFollowupSheet({
                               </Text>
                               {act.date ? (
                                 <Text style={styles.timelineDate}>
-                                  {formatTimelineDate(act.date)}
+                                  🕒 {formatTimelineDate(act.date)}
                                 </Text>
                               ) : null}
                             </View>
@@ -754,7 +748,7 @@ export function MobileFollowupSheet({
 
                 {fullDetailItem?.lastReason && fullDetailItem.lastReason.trim() !== '' && (
                   <View style={styles.timelineObjectiveBox}>
-                    <Text style={styles.timelineObjectiveLabel}>Latest Target Objective:</Text>
+                    <Text style={styles.timelineObjectiveLabel}>🎯 Latest Target Objective:</Text>
                     <Text style={styles.timelineObjectiveVal}>
                       {fullDetailItem.lastReason.split(': ').slice(1).join(': ') || fullDetailItem.lastReason}
                     </Text>
@@ -775,6 +769,7 @@ export function MobileFollowupSheet({
                 }}
                 activeOpacity={0.85}
               >
+                <Text style={styles.dLogActivityIcon}>📝</Text>
                 <Text style={styles.dLogActivityText}>Log Activity</Text>
               </TouchableOpacity>
 
@@ -800,7 +795,7 @@ export function MobileFollowupSheet({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#FFFFFF',
   },
   sheetTopTitleRow: {
     paddingHorizontal: 16,
@@ -810,40 +805,40 @@ const styles = StyleSheet.create({
   sheetTopTitle: {
     fontSize: 18,
     fontWeight: '900',
-    color: '#0F172A',
+    color: '#000000',
     letterSpacing: -0.4,
   },
   sheetTopCountBadge: {
-    backgroundColor: '#EFF6FF',
+    backgroundColor: '#F3F4F6',
     borderWidth: 1,
-    borderColor: '#BFDBFE',
+    borderColor: '#D1D5DB',
     paddingHorizontal: 7,
     paddingVertical: 1.5,
-    borderRadius: 7,
+    borderRadius: 4,
   },
   sheetTopCountBadgeText: {
     fontSize: 11,
     fontWeight: '900',
-    color: '#2563EB',
+    color: '#000000',
   },
   sheetTopSubtitle: {
     fontSize: 11.5,
-    color: '#64748B',
+    color: '#000000',
     marginTop: 2,
     fontWeight: '500',
   },
   employeeIdentityChip: {
-    backgroundColor: '#F1F5F9',
+    backgroundColor: '#F3F4F6',
     borderWidth: 1,
-    borderColor: '#E2E8F0',
-    borderRadius: 8,
+    borderColor: '#D1D5DB',
+    borderRadius: 4,
     paddingHorizontal: 8,
     paddingVertical: 3,
   },
   employeeIdentityChipText: {
     fontSize: 11,
     fontWeight: '800',
-    color: '#334155',
+    color: '#000000',
   },
   filterTabBar: {
     marginBottom: 8,
@@ -857,49 +852,48 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 24,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 4,
     backgroundColor: '#FFFFFF',
-    borderWidth: 1.5,
-    borderColor: '#E2E8F0',
-    shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 3,
-    elevation: 1,
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    shadowOpacity: 0,
+    elevation: 0,
   },
   filterTabActive: {
-    backgroundColor: '#1E3A5F',
-    borderColor: '#1E3A5F',
-    shadowOpacity: 0.18,
-    shadowRadius: 6,
-    elevation: 3,
+    backgroundColor: '#F3F4F6',
+    borderColor: '#000000',
+    shadowOpacity: 0,
+    elevation: 0,
   },
   filterTabText: {
-    fontSize: 13,
-    color: '#334155',
-    fontWeight: '700',
+    fontSize: 12.5,
+    color: '#374151',
+    fontWeight: '600',
   },
   filterTabTextActive: {
-    color: '#FFFFFF',
+    color: '#000000',
     fontWeight: '800',
   },
   filterTabBadge: {
-    backgroundColor: '#F1F5F9',
-    paddingHorizontal: 7,
-    paddingVertical: 2,
-    borderRadius: 10,
-    minWidth: 22,
+    backgroundColor: '#F3F4F6',
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: 4,
+    minWidth: 20,
     alignItems: 'center',
   },
   filterTabBadgeActive: {
-    backgroundColor: 'rgba(255,255,255,0.18)',
+    backgroundColor: '#000000',
+    borderColor: '#000000',
   },
   filterTabBadgeText: {
-    fontSize: 11,
+    fontSize: 10.5,
     fontWeight: '800',
-    color: '#475569',
+    color: '#000000',
   },
   filterTabBadgeTextActive: {
     color: '#FFFFFF',
@@ -1018,95 +1012,88 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     marginHorizontal: 14,
     marginBottom: 10,
-    borderRadius: 14,
+    borderRadius: 4,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
-    padding: 13,
-    shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.03,
-    shadowRadius: 4,
-    elevation: 1,
+    borderColor: '#D1D5DB',
+    padding: 12,
+    shadowOpacity: 0,
+    elevation: 0,
   },
   cardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   avatarCircle: {
-    width: 38,
-    height: 38,
-    borderRadius: 11,
-    backgroundColor: '#EFF6FF',
+    width: 36,
+    height: 36,
+    borderRadius: 4,
+    backgroundColor: '#F3F4F6',
     borderWidth: 1,
-    borderColor: '#DBEAFE',
+    borderColor: '#D1D5DB',
     alignItems: 'center',
     justifyContent: 'center',
   },
   avatarText: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '900',
-    color: '#2563EB',
+    color: '#000000',
   },
   customerName: {
     fontSize: 14,
     fontWeight: '800',
-    color: '#0F172A',
-    letterSpacing: -0.2,
+    color: '#000000',
   },
   idBadge: {
-    backgroundColor: '#F1F5F9',
+    backgroundColor: '#F3F4F6',
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
     paddingHorizontal: 5,
     paddingVertical: 1.5,
-    borderRadius: 5,
+    borderRadius: 4,
   },
   idBadgeText: {
     fontSize: 9.5,
     fontWeight: '800',
-    color: '#64748B',
+    color: '#000000',
   },
   metaPhone: {
     fontSize: 11,
-    color: '#64748B',
+    color: '#6B7280',
     fontWeight: '600',
   },
   metaDot: {
     fontSize: 11,
-    color: '#CBD5E1',
+    color: '#D1D5DB',
   },
   metaLocation: {
     fontSize: 11,
-    color: '#64748B',
+    color: '#6B7280',
     fontWeight: '500',
   },
   urgencyBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 8,
-    paddingVertical: 3.5,
-    borderRadius: 6,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: 4,
+    backgroundColor: '#F3F4F6',
     borderWidth: 1,
-    gap: 4,
+    borderColor: '#D1D5DB',
   },
   urgencyLabel: {
     fontSize: 10,
     fontWeight: '800',
+    color: '#000000',
   },
   sheetHeaderWrapper: {
     backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
+    borderBottomColor: '#D1D5DB',
     paddingBottom: 10,
     marginBottom: 6,
   },
   headerIconBadge: {
-    width: 34,
-    height: 34,
-    borderRadius: 10,
-    backgroundColor: '#FEF3C7',
-    borderWidth: 1,
-    borderColor: '#FDE68A',
-    alignItems: 'center',
-    justifyContent: 'center',
+    display: 'none',
   },
   headerStatRow: {
     flexDirection: 'row',
@@ -1117,25 +1104,26 @@ const styles = StyleSheet.create({
   headerStatCard: {
     flex: 1,
     borderWidth: 1,
-    borderRadius: 10,
-    paddingVertical: 7,
+    borderColor: '#D1D5DB',
+    backgroundColor: '#F3F4F6',
+    borderRadius: 4,
+    paddingVertical: 8,
     paddingHorizontal: 8,
     alignItems: 'center',
     justifyContent: 'center',
   },
   headerStatEmoji: {
-    fontSize: 11,
-    marginBottom: 1,
+    display: 'none',
   },
   headerStatVal: {
     fontSize: 14,
     fontWeight: '900',
-    letterSpacing: -0.2,
+    color: '#000000',
   },
   headerStatLabel: {
     fontSize: 9.5,
     fontWeight: '700',
-    color: '#64748B',
+    color: '#000000',
     marginTop: 1,
   },
   cardMiddleRow: {
@@ -1148,37 +1136,39 @@ const styles = StyleSheet.create({
   cardTypePill: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 3,
-    paddingHorizontal: 7,
+    paddingHorizontal: 6,
     paddingVertical: 2,
-    borderRadius: 6,
+    borderRadius: 4,
+    backgroundColor: '#F3F4F6',
     borderWidth: 1,
+    borderColor: '#D1D5DB',
   },
   cardTypePillText: {
     fontSize: 10,
     fontWeight: '800',
+    color: '#000000',
   },
   cardReqTag: {
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#F3F4F6',
     borderWidth: 1,
-    borderColor: '#E2E8F0',
-    paddingHorizontal: 7,
+    borderColor: '#D1D5DB',
+    paddingHorizontal: 6,
     paddingVertical: 2,
-    borderRadius: 6,
+    borderRadius: 4,
     flexShrink: 1,
   },
   cardReqTagText: {
     fontSize: 10,
-    color: '#475569',
+    color: '#374151',
     fontWeight: '600',
   },
   valuationBadge: {
-    backgroundColor: '#ECFDF5',
+    backgroundColor: '#F3F4F6',
     borderWidth: 1,
-    borderColor: '#A7F3D0',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
+    borderColor: '#D1D5DB',
+    paddingHorizontal: 7,
+    paddingVertical: 2.5,
+    borderRadius: 4,
   },
   cardFooterStrip: {
     flexDirection: 'row',
@@ -1192,7 +1182,7 @@ const styles = StyleSheet.create({
   footerValuationText: {
     fontSize: 13.5,
     fontWeight: '900',
-    color: '#059669',
+    color: '#000000',
   },
   footerValuationMuted: {
     fontSize: 11,

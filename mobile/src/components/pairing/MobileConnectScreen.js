@@ -48,14 +48,14 @@ export const MobileConnectScreen = ({ onConnected, onOpenQrScanner }) => {
       } else {
         setStatusText('');
         Alert.alert(
-          'Connection Failed',
+          '📡 Connection Failed',
           `Could not connect to Desktop server at:\n${cleanUrl}\n\n1. Make sure Desktop CRM is running on PC.\n2. Ensure Phone & PC are connected to the same Wi-Fi network.\n3. Try scanning the Desktop QR Code directly.`,
           [{ text: 'OK' }]
         );
       }
     } catch (e) {
       setStatusText('');
-      Alert.alert('Connection Error', e.message || 'Failed to ping host.');
+      Alert.alert('⚠️ Connection Error', e.message || 'Failed to ping host.');
     } finally {
       setTesting(false);
     }
@@ -67,7 +67,7 @@ export const MobileConnectScreen = ({ onConnected, onOpenQrScanner }) => {
     try {
       const result = await apiClient.autoDetectServer((msg) => setStatusText(msg));
       if (result && result.success && result.host) {
-        setStatusText(`Server detected at ${result.host}!`);
+        setStatusText(`✓ Server detected at ${result.host}!`);
         await apiClient.setApiBase(result.host);
         await apiClient.setPairedStatus(true);
         setTimeout(() => {
@@ -76,7 +76,7 @@ export const MobileConnectScreen = ({ onConnected, onOpenQrScanner }) => {
       } else {
         setStatusText('');
         Alert.alert(
-          'Server Not Found',
+          '🔍 Server Not Found',
           'Could not auto-detect Desktop CRM on your Wi-Fi network.\n\nPlease use "Scan Desktop QR Code" or enter your PC IP address manually.',
           [{ text: 'OK' }]
         );
@@ -100,7 +100,7 @@ export const MobileConnectScreen = ({ onConnected, onOpenQrScanner }) => {
           <View style={styles.heroCard}>
             <View style={styles.heroHeaderRow}>
               <View style={styles.iconCircle}>
-                <View style={{ width: 14, height: 14, borderRadius: 7, backgroundColor: '#0F766E' }} />
+                <Text style={{ fontSize: 32 }}>📱</Text>
               </View>
               <View style={styles.heroTextGroup}>
                 <View style={styles.appBadgeChip}>
@@ -118,10 +118,13 @@ export const MobileConnectScreen = ({ onConnected, onOpenQrScanner }) => {
           {/* Primary Action Card: Option 1 Scan QR Code */}
           <View style={styles.primaryActionCard}>
             <View style={styles.recommendedBadge}>
-              <Text style={styles.recommendedBadgeText}>RECOMMENDED</Text>
+              <Text style={styles.recommendedBadgeText}>⚡ RECOMMENDED (FASTEST)</Text>
             </View>
 
             <View style={styles.cardHeaderRow}>
+              <View style={styles.optionIconBox}>
+                <Text style={{ fontSize: 22 }}>📷</Text>
+              </View>
               <View style={{ flex: 1 }}>
                 <Text style={styles.cardTitle}>Option 1: Instant QR Code Scan</Text>
                 <Text style={styles.cardDesc}>
@@ -135,6 +138,7 @@ export const MobileConnectScreen = ({ onConnected, onOpenQrScanner }) => {
               activeOpacity={0.85}
               onPress={onOpenQrScanner}
             >
+              <Text style={{ fontSize: 18, color: '#FFFFFF', marginRight: 8 }}>📷</Text>
               <Text style={styles.scanBtnText}>Scan Desktop QR Code</Text>
             </TouchableOpacity>
           </View>
@@ -142,6 +146,9 @@ export const MobileConnectScreen = ({ onConnected, onOpenQrScanner }) => {
           {/* Option 2: Wi-Fi Auto-Detect */}
           <View style={styles.secondaryCard}>
             <View style={styles.cardHeaderRow}>
+              <View style={[styles.optionIconBox, { backgroundColor: '#EFF6FF', borderColor: '#BFDBFE' }]}>
+                <Text style={{ fontSize: 22 }}>📡</Text>
+              </View>
               <View style={{ flex: 1 }}>
                 <Text style={styles.cardTitle}>Option 2: Wi-Fi Auto-Detect</Text>
                 <Text style={styles.cardDesc}>
@@ -157,8 +164,10 @@ export const MobileConnectScreen = ({ onConnected, onOpenQrScanner }) => {
               disabled={autoScanning || testing}
             >
               {autoScanning ? (
-                <ActivityIndicator size="small" color="#0F766E" style={{ marginRight: 8 }} />
-              ) : null}
+                <ActivityIndicator size="small" color="#2563EB" style={{ marginRight: 8 }} />
+              ) : (
+                <Text style={{ fontSize: 16, marginRight: 6 }}>🔍</Text>
+              )}
               <Text style={styles.autoBtnText}>
                 {autoScanning ? 'Scanning Wi-Fi Subnet...' : 'Auto-Detect Desktop CRM'}
               </Text>
@@ -168,6 +177,9 @@ export const MobileConnectScreen = ({ onConnected, onOpenQrScanner }) => {
           {/* Option 3: Manual Server Address */}
           <View style={styles.manualCard}>
             <View style={styles.cardHeaderRow}>
+              <View style={[styles.optionIconBox, { backgroundColor: '#F8FAFC', borderColor: '#CBD5E1' }]}>
+                <Text style={{ fontSize: 22 }}>⌨️</Text>
+              </View>
               <View style={{ flex: 1 }}>
                 <Text style={styles.cardTitle}>Option 3: Manual Server Address</Text>
                 <Text style={styles.cardDesc}>
@@ -222,15 +234,15 @@ export const MobileConnectScreen = ({ onConnected, onOpenQrScanner }) => {
           {/* Status Message Box */}
           {statusText ? (
             <View style={styles.statusBox}>
-              <ActivityIndicator size="small" color="#0F766E" style={{ marginRight: 8 }} />
+              <ActivityIndicator size="small" color="#2563EB" style={{ marginRight: 8 }} />
               <Text style={styles.statusText}>{statusText}</Text>
             </View>
           ) : null}
 
           {/* Helpful Tips Banner */}
           <View style={styles.tipsBox}>
-            <Text style={styles.tipsTitle}>Wi-Fi Pairing Tips:</Text>
-            <Text style={styles.tipsText}>• Open Desktop CRM on your PC and click "Pair Mobile".</Text>
+            <Text style={styles.tipsTitle}>💡 Wi-Fi Pairing Tips:</Text>
+            <Text style={styles.tipsText}>• Open Desktop CRM on your PC and click "Mobile Scanner".</Text>
             <Text style={styles.tipsText}>• Ensure your Phone & PC are on the exact same Wi-Fi network.</Text>
           </View>
         </ScrollView>

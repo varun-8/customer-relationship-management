@@ -86,42 +86,77 @@ exports.getMobilePairingInfo = async (req, res) => {
   try {
     const interfaces = os.networkInterfaces();
     const networkInterfaces = [];
-    let preferredIp = null;
+    const validCandidates = [];
+
+    const isVirtualName = (nameStr) => {
+      const lower = String(nameStr || '').toLowerCase();
+      return (
+        lower.includes('virtual') ||
+        lower.includes('vethernet') ||
+        lower.includes('loopback') ||
+        lower.includes('wsl') ||
+        lower.includes('vmware') ||
+        lower.includes('vbox') ||
+        lower.includes('virtualbox') ||
+        lower.includes('docker') ||
+        lower.includes('hyper-v') ||
+        lower.includes('tailscale') ||
+        lower.includes('zerotier') ||
+        lower.includes('bluetooth') ||
+        lower.includes('npcap')
+      );
+    };
 
     for (const ifaceName of Object.keys(interfaces)) {
       for (const iface of interfaces[ifaceName]) {
-        // Only include non-internal IPv4 addresses
-        if (iface.family === 'IPv4' && !iface.internal) {
-          const isVirtual = ifaceName.toLowerCase().includes('virtual') || 
-                            ifaceName.toLowerCase().includes('vethernet') || 
-                            ifaceName.toLowerCase().includes('loopback') ||
-                            ifaceName.toLowerCase().includes('wsl');
-          
-          networkInterfaces.push({
+        // Include non-internal IPv4 addresses, skipping APIPA 169.254.x.x
+        if (iface.family === 'IPv4' && !iface.internal && !iface.address.startsWith('169.254.')) {
+          const isVirtual = isVirtualName(ifaceName);
+          const lowerName = ifaceName.toLowerCase();
+          const ip = iface.address;
+
+          let rankScore = 0;
+          if (isVirtual) {
+            rankScore -= 500;
+          } else {
+            if (lowerName.includes('wi-fi') || lowerName.includes('wireless') || lowerName.includes('wlan')) {
+              rankScore += 100;
+            } else if (lowerName.includes('ethernet') || lowerName.includes('eth0') || lowerName.includes('en0')) {
+              rankScore += 50;
+            }
+
+            if (ip.startsWith('192.168.')) {
+              rankScore += 30;
+            } else if (ip.startsWith('10.')) {
+              rankScore += 20;
+            } else if (ip.startsWith('172.')) {
+              rankScore += 10;
+            }
+          }
+
+          const entry = {
             name: ifaceName,
-            ip: iface.address,
+            ip,
+            address: ip,
             mac: iface.mac,
             isVirtual,
-          });
+            rankScore,
+          };
 
-          // Prioritize Wi-Fi or physical adapters over virtual ones
-          if (!preferredIp && !isVirtual) {
-            preferredIp = iface.address;
-          } else if (
-            (ifaceName.toLowerCase().includes('wi-fi') || 
-             ifaceName.toLowerCase().includes('wireless') || 
-             ifaceName.toLowerCase().includes('wlan') || 
-             ifaceName.toLowerCase().includes('ethernet')) &&
-            !isVirtual
-          ) {
-            preferredIp = iface.address;
+          networkInterfaces.push(entry);
+          if (!isVirtual) {
+            validCandidates.push(entry);
           }
         }
       }
     }
 
-    // Fallback to first available IP or localhost
-    const serverIp = preferredIp || (networkInterfaces.length > 0 ? networkInterfaces[0].ip : '127.0.0.1');
+    // Sort valid candidate interfaces by score descending
+    validCandidates.sort((a, b) => b.rankScore - a.rankScore);
+    networkInterfaces.sort((a, b) => b.rankScore - a.rankScore);
+
+    const allIps = [...new Set(validCandidates.map((c) => c.ip))];
+    const serverIp = allIps.length > 0 ? allIps[0] : (networkInterfaces.length > 0 ? networkInterfaces[0].ip : '127.0.0.1');
     const port = Number(process.env.PORT) || 5000;
     const apiBaseUrl = `http://${serverIp}:${port}/api`;
 
@@ -130,6 +165,7 @@ exports.getMobilePairingInfo = async (req, res) => {
       v: 1,
       appName: 'Vasantham CRM',
       serverIp,
+      allIps: allIps.length > 0 ? allIps : [serverIp],
       port,
       apiBaseUrl,
       healthUrl: `http://${serverIp}:${port}/api/health`,
@@ -140,6 +176,7 @@ exports.getMobilePairingInfo = async (req, res) => {
       success: true,
       data: {
         serverIp,
+        allIps: allIps.length > 0 ? allIps : [serverIp],
         port,
         apiBaseUrl,
         pairingPayload,
@@ -303,6 +340,40 @@ exports.disconnectDevice = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: error.message || 'Failed to disconnect device',
+    });
+  }
+};
+
+/**
+ * Unblock port 5000 in Windows Defender Firewall via UAC prompt
+ * @route POST /api/settings/fix-firewall
+ */
+exports.fixWindowsFirewall = async (req, res) => {
+  try {
+    if (process.platform !== 'win32') {
+      return res.status(200).json({ success: true, message: 'Firewall configuration is only applicable on Windows.' });
+    }
+
+    const { exec } = require('child_process');
+    const port = Number(process.env.PORT) || 5000;
+    const ruleName = 'Vasantham CRM Mobile Pairing';
+
+    const psCmd = `Start-Process netsh -ArgumentList 'advfirewall firewall add rule name="${ruleName}" dir=in action=allow protocol=TCP localport=${port} profile=any' -Verb RunAs`;
+    exec(`powershell -Command "${psCmd}"`, (err) => {
+      if (err) {
+        console.warn('Windows Firewall elevation prompt error:', err.message);
+      }
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: 'Windows Administrator elevation prompt launched. Click "Yes" on your PC screen to allow mobile Wi-Fi pairing.',
+    });
+  } catch (error) {
+    console.error('Error launching firewall fix:', error);
+    return res.status(500).json({
+      success: false,
+      message: error.message || 'Failed to trigger firewall setup',
     });
   }
 };

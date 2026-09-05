@@ -164,13 +164,13 @@ export function MobileSettingsModal({
               <View style={styles.heroMetaRow}>
                 <View style={styles.heroMetaItem}>
                   <Text style={styles.heroMetaLabel}>DATABASE</Text>
-                  <Text style={styles.heroMetaVal}>Showroom Database</Text>
+                  <Text style={styles.heroMetaVal}>MongoDB Atlas</Text>
                 </View>
                 <View style={styles.heroMetaDivider} />
                 <View style={styles.heroMetaItem}>
                   <Text style={styles.heroMetaLabel}>SYNC ENGINE</Text>
-                  <Text style={[styles.heroMetaVal, { color: isOnline ? '#059669' : '#DC2626' }]}>
-                    {isOnline ? 'Live Desktop Sync' : 'Offline Cache'}
+                  <Text style={[styles.heroMetaVal, { color: isOnline ? '#34D399' : '#F87171' }]}>
+                    {isOnline ? 'Live Two-Way' : 'Offline Cache'}
                   </Text>
                 </View>
               </View>
@@ -363,7 +363,7 @@ export function MobileSettingsModal({
                   <View style={styles.refreshIconShape} />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.rowTitle}>Refresh Showroom Data</Text>
+                  <Text style={styles.rowTitle}>Force Refresh Cloud Data</Text>
                   <Text style={styles.rowSubtitle}>Reload customer forms and branding</Text>
                 </View>
                 {reloadingData ? (
@@ -554,16 +554,14 @@ const styles = StyleSheet.create({
     backgroundColor: '#F8FAFC',
   },
   heroCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#0F172A',
     borderRadius: 18,
     padding: 16,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
     shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.18,
+    shadowRadius: 10,
+    elevation: 4,
     marginBottom: 14,
   },
   heroTopRow: {
@@ -572,17 +570,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   heroTagBadge: {
-    backgroundColor: '#ECFEF8',
+    backgroundColor: 'rgba(255, 255, 255, 0.10)',
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 5,
-    borderWidth: 1,
-    borderColor: '#CCFBF1',
   },
   heroTagBadgeText: {
     fontSize: 9,
     fontWeight: '800',
-    color: '#0F766E',
+    color: '#94A3B8',
     letterSpacing: 0.8,
   },
   pingBadge: {
@@ -594,14 +590,10 @@ const styles = StyleSheet.create({
     borderRadius: 6,
   },
   pingBadgeOnline: {
-    backgroundColor: '#ECFDF5',
-    borderWidth: 1,
-    borderColor: '#A7F3D0',
+    backgroundColor: 'rgba(52, 211, 153, 0.15)',
   },
   pingBadgeOffline: {
-    backgroundColor: '#FEF2F2',
-    borderWidth: 1,
-    borderColor: '#FECACA',
+    backgroundColor: 'rgba(248, 113, 113, 0.15)',
   },
   pingDot: {
     width: 5,
@@ -609,25 +601,25 @@ const styles = StyleSheet.create({
     borderRadius: 2.5,
   },
   pingDotOnline: {
-    backgroundColor: '#059669',
+    backgroundColor: '#34D399',
   },
   pingDotOffline: {
-    backgroundColor: '#DC2626',
+    backgroundColor: '#F87171',
   },
   pingBadgeText: {
     fontSize: 10,
     fontWeight: '800',
   },
   pingBadgeTextOnline: {
-    color: '#047857',
+    color: '#34D399',
   },
   pingBadgeTextOffline: {
-    color: '#DC2626',
+    color: '#F87171',
   },
   heroHostText: {
     fontSize: 17,
     fontWeight: '800',
-    color: '#0F172A',
+    color: '#FFFFFF',
     marginTop: 8,
     marginBottom: 12,
     letterSpacing: -0.2,
@@ -636,12 +628,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#F8FAFC',
+    backgroundColor: 'rgba(255, 255, 255, 0.06)',
     borderRadius: 12,
     paddingVertical: 9,
     paddingHorizontal: 12,
-    borderWidth: 1,
-    borderColor: '#F1F5F9',
   },
   heroMetaItem: {
     flex: 1,
@@ -649,19 +639,19 @@ const styles = StyleSheet.create({
   heroMetaLabel: {
     fontSize: 8.5,
     fontWeight: '800',
-    color: '#64748B',
+    color: '#94A3B8',
     letterSpacing: 0.5,
   },
   heroMetaVal: {
     fontSize: 12,
     fontWeight: '800',
-    color: '#0F172A',
+    color: '#FFFFFF',
     marginTop: 2,
   },
   heroMetaDivider: {
     width: 1,
     height: 22,
-    backgroundColor: '#E2E8F0',
+    backgroundColor: 'rgba(255, 255, 255, 0.12)',
     marginHorizontal: 10,
   },
   sectionHeadingRow: {
