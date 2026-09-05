@@ -181,8 +181,21 @@ function createWindow() {
   if (isDev) {
     mainWindow.loadURL(devUrl);
   } else {
-    mainWindow.loadFile(path.join(__dirname, '../dist/index.html'));
+    const indexPath = path.join(__dirname, '../dist/index.html');
+    const altIndexPath = path.join(app.getAppPath(), 'dist/index.html');
+    if (fs.existsSync(indexPath)) {
+      mainWindow.loadFile(indexPath);
+    } else if (fs.existsSync(altIndexPath)) {
+      mainWindow.loadFile(altIndexPath);
+    } else {
+      console.error(`❌ index.html missing at ${indexPath} and ${altIndexPath}`);
+      mainWindow.loadFile(indexPath);
+    }
   }
+
+  mainWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription, validatedURL) => {
+    console.error(`❌ [Electron Load Failure] URL: ${validatedURL}, Error: ${errorDescription} (${errorCode})`);
+  });
 
   mainWindow.once('ready-to-show', () => {
     mainWindow.show();
