@@ -1,5 +1,6 @@
 import { spawn, exec } from 'child_process';
 import http from 'http';
+import net from 'net';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
@@ -11,6 +12,26 @@ const BACKEND_DIR = path.resolve(__dirname, '../backend');
 const DESKTOP_DIR = __dirname;
 
 const processes = [];
+
+// Helper to check if a TCP port is open / listening
+function isPortOpen(port, host = '127.0.0.1') {
+  return new Promise((resolve) => {
+    const socket = new net.Socket();
+    socket.setTimeout(1000);
+    socket.on('connect', () => {
+      socket.destroy();
+      resolve(true);
+    });
+    socket.on('timeout', () => {
+      socket.destroy();
+      resolve(false);
+    });
+    socket.on('error', () => {
+      resolve(false);
+    });
+    socket.connect(port, host);
+  });
+}
 
 // Helper to check if an HTTP URL is currently alive
 function isUrlAlive(url, timeoutMs = 1500) {
@@ -100,19 +121,24 @@ async function main() {
   console.log('=======================================================');
 
   // 0. Auto-Start Bundled MongoDB 6.0 if local service isn't active on port 27017
-  const bundledMongodPath = path.join(BACKEND_DIR, 'bin', 'mongodb', 'mongod.exe');
-  if (fs.existsSync(bundledMongodPath)) {
-    const dataDir = path.join(BACKEND_DIR, 'data', 'db');
-    if (!fs.existsSync(dataDir)) {
-      fs.mkdirSync(dataDir, { recursive: true });
+  const isMongoActive = await isPortOpen(27017);
+  if (isMongoActive) {
+    console.log('✅ MongoDB Database is active on port 27017.');
+  } else {
+    const bundledMongodPath = path.join(BACKEND_DIR, 'bin', 'mongodb', 'mongod.exe');
+    if (fs.existsSync(bundledMongodPath)) {
+      const dataDir = path.join(BACKEND_DIR, 'data', 'db');
+      if (!fs.existsSync(dataDir)) {
+        fs.mkdirSync(dataDir, { recursive: true });
+      }
+      console.log('🍃 [Embedded Database] Starting Bundled MongoDB 6.0 Server (port 27017)...');
+      const mongoProc = spawn(bundledMongodPath, ['--dbpath', dataDir, '--port', '27017', '--bind_ip', '127.0.0.1'], {
+        stdio: 'ignore',
+        shell: false,
+      });
+      processes.push(mongoProc);
+      await new Promise((r) => setTimeout(r, 1200));
     }
-    console.log('🍃 [Embedded Database] Starting Bundled MongoDB 6.0 Server (port 27017)...');
-    const mongoProc = spawn(bundledMongodPath, ['--dbpath', dataDir, '--port', '27017', '--bind_ip', '127.0.0.1'], {
-      stdio: 'ignore',
-      shell: false,
-    });
-    processes.push(mongoProc);
-    await new Promise((r) => setTimeout(r, 1200));
   }
 
   // 1. Backend Server Check & Launch

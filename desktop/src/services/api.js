@@ -1,30 +1,44 @@
-const getApiBase = () => {
-  if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL;
-  if (typeof window !== 'undefined' && (window.location.protocol === 'file:' || !window.location.hostname)) {
+const getApiBaseUrl = () => {
+  if (
+    typeof window !== 'undefined' &&
+    (window.location.protocol === 'file:' ||
+      !window.location.hostname ||
+      (navigator.userAgent && navigator.userAgent.toLowerCase().includes('electron')))
+  ) {
     return 'http://127.0.0.1:5000/api';
+  }
+  if (import.meta.env.VITE_API_URL) {
+    return import.meta.env.VITE_API_URL;
   }
   return '/api';
 };
 
-const API_BASE = getApiBase();
-
+const API_BASE = getApiBaseUrl();
 
 const getAuthHeaders = async (forceRefresh = false) => {
   let token = forceRefresh ? null : localStorage.getItem('vasantham_crm_token');
   if (!token) {
-    try {
-      const res = await fetch(`${API_BASE}/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: 'owner@vasantham.com', password: 'admin123' }),
-      });
-      const data = await res.json();
-      if (data.success && data.data?.token) {
-        token = data.data.token;
-        localStorage.setItem('vasantham_crm_token', token);
+    for (let attempt = 0; attempt < 5; attempt++) {
+      try {
+        const res = await fetch(`${API_BASE}/auth/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: 'owner@vasantham.com', password: 'admin123' }),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success && data.data?.token) {
+            token = data.data.token;
+            localStorage.setItem('vasantham_crm_token', token);
+            break;
+          }
+        }
+      } catch (e) {
+        console.warn(`Auto auth attempt ${attempt + 1} warning:`, e.message || e);
       }
-    } catch (e) {
-      console.warn('Auto auth error:', e);
+      if (attempt < 4) {
+        await new Promise((r) => setTimeout(r, 1000));
+      }
     }
   }
   return {
