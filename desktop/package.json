@@ -65,6 +65,15 @@
       {
         "from": "../backend/bin/mongodb",
         "to": "mongodb"
+      },
+      {
+        "from": "../backend",
+        "to": "backend",
+        "filter": [
+          "**/*",
+          "!bin/mongodb/**/*",
+          "!data/**/*"
+        ]
       }
     ]
   }

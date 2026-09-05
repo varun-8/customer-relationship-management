@@ -65,16 +65,20 @@ async function startBundledMongoDB() {
     return;
   }
 
-  // Determine path to mongod.exe
-  let mongodPath = '';
-  if (app.isPackaged) {
-    mongodPath = path.join(process.resourcesPath, 'mongodb', 'mongod.exe');
-  } else {
-    mongodPath = path.resolve(__dirname, '../../backend/bin/mongodb/mongod.exe');
-  }
+  // Candidate paths for mongod.exe
+  const candidatePaths = app.isPackaged ? [
+    path.join(process.resourcesPath, 'mongodb', 'mongod.exe'),
+    path.join(app.getAppPath(), '..', 'mongodb', 'mongod.exe'),
+    path.join(app.getAppPath(), 'mongodb', 'mongod.exe')
+  ] : [
+    path.resolve(__dirname, '../../backend/bin/mongodb/mongod.exe'),
+    path.resolve(__dirname, '../backend/bin/mongodb/mongod.exe')
+  ];
 
-  if (!fs.existsSync(mongodPath)) {
-    console.warn(`⚠️ [MongoDB Notice] mongod.exe binary not found at ${mongodPath}. Using local MongoDB service if installed.`);
+  const mongodPath = candidatePaths.find(p => fs.existsSync(p));
+
+  if (!mongodPath) {
+    console.warn(`⚠️ [MongoDB Notice] mongod.exe binary not found. Searched paths:`, candidatePaths);
     return;
   }
 
@@ -116,19 +120,24 @@ async function startBundledMongoDB() {
 async function startEmbeddedBackend() {
   const isBackendRunning = await isPortOpen(5000);
   if (isBackendRunning) {
-    console.log('✅ [Backend] API server is active on http://localhost:5000');
+    console.log('✅ [Backend] API server is active on http://127.0.0.1:5000');
     return;
   }
 
-  let backendServerPath = '';
-  if (app.isPackaged) {
-    backendServerPath = path.join(__dirname, '../backend/src/server.js');
-  } else {
-    backendServerPath = path.resolve(__dirname, '../../backend/src/server.js');
-  }
+  const candidatePaths = app.isPackaged ? [
+    path.join(process.resourcesPath, 'backend', 'src', 'server.js'),
+    path.join(app.getAppPath(), 'backend', 'src', 'server.js'),
+    path.join(app.getAppPath(), '..', 'backend', 'src', 'server.js'),
+    path.join(__dirname, '../backend/src/server.js')
+  ] : [
+    path.resolve(__dirname, '../../backend/src/server.js'),
+    path.resolve(__dirname, '../backend/src/server.js')
+  ];
 
-  if (!fs.existsSync(backendServerPath)) {
-    console.warn(`⚠️ [Backend Warning] server.js not found at ${backendServerPath}`);
+  const backendServerPath = candidatePaths.find(p => fs.existsSync(p));
+
+  if (!backendServerPath) {
+    console.warn(`⚠️ [Backend Warning] server.js not found. Searched paths:`, candidatePaths);
     return;
   }
 
@@ -238,7 +247,7 @@ app.whenReady().then(async () => {
 
     // 3. Wait for Backend API readiness
     try {
-      await waitForUrl('http://localhost:5000/api/health', 15000);
+      await waitForUrl('http://127.0.0.1:5000/api/health', 15000);
     } catch (e) {
       console.warn('⚠️ API healthcheck timeout, opening UI...');
     }

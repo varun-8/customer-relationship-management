@@ -1,4 +1,13 @@
-const API_BASE = import.meta.env.VITE_API_URL || '/api';
+const getApiBase = () => {
+  if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL;
+  if (typeof window !== 'undefined' && (window.location.protocol === 'file:' || !window.location.hostname)) {
+    return 'http://127.0.0.1:5000/api';
+  }
+  return '/api';
+};
+
+const API_BASE = getApiBase();
+
 
 const getAuthHeaders = async (forceRefresh = false) => {
   let token = forceRefresh ? null : localStorage.getItem('vasantham_crm_token');
