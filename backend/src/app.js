@@ -43,6 +43,8 @@ app.get('/api/health', (req, res) => {
     service: 'Vasantham Tiles & Sanitary Wares CRM Backend',
     timestamp: new Date(),
   });
+});
+
 // Database Connection Guard Middleware (Prevents 'User.find() buffering timed out')
 app.use(async (req, res, next) => {
   if (req.path === '/api/health') return next();
