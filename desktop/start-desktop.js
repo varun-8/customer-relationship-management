@@ -1,6 +1,7 @@
 import { spawn, exec } from 'child_process';
 import http from 'http';
 import path from 'path';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -97,6 +98,22 @@ async function main() {
   console.log('=======================================================');
   console.log('💎 Vasantham CRM — Launching Desktop Mode with Backend');
   console.log('=======================================================');
+
+  // 0. Auto-Start Bundled MongoDB 6.0 if local service isn't active on port 27017
+  const bundledMongodPath = path.join(BACKEND_DIR, 'bin', 'mongodb', 'mongod.exe');
+  if (fs.existsSync(bundledMongodPath)) {
+    const dataDir = path.join(BACKEND_DIR, 'data', 'db');
+    if (!fs.existsSync(dataDir)) {
+      fs.mkdirSync(dataDir, { recursive: true });
+    }
+    console.log('🍃 [Embedded Database] Starting Bundled MongoDB 6.0 Server (port 27017)...');
+    const mongoProc = spawn(bundledMongodPath, ['--dbpath', dataDir, '--port', '27017', '--bind_ip', '127.0.0.1'], {
+      stdio: 'ignore',
+      shell: false,
+    });
+    processes.push(mongoProc);
+    await new Promise((r) => setTimeout(r, 1200));
+  }
 
   // 1. Backend Server Check & Launch
   const backendAlreadyRunning = await isUrlAlive('http://localhost:5000/api/health');

@@ -16,6 +16,8 @@
     "seed": "npm --prefix backend run seed",
     "test": "npm --prefix backend test",
     "build:desktop": "npm --prefix desktop run build",
+    "build:exe": "npm --prefix desktop run dist:exe",
+    "setup:mongo": "node scripts/setup-bundled-mongodb.js",
     "install:all": "npm install && npm --prefix backend install && npm --prefix desktop install && npm --prefix mobile install"
   },
   "devDependencies": {

@@ -11,7 +11,8 @@
     "dev:backend": "npm --prefix ../backend run dev",
     "dev:electron": "electron .",
     "build": "vite build",
-    "dist:exe": "vite build && electron-builder --win",
+    "dist:exe": "node ../scripts/setup-bundled-mongodb.js && vite build && electron-builder --win",
+    "setup:mongo": "node ../scripts/setup-bundled-mongodb.js",
     "preview": "vite preview"
   },
   "dependencies": {
@@ -46,7 +47,14 @@
     },
     "files": [
       "dist/**/*",
-      "electron/**/*"
+      "electron/**/*",
+      "../backend/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "../backend/bin/mongodb",
+        "to": "mongodb"
+      }
     ]
   }
 }
