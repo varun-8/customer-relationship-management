@@ -1,69 +1,13 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform, NativeModules } from 'react-native';
-import Constants from 'expo-constants';
-import * as Network from 'expo-network';
 
-// Environment variable override from build configuration
-const ENV_SERVER_IP = process.env.EXPO_PUBLIC_SERVER_IP || '';
-const ENV_API_URL = process.env.EXPO_PUBLIC_API_URL || (ENV_SERVER_IP ? `http://${ENV_SERVER_IP}:5000/api` : '');
-
-// Default host constructed dynamically
-const DEFAULT_HOST = ENV_API_URL || 'http://localhost:5000/api';
+// Current active development host
+const CURRENT_LAN_IP = '10.97.47.58';
+const DEFAULT_HOST = `http://${CURRENT_LAN_IP}:5000/api`;
 const HOST_STORAGE_KEY = 'vasantham_api_host_url';
 const TOKEN_KEY = 'vasantham_mobile_jwt';
 const DEVICE_ID_STORAGE_KEY = 'vasantham_mobile_device_id';
 let cachedDeviceId = null;
-
-const normalizeApiBase = (value) => {
-  if (!value || typeof value !== 'string') return null;
-  let cleanValue = value.trim().replace(/\/+$/, '');
-  if (!/^https?:\/\//i.test(cleanValue)) {
-    cleanValue = `http://${cleanValue}`;
-  }
-  if (!cleanValue.endsWith('/api')) {
-    cleanValue += '/api';
-  }
-  return cleanValue;
-};
-
-// Dynamically discover active Wi-Fi IP address of the mobile phone
-const getPhoneIpAddress = async () => {
-  try {
-    if (Network && typeof Network.getIpAddressAsync === 'function') {
-      const ip = await Network.getIpAddressAsync();
-      if (ip && ip !== '127.0.0.1' && !ip.startsWith('169.254.')) {
-        return ip;
-      }
-    }
-  } catch (e) {}
-
-  try {
-    if (typeof window !== 'undefined' && (window.RTCPeerConnection || window.webkitRTCPeerConnection)) {
-      const pc = new (window.RTCPeerConnection || window.webkitRTCPeerConnection)({ iceServers: [] });
-      pc.createDataChannel('');
-      pc.createOffer().then((offer) => pc.setLocalDescription(offer)).catch(() => {});
-      const ip = await new Promise((resolve) => {
-        const timer = setTimeout(() => {
-          try { pc.close(); } catch (e) {}
-          resolve(null);
-        }, 800);
-        pc.onicecandidate = (ice) => {
-          if (ice && ice.candidate && ice.candidate.candidate) {
-            const match = ice.candidate.candidate.match(/([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})/);
-            if (match && match[1] && !match[1].startsWith('127.') && !match[1].startsWith('169.254.')) {
-              clearTimeout(timer);
-              try { pc.close(); } catch (e) {}
-              resolve(match[1]);
-            }
-          }
-        };
-      });
-      if (ip) return ip;
-    }
-  } catch (e) {}
-
-  return null;
-};
 
 // Purge any legacy cached data keys on startup
 (async () => {
@@ -78,73 +22,27 @@ const getPhoneIpAddress = async () => {
   } catch (e) {}
 })();
 
-// Helper to extract IP address or hostname from various URL / host strings
-const extractIpFromHost = (hostStr) => {
-  if (!hostStr || typeof hostStr !== 'string') return null;
-  const cleaned = hostStr.trim().replace(/^https?:\/\//i, '').replace(/^exp:\/\//i, '');
-  const match = cleaned.match(/^([a-zA-Z0-9.-]+)(?::\d+)?/);
-  if (match && match[1] && match[1] !== 'localhost' && match[1] !== '127.0.0.1') {
-    return match[1];
-  }
-  return null;
-};
-
-// Candidate host list for automatic discovery across Expo Go and Native APK builds
+// Candidate host list for automatic discovery
 const getCandidateHosts = () => {
   const candidates = [];
 
-  // 1. Prioritize Expo Go / Metro host IP dynamically from Expo Constants
-  try {
-    const expoHostUri = Constants.expoConfig?.hostUri;
-    const ipFromHostUri = extractIpFromHost(expoHostUri);
-    if (ipFromHostUri) {
-      candidates.push(`http://${ipFromHostUri}:5000/api`);
-    }
-  } catch (e) {}
-
-  try {
-    const debuggerHost =
-      Constants.manifest2?.extra?.expoGo?.debuggerHost ||
-      Constants.manifest?.debuggerHost ||
-      Constants.expoGoConfig?.debuggerHost;
-    const ipFromDebugger = extractIpFromHost(debuggerHost);
-    if (ipFromDebugger) {
-      candidates.push(`http://${ipFromDebugger}:5000/api`);
-    }
-  } catch (e) {}
-
-  try {
-    const expUrl = Constants.experienceUrl;
-    const ipFromExp = extractIpFromHost(expUrl);
-    if (ipFromExp) {
-      candidates.push(`http://${ipFromExp}:5000/api`);
-    }
-  } catch (e) {}
-
-  // 2. Extract host from React Native bundle scriptURL
-  try {
-    const scriptURL = NativeModules.SourceCode?.scriptURL;
-    const ipFromScript = extractIpFromHost(scriptURL);
-    if (ipFromScript) {
-      candidates.push(`http://${ipFromScript}:5000/api`);
-    }
-  } catch (e) {}
-
-  // 3. Environment variable configured at build or sync time
-  if (ENV_API_URL) {
-    candidates.push(ENV_API_URL);
-  }
-  if (ENV_SERVER_IP) {
-    candidates.push(`http://${ENV_SERVER_IP}:5000/api`);
+  // Extract host from React Native bundle URL if available
+  const scriptURL = NativeModules.SourceCode?.scriptURL;
+  if (scriptURL) {
+    try {
+      const match = scriptURL.match(/https?:\/\/([^/:]+)/);
+      if (match && match[1] && match[1] !== 'localhost' && match[1] !== '127.0.0.1') {
+        candidates.push(`http://${match[1]}:5000/api`);
+      }
+    } catch (e) {}
   }
 
-  // 4. Fallbacks
   candidates.push(DEFAULT_HOST);
+  candidates.push('http://localhost:5000/api');
   candidates.push('http://10.0.2.2:5000/api'); // Android emulator fallback
   candidates.push('http://127.0.0.1:5000/api');
-  candidates.push('http://localhost:5000/api');
 
-  return [...new Set(candidates.filter(Boolean))];
+  return [...new Set(candidates)];
 };
 
 let cachedWorkingHost = null;
@@ -284,11 +182,10 @@ export const apiClient = {
     try {
       const custom = await AsyncStorage.getItem(HOST_STORAGE_KEY);
       if (custom && custom.trim() !== '') {
-        const storedApiBase = normalizeApiBase(custom);
-        if (storedApiBase) {
-          cachedWorkingHost = storedApiBase;
-          return storedApiBase;
-        }
+        const cleanHost = custom.trim().replace(/\/+$/, '');
+        const fullApiUrl = cleanHost.endsWith('/api') ? cleanHost : `${cleanHost}/api`;
+        cachedWorkingHost = fullApiUrl;
+        return fullApiUrl;
       }
     } catch (e) {}
 
@@ -297,8 +194,11 @@ export const apiClient = {
   },
 
   async setApiBase(url) {
-    const cleanUrl = normalizeApiBase(url);
-    if (!cleanUrl) return null;
+    if (!url) return null;
+    let cleanUrl = url.trim().replace(/\/+$/, '');
+    if (!cleanUrl.endsWith('/api')) {
+      cleanUrl += '/api';
+    }
     cachedWorkingHost = cleanUrl;
     await AsyncStorage.setItem(HOST_STORAGE_KEY, cleanUrl);
     await AsyncStorage.setItem('vasantham_is_paired', 'true');
@@ -392,46 +292,32 @@ export const apiClient = {
     }
   },
 
-  // Parse QR code payload safely into candidate connection URLs
+  // Parse QR code payload safely
   parsePairingPayload(payloadStr) {
     if (!payloadStr || typeof payloadStr !== 'string') return null;
     const trimmed = payloadStr.trim();
-    const candidateUrls = [];
 
     // 1. Check if JSON payload from Desktop QR
     try {
       if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
         const parsed = JSON.parse(trimmed);
-        const port = parsed.port || 5000;
-
-        if (Array.isArray(parsed.allIps)) {
-          parsed.allIps.forEach((ip) => {
-            if (ip) candidateUrls.push(`http://${ip}:${port}/api`);
-          });
+        if (parsed.apiBaseUrl) {
+          return parsed.apiBaseUrl;
         }
         if (parsed.serverIp) {
-          candidateUrls.push(`http://${parsed.serverIp}:${port}/api`);
-        }
-        if (parsed.apiBaseUrl) {
-          let clean = parsed.apiBaseUrl.trim().replace(/\/+$/, '');
-          if (!clean.endsWith('/api')) clean += '/api';
-          candidateUrls.push(clean);
-        }
-
-        const unique = [...new Set(candidateUrls.filter(Boolean))];
-        if (unique.length > 0) {
-          return { primaryUrl: unique[0], candidateUrls: unique };
+          const port = parsed.port || 5000;
+          return `http://${parsed.serverIp}:${port}/api`;
         }
       }
     } catch (e) {}
 
     // 2. Check if direct URL
     if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
-      let cleanUrl = trimmed.trim().replace(/\/+$/, '');
+      let cleanUrl = trimmed;
       if (!cleanUrl.endsWith('/api') && !cleanUrl.includes('/api/')) {
-        cleanUrl += '/api';
+        cleanUrl = cleanUrl.replace(/\/+$/, '') + '/api';
       }
-      return { primaryUrl: cleanUrl, candidateUrls: [cleanUrl] };
+      return cleanUrl;
     }
 
     // 3. Check if IP:Port string (e.g. "192.168.1.5:5000" or "192.168.1.5")
@@ -439,17 +325,16 @@ export const apiClient = {
     if (ipMatch) {
       const ip = ipMatch[1];
       const port = ipMatch[2] || '5000';
-      const cleanUrl = `http://${ip}:${port}/api`;
-      return { primaryUrl: cleanUrl, candidateUrls: [cleanUrl] };
+      return `http://${ip}:${port}/api`;
     }
 
     return null;
   },
 
-  // Check if mobile app is already paired or can auto-connect to candidates on same network
+  // Check if mobile app is already paired & desktop server is reachable with automatic IP self-healing
   async checkIsPairedAndOnline() {
     try {
-      // 1. Check stored host first if present
+      // 1. Try stored host first
       const storedHost = await AsyncStorage.getItem(HOST_STORAGE_KEY);
       if (storedHost && storedHost.trim() !== '') {
         const cleanHost = storedHost.trim().replace(/\/+$/, '');
@@ -457,7 +342,7 @@ export const apiClient = {
         const healthUrl = `${baseApi}/health`;
 
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 1500);
+        const timeoutId = setTimeout(() => controller.abort(), 2500);
 
         try {
           const res = await fetch(healthUrl, { signal: controller.signal });
@@ -475,10 +360,16 @@ export const apiClient = {
         }
       }
 
-      // 2. If stored host is missing or unreachable, run dynamic auto-detection on local Wi-Fi
-      const detected = await this.autoDetectServer();
-      if (detected && detected.success && detected.host) {
-        return { isPaired: true, host: detected.host, data: detected.data };
+      // 2. Self-Healing: Try auto-discovering candidate hosts (Metro bundle URL, ENV IP, LAN defaults)
+      const testResult = await this.testConnection();
+      if (testResult && testResult.success) {
+        return { isPaired: true, host: testResult.host, data: testResult.data };
+      }
+
+      // 3. Subnet Auto-Detection: Scan local network subnets automatically
+      const autoResult = await this.autoDetectServer();
+      if (autoResult && autoResult.success) {
+        return { isPaired: true, host: autoResult.host, data: autoResult.data };
       }
     } catch (e) {}
 
@@ -521,161 +412,79 @@ export const apiClient = {
     } catch (e) {}
   },
 
-  // Test connection to backend (supports single URL string, array, or object)
+  // Test connection to backend
   async testConnection(customBase = null) {
     const candidates = [];
     if (customBase) {
-      if (typeof customBase === 'object') {
-        if (customBase.primaryUrl) candidates.push(customBase.primaryUrl);
-        if (Array.isArray(customBase.candidateUrls)) candidates.push(...customBase.candidateUrls);
-      } else if (Array.isArray(customBase)) {
-        candidates.push(...customBase);
-      } else if (typeof customBase === 'string') {
-        candidates.push(customBase);
-      }
+      let clean = customBase.trim().replace(/\/+$/, '');
+      if (!clean.endsWith('/api')) clean += '/api';
+      candidates.push(clean);
     } else {
       const stored = await AsyncStorage.getItem(HOST_STORAGE_KEY);
       if (stored) {
-        candidates.push(stored);
+        let cleanStored = stored.trim().replace(/\/+$/, '');
+        if (!cleanStored.endsWith('/api')) cleanStored += '/api';
+        candidates.push(cleanStored);
       }
       candidates.push(...getCandidateHosts());
     }
 
-    const uniqueCandidates = [...new Set(candidates.map(normalizeApiBase).filter(Boolean))];
+    const uniqueCandidates = [...new Set(candidates)];
 
-    const probePromises = uniqueCandidates.map((host) => {
-      return new Promise(async (resolve) => {
-        try {
-          const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 1800);
+    for (const host of uniqueCandidates) {
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 3000);
 
-          const res = await fetch(`${host}/health`, { signal: controller.signal });
-          clearTimeout(timeoutId);
+        const res = await fetch(`${host}/health`, { signal: controller.signal });
+        clearTimeout(timeoutId);
 
-          if (res.ok) {
-            const data = await res.json();
-            if (
-              data.status === 'online' ||
-              data.status === 'ok' ||
-              data.online === true ||
-              data.appId === 'vasantham-crm' ||
-              data.dbConnected !== undefined ||
-              data.service
-            ) {
-              resolve({ success: true, host, data });
-              return;
-            }
-          }
-        } catch (e) {}
-        resolve(null);
-      });
-    });
-
-    const results = await Promise.all(probePromises);
-    const working = results.find((r) => r && r.success);
-    if (working) {
-      cachedWorkingHost = working.host;
-      await AsyncStorage.setItem(HOST_STORAGE_KEY, working.host);
-      await AsyncStorage.setItem('vasantham_is_paired', 'true');
-      return working;
+        if (res.ok) {
+          const data = await res.json();
+          cachedWorkingHost = host;
+          await AsyncStorage.setItem(HOST_STORAGE_KEY, host);
+          await AsyncStorage.setItem('vasantham_is_paired', 'true');
+          return { success: true, host, data };
+        }
+      } catch (e) {}
     }
-
-    return { success: false, error: 'Cannot connect to Desktop CRM backend server. Verify Desktop app is open.' };
+    return { success: false, error: 'Cannot connect to backend API server. Verify backend is running.' };
   },
 
-  // Auto-detect Desktop CRM Server across local subnets dynamically
+  // Auto-detect Desktop CRM Server across local subnets with dynamic subnet extraction
   async autoDetectServer(onProgress) {
-    // 1. Fast probe candidate hosts first
+    const candidateSubnets = [];
+
+    // 1. Extract subnet from React Native Metro scriptURL if running on device
+    const scriptURL = NativeModules.SourceCode?.scriptURL;
+    if (scriptURL) {
+      const match = scriptURL.match(/https?:\/\/(\d+\.\d+\.\d+)\.\d+/);
+      if (match && match[1]) {
+        candidateSubnets.push(match[1]);
+      }
+    }
+
+    // 2. Extract subnet from DEFAULT_HOST or stored host
     try {
-      const candidates = getCandidateHosts();
-      const probeRes = await this.testConnection(candidates);
-      if (probeRes && probeRes.success) {
-        return probeRes;
+      const stored = await AsyncStorage.getItem(HOST_STORAGE_KEY);
+      if (stored) {
+        const match = stored.match(/https?:\/\/(\d+\.\d+\.\d+)\.\d+/);
+        if (match && match[1]) candidateSubnets.push(match[1]);
       }
     } catch (e) {}
 
-    // 2. Discover Phone's IP address dynamically
-    if (onProgress) onProgress('Detecting mobile Wi-Fi network interface...');
-    const phoneIp = await getPhoneIpAddress();
-
-    const candidateSubnets = [];
-
-    const addSubnetFromIp = (ipStr) => {
-      if (!ipStr) return;
-      const parts = ipStr.split('.');
-      if (parts.length === 4) {
-        candidateSubnets.push(`${parts[0]}.${parts[1]}.${parts[2]}`);
-      }
-    };
-
-    // Prioritize phone's active Wi-Fi subnet
-    if (phoneIp) {
-      addSubnetFromIp(phoneIp);
-    }
-
-    // Extract subnets from candidate hosts
-    const candidateHosts = getCandidateHosts();
-    candidateHosts.forEach((host) => {
-      const ip = extractIpFromHost(host);
-      if (ip) addSubnetFromIp(ip);
-    });
-
-    if (ENV_SERVER_IP) {
-      addSubnetFromIp(ENV_SERVER_IP);
-    }
-
-    // Common LAN subnets fallback
-    candidateSubnets.push(
-      '192.168.1',
-      '192.168.0',
-      '192.168.29',
-      '192.168.31',
-      '192.168.18',
-      '192.168.43',
-      '10.97.47',
-      '10.169.195',
-      '192.168.137',
-      '10.0.0',
-      '172.20.10'
-    );
+    // 3. Default common LAN subnets
+    candidateSubnets.push('10.97.47', '10.169.195', '192.168.1', '192.168.0', '192.168.29', '192.168.137', '172.20.10');
     const uniqueSubnets = [...new Set(candidateSubnets.filter(Boolean))];
 
-    // Priority octets ordered for instant discovery
-    let phoneOctet = null;
-    if (phoneIp) {
-      const parts = phoneIp.split('.');
-      if (parts.length === 4) phoneOctet = parseInt(parts[3], 10);
-    }
-
-    const priorityOctets = [];
-    const commonStaticOctets = [1, 2, 3, 100, 101, 102, 105, 110, 150, 200, 250, 254];
-
-    if (phoneOctet && phoneOctet > 0 && phoneOctet < 255) {
-      for (let offset = -20; offset <= 20; offset++) {
-        const target = phoneOctet + offset;
-        if (target >= 1 && target <= 254 && target !== phoneOctet) {
-          priorityOctets.push(target);
-        }
-      }
-    }
-
-    commonStaticOctets.forEach((oct) => {
-      if (!priorityOctets.includes(oct)) priorityOctets.push(oct);
-    });
-
-    for (let i = 1; i <= 254; i++) {
-      if (!priorityOctets.includes(i)) priorityOctets.push(i);
-    }
-
-    // Chunk into parallel batches of 40 octets
-    const chunkSize = 40;
-    const ipBatches = [];
-    for (let i = 0; i < priorityOctets.length; i += chunkSize) {
-      ipBatches.push(priorityOctets.slice(i, i + chunkSize));
-    }
-
     for (const subnet of uniqueSubnets) {
-      if (onProgress) onProgress(`Scanning Wi-Fi subnet ${subnet}.* for Desktop CRM...`);
+      if (onProgress) onProgress(`Scanning ${subnet}.* for Desktop CRM...`);
+
+      // Fast concurrent batches covering static/DHCP ranges
+      const ipBatches = [
+        [58, 189, 176, 237, 152, 222, 100, 101, 102, 103, 104, 105],
+        [1, 2, 3, 4, 5, 10, 15, 20, 25, 30, 40, 50, 100, 110, 120, 150, 200],
+      ];
 
       for (const batch of ipBatches) {
         const promises = batch.map((lastOctet) => {
@@ -683,19 +492,12 @@ export const apiClient = {
           return new Promise(async (resolve) => {
             try {
               const ctrl = new AbortController();
-              const tid = setTimeout(() => ctrl.abort(), 500);
+              const tid = setTimeout(() => ctrl.abort(), 1200);
               const r = await fetch(`${targetUrl}/health`, { signal: ctrl.signal });
               clearTimeout(tid);
               if (r.ok) {
                 const data = await r.json();
-                if (
-                  data.status === 'online' ||
-                  data.status === 'ok' ||
-                  data.online === true ||
-                  data.appId === 'vasantham-crm' ||
-                  data.dbConnected !== undefined ||
-                  data.service
-                ) {
+                if (data.online || data.status === 'online' || data.status === 'ok' || data.service) {
                   resolve({ success: true, host: targetUrl, data });
                   return;
                 }

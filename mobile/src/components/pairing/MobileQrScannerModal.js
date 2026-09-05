@@ -12,13 +12,13 @@ import {
   Platform,
   TextInput,
   KeyboardAvoidingView,
+  ScrollView,
 } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { apiClient } from '../../api/client';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const SCAN_FRAME_SIZE = Math.min(SCREEN_WIDTH * 0.68, 260);
-const BARCODE_SETTINGS = { barcodeTypes: ['qr'] };
 
 export const MobileQrScannerModal = ({
   visible,
@@ -31,8 +31,6 @@ export const MobileQrScannerModal = ({
   const [connecting, setConnecting] = useState(false);
   const [statusMessage, setStatusMessage] = useState('');
   const [scanLaserAnim] = useState(new Animated.Value(0));
-  const [cameraError, setCameraError] = useState(false);
-  const [cameraErrorMessage, setCameraErrorMessage] = useState('');
 
   // Manual IP & Auto-detect state
   const [showManualInput, setShowManualInput] = useState(false);
@@ -41,7 +39,7 @@ export const MobileQrScannerModal = ({
 
   // Laser animation effect
   useEffect(() => {
-    if (visible && !scanned && !connecting && !cameraError) {
+    if (visible && !scanned && !connecting) {
       Animated.loop(
         Animated.sequence([
           Animated.timing(scanLaserAnim, {
@@ -59,7 +57,7 @@ export const MobileQrScannerModal = ({
     } else {
       scanLaserAnim.setValue(0);
     }
-  }, [visible, scanned, connecting, cameraError]);
+  }, [visible, scanned, connecting]);
 
   // Reset scan state on reopen
   useEffect(() => {
@@ -68,27 +66,18 @@ export const MobileQrScannerModal = ({
       setConnecting(false);
       setStatusMessage('');
       setShowManualInput(false);
-      setCameraError(false);
-      setCameraErrorMessage('');
       apiClient.getApiBase().then((base) => {
         if (base) setManualHost(base);
       });
     }
   }, [visible]);
 
-  // Auto request camera permission if available
-  useEffect(() => {
-    if (visible && permission && !permission.granted && permission.canAskAgain) {
-      requestPermission().catch(() => {});
-    }
-  }, [visible, permission]);
-
   const handleBarcodeScanned = async ({ data }) => {
     if (scanned || connecting) return;
     setScanned(true);
 
-    const parsedPayload = apiClient.parsePairingPayload(data);
-    if (!parsedPayload) {
+    const parsedApiUrl = apiClient.parsePairingPayload(data);
+    if (!parsedApiUrl) {
       Alert.alert(
         'Invalid QR Code',
         'This QR code does not contain a valid Vasantham CRM server payload.',
@@ -97,32 +86,22 @@ export const MobileQrScannerModal = ({
       return;
     }
 
-    const targetUrl = typeof parsedPayload === 'object' ? (parsedPayload.primaryUrl || '') : parsedPayload;
     setConnecting(true);
-    setStatusMessage(`Verifying Desktop Server at ${targetUrl}...`);
+    setStatusMessage(`Connecting to ${parsedApiUrl}...`);
 
     try {
-      const testRes = await apiClient.testConnection(parsedPayload);
-      if (testRes.success && testRes.host) {
-        setStatusMessage('Connected to Desktop Server!');
+      const testRes = await apiClient.testConnection(parsedApiUrl);
+      if (testRes.success) {
+        setStatusMessage('Connected to Desktop Server');
         setTimeout(() => {
-          if (onConnected) onConnected(testRes.host);
+          if (onConnected) onConnected(parsedApiUrl);
           if (onClose) onClose();
         }, 500);
       } else {
         Alert.alert(
           'Connection Failed',
-          `Could not reach Desktop CRM server at:\n${targetUrl}\n\n1. Ensure phone and PC are on the same Wi-Fi network.\n2. Ensure Desktop CRM app is open on your PC.`,
+          `Could not reach Desktop CRM at:\n${parsedApiUrl}\n\n1. Ensure phone and PC are on the same Wi-Fi network.\n2. Ensure Desktop CRM is running.`,
           [
-            {
-              text: 'Try Auto-Detect',
-              onPress: () => {
-                setScanned(false);
-                setConnecting(false);
-                setStatusMessage('');
-                handleAutoDetect();
-              },
-            },
             {
               text: 'Scan Again',
               onPress: () => {
@@ -229,20 +208,20 @@ export const MobileQrScannerModal = ({
         )}
       </View>
 
-      {/* Camera Viewport / Permission Handling / Error Handling */}
+      {/* Camera Viewport / Permission Handling */}
       {!permission ? (
         <View style={styles.centerBox}>
-          <ActivityIndicator size="small" color="#3B82F6" />
+          <ActivityIndicator size="small" color="#0F766E" />
           <Text style={styles.statusText}>Checking camera...</Text>
         </View>
       ) : !permission.granted ? (
         <View style={styles.permissionBox}>
           <View style={styles.permissionIconBadge}>
-            <Text style={{ fontSize: 24 }}>📷</Text>
+            <View style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: '#0F766E' }} />
           </View>
           <Text style={styles.permissionTitle}>Camera Access Required</Text>
           <Text style={styles.permissionDesc}>
-            Vasantham CRM uses the camera to scan your Desktop screen for automatic server pairing.
+            Vasantham CRM uses the camera to scan your Desktop screen for automatic 1-second server pairing.
           </Text>
 
           <TouchableOpacity style={styles.grantBtn} onPress={requestPermission} activeOpacity={0.85}>
@@ -257,46 +236,14 @@ export const MobileQrScannerModal = ({
             <Text style={styles.secondaryBtnText}>Enter IP Address Manually</Text>
           </TouchableOpacity>
         </View>
-      ) : cameraError ? (
-        <View style={styles.permissionBox}>
-          <View style={styles.permissionIconBadge}>
-            <Text style={{ fontSize: 24 }}>⚠️</Text>
-          </View>
-          <Text style={styles.permissionTitle}>Camera Initialization Error</Text>
-          <Text style={styles.permissionDesc}>
-            {cameraErrorMessage || 'Unable to start camera scanner on this device.'}
-          </Text>
-
-          <TouchableOpacity
-            style={styles.grantBtn}
-            onPress={() => {
-              setCameraError(false);
-              setCameraErrorMessage('');
-            }}
-            activeOpacity={0.85}
-          >
-            <Text style={styles.grantBtnText}>Retry Camera</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.secondaryBtn}
-            onPress={() => setShowManualInput(true)}
-            activeOpacity={0.85}
-          >
-            <Text style={styles.secondaryBtnText}>Enter IP Address Manually</Text>
-          </TouchableOpacity>
-        </View>
       ) : (
         <View style={styles.cameraWrapper}>
           <CameraView
             style={StyleSheet.absoluteFillObject}
-            barcodeScannerSettings={BARCODE_SETTINGS}
-            onBarcodeScanned={handleBarcodeScanned}
-            onMountError={(err) => {
-              console.warn('Camera mount error:', err);
-              setCameraError(true);
-              setCameraErrorMessage(err?.message || 'Camera failed to mount.');
+            barcodeScannerSettings={{
+              barcodeTypes: ['qr'],
             }}
+            onBarcodeScanned={scanned ? undefined : handleBarcodeScanned}
           />
 
           {/* Viewfinder Target Mask */}
@@ -332,7 +279,7 @@ export const MobileQrScannerModal = ({
           {/* Status / Connecting Notification Banner */}
           {(connecting || autoDetecting) && (
             <View style={styles.connectingBanner}>
-              <ActivityIndicator size="small" color="#FFFFFF" style={{ marginRight: 8 }} />
+              <ActivityIndicator size="small" color="#0F766E" style={{ marginRight: 8 }} />
               <Text style={styles.connectingText}>{statusMessage || 'Verifying Connection...'}</Text>
             </View>
           )}
@@ -357,7 +304,7 @@ export const MobileQrScannerModal = ({
               value={manualHost}
               onChangeText={setManualHost}
               placeholder="http://192.168.1.xxx:5000/api"
-              placeholderTextColor="#64748B"
+              placeholderTextColor="#94A3B8"
               autoCapitalize="none"
               autoCorrect={false}
             />
@@ -378,7 +325,7 @@ export const MobileQrScannerModal = ({
           <View style={styles.footerContent}>
             <View style={styles.instructionBadge}>
               <Text style={styles.instructionText}>
-                💡 In Desktop CRM, click <Text style={{ fontWeight: '800', color: '#FFFFFF' }}>"📱 Pair Mobile"</Text> at the top to display the pairing QR code.
+                In Desktop CRM, click <Text style={{ fontWeight: '800', color: '#0F172A' }}>"Pair Mobile"</Text> at the top to display the pairing QR code.
               </Text>
             </View>
 
@@ -390,7 +337,6 @@ export const MobileQrScannerModal = ({
                 disabled={autoDetecting}
                 activeOpacity={0.75}
               >
-                <Text style={{ fontSize: 13 }}>📡</Text>
                 <Text style={styles.actionChipText}>
                   {autoDetecting ? 'Scanning Wi-Fi...' : 'Auto-Detect Wi-Fi'}
                 </Text>
@@ -401,7 +347,6 @@ export const MobileQrScannerModal = ({
                 onPress={() => setShowManualInput(true)}
                 activeOpacity={0.75}
               >
-                <Text style={{ fontSize: 13 }}>⌨️</Text>
                 <Text style={styles.actionChipText}>Manual IP</Text>
               </TouchableOpacity>
             </View>
@@ -425,51 +370,51 @@ export const MobileQrScannerModal = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#090D16',
+    backgroundColor: '#F8FAFC',
   },
   header: {
     paddingTop: Platform.OS === 'ios' ? 56 : 40,
     paddingHorizontal: 20,
     paddingBottom: 14,
-    backgroundColor: '#0F172A',
+    backgroundColor: '#FFFFFF',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.08)',
+    borderBottomColor: '#E2E8F0',
   },
   headerTitle: {
     fontSize: 17,
     fontWeight: '900',
-    color: '#FFFFFF',
+    color: '#0F172A',
     letterSpacing: -0.3,
   },
   liveTag: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: 'rgba(37, 99, 235, 0.2)',
+    backgroundColor: '#ECFEF8',
     paddingHorizontal: 6,
     paddingVertical: 1.5,
     borderRadius: 4,
     borderWidth: 1,
-    borderColor: 'rgba(37, 99, 235, 0.4)',
+    borderColor: '#CCFBF1',
   },
   liveDot: {
     width: 4,
     height: 4,
     borderRadius: 2,
-    backgroundColor: '#3B82F6',
+    backgroundColor: '#0F766E',
   },
   liveTagText: {
     fontSize: 8.5,
     fontWeight: '900',
-    color: '#93C5FD',
+    color: '#0F766E',
     letterSpacing: 0.6,
   },
   headerSubtitle: {
     fontSize: 11,
-    color: '#94A3B8',
+    color: '#64748B',
     marginTop: 2,
     fontWeight: '500',
   },
@@ -477,13 +422,13 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: '#F1F5F9',
     alignItems: 'center',
     justifyContent: 'center',
   },
   closeBtnText: {
     fontSize: 13,
-    color: '#E2E8F0',
+    color: '#475569',
     fontWeight: '800',
   },
   cameraWrapper: {
@@ -493,7 +438,7 @@ const styles = StyleSheet.create({
   },
   overlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(9, 13, 22, 0.55)',
+    backgroundColor: 'rgba(15, 23, 42, 0.35)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -504,13 +449,13 @@ const styles = StyleSheet.create({
     position: 'relative',
     backgroundColor: 'transparent',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.15)',
+    borderColor: 'rgba(255, 255, 255, 0.50)',
   },
   corner: {
     position: 'absolute',
     width: 22,
     height: 22,
-    borderColor: '#3B82F6',
+    borderColor: '#0F766E',
   },
   topLeft: {
     top: -1,
@@ -544,9 +489,9 @@ const styles = StyleSheet.create({
     height: 2.5,
     width: SCAN_FRAME_SIZE - 20,
     alignSelf: 'center',
-    backgroundColor: '#38BDF8',
+    backgroundColor: '#0F766E',
     borderRadius: 1.5,
-    shadowColor: '#38BDF8',
+    shadowColor: '#0F766E',
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.9,
     shadowRadius: 8,
@@ -557,7 +502,7 @@ const styles = StyleSheet.create({
     bottom: 24,
     left: 20,
     right: 20,
-    backgroundColor: '#0F172A',
+    backgroundColor: '#FFFFFF',
     borderRadius: 12,
     paddingVertical: 12,
     paddingHorizontal: 16,
@@ -565,17 +510,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(59, 130, 246, 0.4)',
-    shadowColor: '#000',
+    borderColor: '#CBD5E1',
+    shadowColor: '#0F172A',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.1,
     shadowRadius: 8,
-    elevation: 6,
+    elevation: 4,
   },
   connectingText: {
     fontSize: 12.5,
     fontWeight: '800',
-    color: '#FFFFFF',
+    color: '#0F172A',
   },
   centerBox: {
     flex: 1,
@@ -585,7 +530,7 @@ const styles = StyleSheet.create({
   },
   statusText: {
     fontSize: 12,
-    color: '#94A3B8',
+    color: '#64748B',
     fontWeight: '600',
   },
   permissionBox: {
@@ -593,45 +538,44 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 28,
+    backgroundColor: '#F8FAFC',
   },
   permissionIconBadge: {
     width: 60,
     height: 60,
     borderRadius: 20,
-    backgroundColor: 'rgba(37, 99, 235, 0.15)',
+    backgroundColor: '#ECFEF8',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: 'rgba(37, 99, 235, 0.3)',
+    borderColor: '#CCFBF1',
   },
   permissionTitle: {
     fontSize: 18,
     fontWeight: '900',
-    color: '#FFFFFF',
+    color: '#0F172A',
     marginBottom: 8,
     textAlign: 'center',
   },
   permissionDesc: {
     fontSize: 12.5,
-    color: '#94A3B8',
+    color: '#64748B',
     textAlign: 'center',
     lineHeight: 18,
     marginBottom: 20,
   },
   grantBtn: {
-    backgroundColor: '#2563EB',
+    backgroundColor: '#0F766E',
     paddingVertical: 14,
     paddingHorizontal: 24,
     borderRadius: 14,
     width: '100%',
     alignItems: 'center',
     marginBottom: 10,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.15)',
-    shadowColor: '#2563EB',
+    shadowColor: '#0F766E',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.35,
+    shadowOpacity: 0.2,
     shadowRadius: 8,
     elevation: 4,
   },
@@ -642,25 +586,25 @@ const styles = StyleSheet.create({
     letterSpacing: -0.2,
   },
   secondaryBtn: {
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    backgroundColor: '#F1F5F9',
     paddingVertical: 13,
     paddingHorizontal: 20,
     borderRadius: 14,
     width: '100%',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.12)',
+    borderColor: '#E2E8F0',
   },
   secondaryBtnText: {
     fontSize: 13,
     fontWeight: '800',
-    color: '#E2E8F0',
+    color: '#334155',
     letterSpacing: -0.2,
   },
   footerDeck: {
-    backgroundColor: '#0F172A',
+    backgroundColor: '#FFFFFF',
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255, 255, 255, 0.08)',
+    borderTopColor: '#E2E8F0',
     paddingHorizontal: 16,
     paddingTop: 12,
     paddingBottom: Platform.OS === 'ios' ? 32 : 16,
@@ -669,16 +613,16 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   instructionBadge: {
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    backgroundColor: '#F8FAFC',
     borderRadius: 12,
     paddingHorizontal: 13,
     paddingVertical: 9,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
+    borderColor: '#E2E8F0',
   },
   instructionText: {
     fontSize: 12,
-    color: '#94A3B8',
+    color: '#475569',
     lineHeight: 17,
     textAlign: 'center',
   },
@@ -688,7 +632,7 @@ const styles = StyleSheet.create({
   },
   actionChip: {
     flex: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    backgroundColor: '#F1F5F9',
     borderRadius: 13,
     paddingVertical: 12,
     paddingHorizontal: 14,
@@ -697,50 +641,48 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 8,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.14)',
+    borderColor: '#E2E8F0',
   },
   actionChipText: {
     fontSize: 12.5,
     fontWeight: '900',
-    color: '#F8FAFC',
+    color: '#0F172A',
     letterSpacing: -0.2,
   },
   manualInputCard: {
-    backgroundColor: '#1E293B',
+    backgroundColor: '#F8FAFC',
     borderRadius: 16,
     padding: 15,
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: '#E2E8F0',
   },
   manualLabel: {
     fontSize: 10.5,
     fontWeight: '900',
-    color: '#94A3B8',
+    color: '#64748B',
     letterSpacing: 0.6,
   },
   manualTextInput: {
-    backgroundColor: '#0F172A',
+    backgroundColor: '#FFFFFF',
     borderWidth: 1.2,
-    borderColor: '#475569',
+    borderColor: '#CBD5E1',
     borderRadius: 12,
     paddingHorizontal: 13,
     paddingVertical: 10,
     fontSize: 13.5,
-    color: '#FFFFFF',
+    color: '#0F172A',
     fontWeight: '700',
     marginBottom: 11,
   },
   manualConnectBtn: {
-    backgroundColor: '#2563EB',
+    backgroundColor: '#0F766E',
     borderRadius: 12,
     paddingVertical: 12.5,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.15)',
-    shadowColor: '#2563EB',
+    shadowColor: '#0F766E',
     shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.2,
     shadowRadius: 6,
     elevation: 3,
   },
