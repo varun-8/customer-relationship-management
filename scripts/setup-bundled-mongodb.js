@@ -3,12 +3,12 @@ const path = require('path');
 const https = require('https');
 const { execSync } = require('child_process');
 
-const MONGO_VERSION = '6.0.20';
+const MONGO_VERSION = '6.0.29';
 const MONGO_URL = `https://fastdl.mongodb.org/windows/mongodb-windows-x86_64-${MONGO_VERSION}.zip`;
 
 const ROOT_DIR = path.resolve(__dirname, '..');
 const BUNDLE_TARGET_DIR = path.join(ROOT_DIR, 'backend', 'bin', 'mongodb');
-const TEMP_ZIP_PATH = path.join(ROOT_DIR, 'backend', 'bin', 'mongodb-6.0.zip');
+const TEMP_ZIP_PATH = path.join(ROOT_DIR, 'backend', 'bin', `mongodb-${MONGO_VERSION}.zip`);
 const targetMongod = path.join(BUNDLE_TARGET_DIR, 'mongod.exe');
 
 const forceRebuild = process.argv.includes('--force');

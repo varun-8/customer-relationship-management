@@ -25,6 +25,9 @@ mobile/.env
 !backend/bin/**
 !*.exe
 !*.apk
+backend/bin/*.zip
+backend/bin/temp_extract/
+backend/data/
 
 # Expo / React Native & Android Native Builds
 .expo/
