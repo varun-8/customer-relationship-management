@@ -79,7 +79,7 @@ export class ErrorBoundary extends React.Component {
             </h1>
 
             <p style={{ fontSize: '13.5px', color: '#64748B', margin: '0 0 20px', lineHeight: '1.5' }}>
-              The application encountered an unexpected runtime error. Your saved data in MongoDB Atlas is safe.
+              The application encountered an unexpected runtime error. Your saved data in the database is safe.
             </p>
 
             {this.state.error && (

@@ -28,7 +28,6 @@ import {
 import { api } from '../../services/api';
 import { useBranding } from '../../context/BrandingContext';
 import { useCustomer } from '../../context/CustomerContext';
-import { useToneDown } from '../../context/ToneDownContext';
 import { FormBuilderView } from '../form-builder/FormBuilderView';
 import { SequenceConfigModal } from './SequenceConfigModal';
 import { DataImportModal } from './DataImportModal';
@@ -59,7 +58,6 @@ export const SettingsView = ({
   } = useBranding();
 
   const { customers, sequenceConfig, activeForm } = useCustomer();
-  const { isToneDown, toggleToneDown } = useToneDown();
 
   // Branding Form State
   const [appName, setAppName] = useState(currentAppName || 'Vasantham Tiles & Sanitary Wares');
@@ -1100,83 +1098,7 @@ export const SettingsView = ({
             </div>
           </div>
 
-          {/* Tone Down Mode Control Card */}
-          <div
-            style={{
-              backgroundColor: isToneDown ? '#F1F5F9' : '#FFFFFF',
-              borderRadius: '20px',
-              border: isToneDown ? '2px solid #000000' : '1.5px solid #E2E8F0',
-              padding: '24px',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '14px',
-              boxShadow: isToneDown ? 'none' : '0 2px 8px rgba(0,0,0,0.02)',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <div
-                  style={{
-                    width: '40px',
-                    height: '40px',
-                    borderRadius: '10px',
-                    backgroundColor: isToneDown ? '#000000' : '#F1F5F9',
-                    color: isToneDown ? '#FFFFFF' : '#0F172A',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontWeight: '900',
-                    fontSize: '15px',
-                  }}
-                >
-                  B/W
-                </div>
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <h3 style={{ fontSize: '16px', fontWeight: '800', color: '#0F172A', margin: 0 }}>
-                      Tone Down Mode
-                    </h3>
-                    <span
-                      style={{
-                        fontSize: '11px',
-                        fontWeight: '800',
-                        backgroundColor: isToneDown ? '#000000' : '#E2E8F0',
-                        color: isToneDown ? '#FFFFFF' : '#475569',
-                        padding: '3px 8px',
-                        borderRadius: '6px',
-                      }}
-                    >
-                      {isToneDown ? 'ACTIVE (DEFAULT ON)' : 'INACTIVE (OFF)'}
-                    </span>
-                  </div>
-                  <p style={{ fontSize: '12.5px', color: '#64748B', margin: '3px 0 0', maxWidth: '600px' }}>
-                    Removes all colors, transitions, and animations; strips navigation to simple black & white; hides showroom revenue goal cards, stats, and heavy record tables for a raw minimal view.
-                  </p>
-                </div>
-              </div>
 
-              <button
-                type="button"
-                onClick={() => toggleToneDown()}
-                style={{
-                  backgroundColor: isToneDown ? '#000000' : '#2563EB',
-                  color: '#FFFFFF',
-                  border: isToneDown ? '2px solid #000000' : 'none',
-                  borderRadius: '12px',
-                  padding: '10px 20px',
-                  fontSize: '13px',
-                  fontWeight: '800',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  boxShadow: isToneDown ? 'none' : '0 4px 12px rgba(37, 99, 235, 0.25)',
-                }}
-              >
-                <span>{isToneDown ? 'Turn Tone Down OFF (Restore Theme)' : 'Turn Tone Down ON'}</span>
-              </button>
-            </div>
-          </div>
 
           {/* Developer Reset Danger Zone */}
           <div style={{ backgroundColor: '#FEF2F2', borderRadius: '20px', border: '1.5px solid #FECDD3', padding: '24px', display: 'flex', flexDirection: 'column', gap: '14px' }}>

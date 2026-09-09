@@ -19,6 +19,13 @@
     },
     "android": {
       "package": "com.vasantham.crm",
+      "usesCleartextTraffic": true,
+      "permissions": [
+        "INTERNET",
+        "ACCESS_NETWORK_STATE",
+        "ACCESS_WIFI_STATE",
+        "CAMERA"
+      ],
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#FFFFFF"
@@ -26,8 +33,9 @@
     },
     "extra": {
       "eas": {
-        "projectId": "fbff3ac0-94e2-4072-b59e-abbbc942f0f9"
+        "projectId": "87e4751f-f72f-4a8e-a0bc-e0cedc72354b"
       }
-    }
+    },
+    "owner": "varuunnnnn"
   }
 }

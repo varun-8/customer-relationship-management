@@ -16,6 +16,64 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { colors } from '../../theme/colors';
 import { apiClient } from '../../api/client';
 
+export function LogoutVectorIcon({ size = 18, color = '#DC2626' }) {
+  return (
+    <View style={{ width: size, height: size, justifyContent: 'center', alignItems: 'center' }}>
+      {/* Door frame */}
+      <View
+        style={{
+          position: 'absolute',
+          left: 1,
+          top: 1,
+          bottom: 1,
+          width: size * 0.45,
+          borderWidth: 1.8,
+          borderColor: color,
+          borderRightWidth: 0,
+          borderRadius: 2.5,
+        }}
+      />
+      {/* Arrow stem */}
+      <View
+        style={{
+          position: 'absolute',
+          left: size * 0.28,
+          width: size * 0.52,
+          height: 1.8,
+          backgroundColor: color,
+          borderRadius: 1,
+        }}
+      />
+      {/* Arrow top head */}
+      <View
+        style={{
+          position: 'absolute',
+          right: 1.5,
+          top: size * 0.5 - 4.5,
+          width: 5.5,
+          height: 1.8,
+          backgroundColor: color,
+          borderRadius: 1,
+          transform: [{ rotate: '45deg' }],
+        }}
+      />
+      {/* Arrow bottom head */}
+      <View
+        style={{
+          position: 'absolute',
+          right: 1.5,
+          bottom: size * 0.5 - 4.5,
+          width: 5.5,
+          height: 1.8,
+          backgroundColor: color,
+          borderRadius: 1,
+          transform: [{ rotate: '-45deg' }],
+        }}
+      />
+    </View>
+  );
+}
+
 export function MobileSettingsModal({
   visible,
   onClose,
@@ -32,6 +90,7 @@ export function MobileSettingsModal({
   onSwitchProfile,
   onDisconnectServer,
   onReloadData,
+  onLogout,
   branding,
 }) {
   const [clearingCache, setClearingCache] = useState(false);
@@ -315,18 +374,18 @@ export function MobileSettingsModal({
                 style={styles.groupedRow}
                 onPress={() => {
                   onClose();
-                  if (onSwitchProfile) onSwitchProfile();
+                  if (onLogout) onLogout();
                 }}
                 activeOpacity={0.7}
               >
-                <View style={[styles.iconSquircle, { backgroundColor: '#F5F3FF' }]}>
-                  <View style={styles.userIconShape} />
+                <View style={[styles.iconSquircle, { backgroundColor: '#FEF2F2' }]}>
+                  <LogoutVectorIcon size={17} color="#DC2626" />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.rowTitle}>Switch Staff Profile</Text>
-                  <Text style={styles.rowSubtitle}>Select another executive profile</Text>
+                  <Text style={[styles.rowTitle, { color: '#DC2626' }]}>Log Out Account</Text>
+                  <Text style={styles.rowSubtitle}>End session and return to login</Text>
                 </View>
-                <Text style={styles.chevronText}>›</Text>
+                <Text style={[styles.chevronText, { color: '#F87171' }]}>›</Text>
               </TouchableOpacity>
 
               <View style={styles.groupedDivider} />

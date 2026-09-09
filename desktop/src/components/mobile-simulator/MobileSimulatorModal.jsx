@@ -43,7 +43,7 @@ export const MobileSimulatorModal = ({ onClose }) => {
     await fetchCustomers();
     setTimeout(() => {
       setSyncing(false);
-      setSuccessToast('Synced with MongoDB Atlas!');
+      setSuccessToast('Synced with database!');
       setTimeout(() => setSuccessToast(''), 2500);
     }, 600);
   };

@@ -1,13 +1,12 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform, NativeModules } from 'react-native';
 
-// Current active development host
-const CURRENT_LAN_IP = '10.97.47.58';
-const DEFAULT_HOST = `http://${CURRENT_LAN_IP}:5000/api`;
 const HOST_STORAGE_KEY = 'vasantham_api_host_url';
 const TOKEN_KEY = 'vasantham_mobile_jwt';
+const USER_STORAGE_KEY = 'vasantham_mobile_user';
 const DEVICE_ID_STORAGE_KEY = 'vasantham_mobile_device_id';
 let cachedDeviceId = null;
+let cachedWorkingHost = null;
 
 // Purge any legacy cached data keys on startup
 (async () => {
@@ -22,30 +21,83 @@ let cachedDeviceId = null;
   } catch (e) {}
 })();
 
-// Candidate host list for automatic discovery
-const getCandidateHosts = () => {
-  const candidates = [];
-
-  // Extract host from React Native bundle URL if available
+// Helper to dynamically extract host from Metro / Dev server bundle URL or Web window
+const getMetroHost = () => {
   const scriptURL = NativeModules.SourceCode?.scriptURL;
   if (scriptURL) {
     try {
       const match = scriptURL.match(/https?:\/\/([^/:]+)/);
       if (match && match[1] && match[1] !== 'localhost' && match[1] !== '127.0.0.1') {
-        candidates.push(`http://${match[1]}:5000/api`);
+        return match[1];
       }
     } catch (e) {}
   }
-
-  candidates.push(DEFAULT_HOST);
-  candidates.push('http://localhost:5000/api');
-  candidates.push('http://10.0.2.2:5000/api'); // Android emulator fallback
-  candidates.push('http://127.0.0.1:5000/api');
-
-  return [...new Set(candidates)];
+  if (Platform.OS === 'web' && typeof window !== 'undefined' && window.location?.hostname) {
+    const hostname = window.location.hostname;
+    if (hostname && hostname !== 'localhost' && hostname !== '127.0.0.1') {
+      return hostname;
+    }
+  }
+  return null;
 };
 
-let cachedWorkingHost = null;
+// Dynamically determine default API host without any hardcoded IP
+const getDynamicDefaultHost = () => {
+  // 1. Check Expo public environment variables if provided
+  if (process.env.EXPO_PUBLIC_API_URL) {
+    let clean = process.env.EXPO_PUBLIC_API_URL.trim().replace(/\/+$/, '');
+    if (!clean.endsWith('/api')) clean += '/api';
+    return clean;
+  }
+  if (process.env.EXPO_PUBLIC_SERVER_IP) {
+    return `http://${process.env.EXPO_PUBLIC_SERVER_IP.trim()}:5000/api`;
+  }
+
+  // 2. Extract dynamically from Metro packager host IP
+  const metroHost = getMetroHost();
+  if (metroHost) {
+    return `http://${metroHost}:5000/api`;
+  }
+
+  // 3. Android emulator alias
+  if (Platform.OS === 'android') {
+    return 'http://10.0.2.2:5000/api';
+  }
+
+  // 4. Default localhost loopback
+  return 'http://localhost:5000/api';
+};
+
+// Candidate host list for automatic discovery (100% dynamic)
+const getCandidateHosts = () => {
+  const candidates = [];
+
+  // 1. Dynamic host extracted from active Metro packager URL
+  const metroHost = getMetroHost();
+  if (metroHost) {
+    candidates.push(`http://${metroHost}:5000/api`);
+  }
+
+  // 2. Env variables if configured
+  if (process.env.EXPO_PUBLIC_API_URL) {
+    candidates.push(process.env.EXPO_PUBLIC_API_URL);
+  }
+  if (process.env.EXPO_PUBLIC_SERVER_IP) {
+    candidates.push(`http://${process.env.EXPO_PUBLIC_SERVER_IP}:5000/api`);
+  }
+
+  // 3. Dynamic default
+  candidates.push(getDynamicDefaultHost());
+
+  // 4. Platform-specific local candidates
+  if (Platform.OS === 'android') {
+    candidates.push('http://10.0.2.2:5000/api');
+  }
+  candidates.push('http://localhost:5000/api');
+  candidates.push('http://127.0.0.1:5000/api');
+
+  return [...new Set(candidates.filter(Boolean))];
+};
 
 // Fallback schema if network is unreachable
 export const FALLBACK_SCHEMA = {
@@ -131,7 +183,7 @@ export const FALLBACK_SCHEMA = {
     { id: 'field_sanitary_req', name: 'sanitaryRequirement', label: 'Sanitary Requirement', type: 'radio', active: true, order: 12, options: [{ label: 'Yes', value: 'Yes' }, { label: 'No', value: 'No' }] },
     { id: 'field_adhesive_req', name: 'adhesiveRequirement', label: 'Adhesive Requirement', type: 'radio', active: true, order: 13, options: [{ label: 'Yes', value: 'Yes' }, { label: 'No', value: 'No' }] },
     { id: 'field_quotation_val', name: 'quotationValue', label: 'Quotation Value (₹)', type: 'currency', active: true, order: 14 },
-    { id: 'field_quotation_date', name: 'quotationDate', label: 'Quotation Date', type: 'date', active: true, order: 15 },
+    { id: 'field_quotation_date', name: 'quotationDate', label: 'Quotation Date', type: 'date', active: false, order: 15 },
     {
       id: 'field_status',
       name: 'status',
@@ -189,8 +241,9 @@ export const apiClient = {
       }
     } catch (e) {}
 
-    cachedWorkingHost = DEFAULT_HOST;
-    return DEFAULT_HOST;
+    const dynamicHost = getDynamicDefaultHost();
+    cachedWorkingHost = dynamicHost;
+    return dynamicHost;
   },
 
   async setApiBase(url) {
@@ -215,6 +268,69 @@ export const apiClient = {
 
   async removeToken() {
     await AsyncStorage.removeItem(TOKEN_KEY);
+  },
+
+  async login(identifier, password) {
+    try {
+      const base = await this.getApiBase();
+      const deviceId = await this.getDeviceId();
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 8000);
+
+      const res = await fetch(`${base}/auth/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Device-Id': deviceId,
+        },
+        body: JSON.stringify({
+          username: (identifier || '').trim(),
+          email: (identifier || '').trim(),
+          password: password || '',
+        }),
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+
+      const data = await res.json();
+      if (res.ok && data.success && data.data?.token) {
+        await this.setToken(data.data.token);
+        await this.setSavedUser(data.data);
+        const role = (data.data.role === 'owner' || data.data.role === 'admin') ? 'owner' : 'employee';
+        await this.setSavedAuthRole(role);
+        return { success: true, data: data.data };
+      }
+      return { success: false, message: data.message || 'Invalid username or password' };
+    } catch (e) {
+      return { success: false, message: e.message || 'Unable to connect to server' };
+    }
+  },
+
+  async getSavedUser() {
+    try {
+      const raw = await AsyncStorage.getItem(USER_STORAGE_KEY);
+      return raw ? JSON.parse(raw) : null;
+    } catch (e) {
+      return null;
+    }
+  },
+
+  async setSavedUser(user) {
+    try {
+      if (user) {
+        await AsyncStorage.setItem(USER_STORAGE_KEY, JSON.stringify(user));
+      } else {
+        await AsyncStorage.removeItem(USER_STORAGE_KEY);
+      }
+    } catch (e) {}
+  },
+
+  async logout() {
+    try {
+      await this.removeToken();
+      await this.setSavedUser(null);
+      await this.setSavedAuthRole(null);
+    } catch (e) {}
   },
 
   async getDeviceId() {
@@ -451,39 +567,62 @@ export const apiClient = {
     return { success: false, error: 'Cannot connect to backend API server. Verify backend is running.' };
   },
 
-  // Auto-detect Desktop CRM Server across local subnets with dynamic subnet extraction
+  // Auto-detect Desktop CRM Server across local subnets with dynamic subnet extraction (zero hardcoded IPs)
   async autoDetectServer(onProgress) {
     const candidateSubnets = [];
+    const priorityOctets = [];
 
-    // 1. Extract subnet from React Native Metro scriptURL if running on device
-    const scriptURL = NativeModules.SourceCode?.scriptURL;
-    if (scriptURL) {
-      const match = scriptURL.match(/https?:\/\/(\d+\.\d+\.\d+)\.\d+/);
+    // 1. Extract host and subnet dynamically from Metro dev packager scriptURL or web
+    const metroHost = getMetroHost();
+    if (metroHost) {
+      const match = metroHost.match(/^(\d+\.\d+\.\d+)\.(\d+)$/);
       if (match && match[1]) {
         candidateSubnets.push(match[1]);
+        priorityOctets.push(parseInt(match[2], 10));
       }
     }
 
-    // 2. Extract subnet from DEFAULT_HOST or stored host
+    // 2. Extract subnet from stored host
     try {
       const stored = await AsyncStorage.getItem(HOST_STORAGE_KEY);
       if (stored) {
-        const match = stored.match(/https?:\/\/(\d+\.\d+\.\d+)\.\d+/);
-        if (match && match[1]) candidateSubnets.push(match[1]);
+        const match = stored.match(/https?:\/\/(\d+\.\d+\.\d+)\.(\d+)/);
+        if (match && match[1]) {
+          candidateSubnets.push(match[1]);
+          priorityOctets.push(parseInt(match[2], 10));
+        }
       }
     } catch (e) {}
 
-    // 3. Default common LAN subnets
-    candidateSubnets.push('10.97.47', '10.169.195', '192.168.1', '192.168.0', '192.168.29', '192.168.137', '172.20.10');
+    // 3. Extract subnet from env if present
+    if (process.env.EXPO_PUBLIC_SERVER_IP) {
+      const match = process.env.EXPO_PUBLIC_SERVER_IP.match(/^(\d+\.\d+\.\d+)\.(\d+)$/);
+      if (match && match[1]) {
+        candidateSubnets.push(match[1]);
+        priorityOctets.push(parseInt(match[2], 10));
+      }
+    }
+
+    // 4. Standard common private LAN subnets (RFC 1918)
+    candidateSubnets.push(
+      '192.168.1',
+      '192.168.0',
+      '192.168.29',
+      '192.168.137',
+      '10.0.0',
+      '10.0.1',
+      '172.20.10'
+    );
+
     const uniqueSubnets = [...new Set(candidateSubnets.filter(Boolean))];
+    const uniquePriorityOctets = [...new Set(priorityOctets.filter((o) => !isNaN(o) && o >= 1 && o <= 254))];
 
     for (const subnet of uniqueSubnets) {
       if (onProgress) onProgress(`Scanning ${subnet}.* for Desktop CRM...`);
 
-      // Fast concurrent batches covering static/DHCP ranges
+      // Priority host octets followed by common router / static / DHCP allocation pools
       const ipBatches = [
-        [58, 189, 176, 237, 152, 222, 100, 101, 102, 103, 104, 105],
-        [1, 2, 3, 4, 5, 10, 15, 20, 25, 30, 40, 50, 100, 110, 120, 150, 200],
+        [...new Set([...uniquePriorityOctets, 1, 2, 3, 4, 5, 10, 15, 20, 25, 30, 40, 50, 100, 101, 102, 103, 104, 105, 110, 120, 150, 200])],
       ];
 
       for (const batch of ipBatches) {
@@ -633,31 +772,6 @@ export const apiClient = {
       logoImage: '',
       primaryColor: '#2563EB',
     };
-  },
-
-  // Login
-  async login(email, password) {
-    try {
-      const base = await this.getApiBase();
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 5000);
-
-      const res = await fetch(`${base}/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
-        signal: controller.signal,
-      });
-      clearTimeout(timeoutId);
-
-      const data = await res.json();
-      if (data.success && data.data?.token) {
-        await this.setToken(data.data.token);
-      }
-      return data;
-    } catch (e) {
-      return { success: false, message: e.message };
-    }
   },
 
   // Daily KPI Tracking LIVE

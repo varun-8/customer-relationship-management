@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, RefreshCw, Wifi, WifiOff, Cloud, QrCode, Smartphone } from 'lucide-react';
+import { Plus, RefreshCw, WifiOff, QrCode, Smartphone } from 'lucide-react';
 import { api } from '../../services/api';
 
 export const Header = ({
@@ -97,35 +97,8 @@ export const Header = ({
           </button>
         )}
 
-        {/* Live Cloud Connection Status Badge */}
-        {isOnline ? (
-          <div
-            title="Connected to Node.js & MongoDB Atlas backend"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              backgroundColor: '#ECFDF5',
-              border: '1px solid #A7F3D0',
-              padding: '6px 12px',
-              borderRadius: '20px',
-              fontSize: '12px',
-              fontWeight: '700',
-              color: '#047857',
-            }}
-          >
-            <span
-              style={{
-                width: '7px',
-                height: '7px',
-                borderRadius: '50%',
-                backgroundColor: '#10B981',
-                boxShadow: '0 0 6px rgba(16, 185, 129, 0.6)',
-              }}
-            />
-            <span>Cloud Live</span>
-          </div>
-        ) : (
+        {/* Server Offline Alert (Only displayed when backend is disconnected) */}
+        {!isOnline && (
           <div
             style={{
               display: 'flex',

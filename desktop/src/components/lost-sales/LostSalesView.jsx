@@ -27,10 +27,8 @@ import {
 import { api } from '../../services/api';
 import { LostSaleModal } from './LostSaleModal';
 import { ConnectionErrorState } from '../common/ConnectionErrorState';
-import { useToneDown } from '../../context/ToneDownContext';
 
 export const LostSalesView = () => {
-  const { isToneDown } = useToneDown();
   const todayStr = new Date().toISOString().split('T')[0];
 
   // State
@@ -181,35 +179,6 @@ export const LostSalesView = () => {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', animation: 'tabFadeInUp 0.3s ease' }}>
-      {/* Top Page Header Action Bar */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', flexWrap: 'wrap', gap: '12px', paddingBottom: '4px' }}>
-        <button
-          type="button"
-          onClick={() => {
-            setEditingRecord(null);
-            setShowModal(true);
-          }}
-          style={{
-            backgroundColor: '#DC2626',
-            color: '#FFFFFF',
-            border: 'none',
-            borderRadius: '12px',
-            padding: '10px 18px',
-            fontSize: '13.5px',
-            fontWeight: '800',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            boxShadow: '0 4px 14px rgba(220, 38, 38, 0.25)',
-            transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
-          }}
-        >
-          <Plus size={16} />
-          <span>Log Lost Sale</span>
-        </button>
-      </div>
-
       {/* 1. Minimalist Executive Metric Scorecards */}
       <div
         style={{
@@ -453,42 +422,44 @@ export const LostSalesView = () => {
         </div>
       )}
 
-      {/* 3. Aesthetic Minimalist Control Toolbar */}
+      {/* 3. Aesthetic Executive Control Toolbar */}
       <div
-        className="lost-sales-toolbar"
+        className="control-bar-container"
         style={{
-          background: '#FFFFFF',
-          borderRadius: isToneDown ? '8px' : '18px',
-          border: '1px solid #CBD5E1',
-          boxShadow: isToneDown ? 'none' : '0 4px 20px -2px rgba(15, 23, 42, 0.05)',
-          padding: isToneDown ? '10px 14px' : '14px 18px',
+          backgroundColor: '#FFFFFF',
+          borderRadius: '16px',
+          border: '1px solid #E2E8F0',
+          boxShadow: '0 2px 10px rgba(15, 23, 42, 0.03)',
+          padding: '12px 16px',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
           flexWrap: 'wrap',
-          gap: isToneDown ? '10px' : '14px',
+          gap: '12px',
+          transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: isToneDown ? '10px' : '12px', flexWrap: 'wrap' }}>
-          {/* Search Input */}
-          <form onSubmit={handleSearchSubmit} style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-            <Search size={15} style={{ position: 'absolute', left: '12px', color: '#94A3B8' }} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+          {/* Enhanced Search Input */}
+          <form onSubmit={handleSearchSubmit} style={{ position: 'relative', width: '280px' }}>
+            <Search size={15} style={{ position: 'absolute', left: '12px', top: '11px', color: '#94A3B8' }} />
             <input
               type="text"
               placeholder="Search lost deals, competitors..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               style={{
-                paddingLeft: '34px',
-                paddingRight: search ? '30px' : '12px',
-                height: isToneDown ? '34px' : '38px',
-                borderRadius: isToneDown ? '6px' : '10px',
-                border: '1px solid #CBD5E1',
-                background: isToneDown ? '#FFFFFF' : '#F8FAFC',
+                width: '100%',
+                paddingLeft: '36px',
+                paddingRight: search ? '32px' : '14px',
+                paddingTop: '9px',
+                paddingBottom: '9px',
+                backgroundColor: '#F8FAFC',
+                border: '1.2px solid #CBD5E1',
+                borderRadius: '11px',
                 fontSize: '13px',
+                fontWeight: '600',
                 color: '#0F172A',
-                fontWeight: '500',
-                width: '240px',
                 outline: 'none',
                 transition: 'all 0.2s ease',
               }}
@@ -497,7 +468,16 @@ export const LostSalesView = () => {
               <button
                 type="button"
                 onClick={() => { setSearch(''); fetchData(); }}
-                style={{ position: 'absolute', right: '10px', background: 'transparent', border: 'none', color: '#94A3B8', cursor: 'pointer', fontSize: '12px' }}
+                style={{
+                  position: 'absolute',
+                  right: '10px',
+                  top: '9px',
+                  background: 'none',
+                  border: 'none',
+                  color: '#94A3B8',
+                  cursor: 'pointer',
+                  fontSize: '12px',
+                }}
               >
                 ✕
               </button>
@@ -509,10 +489,10 @@ export const LostSalesView = () => {
             style={{
               display: 'flex',
               gap: '3px',
-              background: isToneDown ? '#FFFFFF' : '#F1F5F9',
-              padding: '3px',
-              borderRadius: isToneDown ? '6px' : '10px',
-              border: '1px solid #CBD5E1',
+              backgroundColor: '#F1F5F9',
+              padding: '4px',
+              borderRadius: '11px',
+              border: '1px solid #E2E8F0',
             }}
           >
             {[
@@ -529,15 +509,15 @@ export const LostSalesView = () => {
                   type="button"
                   onClick={() => setProductFilter(p.id)}
                   style={{
-                    padding: isToneDown ? '4px 10px' : '6px 12px',
-                    borderRadius: isToneDown ? '4px' : '8px',
-                    border: isToneDown && isSelected ? '1px solid #0F172A' : 'none',
-                    background: isSelected ? (isToneDown ? '#F1F5F9' : '#FFFFFF') : 'transparent',
-                    color: isSelected ? (isToneDown ? '#0F172A' : '#2563EB') : '#64748B',
+                    padding: '6px 12px',
+                    borderRadius: '8px',
+                    border: 'none',
+                    backgroundColor: isSelected ? '#FFFFFF' : 'transparent',
+                    color: isSelected ? '#2563EB' : '#64748B',
                     fontWeight: isSelected ? '800' : '600',
                     fontSize: '12px',
                     cursor: 'pointer',
-                    boxShadow: isSelected && !isToneDown ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
+                    boxShadow: isSelected ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
                     display: 'inline-flex',
                     alignItems: 'center',
                     gap: '4px',
@@ -550,37 +530,58 @@ export const LostSalesView = () => {
               );
             })}
           </div>
+
+          {/* Record Counter Pill */}
+          <span
+            style={{
+              fontSize: '12px',
+              color: '#64748B',
+              fontWeight: '700',
+              backgroundColor: '#F8FAFC',
+              border: '1px solid #E2E8F0',
+              padding: '7px 12px',
+              borderRadius: '11px',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '4px',
+            }}
+          >
+            Records: <strong style={{ color: '#0F172A' }}>{lostSales.length}</strong>
+          </span>
         </div>
 
         {/* Right Filter & Action Group */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-          {/* Sales Staff Select */}
-          <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-            <select
-              value={staffFilter}
-              onChange={(e) => setStaffFilter(e.target.value)}
-              style={{
-                height: isToneDown ? '34px' : '38px',
-                minWidth: '150px',
-                padding: '0 12px',
-                borderRadius: isToneDown ? '6px' : '10px',
-                border: '1px solid #CBD5E1',
-                background: '#FFFFFF',
-                fontSize: '12.5px',
-                color: '#0F172A',
-                fontWeight: '700',
-                outline: 'none',
-                cursor: 'pointer',
-              }}
-            >
-              <option value="all">All Sales Staff</option>
-              {staffList.map((name) => (
-                <option key={name} value={name}>
-                  {name}
-                </option>
-              ))}
-            </select>
-          </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+          {/* Sales Staff Select with custom chevron */}
+          <select
+            value={staffFilter}
+            onChange={(e) => setStaffFilter(e.target.value)}
+            style={{
+              padding: '8px 14px',
+              paddingRight: '32px',
+              borderRadius: '11px',
+              border: '1.2px solid #CBD5E1',
+              fontSize: '12.5px',
+              fontWeight: '700',
+              color: '#0F172A',
+              backgroundColor: '#FFFFFF',
+              backgroundImage: `url("data:image/svg+xml;utf8,<svg fill='%23475569' height='18' viewBox='0 0 24 24' width='18' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/></svg>")`,
+              backgroundRepeat: 'no-repeat',
+              backgroundPosition: 'right 8px center',
+              appearance: 'none',
+              WebkitAppearance: 'none',
+              boxShadow: '0 1px 3px rgba(0, 0, 0, 0.02)',
+              outline: 'none',
+              cursor: 'pointer',
+            }}
+          >
+            <option value="all">All Sales Staff</option>
+            {staffList.map((name) => (
+              <option key={name} value={name}>
+                {name}
+              </option>
+            ))}
+          </select>
 
           {/* Month Selector */}
           <input
@@ -588,65 +589,68 @@ export const LostSalesView = () => {
             value={selectedMonth}
             onChange={(e) => setSelectedMonth(e.target.value)}
             style={{
-              height: isToneDown ? '34px' : '38px',
-              borderRadius: isToneDown ? '6px' : '10px',
-              border: '1px solid #CBD5E1',
-              background: '#FFFFFF',
+              padding: '8px 12px',
+              borderRadius: '11px',
+              border: '1.2px solid #CBD5E1',
+              backgroundColor: '#FFFFFF',
               fontSize: '12.5px',
-              padding: '0 10px',
               color: '#0F172A',
               fontWeight: '700',
               outline: 'none',
               cursor: 'pointer',
+              boxShadow: '0 1px 3px rgba(0, 0, 0, 0.02)',
             }}
           />
 
+          {/* Refresh Button */}
           <button
             type="button"
             onClick={fetchData}
             title="Refresh Intelligence Data"
             style={{
-              height: isToneDown ? '34px' : '38px',
-              padding: isToneDown ? '0 10px' : '0 12px',
-              borderRadius: isToneDown ? '6px' : '10px',
-              border: '1px solid #CBD5E1',
-              background: isToneDown ? '#FFFFFF' : '#F8FAFC',
+              padding: '8px 13px',
+              borderRadius: '11px',
+              border: '1.2px solid #CBD5E1',
+              backgroundColor: '#F8FAFC',
               color: '#0F172A',
               fontSize: '12px',
               fontWeight: '700',
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
-              gap: '5px',
+              gap: '6px',
+              transition: 'all 0.15s ease',
             }}
           >
             <RefreshCw size={13} className={loading ? 'spin' : ''} />
             <span>Refresh</span>
           </button>
 
+          {/* Export CSV Button */}
           <button
             type="button"
             onClick={handleExportCSV}
             title="Export CSV"
             style={{
-              height: isToneDown ? '34px' : '38px',
-              padding: isToneDown ? '0 10px' : '0 12px',
-              borderRadius: isToneDown ? '6px' : '10px',
-              border: '1px solid #CBD5E1',
-              background: isToneDown ? '#FFFFFF' : '#F8FAFC',
+              padding: '8px 13px',
+              borderRadius: '11px',
+              border: '1.2px solid #CBD5E1',
+              backgroundColor: '#F8FAFC',
               color: '#0F172A',
               fontSize: '12px',
               fontWeight: '700',
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
-              gap: '5px',
+              gap: '6px',
+              transition: 'all 0.15s ease',
             }}
           >
             <Download size={13} />
             <span>Export CSV</span>
           </button>
 
+          {/* Primary Action Button: Log Lost Sale */}
           <button
             type="button"
             onClick={() => {
@@ -654,23 +658,22 @@ export const LostSalesView = () => {
               setShowModal(true);
             }}
             style={{
-              height: isToneDown ? '34px' : '38px',
-              padding: isToneDown ? '0 12px' : '0 16px',
-              borderRadius: isToneDown ? '6px' : '10px',
+              padding: '9px 18px',
+              borderRadius: '11px',
               border: 'none',
-              background: isToneDown ? '#0F172A' : 'linear-gradient(135deg, #DC2626 0%, #B91C1C 100%)',
+              background: 'linear-gradient(135deg, #DC2626 0%, #B91C1C 100%)',
               color: '#FFFFFF',
-              fontSize: '12.5px',
+              fontSize: '13px',
               fontWeight: '800',
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
-              gap: '6px',
-              boxShadow: isToneDown ? 'none' : '0 4px 12px rgba(220, 38, 38, 0.25)',
-              transition: 'all 0.15s ease',
+              gap: '7px',
+              boxShadow: '0 4px 14px rgba(220, 38, 38, 0.25)',
+              transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
             }}
           >
-            <Plus size={14} />
+            <Plus size={15} />
             <span>Log Lost Sale</span>
           </button>
         </div>

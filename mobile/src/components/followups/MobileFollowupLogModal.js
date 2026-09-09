@@ -11,6 +11,7 @@ import {
   Platform,
   ActivityIndicator,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { apiClient } from '../../api/client';
 
 const OUTCOMES = [
@@ -134,47 +135,80 @@ export function MobileFollowupLogModal({
             <View style={styles.sheetHandle} />
           </View>
 
-          {/* Header Bar with Editable Customer Info */}
+          {/* Modern App Header Bar */}
           <View style={styles.headerLight}>
             <View style={styles.headerIconBoxLight}>
-              <Text style={{ fontSize: 13, fontWeight: '800', color: '#0F766E' }}>LOG</Text>
+              <Text style={styles.headerIconGlyph}>✎</Text>
             </View>
-            <View style={{ flex: 1, gap: 4 }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                <TextInput
-                  style={[styles.headerTitleLight, { flex: 1, borderWidth: 1, borderColor: '#CBD5E1', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 2, backgroundColor: '#FFFFFF' }]}
-                  value={customerName}
-                  onChangeText={setCustomerName}
-                  placeholder="Customer Name"
-                  placeholderTextColor="#94A3B8"
-                />
-                {followUp.customerId && (
-                  <View style={styles.headerIdBadgeLight}>
-                    <Text style={styles.headerIdBadgeTextLight}>#{followUp.customerId}</Text>
-                  </View>
-                )}
-              </View>
-
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                <Text style={{ fontSize: 11, fontWeight: '700', color: '#64748B' }}>PH:</Text>
-                <TextInput
-                  style={{ fontSize: 12, color: '#334155', fontWeight: '700', flex: 1, borderWidth: 1, borderColor: '#CBD5E1', borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2, backgroundColor: '#FFFFFF' }}
-                  value={phone}
-                  onChangeText={setPhone}
-                  placeholder="Mobile Phone"
-                  placeholderTextColor="#94A3B8"
-                />
-              </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.headerTitleMain}>Log Follow-up Activity</Text>
+              <Text style={styles.headerSubtitleText}>Record conversation remarks & schedule reminder</Text>
             </View>
-            <TouchableOpacity onPress={onClose} style={styles.headerCloseBtnLight} activeOpacity={0.7}>
+            <TouchableOpacity
+              onPress={onClose}
+              style={styles.headerCloseBtnLight}
+              activeOpacity={0.7}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
               <Text style={styles.headerCloseBtnTextLight}>✕</Text>
             </TouchableOpacity>
           </View>
 
           <ScrollView showsVerticalScrollIndicator={false} style={styles.scroll} contentContainerStyle={{ padding: 16 }}>
+            {/* Modern Customer Target Profile Card */}
+            <View style={styles.customerCard}>
+              <View style={styles.customerAvatarCircle}>
+                <Text style={styles.customerAvatarText}>
+                  {(customerName || 'C').charAt(0).toUpperCase()}
+                </Text>
+              </View>
+
+              <View style={{ flex: 1 }}>
+                <View style={styles.customerNameRow}>
+                  <TextInput
+                    style={styles.customerNameInput}
+                    value={customerName}
+                    onChangeText={setCustomerName}
+                    placeholder="Customer Name"
+                    placeholderTextColor="#94A3B8"
+                  />
+                  {followUp.customerId && (
+                    <View style={styles.headerIdBadgeLight}>
+                      <Text style={styles.headerIdBadgeTextLight}>#{followUp.customerId}</Text>
+                    </View>
+                  )}
+                </View>
+
+                <View style={styles.customerMetaRow}>
+                  <View style={styles.phoneInputWrap}>
+                    <Text style={styles.phoneIconSmall}>📞</Text>
+                    <TextInput
+                      style={styles.customerPhoneInput}
+                      value={phone}
+                      onChangeText={setPhone}
+                      placeholder="Mobile Phone"
+                      placeholderTextColor="#94A3B8"
+                      keyboardType="phone-pad"
+                    />
+                  </View>
+
+                  {followUp.customerType ? (
+                    <View style={styles.customerTypePill}>
+                      <Text style={styles.customerTypePillText}>{followUp.customerType}</Text>
+                    </View>
+                  ) : null}
+                </View>
+              </View>
+            </View>
+
             {/* 1. Discussion Outcome Dropdown List Box */}
             <View style={styles.sectionCard}>
-              <Text style={styles.sectionHeading}>1. Call Outcome *</Text>
+              <View style={styles.sectionHeadingRow}>
+                <View style={styles.sectionHeadingIconCircle}>
+                  <Text style={styles.sectionHeadingIcon}>✓</Text>
+                </View>
+                <Text style={styles.sectionHeading}>1. Call Outcome & Priority</Text>
+              </View>
               
               {/* Outcome Dropdown Trigger Box */}
               <TouchableOpacity
@@ -186,13 +220,18 @@ export function MobileFollowupLogModal({
                 activeOpacity={0.8}
               >
                 <View style={styles.dropdownTriggerLeftGroup}>
-                  <Text style={{ fontSize: 14, fontWeight: '800', color: selectedOutcomeObj.color }}>{selectedOutcomeObj.icon}</Text>
-                  <Text style={[styles.dropdownTriggerValueText, { color: selectedOutcomeObj.color }]} numberOfLines={1}>
-                    {selectedOutcomeObj.label}
-                  </Text>
+                  <View style={[styles.outcomeIconBadge, { backgroundColor: selectedOutcomeObj.color }]}>
+                    <Text style={styles.outcomeIconBadgeText}>{selectedOutcomeObj.icon}</Text>
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.dropdownTriggerHint}>Selected Outcome</Text>
+                    <Text style={[styles.dropdownTriggerValueText, { color: selectedOutcomeObj.color }]} numberOfLines={1}>
+                      {selectedOutcomeObj.label}
+                    </Text>
+                  </View>
                 </View>
                 <View style={styles.dropdownTriggerChevronBox}>
-                  <Text style={{ fontSize: 11, color: selectedOutcomeObj.color }}>▼</Text>
+                  <Text style={{ fontSize: 13, color: selectedOutcomeObj.color, fontWeight: '800' }}>▼</Text>
                 </View>
               </TouchableOpacity>
 
@@ -212,7 +251,7 @@ export function MobileFollowupLogModal({
                     <View style={styles.outcomeModalHeader}>
                       <Text style={styles.outcomeModalTitle}>Select Call Outcome</Text>
                       <TouchableOpacity onPress={() => setOutcomeModalVisible(false)} style={styles.modalCloseBtn}>
-                        <Text style={styles.modalCloseBtnText}>Close</Text>
+                        <Text style={styles.modalCloseBtnText}>Done</Text>
                       </TouchableOpacity>
                     </View>
 
@@ -251,18 +290,19 @@ export function MobileFollowupLogModal({
 
               {/* Lead Priority Temperature Selector */}
               <View style={styles.subHeadingRow}>
-                <Text style={styles.subHeadingLabel}>Lead Priority</Text>
+                <Text style={styles.subHeadingLabel}>Lead Priority Temperature</Text>
               </View>
               <View style={styles.tempRow}>
                 <TouchableOpacity
                   style={[
                     styles.tempBtn,
-                    leadTemperature === 'Hot' && { backgroundColor: '#FEF2F2', borderColor: '#DC2626', borderWidth: 1.5 },
+                    leadTemperature === 'Hot' && styles.tempBtnHotActive,
                   ]}
                   onPress={() => setLeadTemperature('Hot')}
                   activeOpacity={0.75}
                 >
-                  <Text style={[styles.tempBtnText, leadTemperature === 'Hot' && { color: '#DC2626', fontWeight: '900' }]}>
+                  <Text style={{ fontSize: 12 }}>🔥</Text>
+                  <Text style={[styles.tempBtnText, leadTemperature === 'Hot' && styles.tempBtnHotText]}>
                     Hot Deal
                   </Text>
                 </TouchableOpacity>
@@ -270,12 +310,13 @@ export function MobileFollowupLogModal({
                 <TouchableOpacity
                   style={[
                     styles.tempBtn,
-                    leadTemperature === 'Warm' && { backgroundColor: '#FFFBEB', borderColor: '#D97706', borderWidth: 1.5 },
+                    leadTemperature === 'Warm' && styles.tempBtnWarmActive,
                   ]}
                   onPress={() => setLeadTemperature('Warm')}
                   activeOpacity={0.75}
                 >
-                  <Text style={[styles.tempBtnText, leadTemperature === 'Warm' && { color: '#D97706', fontWeight: '900' }]}>
+                  <Text style={{ fontSize: 12 }}>⚡</Text>
+                  <Text style={[styles.tempBtnText, leadTemperature === 'Warm' && styles.tempBtnWarmText]}>
                     Warm Lead
                   </Text>
                 </TouchableOpacity>
@@ -283,12 +324,13 @@ export function MobileFollowupLogModal({
                 <TouchableOpacity
                   style={[
                     styles.tempBtn,
-                    leadTemperature === 'Future' && { backgroundColor: '#EFF6FF', borderColor: '#2563EB', borderWidth: 1.5 },
+                    leadTemperature === 'Future' && styles.tempBtnFutureActive,
                   ]}
                   onPress={() => setLeadTemperature('Future')}
                   activeOpacity={0.75}
                 >
-                  <Text style={[styles.tempBtnText, leadTemperature === 'Future' && { color: '#2563EB', fontWeight: '900' }]}>
+                  <Text style={{ fontSize: 12 }}>✦</Text>
+                  <Text style={[styles.tempBtnText, leadTemperature === 'Future' && styles.tempBtnFutureText]}>
                     Future
                   </Text>
                 </TouchableOpacity>
@@ -297,12 +339,17 @@ export function MobileFollowupLogModal({
 
             {/* 2. Next Follow-up Schedule & Valuation */}
             <View style={styles.sectionCard}>
-              <Text style={styles.sectionHeading}>2. Schedule & Valuation</Text>
+              <View style={styles.sectionHeadingRow}>
+                <View style={styles.sectionHeadingIconCircle}>
+                  <Text style={styles.sectionHeadingIcon}>📅</Text>
+                </View>
+                <Text style={styles.sectionHeading}>2. Next Schedule & Value</Text>
+              </View>
               
               {/* Next Follow-up Date */}
               <View style={styles.scheduleRowHeader}>
                 <Text style={styles.subHeadingLabel}>Next Reminder Date *</Text>
-                <View style={{ flexDirection: 'row', gap: 4 }}>
+                <View style={{ flexDirection: 'row', gap: 5 }}>
                   <TouchableOpacity style={styles.quickDayBtn} onPress={() => handleQuickDays(1)}>
                     <Text style={styles.quickDayText}>+1d</Text>
                   </TouchableOpacity>
@@ -319,7 +366,7 @@ export function MobileFollowupLogModal({
               </View>
 
               <View style={styles.dateInputWrapper}>
-                <Text style={{ fontSize: 11, fontWeight: '700', color: '#64748B', marginRight: 8 }}>DATE</Text>
+                <Text style={{ fontSize: 13, marginRight: 8 }}>📅</Text>
                 <TextInput
                   style={styles.dateTextInput}
                   value={nextFollowUp}
@@ -330,7 +377,7 @@ export function MobileFollowupLogModal({
               </View>
 
               {/* Deal / Quotation Value */}
-              <View style={[styles.scheduleRowHeader, { marginTop: 12 }]}>
+              <View style={[styles.scheduleRowHeader, { marginTop: 14 }]}>
                 <Text style={styles.subHeadingLabel}>Deal / Quotation Value (₹)</Text>
               </View>
               <View style={styles.quoteValueInputWrapper}>
@@ -350,7 +397,12 @@ export function MobileFollowupLogModal({
 
             {/* 3. Discussion Remarks & 1-Tap Snippets */}
             <View style={styles.sectionCard}>
-              <Text style={styles.sectionHeading}>3. Discussion Notes & Remarks</Text>
+              <View style={styles.sectionHeadingRow}>
+                <View style={styles.sectionHeadingIconCircle}>
+                  <Text style={styles.sectionHeadingIcon}>💬</Text>
+                </View>
+                <Text style={styles.sectionHeading}>3. Discussion Remarks & Notes</Text>
+              </View>
               
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6, paddingBottom: 8 }}>
                 {QUICK_SNIPPETS.map((snip, idx) => (
@@ -373,6 +425,9 @@ export function MobileFollowupLogModal({
                 placeholder="Type customer discussion notes, tile requirements, objections or next steps..."
                 placeholderTextColor="#94A3B8"
               />
+              <Text style={styles.notesSubHint}>
+                Notes will be appended to the customer's permanent follow-up timeline.
+              </Text>
             </View>
 
             <View style={{ height: 10 }} />
@@ -390,13 +445,29 @@ export function MobileFollowupLogModal({
               disabled={submitting}
               activeOpacity={0.85}
             >
-              {submitting ? (
-                <ActivityIndicator size="small" color="#FFFFFF" />
-              ) : (
-                <Text style={styles.saveBtnText}>
-                  {outcome === 'Deal Lost / Postponed' ? 'Record Lost Deal' : 'Save Follow-up Activity'}
-                </Text>
-              )}
+              <LinearGradient
+                colors={
+                  outcome === 'Deal Lost / Postponed'
+                    ? ['#DC2626', '#B91C1C']
+                    : ['#0F766E', '#0D9488']
+                }
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.saveBtnGradient}
+              >
+                {submitting ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7 }}>
+                    <Text style={styles.saveBtnIcon}>
+                      {outcome === 'Deal Lost / Postponed' ? '✕' : '✓'}
+                    </Text>
+                    <Text style={styles.saveBtnText}>
+                      {outcome === 'Deal Lost / Postponed' ? 'Record Lost Deal' : 'Save Follow-up Activity'}
+                    </Text>
+                  </View>
+                )}
+              </LinearGradient>
             </TouchableOpacity>
           </View>
         </View>
@@ -431,75 +502,200 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 16,
-    paddingBottom: 12,
+    paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: '#E2E8F0',
+    backgroundColor: '#FFFFFF',
     gap: 12,
   },
   headerIconBoxLight: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    backgroundColor: '#EFF6FF',
+    width: 38,
+    height: 38,
+    borderRadius: 10,
+    backgroundColor: '#F0FDFA',
+    borderWidth: 1.2,
+    borderColor: '#CCFBF1',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  headerTitleLight: {
+  headerIconGlyph: {
     fontSize: 16,
+    fontWeight: '900',
+    color: '#0F766E',
+  },
+  headerTitleMain: {
+    fontSize: 15.5,
     fontWeight: '800',
     color: '#0F172A',
+    letterSpacing: -0.2,
+  },
+  headerSubtitleText: {
+    fontSize: 11,
+    color: '#64748B',
+    fontWeight: '500',
+    marginTop: 1,
   },
   headerIdBadgeLight: {
     backgroundColor: '#F1F5F9',
     paddingHorizontal: 6,
-    paddingVertical: 1,
+    paddingVertical: 1.5,
     borderRadius: 5,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
   },
   headerIdBadgeTextLight: {
-    fontSize: 11,
+    fontSize: 10.5,
     fontWeight: '700',
     color: '#475569',
     fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
   },
-  headerSubtitleLight: {
-    fontSize: 12,
-    color: '#64748B',
-    marginTop: 2,
-  },
   headerCloseBtnLight: {
-    padding: 6,
-    borderRadius: 8,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
     backgroundColor: '#F1F5F9',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   headerCloseBtnTextLight: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '800',
     color: '#64748B',
   },
   scroll: {
     flexGrow: 0,
   },
-  sectionCard: {
+
+  /* ── Customer Identity Profile Card ── */
+  customerCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 14,
-    marginBottom: 14,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 14,
+    padding: 12,
+    marginBottom: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 11,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  customerAvatarCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 11,
+    backgroundColor: '#F0FDFA',
+    borderWidth: 1.2,
+    borderColor: '#CCFBF1',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  customerAvatarText: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#0F766E',
+  },
+  customerNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  customerNameInput: {
+    flex: 1,
+    fontSize: 15.5,
+    fontWeight: '800',
+    color: '#0F172A',
+    paddingVertical: 2,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E2E8F0',
+  },
+  customerMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 5,
+    flexWrap: 'wrap',
+  },
+  phoneInputWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    flex: 1,
+    minWidth: 130,
+  },
+  phoneIconSmall: {
+    fontSize: 12,
+  },
+  customerPhoneInput: {
+    flex: 1,
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#334155',
+    paddingVertical: 1,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E2E8F0',
+  },
+  customerTypePill: {
+    backgroundColor: '#F1F5F9',
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 5,
     borderWidth: 1,
     borderColor: '#E2E8F0',
   },
+  customerTypePillText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#475569',
+  },
+
+  /* ── Form Section Cards ── */
+  sectionCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
+    padding: 14,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  sectionHeadingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 12,
+  },
+  sectionHeadingIconCircle: {
+    width: 22,
+    height: 22,
+    borderRadius: 6,
+    backgroundColor: '#F0FDFA',
+    borderWidth: 1,
+    borderColor: '#CCFBF1',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sectionHeadingIcon: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#0F766E',
+  },
   sectionHeading: {
-    fontSize: 13,
+    fontSize: 12.5,
     fontWeight: '800',
     color: '#0F172A',
-    marginBottom: 12,
     textTransform: 'uppercase',
     letterSpacing: 0.3,
   },
+
+  /* ── Outcome Selector ── */
   dropdownTriggerBox: {
-    borderWidth: 1.5,
+    borderWidth: 1.2,
     borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -511,10 +707,29 @@ const styles = StyleSheet.create({
     gap: 10,
     flex: 1,
   },
+  outcomeIconBadge: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  outcomeIconBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '900',
+  },
+  dropdownTriggerHint: {
+    fontSize: 9.5,
+    fontWeight: '700',
+    color: '#64748B',
+    textTransform: 'uppercase',
+    letterSpacing: 0.3,
+  },
   dropdownTriggerValueText: {
-    fontSize: 13.5,
+    fontSize: 13,
     fontWeight: '800',
-    flex: 1,
+    marginTop: 1,
   },
   dropdownTriggerChevronBox: {
     paddingLeft: 8,
@@ -545,7 +760,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 10,
+    paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: '#F1F5F9',
     marginBottom: 10,
@@ -559,12 +774,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 8,
-    backgroundColor: '#F1F5F9',
+    backgroundColor: '#F0FDFA',
+    borderWidth: 1,
+    borderColor: '#CCFBF1',
   },
   modalCloseBtnText: {
     fontSize: 12,
     fontWeight: '800',
-    color: '#2563EB',
+    color: '#0F766E',
   },
   outcomeListItem: {
     flexDirection: 'row',
@@ -577,7 +794,7 @@ const styles = StyleSheet.create({
     borderColor: '#F1F5F9',
   },
   outcomeListItemText: {
-    fontSize: 13.5,
+    fontSize: 13,
     fontWeight: '700',
     color: '#334155',
     flex: 1,
@@ -594,7 +811,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   subHeadingLabel: {
-    fontSize: 12,
+    fontSize: 11.5,
     fontWeight: '700',
     color: '#64748B',
   },
@@ -604,6 +821,7 @@ const styles = StyleSheet.create({
   },
   tempBtn: {
     flex: 1,
+    flexDirection: 'row',
     backgroundColor: '#F8FAFC',
     borderWidth: 1,
     borderColor: '#E2E8F0',
@@ -611,13 +829,42 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 2,
+    gap: 5,
   },
   tempBtnText: {
     fontSize: 11.5,
     fontWeight: '700',
     color: '#475569',
   },
+  tempBtnHotActive: {
+    backgroundColor: '#FEF2F2',
+    borderColor: '#DC2626',
+    borderWidth: 1.5,
+  },
+  tempBtnHotText: {
+    color: '#DC2626',
+    fontWeight: '900',
+  },
+  tempBtnWarmActive: {
+    backgroundColor: '#FFFBEB',
+    borderColor: '#D97706',
+    borderWidth: 1.5,
+  },
+  tempBtnWarmText: {
+    color: '#D97706',
+    fontWeight: '900',
+  },
+  tempBtnFutureActive: {
+    backgroundColor: '#F0FDFA',
+    borderColor: '#0F766E',
+    borderWidth: 1.5,
+  },
+  tempBtnFutureText: {
+    color: '#0F766E',
+    fontWeight: '900',
+  },
+
+  /* ── Schedule & Valuation ── */
   scheduleRowHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -625,17 +872,17 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   quickDayBtn: {
-    backgroundColor: '#EFF6FF',
+    backgroundColor: '#F0FDFA',
     borderWidth: 1,
-    borderColor: '#BFDBFE',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
+    borderColor: '#CCFBF1',
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderRadius: 7,
   },
   quickDayText: {
     fontSize: 11,
     fontWeight: '800',
-    color: '#2563EB',
+    color: '#0F766E',
   },
   dateInputWrapper: {
     flexDirection: 'row',
@@ -649,8 +896,8 @@ const styles = StyleSheet.create({
   },
   dateTextInput: {
     flex: 1,
-    fontSize: 13.5,
-    fontWeight: '700',
+    fontSize: 14.5,
+    fontWeight: '800',
     color: '#0F172A',
   },
   quoteValueInputWrapper: {
@@ -661,40 +908,42 @@ const styles = StyleSheet.create({
     borderColor: '#CBD5E1',
     borderRadius: 12,
     overflow: 'hidden',
-    height: 42,
+    height: 44,
   },
   currencyPrefixBadgeEmerald: {
-    backgroundColor: '#ECFDF5',
+    backgroundColor: '#F0FDFA',
     borderRightWidth: 1,
     borderRightColor: '#CBD5E1',
-    paddingHorizontal: 12,
+    paddingHorizontal: 13,
     height: '100%',
     alignItems: 'center',
     justifyContent: 'center',
   },
   currencyPrefixTextEmerald: {
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: '900',
-    color: '#047857',
+    color: '#0F766E',
   },
   quoteTextInput: {
     paddingHorizontal: 12,
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '800',
     color: '#0F172A',
   },
+
+  /* ── Discussion Notes ── */
   snippetChip: {
     backgroundColor: '#F1F5F9',
     borderWidth: 1,
-    borderColor: '#E2E8F0',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
+    borderColor: '#CBD5E1',
+    paddingHorizontal: 11,
+    paddingVertical: 6,
     borderRadius: 8,
   },
   snippetChipText: {
-    fontSize: 11.5,
+    fontSize: 12,
     fontWeight: '700',
-    color: '#475569',
+    color: '#334155',
   },
   notesTextInput: {
     backgroundColor: '#FFFFFF',
@@ -702,12 +951,21 @@ const styles = StyleSheet.create({
     borderColor: '#CBD5E1',
     borderRadius: 12,
     padding: 12,
-    fontSize: 13,
+    fontSize: 13.5,
     color: '#0F172A',
     fontWeight: '500',
-    minHeight: 80,
+    minHeight: 96,
+    lineHeight: 19,
     textAlignVertical: 'top',
   },
+  notesSubHint: {
+    fontSize: 11,
+    color: '#94A3B8',
+    fontStyle: 'italic',
+    marginTop: 6,
+  },
+
+  /* ── Footer Row ── */
   footerRow: {
     flexDirection: 'row',
     gap: 10,
@@ -718,28 +976,44 @@ const styles = StyleSheet.create({
   },
   cancelBtn: {
     flex: 1,
-    backgroundColor: '#F1F5F9',
-    borderRadius: 12,
-    paddingVertical: 12,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1.2,
+    borderColor: '#E2E8F0',
+    borderRadius: 14,
+    height: 48,
     alignItems: 'center',
     justifyContent: 'center',
   },
   cancelBtnText: {
-    fontSize: 13,
-    fontWeight: '800',
-    color: '#475569',
+    fontSize: 13.5,
+    fontWeight: '700',
+    color: '#64748B',
   },
   saveBtn: {
     flex: 2,
-    backgroundColor: '#2563EB',
-    borderRadius: 12,
-    paddingVertical: 12,
+    borderRadius: 14,
+    overflow: 'hidden',
+    shadowColor: '#0F766E',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  saveBtnGradient: {
+    height: 48,
     alignItems: 'center',
     justifyContent: 'center',
+    paddingHorizontal: 16,
+  },
+  saveBtnIcon: {
+    fontSize: 16,
+    fontWeight: '900',
+    color: '#FFFFFF',
   },
   saveBtnText: {
-    fontSize: 13,
+    fontSize: 14.5,
     fontWeight: '800',
     color: '#FFFFFF',
+    letterSpacing: -0.2,
   },
 });

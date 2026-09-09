@@ -24,7 +24,7 @@ export const PROFILES = [
   },
 ];
 
-export function ProfileSelectorModal({ visible, currentProfile, profiles = PROFILES, onSelectProfile, onClose }) {
+export function ProfileSelectorModal({ visible, currentProfile, profiles = PROFILES, onSelectProfile, onClose, onLogout }) {
   const displayProfiles = profiles && profiles.length > 0 ? profiles : PROFILES;
 
   return (
@@ -92,12 +92,20 @@ export function ProfileSelectorModal({ visible, currentProfile, profiles = PROFI
             })}
           </ScrollView>
 
-          {/* Quick Notice */}
-          <View style={styles.noticeBox}>
-            <Text style={styles.noticeText}>
-              💡 <Text style={{ fontWeight: '800' }}>No credentials required.</Text> Switch freely between Owner command mode and Sales Executive follow-up views.
-            </Text>
-          </View>
+          {/* Logout Action Button */}
+          {onLogout ? (
+            <TouchableOpacity
+              style={styles.logoutBtn}
+              onPress={() => {
+                onClose();
+                onLogout();
+              }}
+              activeOpacity={0.8}
+            >
+              <Text style={{ fontSize: 14, marginRight: 6 }}>🚪</Text>
+              <Text style={styles.logoutBtnText}>Log Out from Account</Text>
+            </TouchableOpacity>
+          ) : null}
         </View>
       </View>
     </Modal>
@@ -208,5 +216,21 @@ const styles = StyleSheet.create({
     fontSize: 11.5,
     color: '#475569',
     lineHeight: 16,
+  },
+  logoutBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FEF2F2',
+    borderWidth: 1,
+    borderColor: '#FECDD3',
+    borderRadius: 12,
+    paddingVertical: 12,
+    marginTop: 14,
+  },
+  logoutBtnText: {
+    color: '#B91C1C',
+    fontSize: 13,
+    fontWeight: '800',
   },
 });

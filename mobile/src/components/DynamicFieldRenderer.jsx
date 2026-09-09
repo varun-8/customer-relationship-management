@@ -250,45 +250,49 @@ const calStyles = StyleSheet.create({
   },
   card: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 20,
+    borderRadius: 18,
     width: '100%',
     maxWidth: 360,
-    padding: 18,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.15,
-    shadowRadius: 20,
-    elevation: 10,
+    padding: 20,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.1,
+    shadowRadius: 16,
+    elevation: 8,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 14,
+    marginBottom: 16,
   },
   headerTitle: {
     fontSize: 16,
-    fontWeight: '800',
+    fontWeight: '700',
     color: '#0F172A',
     letterSpacing: -0.2,
   },
   headerSub: {
-    fontSize: 11,
+    fontSize: 11.5,
     color: '#64748B',
     fontWeight: '500',
     marginTop: 1,
   },
   closeBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#F1F5F9',
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
     alignItems: 'center',
     justifyContent: 'center',
   },
   closeBtnText: {
-    fontSize: 13,
-    color: '#475569',
+    fontSize: 12,
+    color: '#64748B',
     fontWeight: '700',
   },
   presetsRow: {
@@ -307,24 +311,24 @@ const calStyles = StyleSheet.create({
   },
   presetChipText: {
     fontSize: 11,
-    fontWeight: '700',
-    color: '#334155',
+    fontWeight: '600',
+    color: '#475569',
   },
   monthNav: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 6,
+    paddingVertical: 8,
     paddingHorizontal: 4,
-    marginBottom: 8,
+    marginBottom: 10,
     borderTopWidth: 1,
     borderBottomWidth: 1,
     borderColor: '#F1F5F9',
   },
   navBtn: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
+    width: 32,
+    height: 32,
+    borderRadius: 8,
     backgroundColor: '#F8FAFC',
     alignItems: 'center',
     justifyContent: 'center',
@@ -332,13 +336,13 @@ const calStyles = StyleSheet.create({
     borderColor: '#E2E8F0',
   },
   navBtnText: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: '#1E293B',
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#334155',
   },
   monthLabel: {
     fontSize: 14,
-    fontWeight: '800',
+    fontWeight: '700',
     color: '#0F172A',
   },
   dayNamesRow: {
@@ -351,7 +355,7 @@ const calStyles = StyleSheet.create({
     width: 38,
     textAlign: 'center',
     fontSize: 11,
-    fontWeight: '700',
+    fontWeight: '600',
     color: '#94A3B8',
   },
   grid: {
@@ -377,16 +381,16 @@ const calStyles = StyleSheet.create({
   },
   cellText: {
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: '500',
     color: '#1E293B',
   },
   cellTextSelected: {
     color: '#FFFFFF',
-    fontWeight: '900',
+    fontWeight: '700',
   },
   cellTextToday: {
     color: '#0F766E',
-    fontWeight: '800',
+    fontWeight: '700',
   },
   footerSelectedRow: {
     marginTop: 14,
@@ -400,12 +404,12 @@ const calStyles = StyleSheet.create({
   footerSelectedLabel: {
     fontSize: 11.5,
     color: '#64748B',
-    fontWeight: '600',
+    fontWeight: '500',
   },
   footerSelectedValue: {
     fontSize: 12,
     color: '#0F766E',
-    fontWeight: '800',
+    fontWeight: '700',
   },
 });
 
@@ -595,36 +599,6 @@ export const DynamicFieldRenderer = ({ field, value, onChange, error }) => {
               ) : null}
             </View>
 
-            {/* Quick Presets for Area/Quantity */}
-            {name.toLowerCase().includes('quantity') && (
-              <View style={styles.quickAmountRow}>
-                {[
-                  { label: '500 sq.ft', val: 500 },
-                  { label: '1,000 sq.ft', val: 1000 },
-                  { label: '2,500 sq.ft', val: 2500 },
-                  { label: '5,000 sq.ft', val: 5000 },
-                ].map((item) => (
-                  <TouchableOpacity
-                    key={item.label}
-                    style={[
-                      styles.quickAmountPill,
-                      Number(value) === item.val && styles.quickAmountPillActive,
-                    ]}
-                    onPress={() => handleChange(item.val)}
-                    activeOpacity={0.75}
-                  >
-                    <Text
-                      style={[
-                        styles.quickAmountPillText,
-                        Number(value) === item.val && styles.quickAmountPillTextActive,
-                      ]}
-                    >
-                      {item.label}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            )}
           </View>
         );
 
@@ -639,8 +613,8 @@ export const DynamicFieldRenderer = ({ field, value, onChange, error }) => {
                 error && styles.inputContainerError,
               ]}
             >
-              <View style={styles.currencySymbolBadge}>
-                <Text style={styles.currencySymbolText}>₹</Text>
+              <View style={styles.currencyPrefixBox}>
+                <Text style={styles.currencyPrefixText}>₹</Text>
               </View>
               <TextInput
                 style={styles.currencyTextInput}
@@ -662,35 +636,12 @@ export const DynamicFieldRenderer = ({ field, value, onChange, error }) => {
               ) : null}
             </View>
 
-            {/* Live Indian Currency Words / Lakhs Helper */}
+            {/* Live Indian Currency Words Helper */}
             {currencyWords ? (
               <View style={styles.currencyWordsBadge}>
                 <Text style={styles.currencyWordsBadgeText}>{currencyWords}</Text>
               </View>
             ) : null}
-
-            {/* Quick Amount Suggestion Pills */}
-            <View style={styles.quickAmountRow}>
-              {[
-                { label: '+25k', val: 25000 },
-                { label: '+50k', val: 50000 },
-                { label: '+1L', val: 100000 },
-                { label: '+2.5L', val: 250000 },
-                { label: '+5L', val: 500000 },
-              ].map((item) => (
-                <TouchableOpacity
-                  key={item.label}
-                  style={styles.quickAmountPill}
-                  onPress={() => {
-                    const currentVal = Number(value) || 0;
-                    handleChange(currentVal + item.val);
-                  }}
-                  activeOpacity={0.7}
-                >
-                  <Text style={styles.quickAmountPillText}>{item.label}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
           </View>
         );
       }
@@ -708,7 +659,7 @@ export const DynamicFieldRenderer = ({ field, value, onChange, error }) => {
                 error && styles.inputContainerError,
               ]}
             >
-              <View style={styles.phonePrefixBadge}>
+              <View style={styles.phonePrefixBox}>
                 <Text style={styles.phonePrefixText}>+91</Text>
               </View>
               <TextInput
@@ -732,7 +683,7 @@ export const DynamicFieldRenderer = ({ field, value, onChange, error }) => {
               />
               {isTenDigits ? (
                 <View style={styles.validCheckBadge}>
-                  <Text style={styles.validCheckText}>✓ Valid</Text>
+                  <Text style={styles.validCheckText}>Valid</Text>
                 </View>
               ) : value ? (
                 <TouchableOpacity onPress={() => handleChange('')} style={styles.clearBtn} activeOpacity={0.7}>
@@ -794,22 +745,18 @@ export const DynamicFieldRenderer = ({ field, value, onChange, error }) => {
               onPress={() => setCalendarVisible(true)}
               activeOpacity={0.75}
             >
-              <View style={styles.dateTypeBadge}>
-                <Text style={styles.dateTypeBadgeText}>DATE</Text>
-              </View>
-
               <Text
                 style={[
                   styles.dateTextInput,
-                  !value && { color: '#94A3B8', fontWeight: '500' },
+                  !value && { color: '#94A3B8', fontWeight: '400' },
                 ]}
                 numberOfLines={1}
               >
-                {value ? readableDate || value : placeholder || 'Tap to choose date...'}
+                {value ? readableDate || value : placeholder || 'Tap to select date...'}
               </Text>
 
               <View style={styles.calendarTriggerBtn}>
-                <Text style={styles.calendarTriggerBtnText}>Open Calendar</Text>
+                <Text style={styles.calendarTriggerBtnText}>Pick Date</Text>
               </View>
             </TouchableOpacity>
 
@@ -846,13 +793,6 @@ export const DynamicFieldRenderer = ({ field, value, onChange, error }) => {
                 >
                   <Text style={styles.quickDatePillText}>+1 Week</Text>
                 </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.quickDatePill, { backgroundColor: '#EFF6FF', borderColor: '#BFDBFE' }]}
-                  onPress={() => setCalendarVisible(true)}
-                  activeOpacity={0.75}
-                >
-                  <Text style={[styles.quickDatePillText, { color: '#1D4ED8' }]}>Pick Date</Text>
-                </TouchableOpacity>
               </View>
             )}
 
@@ -880,7 +820,7 @@ export const DynamicFieldRenderer = ({ field, value, onChange, error }) => {
             activeOpacity={0.75}
           >
             <View style={[styles.checkboxSquare, isChecked && styles.checkboxSquareChecked]}>
-              {isChecked && <Text style={styles.checkboxCheckmark}>✓</Text>}
+              {isChecked && <View style={styles.checkboxSquareFilled} />}
             </View>
             <View style={styles.checkboxTextContent}>
               <Text style={[styles.checkboxLabel, isChecked && styles.checkboxLabelChecked]}>
@@ -942,7 +882,7 @@ export const DynamicFieldRenderer = ({ field, value, onChange, error }) => {
                       {selected && <View style={innerDotStyle} />}
                     </View>
                     <Text style={textStyle}>
-                      {isYes ? '✓ Yes' : isNo ? '✕ No' : option.label}
+                      {isYes ? 'Yes' : isNo ? 'No' : option.label}
                     </Text>
                   </TouchableOpacity>
                 );
@@ -971,20 +911,16 @@ export const DynamicFieldRenderer = ({ field, value, onChange, error }) => {
               }}
               activeOpacity={0.8}
             >
-              <View style={styles.dropdownTriggerLeftGroup}>
-                <Text
-                  style={[
-                    styles.dropdownTriggerValueText,
-                    !selectedOptionObj && styles.dropdownTriggerPlaceholderText,
-                  ]}
-                  numberOfLines={1}
-                >
-                  {selectedOptionObj ? selectedOptionObj.label : placeholder || `Select ${label.toLowerCase()}...`}
-                </Text>
-              </View>
-              <View style={styles.dropdownTriggerChevronBox}>
-                <Text style={styles.dropdownChevronText}>▼</Text>
-              </View>
+              <Text
+                style={[
+                  styles.dropdownTriggerValueText,
+                  !selectedOptionObj && styles.dropdownTriggerPlaceholderText,
+                ]}
+                numberOfLines={1}
+              >
+                {selectedOptionObj ? selectedOptionObj.label : placeholder || `Select ${label.toLowerCase()}...`}
+              </Text>
+              <Text style={styles.dropdownChevronText}>▾</Text>
             </TouchableOpacity>
 
             {/* Dropdown Bottom Sheet Modal */}
@@ -1047,16 +983,14 @@ export const DynamicFieldRenderer = ({ field, value, onChange, error }) => {
                           }}
                           activeOpacity={0.75}
                         >
-                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
+                          <View style={styles.modalOptionItemContent}>
                             <View style={[styles.modalOptionBullet, selected && styles.modalOptionBulletActive]} />
                             <Text style={[styles.modalOptionItemText, selected && styles.modalOptionItemTextActive]}>
                               {opt.label}
                             </Text>
                           </View>
                           {selected && (
-                            <View style={styles.modalCheckmarkBadge}>
-                              <Text style={styles.modalCheckmarkText}>✓</Text>
-                            </View>
+                            <View style={styles.modalActiveIndicatorDot} />
                           )}
                         </TouchableOpacity>
                       );
@@ -1106,7 +1040,7 @@ export const DynamicFieldRenderer = ({ field, value, onChange, error }) => {
                         isSelected && styles.quickMultiChipTextSelected,
                       ]}
                     >
-                      {isSelected ? '✓ ' : '+ '}{opt.label}
+                      {isSelected ? '• ' : '+ '}{opt.label}
                     </Text>
                   </TouchableOpacity>
                 );
@@ -1126,22 +1060,18 @@ export const DynamicFieldRenderer = ({ field, value, onChange, error }) => {
               }}
               activeOpacity={0.8}
             >
-              <View style={styles.dropdownTriggerLeftGroup}>
-                <Text
-                  style={[
-                    styles.dropdownTriggerValueText,
-                    multiSelectedValues.length === 0 && styles.dropdownTriggerPlaceholderText,
-                  ]}
-                  numberOfLines={1}
-                >
-                  {multiSelectedValues.length > 0
-                    ? `${multiSelectedValues.length} items selected`
-                    : placeholder || `Select ${label.toLowerCase()}...`}
-                </Text>
-              </View>
-              <View style={styles.dropdownTriggerChevronBox}>
-                <Text style={styles.dropdownChevronText}>▼</Text>
-              </View>
+              <Text
+                style={[
+                  styles.dropdownTriggerValueText,
+                  multiSelectedValues.length === 0 && styles.dropdownTriggerPlaceholderText,
+                ]}
+                numberOfLines={1}
+              >
+                {multiSelectedValues.length > 0
+                  ? `${multiSelectedValues.length} items selected`
+                  : placeholder || `Select ${label.toLowerCase()}...`}
+              </Text>
+              <Text style={styles.dropdownChevronText}>▾</Text>
             </TouchableOpacity>
 
             {/* Selected Dismissible Chips */}
@@ -1188,7 +1118,7 @@ export const DynamicFieldRenderer = ({ field, value, onChange, error }) => {
                       style={styles.modalDoneBtn}
                       activeOpacity={0.7}
                     >
-                      <Text style={styles.modalDoneBtnText}>Done ✓</Text>
+                      <Text style={styles.modalDoneBtnText}>Done</Text>
                     </TouchableOpacity>
                   </View>
 
@@ -1217,7 +1147,7 @@ export const DynamicFieldRenderer = ({ field, value, onChange, error }) => {
                           activeOpacity={0.75}
                         >
                           <View style={[styles.multiCheckboxSquare, selected && styles.multiCheckboxSquareActive]}>
-                            {selected && <Text style={styles.multiCheckboxCheck}>✓</Text>}
+                            {selected && <View style={styles.multiCheckboxCheckFilled} />}
                           </View>
                           <Text style={[styles.modalOptionItemText, selected && styles.modalOptionItemTextActive]}>
                             {opt.label}
@@ -1235,24 +1165,13 @@ export const DynamicFieldRenderer = ({ field, value, onChange, error }) => {
 
       case 'auto_number':
         return (
-          <View style={styles.autoNumberBox}>
-            <View style={styles.autoNumberHeader}>
-              <View style={styles.autoNumberIconPill}>
-                <Text style={styles.autoNumberIconText}>#</Text>
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.autoNumberTitle}>SYSTEM GENERATED ID</Text>
-                <Text style={styles.autoNumberSub}>Auto-assigned upon registration</Text>
-              </View>
-              <View style={styles.autoNumberBadge}>
-                <Text style={styles.autoNumberBadgeText}>AUTO</Text>
-              </View>
+          <View style={styles.autoNumberBoxClean}>
+            <View style={styles.autoNumberIconPillClean}>
+              <Text style={styles.autoNumberIconTextClean}>#</Text>
             </View>
-            <View style={styles.autoNumberValueBox}>
-              <Text style={styles.autoNumberValue}>
-                {value || 'CUS-AUTO (Assigned on save)'}
-              </Text>
-            </View>
+            <Text style={styles.autoNumberValueClean}>
+              {value || 'Auto-generated'}
+            </Text>
           </View>
         );
 
@@ -1290,24 +1209,10 @@ export const DynamicFieldRenderer = ({ field, value, onChange, error }) => {
           </Text>
         </View>
 
-        {/* Type / Status Badges */}
-        {required ? (
-          <View style={styles.typeBadgeContainer}>
-            <Text style={styles.typeBadgeRequired}>* Required</Text>
-          </View>
-        ) : type === 'multiselect' ? (
-          <View style={styles.typeBadgeContainer}>
-            <Text style={styles.typeBadgeMulti}>Multi-Select</Text>
-          </View>
-        ) : shouldUseRadioButton ? (
-          <View style={styles.typeBadgeContainer}>
-            <Text style={styles.typeBadgeRadio}>Quick Select</Text>
-          </View>
-        ) : (
-          <View style={styles.typeBadgeContainer}>
-            <Text style={styles.typeBadgeOptional}>Optional</Text>
-          </View>
-        )}
+        {/* Minimalist Meta Indicator: Never show Optional for dropdowns, radios, auto-number, or multiselect */}
+        {!required && type !== 'select' && type !== 'radio' && type !== 'multiselect' && type !== 'auto_number' ? (
+          <Text style={styles.fieldMetaText}>Optional</Text>
+        ) : null}
       </View>
 
       {/* Field Description */}
@@ -1338,85 +1243,33 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 7,
+    marginBottom: 6,
   },
   labelTitleGroup: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-  },
-  fieldIconPrefix: {
-    fontSize: 14,
   },
   fieldLabel: {
-    fontSize: 13,
-    fontWeight: '800',
-    color: '#0F172A',
-    letterSpacing: -0.2,
+    fontSize: 13.5,
+    fontWeight: '600',
+    color: '#1E293B',
+    letterSpacing: -0.1,
   },
   requiredAsterisk: {
     color: '#EF4444',
-    fontWeight: '900',
-    fontSize: 14,
+    fontWeight: '600',
+    fontSize: 13.5,
   },
-  typeBadgeContainer: {
-    marginLeft: 8,
-  },
-  typeBadgeRequired: {
-    fontSize: 9.5,
-    fontWeight: '800',
-    color: '#DC2626',
-    backgroundColor: '#FEF2F2',
-    borderWidth: 1,
-    borderColor: '#FECACA',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 6,
-    textTransform: 'uppercase',
-    letterSpacing: 0.3,
-  },
-  typeBadgeOptional: {
-    fontSize: 9.5,
-    fontWeight: '700',
-    color: '#64748B',
-    backgroundColor: '#F1F5F9',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 6,
-    textTransform: 'uppercase',
-    letterSpacing: 0.3,
-  },
-  typeBadgeMulti: {
-    fontSize: 9.5,
-    fontWeight: '800',
-    color: '#2563EB',
-    backgroundColor: '#EFF6FF',
-    borderWidth: 1,
-    borderColor: '#BFDBFE',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 6,
-    textTransform: 'uppercase',
-    letterSpacing: 0.3,
-  },
-  typeBadgeRadio: {
-    fontSize: 9.5,
-    fontWeight: '800',
-    color: '#059669',
-    backgroundColor: '#ECFDF5',
-    borderWidth: 1,
-    borderColor: '#A7F3D0',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 6,
-    textTransform: 'uppercase',
-    letterSpacing: 0.3,
+  fieldMetaText: {
+    fontSize: 11.5,
+    fontWeight: '500',
+    color: '#94A3B8',
   },
   fieldDescriptionText: {
-    fontSize: 11,
+    fontSize: 11.5,
     color: '#64748B',
-    lineHeight: 15,
+    lineHeight: 16,
     marginBottom: 6,
   },
   inputBodyWrapper: {
@@ -1425,28 +1278,20 @@ const styles = StyleSheet.create({
 
   // Standard Text Input
   inputContainer: {
-    backgroundColor: '#F8FAFC',
-    borderWidth: 1.2,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
     borderColor: '#E2E8F0',
-    borderRadius: 13,
-    paddingHorizontal: 13,
+    borderRadius: 10,
+    paddingHorizontal: 12,
     paddingVertical: Platform.OS === 'ios' ? 12 : 9,
+    minHeight: 46,
     flexDirection: 'row',
     alignItems: 'center',
-    shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.02,
-    shadowRadius: 2,
   },
   inputContainerFocused: {
     backgroundColor: '#FFFFFF',
-    borderColor: '#2563EB',
+    borderColor: '#0F766E',
     borderWidth: 1.5,
-    shadowColor: '#2563EB',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
   },
   inputContainerError: {
     borderColor: '#EF4444',
@@ -1455,30 +1300,30 @@ const styles = StyleSheet.create({
   },
   textInput: {
     flex: 1,
-    fontSize: 13.5,
+    fontSize: 14,
     color: '#0F172A',
-    fontWeight: '600',
+    fontWeight: '500',
   },
   clearBtn: {
-    padding: 5,
+    padding: 4,
     marginLeft: 6,
-    backgroundColor: '#E2E8F0',
     borderRadius: 10,
+    backgroundColor: '#F1F5F9',
   },
   clearBtnText: {
-    fontSize: 11,
-    color: '#64748B',
-    fontWeight: '800',
+    fontSize: 10,
+    color: '#94A3B8',
+    fontWeight: '700',
   },
 
   // Textarea
   textareaContainer: {
     paddingVertical: 10,
-    minHeight: 88,
+    minHeight: 84,
     alignItems: 'flex-start',
   },
   textareaInput: {
-    minHeight: 76,
+    minHeight: 68,
     textAlignVertical: 'top',
   },
   charCountRow: {
@@ -1489,272 +1334,232 @@ const styles = StyleSheet.create({
   charCountText: {
     fontSize: 10.5,
     color: '#94A3B8',
-    fontWeight: '600',
+    fontWeight: '500',
   },
 
   // ERROR ALERT
   errorAlertBox: {
-    marginTop: 5,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    backgroundColor: '#FEF2F2',
-    borderWidth: 1,
-    borderColor: '#FECACA',
-    borderRadius: 6,
-    alignSelf: 'flex-start',
+    marginTop: 4,
+    paddingHorizontal: 2,
   },
   errorAlertText: {
     fontSize: 11,
-    fontWeight: '700',
-    color: '#DC2626',
+    fontWeight: '600',
+    color: '#EF4444',
   },
 
   // Currency
   currencyInputBox: {
-    backgroundColor: '#F8FAFC',
-    borderWidth: 1.2,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
     borderColor: '#E2E8F0',
-    borderRadius: 13,
+    borderRadius: 10,
+    minHeight: 46,
     flexDirection: 'row',
     alignItems: 'center',
-    overflow: 'hidden',
   },
-  currencySymbolBadge: {
-    backgroundColor: '#E2E8F0',
+  currencyPrefixBox: {
+    paddingLeft: 12,
+    paddingRight: 10,
     borderRightWidth: 1,
-    borderRightColor: '#CBD5E1',
-    paddingHorizontal: 14,
-    paddingVertical: 12,
+    borderRightColor: '#E2E8F0',
+    marginRight: 10,
+    justifyContent: 'center',
   },
-  currencySymbolText: {
-    fontSize: 15,
-    fontWeight: '900',
-    color: '#0F172A',
+  currencyPrefixText: {
+    fontSize: 14.5,
+    fontWeight: '600',
+    color: '#64748B',
   },
   currencyTextInput: {
     flex: 1,
-    paddingHorizontal: 12,
     fontSize: 14,
-    fontWeight: '800',
+    fontWeight: '600',
     color: '#0F172A',
   },
   currencyWordsBadge: {
-    backgroundColor: '#EFF6FF',
-    borderWidth: 1,
-    borderColor: '#BFDBFE',
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
+    backgroundColor: '#F0FDF4',
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
     marginTop: 6,
     alignSelf: 'flex-start',
   },
   currencyWordsBadgeText: {
-    fontSize: 11.5,
-    fontWeight: '800',
-    color: '#1D4ED8',
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#15803D',
   },
   quickAmountRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 6,
-    marginTop: 8,
+    marginTop: 6,
   },
   quickAmountPill: {
-    backgroundColor: '#F1F5F9',
+    backgroundColor: '#F8FAFC',
     borderWidth: 1,
-    borderColor: '#CBD5E1',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 8,
+    borderColor: '#E2E8F0',
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderRadius: 6,
   },
   quickAmountPillActive: {
-    backgroundColor: '#EFF6FF',
-    borderColor: '#2563EB',
+    backgroundColor: '#F0FDFA',
+    borderColor: '#0F766E',
   },
   quickAmountPillText: {
-    fontSize: 11.5,
-    fontWeight: '800',
-    color: '#334155',
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#475569',
   },
   quickAmountPillTextActive: {
-    color: '#2563EB',
-    fontWeight: '900',
+    color: '#0F766E',
+    fontWeight: '700',
   },
 
   // Phone
   phoneInputBox: {
-    backgroundColor: '#F8FAFC',
-    borderWidth: 1.2,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
     borderColor: '#E2E8F0',
-    borderRadius: 13,
+    borderRadius: 10,
+    minHeight: 46,
     flexDirection: 'row',
     alignItems: 'center',
-    overflow: 'hidden',
   },
-  phonePrefixBadge: {
-    backgroundColor: '#E2E8F0',
+  phonePrefixBox: {
+    paddingLeft: 12,
+    paddingRight: 10,
     borderRightWidth: 1,
-    borderRightColor: '#CBD5E1',
-    paddingHorizontal: 12,
-    paddingVertical: 12,
+    borderRightColor: '#E2E8F0',
+    marginRight: 10,
+    justifyContent: 'center',
   },
   phonePrefixText: {
-    fontSize: 12.5,
-    fontWeight: '800',
-    color: '#1E293B',
+    fontSize: 13.5,
+    fontWeight: '600',
+    color: '#64748B',
   },
   phoneTextInput: {
     flex: 1,
-    paddingHorizontal: 12,
     fontSize: 14,
-    fontWeight: '800',
+    fontWeight: '500',
     color: '#0F172A',
     letterSpacing: 0.5,
-    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
   },
   validCheckBadge: {
-    backgroundColor: '#ECFDF5',
-    borderWidth: 1,
-    borderColor: '#A7F3D0',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    backgroundColor: '#F0FDF4',
+    paddingHorizontal: 7,
+    paddingVertical: 3,
     borderRadius: 6,
     marginRight: 8,
   },
   validCheckText: {
     fontSize: 10.5,
-    fontWeight: '800',
-    color: '#059669',
+    fontWeight: '700',
+    color: '#15803D',
   },
 
   // Date
   dateInputBox: {
-    backgroundColor: '#F8FAFC',
-    borderWidth: 1.2,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
     borderColor: '#E2E8F0',
-    borderRadius: 13,
+    borderRadius: 10,
     paddingHorizontal: 12,
-    paddingVertical: 10,
+    minHeight: 46,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-  },
-  dateTypeBadge: {
-    backgroundColor: '#F1F5F9',
-    borderWidth: 1,
-    borderColor: '#CBD5E1',
-    paddingHorizontal: 7,
-    paddingVertical: 3,
-    borderRadius: 6,
-  },
-  dateTypeBadgeText: {
-    fontSize: 9.5,
-    fontWeight: '900',
-    color: '#475569',
-    letterSpacing: 0.5,
+    justifyContent: 'space-between',
   },
   dateTextInput: {
-    flex: 1,
-    fontSize: 13.5,
-    fontWeight: '700',
+    fontSize: 14,
+    fontWeight: '500',
     color: '#0F172A',
+    flex: 1,
   },
   calendarTriggerBtn: {
-    backgroundColor: '#0F766E',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 8,
+    backgroundColor: '#F1F5F9',
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderRadius: 6,
   },
   calendarTriggerBtnText: {
     fontSize: 11,
-    fontWeight: '800',
-    color: '#FFFFFF',
-  },
-  readableDateBadge: {
-    backgroundColor: '#F8FAFC',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    marginTop: 6,
-    alignSelf: 'flex-start',
-  },
-  readableDateBadgeText: {
-    fontSize: 11,
-    fontWeight: '700',
+    fontWeight: '600',
     color: '#475569',
   },
   quickDatesRow: {
     flexDirection: 'row',
     gap: 6,
-    marginTop: 8,
+    marginTop: 6,
   },
   quickDatePill: {
-    backgroundColor: '#F1F5F9',
+    backgroundColor: '#F8FAFC',
     borderWidth: 1,
-    borderColor: '#CBD5E1',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 8,
+    borderColor: '#E2E8F0',
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderRadius: 6,
   },
   quickDatePillActive: {
-    backgroundColor: '#EFF6FF',
-    borderColor: '#2563EB',
+    backgroundColor: '#F0FDFA',
+    borderColor: '#0F766E',
   },
   quickDatePillText: {
-    fontSize: 11.5,
-    fontWeight: '700',
+    fontSize: 11,
+    fontWeight: '600',
     color: '#475569',
   },
   quickDatePillTextActive: {
-    color: '#2563EB',
-    fontWeight: '900',
+    color: '#0F766E',
+    fontWeight: '700',
   },
 
   // Checkbox Card
   checkboxCard: {
     backgroundColor: '#FFFFFF',
-    borderWidth: 1.2,
+    borderWidth: 1,
     borderColor: '#E2E8F0',
-    borderRadius: 13,
+    borderRadius: 10,
     padding: 12,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 10,
   },
   checkboxCardChecked: {
-    backgroundColor: '#ECFDF5',
-    borderColor: '#10B981',
+    backgroundColor: '#F0FDFA',
+    borderColor: '#0F766E',
   },
   checkboxSquare: {
-    width: 20,
-    height: 20,
-    borderRadius: 6,
+    width: 18,
+    height: 18,
+    borderRadius: 5,
     borderWidth: 1.5,
-    borderColor: '#94A3B8',
+    borderColor: '#CBD5E1',
     alignItems: 'center',
     justifyContent: 'center',
   },
   checkboxSquareChecked: {
-    backgroundColor: '#10B981',
-    borderColor: '#10B981',
+    backgroundColor: '#0F766E',
+    borderColor: '#0F766E',
   },
   checkboxCheckmark: {
     color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: '900',
+    fontSize: 11,
+    fontWeight: '800',
   },
   checkboxTextContent: {
     flex: 1,
   },
   checkboxLabel: {
     fontSize: 13.5,
-    fontWeight: '700',
+    fontWeight: '600',
     color: '#0F172A',
   },
   checkboxLabelChecked: {
-    color: '#047857',
+    color: '#0F766E',
   },
   checkboxSubtext: {
     fontSize: 11,
@@ -1762,36 +1567,31 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
 
-  // RADIO BUTTONS (Used ONLY when required: Yes/No or <=3 choices)
+  // Radio Buttons
   radioGroupRow: {
     flexDirection: 'row',
-    gap: 10,
+    gap: 8,
   },
   radioCard: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
-    borderWidth: 1.2,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
     borderColor: '#E2E8F0',
-    borderRadius: 13,
-    paddingVertical: 12,
-    paddingHorizontal: 10,
+    borderRadius: 10,
+    paddingVertical: 11,
+    paddingHorizontal: 8,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
   },
   radioCardActive: {
-    backgroundColor: '#EFF6FF',
-    borderColor: '#2563EB',
+    backgroundColor: '#F0FDFA',
+    borderColor: '#0F766E',
   },
   radioCardYesActive: {
-    backgroundColor: '#ECFDF5',
+    backgroundColor: '#F0FDF4',
     borderColor: '#10B981',
-    shadowColor: '#10B981',
-    shadowOffset: { width: 0, height: 1.5 },
-    shadowOpacity: 0.12,
-    shadowRadius: 3,
-    elevation: 2,
   },
   radioCardNoActive: {
     backgroundColor: '#FEF2F2',
@@ -1799,33 +1599,33 @@ const styles = StyleSheet.create({
   },
   radioCardText: {
     fontSize: 13.5,
-    fontWeight: '700',
+    fontWeight: '600',
     color: '#475569',
   },
   radioCardTextActive: {
-    fontWeight: '900',
-    color: '#1D4ED8',
+    fontWeight: '700',
+    color: '#0F766E',
   },
   radioCardTextYesActive: {
-    fontWeight: '900',
-    color: '#047857',
+    fontWeight: '700',
+    color: '#15803D',
   },
   radioCardTextNoActive: {
-    fontWeight: '900',
-    color: '#B91C1C',
+    fontWeight: '700',
+    color: '#DC2626',
   },
   radioDotCircle: {
-    width: 17,
-    height: 17,
-    borderRadius: 8.5,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
     borderWidth: 1.5,
-    borderColor: '#94A3B8',
+    borderColor: '#CBD5E1',
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#FFFFFF',
   },
   radioDotCircleActive: {
-    borderColor: '#2563EB',
+    borderColor: '#0F766E',
   },
   radioDotCircleYes: {
     borderColor: '#10B981',
@@ -1837,7 +1637,7 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#2563EB',
+    backgroundColor: '#0F766E',
   },
   radioDotInnerYes: {
     backgroundColor: '#10B981',
@@ -1846,179 +1646,149 @@ const styles = StyleSheet.create({
     backgroundColor: '#EF4444',
   },
 
-  // DROPDOWN PICKER (For fields with >3 options)
+  // Dropdown Picker
   dropdownTriggerBox: {
-    backgroundColor: '#F8FAFC',
-    borderWidth: 1.2,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
     borderColor: '#E2E8F0',
-    borderRadius: 13,
+    borderRadius: 10,
     paddingHorizontal: 12,
-    paddingVertical: 12,
+    minHeight: 46,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
   dropdownTriggerBoxActive: {
-    borderColor: '#2563EB',
-    backgroundColor: '#FFFFFF',
-    shadowColor: '#2563EB',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08,
-    shadowRadius: 3,
-  },
-  dropdownTriggerLeftGroup: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    flex: 1,
-  },
-  dropdownMiniIconCircle: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: '#E2E8F0',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  dropdownIconText: {
-    fontSize: 14,
+    borderColor: '#0F766E',
   },
   dropdownTriggerValueText: {
-    fontSize: 13.5,
-    fontWeight: '800',
+    fontSize: 14,
+    fontWeight: '500',
     color: '#0F172A',
     flex: 1,
   },
   dropdownTriggerPlaceholderText: {
     color: '#94A3B8',
-    fontWeight: '600',
-  },
-  dropdownTriggerChevronBox: {
-    paddingLeft: 6,
+    fontWeight: '400',
   },
   dropdownChevronText: {
-    fontSize: 10.5,
+    fontSize: 11,
     color: '#64748B',
   },
 
-  // MULTI-SELECT CHIPS
+  // Multi-select Chips
   quickPillRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 6,
-    marginBottom: 8,
+    marginBottom: 6,
   },
   quickMultiChip: {
-    backgroundColor: '#F1F5F9',
+    backgroundColor: '#F8FAFC',
     borderWidth: 1,
     borderColor: '#E2E8F0',
-    paddingHorizontal: 10,
+    paddingHorizontal: 9,
     paddingVertical: 5,
-    borderRadius: 8,
+    borderRadius: 6,
   },
   quickMultiChipSelected: {
-    backgroundColor: '#ECFDF5',
-    borderColor: '#10B981',
+    backgroundColor: '#F0FDFA',
+    borderColor: '#0F766E',
   },
   quickMultiChipText: {
-    fontSize: 11.5,
-    fontWeight: '700',
+    fontSize: 11,
+    fontWeight: '600',
     color: '#475569',
   },
   quickMultiChipTextSelected: {
-    color: '#047857',
-    fontWeight: '800',
+    color: '#0F766E',
+    fontWeight: '700',
   },
   multiTagsRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 6,
-    marginTop: 8,
+    marginTop: 6,
   },
   multiTagPill: {
-    backgroundColor: '#EFF6FF',
+    backgroundColor: '#F0FDFA',
     borderWidth: 1,
-    borderColor: '#BFDBFE',
-    paddingHorizontal: 10,
-    paddingVertical: 4.5,
-    borderRadius: 8,
+    borderColor: '#CCFBF1',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 5,
   },
   multiTagText: {
     fontSize: 11.5,
-    fontWeight: '800',
-    color: '#1D4ED8',
+    fontWeight: '600',
+    color: '#0F766E',
   },
   multiTagDismiss: {
     fontSize: 10,
-    fontWeight: '900',
-    color: '#3B82F6',
+    fontWeight: '700',
+    color: '#0F766E',
   },
 
-  // MODAL BOTTOM SHEET
+  // Modal Bottom Sheet
   modalBackdrop: {
     flex: 1,
-    backgroundColor: 'rgba(15, 23, 42, 0.65)',
+    backgroundColor: 'rgba(15, 23, 42, 0.5)',
     justifyContent: 'flex-end',
   },
   modalSheetCard: {
     backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    paddingHorizontal: 20,
-    paddingBottom: Platform.OS === 'ios' ? 40 : 24,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingHorizontal: 18,
+    paddingBottom: Platform.OS === 'ios' ? 36 : 20,
     maxHeight: '80%',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 10,
-    elevation: 8,
   },
   modalHandleWrapper: {
     alignItems: 'center',
     paddingVertical: 10,
   },
   modalHandle: {
-    width: 40,
-    height: 4.5,
-    borderRadius: 3,
-    backgroundColor: '#CBD5E1',
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#E2E8F0',
   },
   modalSheetHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 12,
+    paddingVertical: 10,
     borderBottomWidth: 1,
     borderBottomColor: '#F1F5F9',
   },
   modalSheetTitle: {
-    fontSize: 16,
-    fontWeight: '900',
+    fontSize: 15,
+    fontWeight: '700',
     color: '#0F172A',
   },
   modalCloseBtn: {
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 8,
-    backgroundColor: '#F1F5F9',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    backgroundColor: '#F8FAFC',
   },
   modalCloseBtnText: {
     fontSize: 12,
-    fontWeight: '800',
+    fontWeight: '600',
     color: '#64748B',
   },
   modalDoneBtn: {
     paddingHorizontal: 12,
     paddingVertical: 5,
-    borderRadius: 8,
-    backgroundColor: '#2563EB',
+    borderRadius: 6,
+    backgroundColor: '#0F766E',
   },
   modalDoneBtnText: {
     fontSize: 12,
-    fontWeight: '800',
+    fontWeight: '600',
     color: '#FFFFFF',
   },
   modalSearchBox: {
@@ -2027,33 +1797,39 @@ const styles = StyleSheet.create({
     backgroundColor: '#F8FAFC',
     borderWidth: 1,
     borderColor: '#E2E8F0',
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    height: 42,
-    marginVertical: 12,
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    height: 38,
+    marginVertical: 10,
   },
   modalSearchInput: {
     flex: 1,
     fontSize: 13,
-    fontWeight: '600',
     color: '#0F172A',
   },
   modalOptionsList: {
-    maxHeight: 360,
+    maxHeight: 320,
   },
   modalOptionItem: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 13,
+    paddingVertical: 12,
     paddingHorizontal: 12,
-    borderRadius: 12,
-    marginBottom: 4,
+    borderRadius: 8,
+    marginBottom: 3,
     borderBottomWidth: 1,
     borderBottomColor: '#F8FAFC',
   },
   modalOptionItemActive: {
-    backgroundColor: '#EFF6FF',
+    backgroundColor: '#F0FDFA',
+  },
+  modalOptionItemContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    flex: 1,
+    justifyContent: 'flex-start',
   },
   modalOptionBullet: {
     width: 6,
@@ -2062,123 +1838,162 @@ const styles = StyleSheet.create({
     backgroundColor: '#CBD5E1',
   },
   modalOptionBulletActive: {
-    backgroundColor: '#2563EB',
+    backgroundColor: '#0F766E',
   },
   modalOptionItemText: {
-    fontSize: 14,
-    fontWeight: '700',
+    fontSize: 13.5,
+    fontWeight: '500',
     color: '#334155',
+    textAlign: 'left',
+    flex: 1,
   },
   modalOptionItemTextActive: {
-    color: '#1D4ED8',
-    fontWeight: '900',
+    color: '#0F766E',
+    fontWeight: '700',
+  },
+  modalActiveIndicatorDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#0F766E',
   },
   modalCheckmarkBadge: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    backgroundColor: '#2563EB',
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: '#0F766E',
     alignItems: 'center',
     justifyContent: 'center',
   },
   modalCheckmarkText: {
     color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: '900',
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  checkboxSquareFilled: {
+    width: 10,
+    height: 10,
+    borderRadius: 2,
+    backgroundColor: '#FFFFFF',
   },
   multiCheckboxSquare: {
-    width: 20,
-    height: 20,
-    borderRadius: 6,
+    width: 18,
+    height: 18,
+    borderRadius: 4,
     borderWidth: 1.5,
     borderColor: '#CBD5E1',
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 12,
+    marginRight: 10,
   },
   multiCheckboxSquareActive: {
-    backgroundColor: '#059669',
-    borderColor: '#059669',
+    backgroundColor: '#0F766E',
+    borderColor: '#0F766E',
+  },
+  multiCheckboxCheckFilled: {
+    width: 8,
+    height: 8,
+    borderRadius: 2,
+    backgroundColor: '#FFFFFF',
   },
   multiCheckboxCheck: {
     color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: '900',
+    fontSize: 11,
+    fontWeight: '700',
   },
 
-  // AUTO NUMBER BOX
+  // Clean Auto-Number Box
+  autoNumberBoxClean: {
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    minHeight: 46,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  autoNumberIconPillClean: {
+    width: 22,
+    height: 22,
+    borderRadius: 5,
+    backgroundColor: '#F1F5F9',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  autoNumberIconTextClean: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#64748B',
+  },
+  autoNumberValueClean: {
+    fontSize: 13.5,
+    fontWeight: '600',
+    color: '#475569',
+    letterSpacing: 0.2,
+  },
+
+  // Legacy Auto-Number Box
   autoNumberBox: {
     backgroundColor: '#F8FAFC',
-    borderWidth: 1.2,
+    borderWidth: 1,
     borderColor: '#E2E8F0',
-    borderRadius: 14,
-    padding: 14,
+    borderRadius: 10,
+    padding: 12,
   },
   autoNumberHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    marginBottom: 10,
+    gap: 8,
+    marginBottom: 8,
   },
   autoNumberIconPill: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: '#EFF6FF',
+    width: 24,
+    height: 24,
+    borderRadius: 6,
+    backgroundColor: '#F1F5F9',
     alignItems: 'center',
     justifyContent: 'center',
   },
   autoNumberIconText: {
-    fontSize: 14,
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#64748B',
   },
   autoNumberTitle: {
-    fontSize: 10.5,
-    fontWeight: '900',
-    color: '#0F172A',
-    letterSpacing: 0.5,
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#475569',
+    letterSpacing: 0.3,
   },
   autoNumberSub: {
-    fontSize: 10,
-    color: '#64748B',
-    fontWeight: '500',
+    fontSize: 9.5,
+    color: '#94A3B8',
   },
   autoNumberBadge: {
-    backgroundColor: '#EFF6FF',
-    borderWidth: 1,
-    borderColor: '#BFDBFE',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 6,
+    backgroundColor: '#F1F5F9',
+    borderRadius: 4,
+    paddingHorizontal: 5,
+    paddingVertical: 1.5,
   },
   autoNumberBadgeText: {
     fontSize: 9,
-    fontWeight: '900',
-    color: '#1D4ED8',
-    letterSpacing: 0.5,
+    fontWeight: '700',
+    color: '#64748B',
   },
   autoNumberValueBox: {
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
     borderColor: '#E2E8F0',
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
   },
   autoNumberValue: {
-    fontSize: 13.5,
-    fontWeight: '800',
+    fontSize: 13,
+    fontWeight: '600',
     color: '#0F172A',
     fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
-  },
-
-  // ERROR ALERT
-  errorAlertBox: {
-    marginTop: 6,
-    paddingHorizontal: 4,
-  },
-  errorAlertText: {
-    fontSize: 11.5,
-    fontWeight: '700',
-    color: '#DC2626',
   },
 });

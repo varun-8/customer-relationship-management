@@ -21,19 +21,17 @@ import {
   AppState,
   Easing,
 } from 'react-native';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { colors } from './src/theme/colors';
 import { apiClient, FALLBACK_SCHEMA } from './src/api/client';
 import { DynamicFieldRenderer } from './src/components/DynamicFieldRenderer';
-import { PROFILES, ProfileSelectorModal } from './src/components/profile/ProfileSelectorModal';
+import { PROFILES } from './src/components/profile/ProfileSelectorModal';
 import { MobileFollowupSheet } from './src/components/followups/MobileFollowupSheet';
 import { MobileFollowupLogModal } from './src/components/followups/MobileFollowupLogModal';
 import { MobileLostSaleModal } from './src/components/lost-sales/MobileLostSaleModal';
 import { WhatsAppTemplateModal } from './src/components/WhatsAppTemplateModal';
 import { MobileShiftKpiModal } from './src/components/kpi/MobileShiftKpiModal';
 import { MobileQrScannerModal } from './src/components/pairing/MobileQrScannerModal';
-import { RoleSelectLoginScreen } from './src/components/auth/RoleSelectLoginScreen';
-import { CustomerPortalView } from './src/components/customer-portal/CustomerPortalView';
+import { MobileLoginScreen } from './src/components/auth/MobileLoginScreen';
 import { MobileSettingsModal } from './src/components/settings/MobileSettingsModal';
 
 const APP_LOGO = require('./assets/logo.png');
@@ -71,6 +69,53 @@ const formatStatusLabel = (status) => {
   if (!status) return 'Follow-up';
   if (status === 'Future Requirement') return 'Future Req.';
   return status;
+};
+
+const getRequirementChipStyle = (val) => {
+  const v = (val || '').toLowerCase();
+  if (v.includes('tile')) return { icon: '🧱', bg: '#EFF6FF', border: '#BFDBFE', text: '#1D4ED8' };
+  if (v.includes('sanitary') || v.includes('bath') || v.includes('toilet') || v.includes('basin')) return { icon: '🚿', bg: '#ECFDF5', border: '#A7F3D0', text: '#059669' };
+  if (v.includes('cp') || v.includes('tap') || v.includes('faucet') || v.includes('shower')) return { icon: '🚰', bg: '#F0FDFA', border: '#99F6E4', text: '#0F766E' };
+  if (v.includes('adhesive') || v.includes('grout')) return { icon: '🧪', bg: '#FAF5FF', border: '#DDD6FE', text: '#7E22CE' };
+  return { icon: '✨', bg: '#FFF7ED', border: '#FED7AA', text: '#C2410C' };
+};
+
+const renderRequirementPills = (req) => {
+  if (!req) return null;
+  const arr = Array.isArray(req)
+    ? req
+    : String(req).split(',').map((s) => s.trim()).filter(Boolean);
+
+  if (arr.length === 0) return null;
+
+  return (
+    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 4 }}>
+      {arr.map((item, idx) => {
+        const style = getRequirementChipStyle(item);
+        return (
+          <View
+            key={idx}
+            style={{
+              backgroundColor: style.bg,
+              borderColor: style.border,
+              borderWidth: 1,
+              paddingHorizontal: 10,
+              paddingVertical: 4.5,
+              borderRadius: 8,
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 5,
+            }}
+          >
+            <Text style={{ fontSize: 12 }}>{style.icon}</Text>
+            <Text style={{ fontSize: 12, fontWeight: '700', color: style.text }}>
+              {item}
+            </Text>
+          </View>
+        );
+      })}
+    </View>
+  );
 };
 
 const getBrandingIconEmoji = (iconName) => {
@@ -161,7 +206,7 @@ const FollowupsNavIcon = ({ active, color }) => (
       alignItems: 'center',
       justifyContent: 'center',
     }}>
-      <Text style={{ fontSize: 10, color: color, fontWeight: '900', marginTop: 1 }}>✓</Text>
+      <View style={{ width: 6, height: 6, borderRadius: 1.5, backgroundColor: color }} />
     </View>
   </View>
 );
@@ -237,7 +282,7 @@ const SECTIONS = [
     id: 'quotation',
     title: 'Quotation & Financials',
     shortTitle: '3. Quotation',
-    fieldNames: ['quotationValue', 'quotationDate', 'status', 'orderValue', 'crossSell'],
+    fieldNames: ['quotationValue', 'status', 'orderValue', 'crossSell'],
   },
   {
     id: 'followup',
@@ -247,57 +292,29 @@ const SECTIONS = [
   },
 ];
 
-// Professional Order Confirmed Celebration Modal Component
-function OrderConfirmedCelebrationModal({ visible, customer, orderValue, onClose, branding }) {
+// Professional Executive Lead / Customer Saved Confirmation Modal Component
+function LeadSuccessCelebrationModal({ visible, customer, orderValue, isOrder = false, onClose, branding }) {
   const scaleAnim = React.useRef(new Animated.Value(0)).current;
   const opacityAnim = React.useRef(new Animated.Value(0)).current;
-  const pulseAnim = React.useRef(new Animated.Value(1)).current;
-  const confettiAnim = React.useRef(new Animated.Value(0)).current;
 
   React.useEffect(() => {
     if (visible) {
-      scaleAnim.setValue(0.3);
+      scaleAnim.setValue(0.85);
       opacityAnim.setValue(0);
-      confettiAnim.setValue(0);
-      pulseAnim.setValue(1);
 
       Animated.parallel([
         Animated.timing(opacityAnim, {
           toValue: 1,
-          duration: 350,
+          duration: 250,
           useNativeDriver: true,
         }),
         Animated.spring(scaleAnim, {
           toValue: 1,
-          friction: 5,
-          tension: 55,
-          useNativeDriver: true,
-        }),
-        Animated.timing(confettiAnim, {
-          toValue: 1,
-          duration: 2400,
-          easing: Easing.out(Easing.quad),
+          friction: 6,
+          tension: 60,
           useNativeDriver: true,
         }),
       ]).start();
-
-      const pulseLoop = Animated.loop(
-        Animated.sequence([
-          Animated.timing(pulseAnim, {
-            toValue: 1.15,
-            duration: 750,
-            useNativeDriver: true,
-          }),
-          Animated.timing(pulseAnim, {
-            toValue: 1,
-            duration: 750,
-            useNativeDriver: true,
-          }),
-        ])
-      );
-      pulseLoop.start();
-
-      return () => pulseLoop.stop();
     }
   }, [visible]);
 
@@ -308,17 +325,23 @@ function OrderConfirmedCelebrationModal({ visible, customer, orderValue, onClose
     ? Object.fromEntries(customerData)
     : (customerData || {});
   const name = data.customerName || 'Valued Client';
-  const val = orderValue || data.orderValue || data.quotationValue;
-  const phone = data.phone;
+  const val = orderValue || data.orderValue || data.quotationValue || data.tileBudget;
+  const phone = data.phone || data.mobilePhone;
+  const customerId = customer?.customerId || data.customerId || 'CUS-LEAD';
+  const customerType = data.customerType || 'Building Owner';
+  const salesperson = data.salesperson || '';
 
   const handleShareWhatsApp = () => {
     if (!phone) {
       Alert.alert('No Phone', 'No phone number is registered for this customer.');
       return;
     }
-    const cleanPhone = phone.replace(/[^0-9]/g, '');
+    const cleanPhone = String(phone).replace(/[^0-9]/g, '');
     const phoneWithCountry = cleanPhone.length === 10 ? `91${cleanPhone}` : cleanPhone;
-    const msg = `🎉 *Order Confirmed - ${branding?.appName || 'Vasantham CRM'}*\n\nDear *${name}*,\n\nWe are delighted to confirm your order${val ? ` of *₹ ${Number(val).toLocaleString('en-IN')}*` : ''}!\n\nThank you for choosing ${branding?.appName || 'Vasantham Tiles & Sanitary Wares'}. Our delivery team is preparing your materials.`;
+    const msg = isOrder
+      ? `*Order Confirmed - ${branding?.appName || 'Vasantham CRM'}*\n\nDear *${name}* (Ref #${customerId}),\n\nWe are pleased to confirm your order${val ? ` of *₹ ${Number(val).toLocaleString('en-IN')}*` : ''}!\n\nThank you for choosing ${branding?.appName || 'Vasantham Tiles & Sanitary Wares'}. Our showroom fulfillment team is processing your requirements.`
+      : `*Welcome to ${branding?.appName || 'Vasantham CRM'}*\n\nDear *${name}* (Ref #${customerId}),\n\nThank you for reaching out to ${branding?.appName || 'Vasantham Tiles & Sanitary Wares'}! Your inquiry has been registered with our team.\n\nFeel free to connect with us for tile designs, 3D layouts, and quotation updates.`;
+
     const url = `whatsapp://send?phone=${phoneWithCountry}&text=${encodeURIComponent(msg)}`;
     Linking.canOpenURL(url)
       .then((supported) => {
@@ -331,60 +354,33 @@ function OrderConfirmedCelebrationModal({ visible, customer, orderValue, onClose
   return (
     <Modal visible={visible} transparent animationType="none" onRequestClose={onClose}>
       <Animated.View style={[styles.celebrationOverlay, { opacity: opacityAnim }]}>
-        {/* Animated Confetti Particles */}
-        <View style={StyleSheet.absoluteFillObject} pointerEvents="none">
-          {CONFETTI_PIECES.map((piece, i) => {
-            const translateY = confettiAnim.interpolate({
-              inputRange: [0, 1],
-              outputRange: [-40, 680 + (i * 15)],
-            });
-            const rotate = confettiAnim.interpolate({
-              inputRange: [0, 1],
-              outputRange: ['0deg', `${piece.rot}deg`],
-            });
-            const opacity = confettiAnim.interpolate({
-              inputRange: [0, 0.1, 0.8, 1],
-              outputRange: [0, 1, 1, 0],
-            });
-
-            return (
-              <Animated.View
-                key={piece.id}
-                style={[
-                  styles.confettiPiece,
-                  {
-                    left: `${piece.left}%`,
-                    width: piece.width,
-                    height: piece.height,
-                    backgroundColor: piece.color,
-                    borderRadius: piece.radius,
-                    opacity,
-                    transform: [{ translateY }, { rotate }],
-                  },
-                ]}
-              />
-            );
-          })}
-        </View>
-
-        {/* Center Celebration Card */}
         <Animated.View style={[styles.celebrationCard, { transform: [{ scale: scaleAnim }] }]}>
-          {/* Glowing Animated Trophy Circle */}
-          <View style={styles.celebrationTrophyBox}>
-            <Animated.View style={[styles.celebrationAura, { transform: [{ scale: pulseAnim }] }]} />
-            <View style={styles.celebrationTrophyCircle}>
-              <Text style={{ fontSize: 44 }}>🏆</Text>
-            </View>
+          {/* Executive Header Badge */}
+          <View
+            style={[
+              styles.celebrationBadgeChip,
+              isOrder
+                ? { backgroundColor: '#FEF3C7', borderColor: '#FDE68A' }
+                : { backgroundColor: '#F0FDFA', borderColor: '#CCFBF1' },
+            ]}
+          >
+            <Text
+              style={[
+                styles.celebrationBadgeChipText,
+                isOrder ? { color: '#B45309' } : { color: '#0F766E' },
+              ]}
+            >
+              {isOrder ? 'ORDER CONFIRMED • DEAL WON' : 'LEAD REGISTERED • PIPELINE ACTIVE'}
+            </Text>
           </View>
 
-          {/* Deal Tag */}
-          <View style={styles.celebrationBadgeChip}>
-            <Text style={styles.celebrationBadgeChipText}>🎉 DEAL WON • ORDER BOOKED</Text>
-          </View>
-
-          <Text style={styles.celebrationMainTitle}>Order Confirmed!</Text>
+          <Text style={styles.celebrationMainTitle}>
+            {isOrder ? 'Order Confirmed!' : 'Customer Registered'}
+          </Text>
           <Text style={styles.celebrationSubtitleText}>
-            Congratulations! Order successfully registered and locked into pipeline.
+            {isOrder
+              ? 'Congratulations! Deal locked into showroom sales.'
+              : 'Lead profile saved successfully into showroom pipeline.'}
           </Text>
 
           {/* Snapshot Summary Box */}
@@ -399,13 +395,40 @@ function OrderConfirmedCelebrationModal({ visible, customer, orderValue, onClose
             <View style={styles.celebrationDataRow}>
               <Text style={styles.celebrationRowLabel}>Customer ID</Text>
               <Text style={styles.celebrationIdText}>
-                {customer?.customerId || 'CUS-LEAD'}
+                #{customerId}
               </Text>
             </View>
 
-            {val ? (
+            {phone ? (
+              <View style={styles.celebrationDataRow}>
+                <Text style={styles.celebrationRowLabel}>Phone</Text>
+                <Text style={styles.celebrationRowValueRegular}>
+                  {phone}
+                </Text>
+              </View>
+            ) : null}
+
+            <View style={styles.celebrationDataRow}>
+              <Text style={styles.celebrationRowLabel}>Category</Text>
+              <Text style={styles.celebrationRowValueRegular}>
+                {customerType}
+              </Text>
+            </View>
+
+            {salesperson ? (
+              <View style={styles.celebrationDataRow}>
+                <Text style={styles.celebrationRowLabel}>Staff Assigned</Text>
+                <Text style={styles.celebrationRowValueRegular}>
+                  {salesperson}
+                </Text>
+              </View>
+            ) : null}
+
+            {val && Number(val) > 0 ? (
               <View style={[styles.celebrationDataRow, { borderBottomWidth: 0, paddingTop: 10 }]}>
-                <Text style={styles.celebrationRowLabel}>Booking Amount</Text>
+                <Text style={styles.celebrationRowLabel}>
+                  {isOrder ? 'Order Value' : 'Estimated Value'}
+                </Text>
                 <Text style={styles.celebrationAmountText}>
                   ₹ {Number(val).toLocaleString('en-IN')}
                 </Text>
@@ -413,15 +436,17 @@ function OrderConfirmedCelebrationModal({ visible, customer, orderValue, onClose
             ) : null}
           </View>
 
-          {/* Action Buttons */}
-          <View style={{ gap: 10, width: '100%', marginTop: 6 }}>
+          {/* Action Buttons (NO tick mark symbol) */}
+          <View style={{ gap: 10, width: '100%', marginTop: 8 }}>
             {phone ? (
               <TouchableOpacity
                 style={styles.celebrationWhatsAppActionBtn}
                 activeOpacity={0.8}
                 onPress={handleShareWhatsApp}
               >
-                <Text style={styles.celebrationWhatsAppActionBtnText}>💬 Share Receipt via WhatsApp</Text>
+                <Text style={styles.celebrationWhatsAppActionBtnText}>
+                  {isOrder ? 'Share Order on WhatsApp' : 'Share Welcome on WhatsApp'}
+                </Text>
               </TouchableOpacity>
             ) : null}
 
@@ -430,7 +455,7 @@ function OrderConfirmedCelebrationModal({ visible, customer, orderValue, onClose
               activeOpacity={0.7}
               onPress={onClose}
             >
-              <Text style={styles.celebrationContinueBtnText}>✓ Continue to CRM</Text>
+              <Text style={styles.celebrationContinueBtnText}>Continue to CRM</Text>
             </TouchableOpacity>
           </View>
         </Animated.View>
@@ -439,11 +464,125 @@ function OrderConfirmedCelebrationModal({ visible, customer, orderValue, onClose
   );
 }
 
+// Professional Vector Logout Icon (Door Frame + Exit Arrow)
+function LogoutVectorIcon({ size = 20, color = '#DC2626' }) {
+  return (
+    <View style={{ width: size, height: size, justifyContent: 'center', alignItems: 'center' }}>
+      {/* Door frame */}
+      <View
+        style={{
+          position: 'absolute',
+          left: 1,
+          top: 1,
+          bottom: 1,
+          width: size * 0.45,
+          borderWidth: 1.8,
+          borderColor: color,
+          borderRightWidth: 0,
+          borderRadius: 2.5,
+        }}
+      />
+      {/* Arrow stem */}
+      <View
+        style={{
+          position: 'absolute',
+          left: size * 0.28,
+          width: size * 0.52,
+          height: 1.8,
+          backgroundColor: color,
+          borderRadius: 1,
+        }}
+      />
+      {/* Arrow top head */}
+      <View
+        style={{
+          position: 'absolute',
+          right: 1.5,
+          top: size * 0.5 - 4.5,
+          width: 5.5,
+          height: 1.8,
+          backgroundColor: color,
+          borderRadius: 1,
+          transform: [{ rotate: '45deg' }],
+        }}
+      />
+      {/* Arrow bottom head */}
+      <View
+        style={{
+          position: 'absolute',
+          right: 1.5,
+          bottom: size * 0.5 - 4.5,
+          width: 5.5,
+          height: 1.8,
+          backgroundColor: color,
+          borderRadius: 1,
+          transform: [{ rotate: '-45deg' }],
+        }}
+      />
+    </View>
+  );
+}
+
+// Executive Logout Confirmation Modal Component
+function LogoutConfirmationModal({ visible, currentProfile, onClose, onConfirmLogout }) {
+  if (!visible) return null;
+
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <View style={styles.logoutModalOverlay}>
+        <View style={styles.logoutModalCard}>
+          <View style={styles.logoutModalIconBadge}>
+            <LogoutVectorIcon size={24} color="#DC2626" />
+          </View>
+
+          <Text style={styles.logoutModalTitle}>Sign Out</Text>
+          <Text style={styles.logoutModalSubtitle}>
+            Are you sure you want to end your current session? You will need your credentials to sign in again.
+          </Text>
+
+          {currentProfile ? (
+            <View style={styles.logoutModalProfileCard}>
+              <View style={styles.profileAvatarMini}>
+                <Text style={{ fontSize: 13 }}>{currentProfile.icon || '👤'}</Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.logoutModalProfileName} numberOfLines={1}>
+                  {currentProfile.name}
+                </Text>
+                <Text style={styles.logoutModalProfileRole}>
+                  {currentProfile.roleTitle || (currentProfile.role === 'owner' ? 'Showroom Owner' : 'Sales Executive')}
+                </Text>
+              </View>
+            </View>
+          ) : null}
+
+          <View style={styles.logoutModalActionsRow}>
+            <TouchableOpacity
+              style={styles.logoutModalCancelBtn}
+              onPress={onClose}
+              activeOpacity={0.75}
+            >
+              <Text style={styles.logoutModalCancelBtnText}>Cancel</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.logoutModalConfirmBtn}
+              onPress={onConfirmLogout}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.logoutModalConfirmBtnText}>Log Out</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
 export default function App() {
   // Mobile Startup Connection & Role Authentication State
   const [isPairedState, setIsPairedState] = useState(null); // null (checking) | true | false
-  const [authRoleState, setAuthRoleState] = useState(null); // null (role select) | 'sales_executive' | 'customer'
-  const [customerUserSession, setCustomerUserSession] = useState(null);
+  const [authRoleState, setAuthRoleState] = useState(null); // null (role select) | 'sales_executive'
 
   const [activeScreen, setActiveScreen] = useState('list'); // 'list' | 'followups' | 'add' | 'detail'
   const [formSection, setFormSection] = useState('contact');
@@ -473,7 +612,8 @@ export default function App() {
   // Active Staff / Owner Profile State
   const [profiles, setProfiles] = useState(PROFILES);
   const [currentProfile, setCurrentProfile] = useState(PROFILES[0]);
-  const [showProfileModal, setShowProfileModal] = useState(false);
+  const isOwner = currentProfile?.role === 'owner';
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [ownerStaffFilter, setOwnerStaffFilter] = useState('all');
 
   // Follow-up Management State
@@ -539,8 +679,26 @@ export default function App() {
             setShowQrScanner(false);
           }
           const savedRole = await apiClient.getSavedAuthRole();
-          if (savedRole && isMounted) {
-            setAuthRoleState(savedRole);
+          const savedUser = await apiClient.getSavedUser();
+          if ((savedRole === 'owner' || savedRole === 'employee' || savedRole === 'sales_executive') && isMounted) {
+            if (savedUser) {
+              const isOwner = savedUser.role === 'owner' || savedUser.role === 'admin' || savedRole === 'owner';
+              const profile = {
+                id: isOwner ? 'owner' : `staff_${savedUser._id}`,
+                name: savedUser.name,
+                email: savedUser.email,
+                role: isOwner ? 'owner' : 'employee',
+                phone: savedUser.phone || '',
+                icon: isOwner ? '👑' : '💼',
+                roleTitle: isOwner ? 'Showroom Owner' : 'Sales Executive',
+                subtitle: isOwner ? 'Full Showroom Command' : 'Showroom Sales & Leads',
+                color: isOwner ? '#D97706' : '#2563EB',
+                bg: isOwner ? '#FEF3C7' : '#EFF6FF',
+                border: isOwner ? '#FDE68A' : '#BFDBFE',
+              };
+              setCurrentProfile(profile);
+            }
+            setAuthRoleState(savedRole === 'owner' ? 'owner' : 'employee');
           }
         } else {
           // If connection is not made on startup, open scanner automatically
@@ -575,38 +733,50 @@ export default function App() {
     setIsOnline(true);
     setShowQrScanner(false);
     const savedRole = await apiClient.getSavedAuthRole();
-    if (savedRole) {
-      setAuthRoleState(savedRole);
+    const savedUser = await apiClient.getSavedUser();
+    if ((savedRole === 'owner' || savedRole === 'employee' || savedRole === 'sales_executive') && savedUser) {
+      const isOwner = savedUser.role === 'owner' || savedUser.role === 'admin' || savedRole === 'owner';
+      const profile = {
+        id: isOwner ? 'owner' : `staff_${savedUser._id}`,
+        name: savedUser.name,
+        email: savedUser.email,
+        role: isOwner ? 'owner' : 'employee',
+        phone: savedUser.phone || '',
+        icon: isOwner ? '👑' : '💼',
+        roleTitle: isOwner ? 'Showroom Owner' : 'Sales Executive',
+        subtitle: isOwner ? 'Full Showroom Command' : 'Showroom Sales & Leads',
+        color: isOwner ? '#D97706' : '#2563EB',
+        bg: isOwner ? '#FEF3C7' : '#EFF6FF',
+        border: isOwner ? '#FDE68A' : '#BFDBFE',
+      };
+      setCurrentProfile(profile);
+      setAuthRoleState(isOwner ? 'owner' : 'employee');
     }
     await initData(true);
   };
 
-  const handleSelectRole = ({ role, profile, customer, data }) => {
-    setAuthRoleState(role);
-    if (role === 'sales_executive' && profile) {
+  const handleLoginSuccess = async ({ role, profile, user, token }) => {
+    const activeRole = role || (profile?.role === 'owner' ? 'owner' : 'employee');
+    setAuthRoleState(activeRole);
+    if (profile) {
       setCurrentProfile(profile);
-    } else if (role === 'customer') {
-      setCustomerUserSession({
-        customer,
-        data,
-        name: customer?.name,
-        phone: customer?.phone,
-        customerId: customer?.customerId,
-      });
     }
+    await initData(true);
   };
 
   const handleDisconnectServer = async () => {
     await apiClient.clearPairing();
     setIsPairedState(false);
     setAuthRoleState(null);
-    setCustomerUserSession(null);
   };
 
   const handleLogoutRole = async () => {
-    await apiClient.setSavedAuthRole(null);
+    setShowLogoutModal(false);
+    await apiClient.logout();
     setAuthRoleState(null);
-    setCustomerUserSession(null);
+    setActiveScreen('list');
+    setFormData({});
+    setErrors({});
   };
 
   // Periodic Device Heartbeat Registration on Desktop Server
@@ -1029,7 +1199,7 @@ export default function App() {
         setIsPairedState(true);
         setShowQrScanner(false);
         setShowSettingsModal(false);
-        setConnectionStatus({ success: true, message: `✓ Found Desktop CRM at ${res.host}!` });
+        setConnectionStatus({ success: true, message: `Connected to Desktop CRM at ${res.host}!` });
         apiClient.sendDeviceHeartbeat(currentProfile, 'Auto-Discovered & Paired');
         Alert.alert(
           '🎯 Desktop Server Discovered!',
@@ -1137,18 +1307,12 @@ export default function App() {
     try {
       const res = await apiClient.createCustomer(payload);
       if (res && res.success && res.data) {
-        if (payload.status === 'Order Confirmed') {
-          setCelebrationData({
-            customer: res.data,
-            orderValue: payload.orderValue || payload.quotationValue || payload.tileBudget,
-          });
-          setShowOrderCelebration(true);
-        } else {
-          Alert.alert(
-            '✓ Customer Registered',
-            `Lead #${res.data?.customerId || 'New'} for "${payload.customerName || 'Customer'}" successfully saved to MongoDB Atlas.`
-          );
-        }
+        setCelebrationData({
+          customer: res.data,
+          orderValue: payload.orderValue || payload.quotationValue || payload.tileBudget,
+          isOrder: payload.status === 'Order Confirmed',
+        });
+        setShowOrderCelebration(true);
         setFormData({});
         setErrors({});
         setExistingCustomerAlert(null);
@@ -1219,7 +1383,7 @@ export default function App() {
     }
   };
 
-  const activeFields = (formSchema?.fields || []).filter((f) => f.active);
+  const activeFields = (formSchema?.fields || []).filter((f) => f.active && f.name !== 'quotationDate');
 
   // Filter customers by employee (for Owner) or type (for Employee), lost leads hidden
   const filteredCustomers = customers.filter((c) => {
@@ -1293,71 +1457,49 @@ export default function App() {
   // 1. Loading check on app startup
   if (isPairedState === null) {
     return (
-      <SafeAreaProvider>
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#F8FAFC' }}>
-          <ActivityIndicator size="large" color="#0F766E" />
-          <Text style={{ marginTop: 14, fontSize: 14, fontWeight: '700', color: '#475569' }}>
-            Connecting to Vasantham CRM Desktop...
-          </Text>
-        </View>
-      </SafeAreaProvider>
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#F8FAFC' }}>
+        <ActivityIndicator size="large" color="#0F766E" />
+        <Text style={{ marginTop: 14, fontSize: 14, fontWeight: '700', color: '#475569' }}>
+          Connecting to Vasantham CRM Desktop...
+        </Text>
+      </View>
     );
   }
 
   // 2. If NOT paired/connected to Desktop -> Show Minimalist QR Scanner Directly
   if (isPairedState === false) {
     return (
-      <SafeAreaProvider>
-        <View style={{ flex: 1, backgroundColor: '#F8FAFC' }}>
-          <MobileQrScannerModal
-            visible={true}
-            isMainScreen={true}
-            onConnected={handleConnectedServer}
-          />
-        </View>
-      </SafeAreaProvider>
+      <View style={{ flex: 1, backgroundColor: '#F8FAFC' }}>
+        <MobileQrScannerModal
+          visible={true}
+          isMainScreen={true}
+          onConnected={handleConnectedServer}
+        />
+      </View>
     );
   }
 
-  // 3. If Paired but NO Role Selected -> Show Role Select / Login Gate
+  // 3. If Paired but NO Role Selected -> Show Credential Login Gate
   if (authRoleState === null) {
     return (
-      <SafeAreaProvider>
-        <View style={{ flex: 1, backgroundColor: '#F8FAFC' }}>
-          <RoleSelectLoginScreen
-            onSelectRole={handleSelectRole}
-            onDisconnectServer={handleDisconnectServer}
-            serverHost={serverHost}
-          />
-          <MobileQrScannerModal
-            visible={showQrScanner}
-            onClose={() => setShowQrScanner(false)}
-            onConnected={handleConnectedServer}
-          />
-        </View>
-      </SafeAreaProvider>
+      <View style={{ flex: 1, backgroundColor: '#F8FAFC' }}>
+        <MobileLoginScreen
+          onLoginSuccess={handleLoginSuccess}
+          onDisconnectServer={handleDisconnectServer}
+          serverHost={serverHost}
+        />
+        <MobileQrScannerModal
+          visible={showQrScanner}
+          onClose={() => setShowQrScanner(false)}
+          onConnected={handleConnectedServer}
+        />
+      </View>
     );
   }
 
-  // 4. Customer Role -> Render Customer Portal View
-  if (authRoleState === 'customer') {
-    return (
-      <SafeAreaProvider>
-        <View style={{ flex: 1, backgroundColor: '#F8FAFC' }}>
-          <CustomerPortalView
-            customerInfo={customerUserSession}
-            onLogoutRole={handleLogoutRole}
-            branding={branding}
-          />
-        </View>
-      </SafeAreaProvider>
-    );
-  }
-
-  // 5. Sales Executive Role -> Render Full CRM Application
+  // 4. Sales Executive Role -> Render Full CRM Application
   return (
-    <SafeAreaProvider>
-      <View style={styles.safeArea}>
+    <View style={styles.safeArea}>
         <StatusBar
           barStyle="dark-content"
           backgroundColor="#FFFFFF"
@@ -1419,23 +1561,20 @@ export default function App() {
         </View>
 
         <View style={styles.headerRight}>
-          {/* Quick Profile Switcher Capsule */}
-          <TouchableOpacity
-            style={styles.headerProfilePill}
-            onPress={() => {
-              loadStaffProfiles();
-              setShowProfileModal(true);
-            }}
-            activeOpacity={0.8}
-          >
+          {/* Active Logged-In User Identity Badge (Executive, logout relocated to settings) */}
+          <View style={styles.headerProfileBadgeStatic}>
             <View style={styles.profileAvatarMini}>
-              <Text style={{ fontSize: 11 }}>{currentProfile.icon || '👑'}</Text>
+              <Text style={{ fontSize: 11 }}>{currentProfile.icon || '👤'}</Text>
             </View>
-            <Text style={styles.headerProfilePillText} numberOfLines={1}>
+            <Text style={styles.headerProfileBadgeName} numberOfLines={1}>
               {currentProfile.name.split(' ')[0]}
             </Text>
-            <Text style={styles.headerProfileDropdownIcon}>▾</Text>
-          </TouchableOpacity>
+            <View style={[styles.headerRoleMicroPill, isOwner ? styles.headerRoleMicroPillOwner : styles.headerRoleMicroPillStaff]}>
+              <Text style={[styles.headerRoleMicroPillText, isOwner ? { color: '#B45309' } : { color: '#2563EB' }]}>
+                {isOwner ? 'Owner' : 'Sales'}
+              </Text>
+            </View>
+          </View>
 
           {activeScreen === 'add' || activeScreen === 'detail' ? (
             <TouchableOpacity
@@ -1503,7 +1642,7 @@ export default function App() {
                 </TouchableOpacity>
               ) : (
                 <TouchableOpacity
-                  onPress={() => { loadStaffProfiles(); setShowProfileModal(true); }}
+                  onPress={onRefresh}
                   hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                   activeOpacity={0.7}
                 >
@@ -1513,7 +1652,7 @@ export default function App() {
             </View>
           </View>
 
-          {/* ── Stat Tiles ── */}
+          {/* ── Enhanced Executive Stat Tiles (Preserving Brand Teal & Slate Theme) ── */}
           {(() => {
             const isOwner = currentProfile.role === 'owner';
             const roleCustomers = isOwner
@@ -1528,29 +1667,98 @@ export default function App() {
               return sum + (isNaN(val) ? 0 : val);
             }, 0);
             const urgentCount = followupCounts.overdue + followupCounts.today;
+            const inProgressCount = roleCustomers.filter((c) => {
+              const d = c.data instanceof Map ? Object.fromEntries(c.data) : (c.data || c);
+              const s = (d.status || c.status || '').toLowerCase();
+              return s.includes('quot') || s.includes('confirm') || s.includes('negot') || s.includes('contact');
+            }).length;
             const pipelineStr = displayPipeline >= 100000
               ? `₹${(displayPipeline / 100000).toFixed(1)}L`
               : `₹${displayPipeline.toLocaleString('en-IN')}`;
+
             return (
               <View style={styles.statTileRow}>
+                {/* 1. Pipeline */}
                 <View style={styles.statTile}>
-                  <Text style={styles.statTileIcon}>💰</Text>
+                  <View style={styles.statTileTopRow}>
+                    <View style={[styles.statTileIconBadge, { backgroundColor: '#F0FDFA', borderColor: '#CCFBF1' }]}>
+                      <Text style={[styles.statTileIconGlyph, { color: '#0F766E' }]}>₹</Text>
+                    </View>
+                    <Text style={styles.statTileLabel}>{isOwner ? 'PIPELINE' : 'MY PIPELINE'}</Text>
+                  </View>
                   <Text style={styles.statTileValue} numberOfLines={1}>{pipelineStr}</Text>
-                  <Text style={styles.statTileLabel}>{isOwner ? 'Pipeline' : 'My Pipeline'}</Text>
+                  <View style={[styles.statTileSubBadge, { backgroundColor: '#F0FDFA' }]}>
+                    <Text style={[styles.statTileSubText, { color: '#0F766E' }]}>
+                      {roleCustomers.length} Total Deals
+                    </Text>
+                  </View>
                 </View>
-                <View style={[styles.statTile, styles.statTileAccentBlue]}>
-                  <Text style={styles.statTileIcon}>👥</Text>
-                  <Text style={[styles.statTileValue, styles.statTileValueBlue]}>{roleCustomers.length}</Text>
-                  <Text style={styles.statTileLabel}>{isOwner ? 'Active Leads' : 'My Leads'}</Text>
+
+                {/* 2. Active Leads */}
+                <View style={styles.statTile}>
+                  <View style={styles.statTileTopRow}>
+                    <View style={[styles.statTileIconBadge, { backgroundColor: '#F8FAFC', borderColor: '#E2E8F0' }]}>
+                      <Text style={[styles.statTileIconGlyph, { color: '#0F172A' }]}>👥</Text>
+                    </View>
+                    <Text style={styles.statTileLabel}>{isOwner ? 'ALL LEADS' : 'MY LEADS'}</Text>
+                  </View>
+                  <Text style={styles.statTileValue} numberOfLines={1}>{roleCustomers.length}</Text>
+                  <View style={[styles.statTileSubBadge, { backgroundColor: '#F1F5F9' }]}>
+                    <Text style={[styles.statTileSubText, { color: '#475569' }]}>
+                      {inProgressCount} Active
+                    </Text>
+                  </View>
                 </View>
-                <View style={[styles.statTile, urgentCount > 0 ? styles.statTileAccentRed : styles.statTileAccentGray]}>
-                  <Text style={styles.statTileIcon}>{urgentCount > 0 ? '🔥' : '📞'}</Text>
-                  <Text style={[styles.statTileValue, urgentCount > 0 ? styles.statTileValueRed : styles.statTileValueGray]}>{urgentCount}</Text>
-                  <Text style={styles.statTileLabel}>
-                    {urgentCount > 0
-                      ? (followupCounts.overdue > 0 ? `${followupCounts.overdue} Overdue` : 'Due Today')
-                      : 'Due Calls'}
+
+                {/* 3. Urgent Actions / Calls */}
+                <View style={styles.statTile}>
+                  <View style={styles.statTileTopRow}>
+                    <View
+                      style={[
+                        styles.statTileIconBadge,
+                        urgentCount > 0
+                          ? { backgroundColor: '#FEF2F2', borderColor: '#FECACA' }
+                          : { backgroundColor: '#F0FDF4', borderColor: '#BBF7D0' },
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.statTileIconGlyph,
+                          { color: urgentCount > 0 ? '#DC2626' : '#16A34A', fontSize: urgentCount > 0 ? 11 : 12 },
+                        ]}
+                      >
+                        {urgentCount > 0 ? '⏱' : '•'}
+                      </Text>
+                    </View>
+                    <Text style={styles.statTileLabel}>DUE CALLS</Text>
+                  </View>
+                  <Text
+                    style={[
+                      styles.statTileValue,
+                      urgentCount > 0 ? { color: '#DC2626' } : { color: '#0F766E' },
+                    ]}
+                    numberOfLines={1}
+                  >
+                    {urgentCount}
                   </Text>
+                  <View
+                    style={[
+                      styles.statTileSubBadge,
+                      urgentCount > 0 ? { backgroundColor: '#FEF2F2' } : { backgroundColor: '#F0FDF4' },
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.statTileSubText,
+                        urgentCount > 0 ? { color: '#DC2626' } : { color: '#16A34A' },
+                      ]}
+                      numberOfLines={1}
+                    >
+                      {urgentCount > 0
+                        ? (followupCounts.overdue > 0 ? `${followupCounts.overdue} overdue` : 'Due today')
+                        : 'Caught up'}
+                    </Text>
+                  </View>
                 </View>
               </View>
             );
@@ -1675,6 +1883,11 @@ export default function App() {
                 const statusStyle = getStatusBadgeStyle(data.status);
                 const phone = data.mobilePhone || data.phone || '';
                 const customerType = data.customerType || '';
+                const quotationVal = Number(data.quotationValue || data.orderValue || data.tileBudget || 0);
+                const quotationStr = quotationVal > 0
+                  ? (quotationVal >= 100000 ? `₹${(quotationVal / 100000).toFixed(1)}L` : `₹${quotationVal.toLocaleString('en-IN')}`)
+                  : null;
+                const location = data.location || data.city || '';
 
                 return (
                   <TouchableOpacity
@@ -1689,32 +1902,43 @@ export default function App() {
 
                     {/* Info block */}
                     <View style={styles.leadInfoCol}>
-                      <Text style={styles.leadName} numberOfLines={1}>
-                        {data.customerName || 'Unnamed Customer'}
-                      </Text>
+                      <View style={styles.leadHeaderRow}>
+                        <Text style={styles.leadName} numberOfLines={1}>
+                          {data.customerName || 'Unnamed Customer'}
+                        </Text>
+                        <View style={[styles.leadStatusPill, { backgroundColor: statusStyle.bg, borderColor: statusStyle.border }]}>
+                          <View style={[styles.leadStatusDot, { backgroundColor: statusStyle.dot }]} />
+                          <Text style={[styles.leadStatusText, { color: statusStyle.text }]}>
+                            {formatStatusLabel(data.status)}
+                          </Text>
+                        </View>
+                      </View>
+
                       <View style={styles.leadMetaRow}>
                         {customerType ? (
                           <View style={styles.leadTypeBadge}>
                             <Text style={styles.leadTypeBadgeText}>{customerType}</Text>
                           </View>
                         ) : null}
+                        {quotationStr ? (
+                          <View style={styles.leadValueBadge}>
+                            <Text style={styles.leadValueBadgeText}>{quotationStr}</Text>
+                          </View>
+                        ) : null}
+                        {location ? (
+                          <Text style={styles.leadLocationText} numberOfLines={1}>📍 {location}</Text>
+                        ) : null}
+                      </View>
+
+                      <View style={styles.leadFooterRow}>
+                        <Text style={styles.leadIdText}>#{item.customerId || 'CUS-000000'}</Text>
                         {phone ? (
                           <Text style={styles.leadPhone} numberOfLines={1}>{phone}</Text>
                         ) : null}
                       </View>
-                      <Text style={styles.leadIdText}>#{item.customerId || 'CUS-000000'}</Text>
                     </View>
 
-                    {/* Right — status + chevron */}
-                    <View style={styles.leadRightGroup}>
-                      <View style={[styles.leadStatusPill, { backgroundColor: statusStyle.bg, borderColor: statusStyle.border }]}>
-                        <View style={[styles.leadStatusDot, { backgroundColor: statusStyle.dot }]} />
-                        <Text style={[styles.leadStatusText, { color: statusStyle.text }]}>
-                          {formatStatusLabel(data.status)}
-                        </Text>
-                      </View>
-                      <Text style={styles.leadChevron}>›</Text>
-                    </View>
+                    <Text style={styles.leadChevron}>›</Text>
                   </TouchableOpacity>
                 );
               }}
@@ -1812,7 +2036,7 @@ export default function App() {
                           isCompleted && styles.sectionTabChipTextCompleted,
                         ]}
                       >
-                        {isCompleted ? '✓ ' : ''}{sec.shortTitle}
+                        {sec.shortTitle}
                       </Text>
                     </TouchableOpacity>
                   );
@@ -1947,7 +2171,6 @@ export default function App() {
       )}
 
       {/* Screen: Customer Details (Ultra-Modern Executive Detail Screen) */}
-      {/* Screen: Customer Details (Ultra-Modern Executive Detail Screen) */}
       {activeScreen === 'detail' && selectedCustomer && (
         <ScrollView style={styles.detailScrollView} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 60 }}>
           {(() => {
@@ -1958,6 +2181,10 @@ export default function App() {
             const badgeStyle = getBadgeStyle(data.customerType);
             const statusStyle = getStatusBadgeStyle(data.status);
             const phone = data.mobilePhone || data.phone || '';
+
+            // Registered date
+            const regDate = selectedCustomer.createdAt || selectedCustomer.entryDate || data.entryDate;
+            const regDateStr = regDate ? formatShortDate(regDate) : 'Recent';
 
             // Parse discussion history to construct a vertical activity timeline
             const notesStr = data.notes || '';
@@ -2035,11 +2262,11 @@ export default function App() {
                   </View>
                 </View>
 
-                {/* 2. Hero Customer Identity Card */}
+                {/* 2. Hero Customer Identity Card (Web CRM Inspired) */}
                 <View style={styles.detailHeroCard}>
                   <View style={styles.detailHeroHeaderRow}>
-                    <View style={[styles.detailAvatar, { backgroundColor: statusStyle.bg, borderColor: statusStyle.border }]}>
-                      <Text style={[styles.detailAvatarText, { color: statusStyle.dot }]}>{initial}</Text>
+                    <View style={styles.detailAvatar}>
+                      <Text style={styles.detailAvatarText}>{initial}</Text>
                     </View>
                     <View style={{ flex: 1 }}>
                       <Text style={styles.detailCustomerName} numberOfLines={1}>
@@ -2056,7 +2283,7 @@ export default function App() {
                     </View>
                   </View>
 
-                  {/* Dual Badges Flow */}
+                  {/* Classification & Status Badges */}
                   <View style={styles.detailBadgesRow}>
                     <View style={[styles.typePill, { backgroundColor: badgeStyle.bg, borderColor: badgeStyle.border }]}>
                       <Text style={[styles.typePillText, { color: badgeStyle.text }]}>
@@ -2071,6 +2298,15 @@ export default function App() {
                     </View>
                   </View>
 
+                  {/* Subtitle Details Line */}
+                  <View style={styles.detailSubtitleRow}>
+                    <Text style={styles.detailSubtitleText}>
+                      Registered: <Text style={styles.detailSubtitleBold}>{regDateStr}</Text>
+                      {'  •  '}
+                      Staff: <Text style={[styles.detailSubtitleBold, { color: '#2563EB' }]}>{data.salesperson || 'Showroom Team'}</Text>
+                    </Text>
+                  </View>
+
                   {/* 1-Tap Action Call & WhatsApp Buttons */}
                   {phone ? (
                     <View style={styles.detailHeroActionsRow}>
@@ -2080,7 +2316,7 @@ export default function App() {
                         activeOpacity={0.85}
                       >
                         <Text style={styles.detailActionBtnCallIcon}>📞</Text>
-                        <Text style={styles.detailActionBtnCallText}>Call {phone}</Text>
+                        <Text style={styles.detailActionBtnCallText}>Call</Text>
                       </TouchableOpacity>
 
                       <TouchableOpacity
@@ -2142,7 +2378,7 @@ export default function App() {
                   </View>
                 </View>
 
-                {/* 4. Structured Sections: Contact & Project Info */}
+                {/* 4. Structured Sections: Contact & Project Info (No Table Borders) */}
                 {/* Section A: Contact & Profile */}
                 <View style={styles.cleanDetailSectionCard}>
                   <View style={styles.cleanSectionHeader}>
@@ -2168,7 +2404,7 @@ export default function App() {
                       <Text style={styles.cleanRowLabel}>Lead Source</Text>
                       <Text style={styles.cleanRowValue}>{data.leadSource || 'Showroom Walk-in'}</Text>
                     </View>
-                    <View style={[styles.cleanDetailRow, { borderBottomWidth: 0 }]}>
+                    <View style={styles.cleanDetailRow}>
                       <Text style={styles.cleanRowLabel}>Sales Executive</Text>
                       <Text style={[styles.cleanRowValueBold, { color: '#2563EB' }]}>
                         👤 {data.salesperson || 'Showroom Team'}
@@ -2177,19 +2413,22 @@ export default function App() {
                   </View>
                 </View>
 
-                {/* Section B: Material & Project Specs */}
+                {/* Section B: Material & Project Specs (With Visual Requirement Pills) */}
                 <View style={styles.cleanDetailSectionCard}>
                   <View style={styles.cleanSectionHeader}>
                     <Text style={styles.cleanSectionIcon}>📐</Text>
                     <Text style={styles.cleanSectionTitle}>Material & Project Specs</Text>
                   </View>
                   <View style={styles.cleanSectionBody}>
-                    <View style={styles.cleanDetailRow}>
-                      <Text style={styles.cleanRowLabel}>Tile Requirement</Text>
-                      <Text style={[styles.cleanRowValue, { flex: 1.5, textAlign: 'right' }]}>
-                        {data.requirement || '—'}
-                      </Text>
-                    </View>
+                    {data.requirement ? (
+                      <View style={{ marginBottom: 10 }}>
+                        <Text style={[styles.cleanRowLabel, { marginBottom: 4 }]}>Tile Requirements</Text>
+                        {renderRequirementPills(data.requirement) || (
+                          <Text style={styles.cleanRowValue}>{data.requirement}</Text>
+                        )}
+                      </View>
+                    ) : null}
+
                     <View style={styles.cleanDetailRow}>
                       <Text style={styles.cleanRowLabel}>Approx Area</Text>
                       <Text style={styles.cleanRowValueBold}>
@@ -2204,7 +2443,7 @@ export default function App() {
                       <Text style={styles.cleanRowLabel}>Adhesive & Grouts</Text>
                       <Text style={styles.cleanRowValue}>{data.adhesiveRequirement || '—'}</Text>
                     </View>
-                    <View style={[styles.cleanDetailRow, { borderBottomWidth: 0 }]}>
+                    <View style={styles.cleanDetailRow}>
                       <Text style={styles.cleanRowLabel}>Cross-Sell Interest</Text>
                       <Text style={styles.cleanRowValue}>{data.crossSell || '—'}</Text>
                     </View>
@@ -2216,7 +2455,7 @@ export default function App() {
                   const standardKeys = [
                     'customerId', 'entryDate', 'customerName', 'phone', 'location', 'leadSource', 'salesperson', 'customerType',
                     'houseStage', 'requirement', 'approxQuantity', 'tileBudget', 'sanitaryRequirement', 'adhesiveRequirement',
-                    'quotationValue', 'quotationDate', 'status', 'orderValue', 'crossSell',
+                    'quotationValue', 'status', 'orderValue', 'crossSell',
                     'nextFollowUp', 'lastFollowUp', 'followUpCount', 'lastReason',
                   ];
                   const customFields = activeFields.filter((f) => !standardKeys.includes(f.name));
@@ -2229,11 +2468,11 @@ export default function App() {
                         <Text style={styles.cleanSectionTitle}>Custom Specifications & Fields</Text>
                       </View>
                       <View style={styles.cleanSectionBody}>
-                        {customFields.map((cf, idx) => {
+                        {customFields.map((cf) => {
                           const val = data[cf.name];
                           let displayVal = '—';
                           if (val !== undefined && val !== null && val !== '') {
-                            if (cf.type === 'checkbox') displayVal = val ? '✓ Yes' : '✕ No';
+                            if (cf.type === 'checkbox') displayVal = val ? 'Yes' : 'No';
                             else if (cf.type === 'currency') displayVal = `₹ ${Number(val).toLocaleString('en-IN')}`;
                             else if (Array.isArray(val)) displayVal = val.join(', ');
                             else displayVal = String(val);
@@ -2241,10 +2480,7 @@ export default function App() {
                           return (
                             <View
                               key={cf.id || cf.name}
-                              style={[
-                                styles.cleanDetailRow,
-                                idx === customFields.length - 1 && { borderBottomWidth: 0 },
-                              ]}
+                              style={styles.cleanDetailRow}
                             >
                               <Text style={styles.cleanRowLabel}>{cf.label}</Text>
                               <Text style={styles.cleanRowValue}>{displayVal}</Text>
@@ -2346,6 +2582,7 @@ export default function App() {
         onSwitchProfile={() => setShowProfileModal(true)}
         onDisconnectServer={handleDisconnectServer}
         onReloadData={() => initData(true)}
+        onLogout={handleLogoutRole}
         branding={branding}
       />
 
@@ -2356,11 +2593,12 @@ export default function App() {
         onConnected={handleQrConnected}
       />
 
-      {/* Deal Won & Order Confirmed Professional Celebration Modal */}
-      <OrderConfirmedCelebrationModal
+      {/* Professional Lead Registered & Order Confirmed Modal */}
+      <LeadSuccessCelebrationModal
         visible={showOrderCelebration}
         customer={celebrationData?.customer}
         orderValue={celebrationData?.orderValue}
+        isOrder={celebrationData?.isOrder}
         onClose={() => setShowOrderCelebration(false)}
         branding={branding}
       />
@@ -2374,13 +2612,12 @@ export default function App() {
         branding={branding}
       />
 
-      {/* Profile Selector Modal (Owner vs Staff) */}
-      <ProfileSelectorModal
-        visible={showProfileModal}
+      {/* Executive Logout Confirmation Modal */}
+      <LogoutConfirmationModal
+        visible={showLogoutModal}
         currentProfile={currentProfile}
-        profiles={profiles}
-        onSelectProfile={(p) => setCurrentProfile(p)}
-        onClose={() => setShowProfileModal(false)}
+        onClose={() => setShowLogoutModal(false)}
+        onConfirmLogout={handleLogoutRole}
       />
 
       {/* Follow-up Activity Logger Modal */}
@@ -2513,8 +2750,7 @@ export default function App() {
           </View>
         </View>
       )}
-      </View>
-    </SafeAreaProvider>
+    </View>
   );
 }
 
@@ -2529,13 +2765,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingVertical: 12,
     backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
+    borderBottomColor: '#E2E8F0',
     shadowColor: '#0F172A',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.03,
+    shadowOpacity: 0.04,
     shadowRadius: 6,
     elevation: 2,
     zIndex: 10,
@@ -2546,12 +2782,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   headerHamburgerBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
+    width: 34,
+    height: 34,
+    borderRadius: 9,
     backgroundColor: '#F8FAFC',
     borderWidth: 1,
-    borderColor: '#F1F5F9',
+    borderColor: '#E2E8F0',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 9,
@@ -2566,7 +2802,7 @@ const styles = StyleSheet.create({
   brandBadge: {
     width: 38,
     height: 38,
-    borderRadius: 11,
+    borderRadius: 10,
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
     borderColor: '#E2E8F0',
@@ -2575,14 +2811,14 @@ const styles = StyleSheet.create({
     padding: 2,
     shadowColor: '#0F172A',
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 2,
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
     elevation: 1,
   },
   brandBadgeLogoImage: {
     width: '100%',
     height: '100%',
-    borderRadius: 9,
+    borderRadius: 8,
   },
   brandBadgeText: {
     color: '#FFFFFF',
@@ -2591,8 +2827,8 @@ const styles = StyleSheet.create({
   },
   headerBrandTitle: {
     color: '#0F172A',
-    fontWeight: '800',
-    fontSize: 15.5,
+    fontWeight: '900',
+    fontSize: 16,
     letterSpacing: -0.3,
   },
   headerStatusPill: {
@@ -2669,6 +2905,16 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     marginLeft: 1,
   },
+  headerLogoutBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   headerBackBtn: {
     paddingHorizontal: 12,
     paddingVertical: 6.5,
@@ -2690,109 +2936,115 @@ const styles = StyleSheet.create({
   },
   // Search Bar
   searchRow: {
-    marginBottom: 12,
+    marginBottom: 10,
   },
   searchInputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#FFFFFF',
-    borderWidth: 1.5,
+    borderWidth: 1,
     borderColor: '#E2E8F0',
-    borderRadius: 16,
-    paddingHorizontal: 16,
-    height: 50,
-    shadowColor: '#64748B',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 2,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    height: 44,
   },
   searchIcon: {
-    fontSize: 15,
-    marginRight: 10,
-    opacity: 0.5,
+    fontSize: 14,
+    marginRight: 8,
+    opacity: 0.6,
   },
   searchInput: {
     flex: 1,
+    fontSize: 13,
     color: '#0F172A',
-    fontSize: 14,
     fontWeight: '500',
-    paddingVertical: 0,
   },
   searchClearBtn: {
-    width: 22,
-    height: 22,
+    padding: 4,
+  },
+  searchClearText: {
+    fontSize: 12,
+    color: '#64748B',
+    fontWeight: '700',
+  },
+  searchFilterBtn: {
+    width: 34,
+    height: 34,
     borderRadius: 11,
-    backgroundColor: '#E2E8F0',
+    backgroundColor: '#F1F5F9',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  // Minimalist Floating Stat Tiles
+  // Executive Floating Stat Tiles (Teal & Slate Theme)
   statTileRow: {
     flexDirection: 'row',
-    gap: 10,
-    marginBottom: 14,
+    gap: 8,
+    marginBottom: 12,
   },
   statTile: {
     flex: 1,
     backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    paddingVertical: 14,
+    borderRadius: 14,
+    paddingVertical: 11,
     paddingHorizontal: 10,
-    alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#F1F5F9',
-    shadowColor: '#94A3B8',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  statTileAccentBlue: {
-    backgroundColor: '#EFF6FF',
-    borderColor: '#DBEAFE',
-  },
-  statTileAccentRed: {
-    backgroundColor: '#FFF1F2',
-    borderColor: '#FECDD3',
-  },
-  statTileAccentGray: {
-    backgroundColor: '#F8FAFC',
     borderColor: '#E2E8F0',
+    justifyContent: 'space-between',
+    minHeight: 90,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.03,
+    shadowRadius: 4,
+    elevation: 1,
   },
-  statTileIcon: {
-    fontSize: 18,
-    marginBottom: 5,
+  statTileTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 4,
   },
-  statTileValue: {
-    fontSize: 20,
+  statTileIconBadge: {
+    width: 24,
+    height: 24,
+    borderRadius: 7,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  statTileIconGlyph: {
+    fontSize: 12,
     fontWeight: '800',
-    color: '#10B981',
-    letterSpacing: -0.5,
-  },
-  statTileValueBlue: {
-    color: '#2563EB',
-  },
-  statTileValueRed: {
-    color: '#EF4444',
-  },
-  statTileValueGray: {
-    color: '#94A3B8',
   },
   statTileLabel: {
-    fontSize: 10,
-    fontWeight: '700',
+    fontSize: 9,
+    fontWeight: '800',
     color: '#64748B',
-    marginTop: 2,
-    textAlign: 'center',
-    letterSpacing: 0.1,
+    letterSpacing: 0.5,
   },
-  // Premium Filter Tab Bar
+  statTileValue: {
+    fontSize: 18,
+    fontWeight: '900',
+    color: '#0F172A',
+    letterSpacing: -0.4,
+    marginVertical: 2,
+  },
+  statTileSubBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    alignSelf: 'flex-start',
+    marginTop: 2,
+  },
+  statTileSubText: {
+    fontSize: 9.5,
+    fontWeight: '600',
+  },
+  // Filter Tab Bar
   filterTabBar: {
-    marginBottom: 14,
+    marginBottom: 12,
   },
   filterTabBarContent: {
-    gap: 8,
+    gap: 6,
     paddingVertical: 2,
     paddingHorizontal: 2,
   },
@@ -2800,48 +3052,40 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
-    paddingHorizontal: 14,
-    paddingVertical: 9,
-    borderRadius: 24,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
     backgroundColor: '#FFFFFF',
-    borderWidth: 1.5,
+    borderWidth: 1,
     borderColor: '#E2E8F0',
-    shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 3,
-    elevation: 1,
   },
   filterTabActive: {
-    backgroundColor: '#1E3A5F',
-    borderColor: '#1E3A5F',
-    shadowOpacity: 0.18,
-    shadowRadius: 6,
-    elevation: 3,
+    backgroundColor: '#0F766E',
+    borderColor: '#0F766E',
   },
   filterTabText: {
-    fontSize: 13,
-    color: '#334155',
-    fontWeight: '700',
+    fontSize: 12,
+    color: '#475569',
+    fontWeight: '600',
   },
   filterTabTextActive: {
     color: '#FFFFFF',
-    fontWeight: '800',
+    fontWeight: '700',
   },
   filterTabBadge: {
     backgroundColor: '#F1F5F9',
-    paddingHorizontal: 7,
-    paddingVertical: 2,
-    borderRadius: 10,
-    minWidth: 22,
+    paddingHorizontal: 6,
+    paddingVertical: 1.5,
+    borderRadius: 6,
+    minWidth: 18,
     alignItems: 'center',
   },
   filterTabBadgeActive: {
-    backgroundColor: 'rgba(255,255,255,0.18)',
+    backgroundColor: 'rgba(255,255,255,0.22)',
   },
   filterTabBadgeText: {
-    fontSize: 11,
-    fontWeight: '800',
+    fontSize: 10.5,
+    fontWeight: '700',
     color: '#475569',
   },
   filterTabBadgeTextActive: {
@@ -2904,57 +3148,51 @@ const styles = StyleSheet.create({
     paddingHorizontal: 18,
     paddingVertical: 10,
     borderRadius: 12,
-    shadowColor: '#2563EB',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 3,
   },
   retryConnectionBtnText: {
     color: '#FFFFFF',
     fontSize: 12.5,
     fontWeight: '800',
   },
-  // Lead Card — premium 2-row layout
+  // Lead Card — Clean executive layout
   leadCard: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#FFFFFF',
-    borderRadius: 18,
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#EFF3F8',
-    paddingVertical: 14,
-    paddingHorizontal: 14,
-    marginBottom: 10,
-    shadowColor: '#1E3A5F',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 2,
+    borderColor: '#E2E8F0',
+    paddingVertical: 11,
+    paddingHorizontal: 12,
+    marginBottom: 8,
   },
   leadAvatar: {
-    width: 46,
-    height: 46,
-    borderRadius: 14,
-    backgroundColor: '#EFF6FF',
+    width: 40,
+    height: 40,
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 12,
+    marginRight: 10,
   },
   leadAvatarText: {
-    fontSize: 20,
+    fontSize: 17,
     fontWeight: '800',
-    color: '#2563EB',
   },
   leadInfoCol: {
     flex: 1,
-    marginRight: 8,
+  },
+  leadHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 6,
   },
   leadName: {
     fontSize: 14.5,
     fontWeight: '700',
     color: '#0F172A',
-    letterSpacing: -0.2,
+    letterSpacing: -0.1,
+    flex: 1,
   },
   leadMetaRow: {
     flexDirection: 'row',
@@ -2964,60 +3202,74 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
   },
   leadTypeBadge: {
-    backgroundColor: '#F0F9FF',
+    backgroundColor: '#F8FAFC',
     borderWidth: 1,
-    borderColor: '#BAE6FD',
-    paddingHorizontal: 7,
+    borderColor: '#E2E8F0',
+    paddingHorizontal: 6,
     paddingVertical: 2,
-    borderRadius: 6,
+    borderRadius: 5,
   },
   leadTypeBadgeText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#475569',
+  },
+  leadValueBadge: {
+    backgroundColor: '#F0FDF4',
+    borderWidth: 1,
+    borderColor: '#BBF7D0',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 5,
+  },
+  leadValueBadgeText: {
     fontSize: 10.5,
     fontWeight: '700',
-    color: '#0369A1',
+    color: '#15803D',
+  },
+  leadLocationText: {
+    fontSize: 10.5,
+    color: '#64748B',
+    fontWeight: '500',
+  },
+  leadFooterRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 4,
+  },
+  leadIdText: {
+    fontSize: 10.5,
+    color: '#94A3B8',
+    fontWeight: '500',
   },
   leadPhone: {
     fontSize: 11,
     color: '#64748B',
     fontWeight: '600',
   },
-  leadIdText: {
-    fontSize: 10.5,
-    color: '#94A3B8',
-    fontWeight: '600',
-    marginTop: 3,
-    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
-  },
-  leadRightGroup: {
-    alignItems: 'flex-end',
-    gap: 4,
-  },
   leadStatusPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F0F9FF',
+    paddingHorizontal: 7,
+    paddingVertical: 2.5,
+    borderRadius: 6,
     borderWidth: 1,
-    borderColor: '#E0F2FE',
-    paddingHorizontal: 9,
-    paddingVertical: 4,
-    borderRadius: 20,
-    gap: 5,
+    gap: 4,
   },
   leadStatusDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: '#2563EB',
+    width: 5,
+    height: 5,
+    borderRadius: 2.5,
   },
   leadStatusText: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '700',
-    color: '#2563EB',
   },
   leadChevron: {
-    fontSize: 20,
+    fontSize: 18,
     color: '#CBD5E1',
-    marginTop: 6,
+    marginLeft: 6,
   },
   activeTabUnderline: {
     width: 16,
@@ -3124,32 +3376,32 @@ const styles = StyleSheet.create({
     paddingTop: Platform.OS === 'ios' ? 14 : 12,
     paddingBottom: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
+    borderBottomColor: '#F1F5F9',
   },
   formHeaderIconCircle: {
-    width: 32,
-    height: 32,
-    borderRadius: 9,
-    backgroundColor: '#EFF6FF',
+    width: 30,
+    height: 30,
+    borderRadius: 8,
+    backgroundColor: '#F0FDFA',
     borderWidth: 1,
-    borderColor: '#DBEAFE',
+    borderColor: '#CCFBF1',
     alignItems: 'center',
     justifyContent: 'center',
   },
   formHeaderTitle: {
     fontSize: 15,
-    fontWeight: '900',
+    fontWeight: '700',
     color: '#0F172A',
-    letterSpacing: -0.2,
+    letterSpacing: -0.1,
   },
   formHeaderSub: {
     fontSize: 10.5,
     color: '#64748B',
-    fontWeight: '600',
+    fontWeight: '500',
     marginTop: 1,
   },
   formCloseBtn: {
-    backgroundColor: '#F1F5F9',
+    backgroundColor: '#F8FAFC',
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderRadius: 8,
@@ -3158,58 +3410,53 @@ const styles = StyleSheet.create({
   },
   formCloseBtnText: {
     fontSize: 11.5,
-    fontWeight: '800',
-    color: '#475569',
+    fontWeight: '600',
+    color: '#64748B',
   },
   progressBarWrapper: {
-    height: 4.5,
-    backgroundColor: '#E2E8F0',
+    height: 3,
+    backgroundColor: '#F1F5F9',
     overflow: 'hidden',
   },
   progressBarFill: {
     height: '100%',
-    backgroundColor: '#2563EB',
-    borderRadius: 2,
+    backgroundColor: '#0F766E',
+    borderRadius: 1.5,
   },
   sectionTabBar: {
     backgroundColor: '#FFFFFF',
     paddingVertical: 10,
     borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
+    borderBottomColor: '#F1F5F9',
   },
   sectionTabChip: {
-    paddingHorizontal: 13,
-    paddingVertical: 7,
-    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
     backgroundColor: '#F8FAFC',
-    borderWidth: 1.2,
+    borderWidth: 1,
     borderColor: '#E2E8F0',
   },
   sectionTabChipActive: {
-    backgroundColor: '#2563EB',
-    borderColor: '#1D4ED8',
-    shadowColor: '#2563EB',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.18,
-    shadowRadius: 4,
-    elevation: 3,
+    backgroundColor: '#0F766E',
+    borderColor: '#0F766E',
   },
   sectionTabChipCompleted: {
-    backgroundColor: '#ECFDF5',
-    borderColor: '#A7F3D0',
+    backgroundColor: '#F0FDFA',
+    borderColor: '#CCFBF1',
   },
   sectionTabChipText: {
-    fontSize: 11.5,
-    fontWeight: '700',
+    fontSize: 12,
+    fontWeight: '500',
     color: '#64748B',
   },
   sectionTabChipTextActive: {
     color: '#FFFFFF',
-    fontWeight: '900',
+    fontWeight: '600',
   },
   sectionTabChipTextCompleted: {
-    color: '#059669',
-    fontWeight: '800',
+    color: '#0F766E',
+    fontWeight: '600',
   },
   formScrollView: {
     flex: 1,
@@ -3217,128 +3464,99 @@ const styles = StyleSheet.create({
   },
   sectionBannerBox: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    borderWidth: 1.2,
+    borderRadius: 12,
+    borderWidth: 1,
     borderColor: '#E2E8F0',
-    borderLeftWidth: 4,
-    borderLeftColor: '#2563EB',
     padding: 14,
     marginBottom: 12,
-    shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 5,
-    elevation: 2,
   },
   sectionBannerIconCircle: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    backgroundColor: '#EFF6FF',
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: '#F0FDFA',
     borderWidth: 1,
-    borderColor: '#DBEAFE',
+    borderColor: '#CCFBF1',
     alignItems: 'center',
     justifyContent: 'center',
   },
   sectionBannerTitle: {
-    fontSize: 15.5,
-    fontWeight: '900',
+    fontSize: 15,
+    fontWeight: '700',
     color: '#0F172A',
-    letterSpacing: -0.2,
+    letterSpacing: -0.1,
   },
   sectionStepCounterBadge: {
-    backgroundColor: '#EFF6FF',
+    backgroundColor: '#F0FDFA',
     borderWidth: 1,
-    borderColor: '#BFDBFE',
-    paddingHorizontal: 9,
-    paddingVertical: 3.5,
-    borderRadius: 8,
+    borderColor: '#CCFBF1',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
   },
   sectionStepCounterText: {
     fontSize: 10.5,
-    fontWeight: '800',
-    color: '#1D4ED8',
+    fontWeight: '600',
+    color: '#0F766E',
   },
   sectionBannerSubtitle: {
     fontSize: 11.5,
     color: '#64748B',
     marginTop: 2,
-    fontWeight: '600',
+    fontWeight: '500',
   },
   inputsCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 18,
-    borderWidth: 1.2,
+    borderRadius: 14,
+    borderWidth: 1,
     borderColor: '#E2E8F0',
-    padding: 18,
-    shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
+    padding: 16,
   },
   formNavButtonsRow: {
     flexDirection: 'row',
     gap: 10,
-    marginTop: 18,
+    marginTop: 16,
   },
   prevSectionBtn: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
-    borderWidth: 1.5,
-    borderColor: '#CBD5E1',
-    paddingVertical: 14,
-    borderRadius: 12,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    paddingVertical: 12,
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
   },
   prevSectionBtnText: {
-    color: '#334155',
+    color: '#475569',
     fontSize: 13.5,
-    fontWeight: '800',
-    letterSpacing: -0.2,
+    fontWeight: '600',
   },
   nextSectionBtn: {
     flex: 1,
-    backgroundColor: '#2563EB',
-    paddingVertical: 14,
-    borderRadius: 12,
+    backgroundColor: '#0F766E',
+    paddingVertical: 12,
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: '#1D4ED8',
-    shadowColor: '#2563EB',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.16,
-    shadowRadius: 5,
-    elevation: 3,
   },
   nextSectionBtnText: {
     color: '#FFFFFF',
     fontSize: 13.5,
-    fontWeight: '800',
-    letterSpacing: -0.2,
+    fontWeight: '600',
   },
   submitFinalBtn: {
     flex: 1,
-    backgroundColor: '#059669',
-    paddingVertical: 14,
-    borderRadius: 12,
+    backgroundColor: '#0F766E',
+    paddingVertical: 12,
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: '#047857',
-    shadowColor: '#059669',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.16,
-    shadowRadius: 5,
-    elevation: 3,
   },
   submitFinalBtnText: {
     color: '#FFFFFF',
     fontSize: 14,
-    fontWeight: '900',
-    letterSpacing: -0.2,
+    fontWeight: '700',
   },
   // Customer Detail Screen Styles — Ultra-Modern Mobile Overhaul
   detailScrollView: {
@@ -3400,34 +3618,40 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     borderWidth: 1,
     borderColor: '#E2E8F0',
-    padding: 16,
+    padding: 18,
     marginBottom: 14,
-    shadowColor: '#1E3A5F',
+    shadowColor: '#0F172A',
     shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.08,
+    shadowOpacity: 0.05,
     shadowRadius: 10,
-    elevation: 3,
+    elevation: 2,
   },
   detailHeroHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 14,
   },
   detailAvatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 16,
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: '#2563EB',
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1.5,
+    shadowColor: '#2563EB',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    elevation: 3,
   },
   detailAvatarText: {
     fontSize: 22,
-    fontWeight: '900',
+    fontWeight: '800',
+    color: '#FFFFFF',
   },
   detailCustomerName: {
-    fontSize: 18,
-    fontWeight: '900',
+    fontSize: 19,
+    fontWeight: '800',
     color: '#0F172A',
     letterSpacing: -0.3,
   },
@@ -3439,21 +3663,21 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
   },
   detailIdPill: {
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#F1F5F9',
     paddingHorizontal: 8,
-    paddingVertical: 2.5,
+    paddingVertical: 3,
     borderRadius: 6,
     borderWidth: 1,
     borderColor: '#E2E8F0',
   },
   detailIdPillText: {
-    fontSize: 11,
-    fontWeight: '800',
+    fontSize: 11.5,
+    fontWeight: '700',
     color: '#475569',
     fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
   },
   detailLocationText: {
-    fontSize: 12,
+    fontSize: 12.5,
     color: '#64748B',
     fontWeight: '600',
   },
@@ -3464,14 +3688,29 @@ const styles = StyleSheet.create({
     marginTop: 12,
     flexWrap: 'wrap',
   },
+  detailSubtitleRow: {
+    marginTop: 10,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: '#F8FAFC',
+  },
+  detailSubtitleText: {
+    fontSize: 12.5,
+    color: '#64748B',
+    fontWeight: '500',
+  },
+  detailSubtitleBold: {
+    color: '#0F172A',
+    fontWeight: '700',
+  },
   typePill: {
-    paddingHorizontal: 9,
+    paddingHorizontal: 10,
     paddingVertical: 4,
-    borderRadius: 8,
+    borderRadius: 16,
     borderWidth: 1,
   },
   typePillText: {
-    fontSize: 11,
+    fontSize: 11.5,
     fontWeight: '800',
     letterSpacing: 0.2,
   },
@@ -3480,9 +3719,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 10,
     paddingVertical: 4,
-    borderRadius: 20,
+    borderRadius: 16,
     borderWidth: 1,
-    gap: 5,
+    gap: 6,
   },
   statusDot: {
     width: 6,
@@ -3497,60 +3736,54 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 10,
     marginTop: 14,
-    paddingTop: 14,
+    paddingTop: 12,
     borderTopWidth: 1,
     borderTopColor: '#F1F5F9',
   },
   detailActionBtnCall: {
     flex: 1.2,
-    backgroundColor: '#EFF6FF',
-    paddingVertical: 12,
+    backgroundColor: '#FFFFFF',
+    paddingVertical: 10,
     paddingHorizontal: 12,
     borderRadius: 12,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 7,
-    borderWidth: 1.5,
-    borderColor: '#BFDBFE',
-    shadowColor: '#2563EB',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 2,
     elevation: 1,
   },
   detailActionBtnCallIcon: {
     fontSize: 14,
   },
   detailActionBtnCallText: {
-    color: '#1D4ED8',
-    fontWeight: '800',
+    color: '#0F172A',
+    fontWeight: '700',
     fontSize: 13,
-    letterSpacing: -0.2,
   },
   detailActionBtnWhatsApp: {
     flex: 1,
-    backgroundColor: '#ECFDF5',
-    paddingVertical: 12,
+    backgroundColor: '#DCFCE7',
+    paddingVertical: 10,
     paddingHorizontal: 12,
     borderRadius: 12,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 7,
-    borderWidth: 1.5,
-    borderColor: '#A7F3D0',
-    shadowColor: '#059669',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 1,
+    borderWidth: 1,
+    borderColor: '#86EFAC',
   },
   detailActionBtnWhatsAppIcon: {
     fontSize: 14,
   },
   detailActionBtnWhatsAppText: {
-    color: '#047857',
+    color: '#15803D',
     fontWeight: '800',
     fontSize: 13,
   },
@@ -3562,14 +3795,14 @@ const styles = StyleSheet.create({
   },
   statTileItem: {
     width: '48.5%',
-    borderRadius: 16,
-    borderWidth: 1.5,
+    borderRadius: 14,
+    borderWidth: 1,
     padding: 12,
     marginBottom: 10,
     shadowColor: '#0F172A',
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.03,
-    shadowRadius: 3,
+    shadowOpacity: 0.02,
+    shadowRadius: 2,
     elevation: 1,
   },
   statTileHeaderRow: {
@@ -3603,43 +3836,41 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E2E8F0',
     marginBottom: 14,
-    overflow: 'hidden',
+    padding: 16,
     shadowColor: '#0F172A',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
+    shadowOpacity: 0.03,
     shadowRadius: 6,
-    elevation: 2,
+    elevation: 1,
   },
   cleanSectionHeader: {
-    backgroundColor: '#F8FAFC',
-    paddingHorizontal: 16,
-    paddingVertical: 11,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+    marginBottom: 10,
+    paddingBottom: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F8FAFC',
   },
   cleanSectionIcon: {
     fontSize: 15,
   },
   cleanSectionTitle: {
-    fontSize: 13,
+    fontSize: 12.5,
     fontWeight: '800',
     color: '#0F172A',
-    letterSpacing: 0.2,
+    letterSpacing: 0.3,
+    textTransform: 'uppercase',
   },
   cleanSectionBody: {
-    paddingHorizontal: 16,
-    paddingVertical: 4,
+    paddingHorizontal: 0,
+    paddingVertical: 2,
   },
   cleanDetailRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
+    paddingVertical: 6,
   },
   cleanRowLabel: {
     fontSize: 13,
@@ -3648,9 +3879,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   cleanRowValue: {
-    fontSize: 13,
+    fontSize: 13.5,
     color: '#0F172A',
-    fontWeight: '600',
+    fontWeight: '700',
     flex: 1.3,
     textAlign: 'right',
   },
@@ -3876,6 +4107,13 @@ const styles = StyleSheet.create({
     maxWidth: '65%',
     textAlign: 'right',
   },
+  celebrationRowValueRegular: {
+    fontSize: 13,
+    color: '#334155',
+    fontWeight: '600',
+    maxWidth: '65%',
+    textAlign: 'right',
+  },
   celebrationIdText: {
     fontSize: 12,
     color: '#2563EB',
@@ -3917,6 +4155,167 @@ const styles = StyleSheet.create({
     color: '#334155',
     fontWeight: '700',
     fontSize: 13,
+  },
+
+  // Executive Logout Confirmation Modal Styles
+  logoutModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(15, 23, 42, 0.65)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  logoutModalCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    padding: 22,
+    width: '100%',
+    maxWidth: 340,
+    alignItems: 'center',
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.15,
+    shadowRadius: 20,
+    elevation: 8,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  logoutModalIconBadge: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#FEE2E2',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
+  },
+  logoutModalTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#0F172A',
+    letterSpacing: -0.2,
+    marginBottom: 6,
+  },
+  logoutModalSubtitle: {
+    fontSize: 12.5,
+    color: '#64748B',
+    textAlign: 'center',
+    lineHeight: 18,
+    marginBottom: 16,
+  },
+  logoutModalProfileCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    width: '100%',
+    marginBottom: 18,
+  },
+  logoutModalAvatar: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  logoutModalProfileName: {
+    fontSize: 13.5,
+    fontWeight: '700',
+    color: '#0F172A',
+  },
+  logoutModalProfileRole: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#64748B',
+    marginTop: 1,
+  },
+  logoutModalActionsRow: {
+    flexDirection: 'row',
+    gap: 10,
+    width: '100%',
+  },
+  logoutModalCancelBtn: {
+    flex: 1,
+    paddingVertical: 11,
+    borderRadius: 10,
+    backgroundColor: '#F1F5F9',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  logoutModalCancelBtnText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#475569',
+  },
+  logoutModalConfirmBtn: {
+    flex: 1,
+    paddingVertical: 11,
+    borderRadius: 10,
+    backgroundColor: '#DC2626',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#DC2626',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  logoutModalConfirmBtnText: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#FFFFFF',
+  },
+
+  // Static Logged-In Identity Badge in Header
+  headerProfileBadgeStatic: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 22,
+    paddingLeft: 4,
+    paddingRight: 8,
+    paddingVertical: 3.5,
+    gap: 6,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.03,
+    shadowRadius: 3,
+    elevation: 1,
+  },
+  headerProfileBadgeName: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#0F172A',
+    letterSpacing: -0.2,
+  },
+  headerRoleMicroPill: {
+    paddingHorizontal: 5,
+    paddingVertical: 1.5,
+    borderRadius: 5,
+    borderWidth: 1,
+  },
+  headerRoleMicroPillOwner: {
+    backgroundColor: '#FEF3C7',
+    borderColor: '#FDE68A',
+  },
+  headerRoleMicroPillStaff: {
+    backgroundColor: '#EFF6FF',
+    borderColor: '#DBEAFE',
+  },
+  headerRoleMicroPillText: {
+    fontSize: 9.5,
+    fontWeight: '800',
+    letterSpacing: 0.2,
   },
   confettiPiece: {
     position: 'absolute',

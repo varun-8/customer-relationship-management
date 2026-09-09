@@ -615,7 +615,7 @@ export const CustomerListTable = ({ onAddCustomer, onEditCustomer, onViewCustome
                 <td colSpan={visibleColumnKeys.length + 1} style={{ textAlign: 'center', padding: '50px 20px' }}>
                   <div style={{ display: 'inline-flex', alignItems: 'center', gap: '10px', color: '#2563EB' }}>
                     <div className="spin" style={{ width: '20px', height: '20px', border: '2px solid #2563EB', borderTopColor: 'transparent', borderRadius: '50%' }} />
-                    <span style={{ fontWeight: '600' }}>Fetching real customer records from MongoDB Atlas...</span>
+                    <span style={{ fontWeight: '600' }}>Fetching customer records from database...</span>
                   </div>
                 </td>
               </tr>
