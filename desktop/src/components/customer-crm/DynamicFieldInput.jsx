@@ -13,6 +13,7 @@ import {
   IndianRupee,
   Layers,
   ChevronDown,
+  Lock,
 } from 'lucide-react';
 
 export const DynamicFieldInput = ({ field, value, onChange, error }) => {
@@ -34,6 +35,49 @@ export const DynamicFieldInput = ({ field, value, onChange, error }) => {
   };
 
   const renderInput = () => {
+    if (field.readOnly || name === 'lastFollowUp' || name === 'followUpCount') {
+      const displayVal =
+        value !== undefined && value !== null && String(value).trim() !== ''
+          ? String(value)
+          : name === 'followUpCount'
+          ? '0'
+          : 'Not yet recorded';
+
+      return (
+        <div
+          style={{
+            padding: '9px 13px',
+            background: '#F8FAFC',
+            border: '1.5px solid #E2E8F0',
+            borderRadius: '8px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            color: '#1E293B',
+            fontSize: '13px',
+            fontWeight: '600',
+          }}
+        >
+          <span>{displayVal}</span>
+          <span
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '4px',
+              fontSize: '11px',
+              fontWeight: '700',
+              color: '#64748B',
+              background: '#EEF2F6',
+              padding: '2px 8px',
+              borderRadius: '6px',
+            }}
+          >
+            <Lock size={11} /> Auto-managed
+          </span>
+        </div>
+      );
+    }
+
     switch (type) {
       case 'text':
         return (

@@ -12,6 +12,7 @@ const followupRoutes = require('./routes/followupRoutes');
 const userRoutes = require('./routes/userRoutes');
 const settingsRoutes = require('./routes/settingsRoutes');
 const backupRoutes = require('./routes/backupRoutes');
+const aiReportRoutes = require('./routes/aiReportRoutes');
 
 const app = express();
 
@@ -80,6 +81,7 @@ app.use('/api/followups', followupRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/backup', backupRoutes);
+app.use('/api/ai-reports', aiReportRoutes);
 
 // 404 Handler
 app.use((req, res) => {

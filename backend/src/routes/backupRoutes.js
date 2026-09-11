@@ -11,4 +11,10 @@ router.post('/config', backupController.updateBackupConfig);
 // POST /api/backup/run - Trigger daily auto-backup (runs once daily automatically, or force=true)
 router.post('/run', backupController.runFullBackup);
 
+// POST /api/backup/restore - Restore full database from backup JSON
+router.post('/restore', backupController.restoreBackup);
+
+// POST /api/backup/open-folder - Open configured backup directory in explorer
+router.post('/open-folder', backupController.openBackupFolder);
+
 module.exports = router;

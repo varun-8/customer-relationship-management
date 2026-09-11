@@ -86,6 +86,12 @@ export const generatePdfReport = ({
 
   startY += 5;
 
+// Helper to sanitize text for jsPDF standard fonts (replaces unsupported ₹ with Rs.)
+const sanitizePdfText = (str) => {
+  if (str === undefined || str === null) return '';
+  return String(str).replace(/\u20B9/g, 'Rs. ').replace(/₹/g, 'Rs. ');
+};
+
   // 4. Key Metric Summary Cards
   if (summaryCards && summaryCards.length > 0) {
     const cardGap = 3.5;
@@ -109,13 +115,13 @@ export const generatePdfReport = ({
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(6.5);
       doc.setTextColor(100, 116, 139);
-      doc.text(String(card.label).toUpperCase(), cardX + 3, startY + 5.2);
+      doc.text(sanitizePdfText(card.label).toUpperCase(), cardX + 3.5, startY + 5.2);
 
       // Card Value
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(9.5);
       doc.setTextColor(15, 23, 42);
-      doc.text(String(card.value), cardX + 3, startY + 10.8);
+      doc.text(sanitizePdfText(card.value), cardX + 3.5, startY + 10.8);
     });
 
     startY += cardHeight + 6;
@@ -133,24 +139,28 @@ export const generatePdfReport = ({
     return acc;
   }, {});
 
-  const formattedHeaders = columns.map((col) => col.header);
+  const formattedHeaders = columns.map((col) => sanitizePdfText(col.header));
   const formattedRows = rows.map((row) =>
     columns.map((col) => {
       const val = row[col.dataKey];
-      return val !== undefined && val !== null && val !== '' ? String(val) : '-';
+      return val !== undefined && val !== null && val !== '' ? sanitizePdfText(val) : '-';
     })
   );
+
+  const formattedFootRow = footRow && Array.isArray(footRow)
+    ? footRow.map((cell) => sanitizePdfText(cell))
+    : undefined;
 
   autoTable(doc, {
     startY: startY,
     head: [formattedHeaders],
     body: formattedRows,
-    foot: footRow ? [footRow] : undefined,
+    foot: formattedFootRow ? [formattedFootRow] : undefined,
     theme: 'grid',
     styles: {
       font: 'helvetica',
       fontSize: 7.5,
-      cellPadding: 2,
+      cellPadding: 2.2,
       textColor: [30, 41, 59], // #1E293B
       lineColor: [226, 232, 240], // #E2E8F0
       lineWidth: 0.15,
@@ -163,15 +173,14 @@ export const generatePdfReport = ({
       textColor: [255, 255, 255],
       fontStyle: 'bold',
       fontSize: 8,
-      halign: 'center',
-      cellPadding: 2.5,
+      cellPadding: 2.8,
     },
     footStyles: {
       fillColor: [241, 245, 249],
       textColor: [15, 23, 42],
       fontStyle: 'bold',
       fontSize: 8,
-      cellPadding: 2.5,
+      cellPadding: 2.8,
     },
     alternateRowStyles: {
       fillColor: [248, 250, 252], // Subtle alternating row tint
@@ -183,6 +192,15 @@ export const generatePdfReport = ({
       const colStyle = columns[data.column.index];
       if (colStyle && colStyle.align) {
         data.cell.styles.halign = colStyle.align;
+      }
+
+      // Bold and right-align footer cells for Amount / Total
+      if (data.section === 'foot') {
+        data.cell.styles.fontStyle = 'bold';
+        if (data.column.index === columns.length - 1) {
+          data.cell.styles.textColor = [15, 23, 42];
+          data.cell.styles.halign = 'right';
+        }
       }
 
       // Color coding for status & priority badges in table body
@@ -213,9 +231,15 @@ export const generatePdfReport = ({
         ) {
           data.cell.styles.textColor = [217, 119, 6]; // Amber Yellow
           data.cell.styles.fontStyle = 'bold';
-        } else if (textVal === 'NEW' || textVal === 'FOLLOW-UP') {
+        } else if (textVal === 'NEW' || textVal === 'NEW LEAD' || textVal === 'FOLLOW-UP') {
           data.cell.styles.textColor = [37, 99, 235]; // Royal Blue
           data.cell.styles.fontStyle = 'bold';
+        }
+
+        // If cell is in the amount / value column (right-aligned value)
+        if (colStyle && colStyle.align === 'right' && (colStyle.header.includes('Amount') || colStyle.header.includes('Value'))) {
+          data.cell.styles.fontStyle = 'bold';
+          data.cell.styles.textColor = [15, 23, 42];
         }
       }
     },

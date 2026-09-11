@@ -666,21 +666,98 @@ h6 {
   transform: scale(0.98);
 }
 
+/* ==========================================================================
+   UNIVERSAL EXECUTIVE DROPDOWN & SELECT BOX STYLES
+   ========================================================================== */
+select,
+.form-select,
+.filter-select,
+.custom-select {
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  -moz-appearance: none !important;
+  background-color: #FFFFFF !important;
+  border: 1.5px solid #CBD5E1 !important;
+  border-radius: 11px !important;
+  padding: 8px 36px 8px 13px !important;
+  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  color: #0F172A !important;
+  cursor: pointer !important;
+  outline: none !important;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23475569' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E") !important;
+  background-repeat: no-repeat !important;
+  background-position: right 11px center !important;
+  background-size: 15px !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04) !important;
+  line-height: 1.4 !important;
+}
+
+select:hover,
+.form-select:hover,
+.filter-select:hover,
+.custom-select:hover {
+  border-color: #94A3B8 !important;
+  background-color: #F8FAFC !important;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.06) !important;
+}
+
+select:focus,
+.form-select:focus,
+.filter-select:focus,
+.custom-select:focus {
+  border-color: #2563EB !important;
+  background-color: #FFFFFF !important;
+  box-shadow: 0 0 0 3.5px rgba(37, 99, 235, 0.16), 0 1px 3px rgba(0, 0, 0, 0.06) !important;
+}
+
+select:disabled,
+.form-select:disabled {
+  background-color: #F1F5F9 !important;
+  border-color: #E2E8F0 !important;
+  color: #94A3B8 !important;
+  cursor: not-allowed !important;
+  opacity: 0.75 !important;
+}
+
+/* Modern Select Options Popup Styling */
+select option {
+  background-color: #FFFFFF;
+  color: #0F172A;
+  padding: 10px 14px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+select option:checked {
+  background-color: #EFF6FF !important;
+  color: #1D4ED8 !important;
+  font-weight: 800 !important;
+}
+
+select option:disabled {
+  color: #94A3B8;
+  background-color: #F8FAFC;
+}
+
 /* Custom Animated Popover Menu for Custom Dropdowns */
+.dropdown-menu,
 .dropdown-menu-popover {
   position: absolute;
-  top: 44px;
+  top: 100%;
   left: 0;
-  background: rgba(255, 255, 255, 0.98);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(226, 232, 240, 0.9);
-  border-radius: 10px;
-  box-shadow: 0 12px 28px -4px rgba(15, 23, 42, 0.14), 0 4px 8px -2px rgba(15, 23, 42, 0.06);
+  margin-top: 6px;
+  background: #FFFFFF;
+  border: 1.5px solid #CBD5E1;
+  border-radius: 13px;
+  box-shadow: 0 16px 36px -6px rgba(15, 23, 42, 0.14), 0 4px 12px rgba(15, 23, 42, 0.05);
   z-index: 50;
-  min-width: 170px;
+  min-width: 190px;
   padding: 6px;
   animation: dropdownSlideDown 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  overflow: hidden;
 }
 
 @keyframes dropdownSlideDown {
@@ -694,11 +771,13 @@ h6 {
   }
 }
 
-.dropdown-menu-item {
-  padding: 8px 12px;
-  font-size: 12.5px;
-  font-weight: 500;
-  border-radius: 6px;
+.dropdown-item,
+.dropdown-menu-item,
+.dropdown-menu > div {
+  padding: 8.5px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: 8px;
   cursor: pointer;
   color: #334155;
   display: flex;
@@ -707,15 +786,19 @@ h6 {
   transition: all 0.15s ease;
 }
 
-.dropdown-menu-item:hover {
-  background-color: #F1F5F9;
-  color: #0F172A;
+.dropdown-item:hover,
+.dropdown-menu-item:hover,
+.dropdown-menu > div:hover {
+  background-color: #EFF6FF !important;
+  color: #1D4ED8 !important;
+  transform: translateX(2px);
 }
 
+.dropdown-item.selected,
 .dropdown-menu-item.selected {
   background-color: #EFF6FF;
-  color: #2563EB;
-  font-weight: 700;
+  color: #1D4ED8;
+  font-weight: 800;
 }
 
 /* Data Table */
@@ -895,23 +978,25 @@ h6 {
 }
 
 .modal-backdrop {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  width: 100vw;
-  height: 100vh;
-  background-color: rgba(15, 23, 42, 0.75);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 9999;
-  padding: 20px;
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  animation: modalFadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-  margin: 0;
+  position: fixed !important;
+  inset: 0 !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  background-color: rgba(15, 23, 42, 0.65) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  z-index: 99999 !important;
+  padding: 20px !important;
+  backdrop-filter: blur(16px) saturate(140%) !important;
+  -webkit-backdrop-filter: blur(16px) saturate(140%) !important;
+  animation: modalFadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  margin: 0 !important;
+  box-sizing: border-box !important;
 }
 
 .modal-card {
@@ -2385,22 +2470,24 @@ select optgroup {
    ========================================================================== */
 .modal-overlay,
 .modal-backdrop {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  width: 100vw;
-  height: 100vh;
-  background: rgba(15, 23, 42, 0.72);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 9999;
-  padding: 20px;
-  margin: 0;
+  position: fixed !important;
+  inset: 0 !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  background: rgba(15, 23, 42, 0.68) !important;
+  backdrop-filter: blur(16px) saturate(140%) !important;
+  -webkit-backdrop-filter: blur(16px) saturate(140%) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  z-index: 99999 !important;
+  padding: 20px !important;
+  margin: 0 !important;
+  box-sizing: border-box !important;
   animation: modalFadeIn 0.2s ease-out;
 }
 
@@ -2597,52 +2684,63 @@ select optgroup {
 
 .filter-select,
 .filter-input-date {
-  padding: 7.5px 12px;
-  font-size: 12.5px;
-  font-weight: 500;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--border-default);
+  height: 40px;
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: 10px;
+  border: 1.5px solid #CBD5E1;
   background: #FFFFFF;
-  color: var(--text-primary);
+  color: #1E293B;
   outline: none;
-  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
   transition: all 0.2s ease;
 }
 
 .filter-select {
+  min-width: 170px;
   -webkit-appearance: none;
   -moz-appearance: none;
   appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='15' height='15' viewBox='0 0 24 24' fill='none' stroke='%2364748B' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23475569' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
   background-repeat: no-repeat;
-  background-position: right 10px center;
-  background-size: 15px 15px;
-  padding-right: 32px !important;
+  background-position: right 12px center;
+  background-size: 16px 16px;
+  padding-right: 36px !important;
   cursor: pointer;
+  line-height: 1.4;
 }
 
 .filter-select:hover {
-  border-color: #94A3B8;
+  border-color: #64748B;
   background-color: #F8FAFC;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='15' height='15' viewBox='0 0 24 24' fill='none' stroke='%232563EB' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
-  box-shadow: 0 2px 5px rgba(15, 23, 42, 0.06);
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.06);
 }
 
 .filter-select:focus,
 .filter-input-date:focus {
-  border-color: var(--primary-600);
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.14), 0 2px 4px rgba(15, 23, 42, 0.05);
+  border-color: #2563EB;
+  background-color: #FFFFFF;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12), 0 2px 4px rgba(15, 23, 42, 0.05);
+}
+
+.filter-select option {
+  padding: 10px 14px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #1E293B;
+  background-color: #FFFFFF;
 }
 
 .filter-item-custom-dates {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   margin-top: 18px;
 }
 
 .filter-search-item {
-  margin-top: 16px;
+  margin-top: 18px;
 }
 
 .filter-search-box {
@@ -2653,23 +2751,29 @@ select optgroup {
 
 .search-icon {
   position: absolute;
-  left: 10px;
-  color: var(--text-muted);
+  left: 12px;
+  color: #64748B;
 }
 
 .filter-search-input {
-  padding: 7px 12px 7px 32px;
-  font-size: 12.5px;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--border-default);
-  width: 200px;
+  height: 40px;
+  padding: 8px 14px 8px 36px;
+  font-size: 13px;
+  font-weight: 500;
+  border-radius: 10px;
+  border: 1.5px solid #CBD5E1;
+  background: #FFFFFF;
+  color: #1E293B;
+  width: 220px;
   outline: none;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
   transition: all 0.2s ease;
 }
 
 .filter-search-input:focus {
-  width: 240px;
-  border-color: var(--primary-600);
+  width: 260px;
+  border-color: #2563EB;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
 }
 
 .filter-group-right {
@@ -3212,9 +3316,9 @@ button:focus-visible {
 
 /* Enhanced Glassmorphic Modal Backdrop & Card Transitions */
 .modal-backdrop {
-  backdrop-filter: blur(8px) saturate(120%);
-  -webkit-backdrop-filter: blur(8px) saturate(120%);
-  background-color: rgba(15, 23, 42, 0.55) !important;
+  backdrop-filter: blur(16px) saturate(140%) !important;
+  -webkit-backdrop-filter: blur(16px) saturate(140%) !important;
+  background-color: rgba(15, 23, 42, 0.68) !important;
   animation: backdropFadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 

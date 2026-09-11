@@ -1,6 +1,15 @@
 const CustomerForm = require('../models/CustomerForm');
 const User = require('../models/User');
 
+// Helper: Sanitize field label (strip corrupted currency symbols and emojis)
+const sanitizeLabel = (str) => {
+  if (!str) return '';
+  return String(str)
+    .replace(/\s*\([₹\u20B9\ufffd?,/]+\)/gi, '')
+    .replace(/[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1FA00}-\u{1FAFF}\u{FE00}-\u{FE0F}]/gu, '')
+    .trim();
+};
+
 // Default initial 23-field specification for Vasantham Tiles & Sanitary Wares Customer CRM
 const DEFAULT_INITIAL_FIELDS = [
   // 1. Customer ID
@@ -166,13 +175,13 @@ const DEFAULT_INITIAL_FIELDS = [
     active: true,
     order: 9,
     placeholder: 'Select primary requirements',
-    description: 'Tiles, Sanitary, Adhesive, Clipping',
+    description: 'Tiles, Sanitary, Adhesive / Epoxy, CP Fittings',
     defaultValue: ['Tiles', 'Sanitary'],
     options: [
       { label: 'Tiles', value: 'Tiles', isDefault: true },
       { label: 'Sanitary', value: 'Sanitary', isDefault: true },
-      { label: 'Adhesive', value: 'Adhesive', isDefault: false },
-      { label: 'Clipping', value: 'Clipping', isDefault: false },
+      { label: 'Adhesive / Epoxy', value: 'Adhesive / Epoxy', isDefault: false },
+      { label: 'CP Fittings', value: 'CP Fittings', isDefault: false },
     ],
     validation: {},
   },
@@ -195,7 +204,7 @@ const DEFAULT_INITIAL_FIELDS = [
   {
     id: 'field_tile_budget',
     name: 'tileBudget',
-    label: 'Tile Budget (₹)',
+    label: 'Tile Budget',
     type: 'currency',
     required: false,
     active: true,
@@ -206,25 +215,7 @@ const DEFAULT_INITIAL_FIELDS = [
     options: [],
     validation: { currencySymbol: '₹', min: 0 },
   },
-  // 13. Sanitary Requirement
-  {
-    id: 'field_sanitary_req',
-    name: 'sanitaryRequirement',
-    label: 'Sanitary Requirement',
-    type: 'radio',
-    required: false,
-    active: true,
-    order: 12,
-    placeholder: '',
-    description: 'Yes or No requirement for sanitary wares',
-    defaultValue: 'Yes',
-    options: [
-      { label: 'Yes', value: 'Yes', isDefault: true },
-      { label: 'No', value: 'No', isDefault: false },
-    ],
-    validation: {},
-  },
-  // 14. Adhesive Requirement
+  // 13. Adhesive Requirement
   {
     id: 'field_adhesive_req',
     name: 'adhesiveRequirement',
@@ -246,7 +237,7 @@ const DEFAULT_INITIAL_FIELDS = [
   {
     id: 'field_quotation_val',
     name: 'quotationValue',
-    label: 'Quotation Value (₹)',
+    label: 'Quotation Value',
     type: 'currency',
     required: false,
     active: true,
@@ -283,10 +274,9 @@ const DEFAULT_INITIAL_FIELDS = [
     order: 16,
     placeholder: '-- Select Pipeline Status --',
     description: 'Deal pipeline stage',
-    defaultValue: 'Newly Contacted',
+    defaultValue: 'New Lead',
     options: [
-      { label: 'Newly Contacted', value: 'Newly Contacted', isDefault: true },
-      { label: 'Walk-in', value: 'Walk-in', isDefault: false },
+      { label: 'New Lead', value: 'New Lead', isDefault: true },
       { label: 'Quotation', value: 'Quotation', isDefault: false },
       { label: 'Follow-up', value: 'Follow-up', isDefault: false },
       { label: 'Negotiation', value: 'Negotiation', isDefault: false },
@@ -319,9 +309,10 @@ const DEFAULT_INITIAL_FIELDS = [
     type: 'date',
     required: false,
     active: true,
+    readOnly: true,
     order: 18,
-    placeholder: '',
-    description: 'Most recent follow-up date',
+    placeholder: 'Auto-updated upon follow-up',
+    description: 'Most recent follow-up date (auto-managed)',
     defaultValue: null,
     options: [],
     validation: {},
@@ -334,9 +325,10 @@ const DEFAULT_INITIAL_FIELDS = [
     type: 'number',
     required: false,
     active: true,
+    readOnly: true,
     order: 19,
     placeholder: '0',
-    description: 'Number of showroom interactions / calls',
+    description: 'Number of showroom interactions (auto-managed)',
     defaultValue: 0,
     options: [],
     validation: { min: 0 },
@@ -345,7 +337,7 @@ const DEFAULT_INITIAL_FIELDS = [
   {
     id: 'field_order_value',
     name: 'orderValue',
-    label: 'Order Value (₹)',
+    label: 'Order Value',
     type: 'currency',
     required: false,
     active: true,
@@ -426,18 +418,17 @@ const getActiveForm = async (req, res) => {
       }));
 
     const formObj = activeForm.toObject ? activeForm.toObject() : JSON.parse(JSON.stringify(activeForm));
-    if (liveStaffOptions.length > 0) {
-      formObj.fields = formObj.fields.map((f) => {
-        if (f.name === 'salesperson') {
-          return {
-            ...f,
-            options: liveStaffOptions,
-            defaultValue: liveStaffOptions[0]?.value || '',
-          };
-        }
-        return f;
-      });
-    }
+    formObj.fields = (formObj.fields || []).map((f) => {
+      const updated = { ...f };
+      if (updated.label) {
+        updated.label = sanitizeLabel(updated.label);
+      }
+      if (updated.name === 'salesperson' && liveStaffOptions.length > 0) {
+        updated.options = liveStaffOptions;
+        updated.defaultValue = liveStaffOptions[0]?.value || '';
+      }
+      return updated;
+    });
 
     res.json({
       success: true,
@@ -469,11 +460,16 @@ const getDraftForm = async (req, res) => {
       });
     }
 
-    draftForm.fields.sort((a, b) => a.order - b.order);
+    const draftObj = draftForm.toObject ? draftForm.toObject() : JSON.parse(JSON.stringify(draftForm));
+    draftObj.fields.sort((a, b) => a.order - b.order);
+    draftObj.fields = (draftObj.fields || []).map((f) => ({
+      ...f,
+      label: sanitizeLabel(f.label),
+    }));
 
     res.json({
       success: true,
-      data: draftForm,
+      data: draftObj,
     });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });

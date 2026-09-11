@@ -27,7 +27,7 @@ export const Sidebar = ({
 }) => {
   const { user, isOwner, isEmployee, logout } = useAuth();
   const { branding, appShortName, tagline, primaryColor, renderLogo } = useBranding();
-  const { customers, pagination } = useCustomer();
+  const { customers, pagination, followupCounts } = useCustomer();
   const { isToneDown } = useToneDown();
 
   const [isCollapsed, setIsCollapsed] = useState(false);
@@ -72,6 +72,10 @@ export const Sidebar = ({
           label: 'Follow-up Sheet',
           shortLabel: 'Follow-ups',
           icon: Clock,
+          badge: (followupCounts?.overdue > 0 || followupCounts?.today > 0)
+            ? (followupCounts.overdue > 0 ? `${followupCounts.overdue} overdue` : followupCounts.today)
+            : null,
+          badgeColor: followupCounts?.overdue > 0 ? '#DC2626' : (isToneDown ? '#000000' : '#2563EB'),
         },
         {
           id: 'lost',

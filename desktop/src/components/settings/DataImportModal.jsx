@@ -146,14 +146,23 @@ export const DataImportModal = ({ mode = 'csv', onClose }) => {
     reader.onload = (evt) => {
       try {
         const parsed = JSON.parse(evt.target.result);
-        if (!parsed || (!parsed.customers && !parsed.branding)) {
-          setError('Invalid CRM JSON backup format.');
+        const dataSection = (parsed?.data && typeof parsed.data === 'object') ? parsed.data : parsed;
+        const customersList = dataSection?.customers || parsed?.customers || [];
+        const brandingData = dataSection?.branding || parsed?.branding || null;
+        const formsList = dataSection?.customerForms || (parsed?.formSchema ? [parsed.formSchema] : []);
+
+        if (!parsed || (customersList.length === 0 && !brandingData && formsList.length === 0)) {
+          setError('Invalid CRM JSON backup format or no recognizable CRM data inside.');
           return;
         }
+
         setJsonBackupData(parsed);
-        if (parsed.customers && Array.isArray(parsed.customers)) {
-          setAllParsedRows(parsed.customers);
-          setPreviewRows(parsed.customers.slice(0, 5));
+        if (Array.isArray(customersList) && customersList.length > 0) {
+          setAllParsedRows(customersList);
+          setPreviewRows(customersList.slice(0, 5));
+        } else {
+          setAllParsedRows([]);
+          setPreviewRows([]);
         }
       } catch (err) {
         setError('Error parsing JSON backup file: ' + err.message);
@@ -173,39 +182,40 @@ export const DataImportModal = ({ mode = 'csv', onClose }) => {
     setError('');
     setProgress(0);
 
-    let successCount = 0;
-    let failCount = 0;
-
     try {
-      // 1. If JSON restore with branding, restore branding first
-      if (jsonBackupData?.branding) {
-        try {
-          await updateBranding(jsonBackupData.branding);
-        } catch (e) {
-          console.warn('Could not restore branding:', e);
+      if (mode === 'json' && jsonBackupData) {
+        setProgress(25);
+        const restoreRes = await api.restoreBackup(jsonBackupData);
+        setProgress(75);
+        if (restoreRes && restoreRes.success) {
+          if (fetchCustomers) await fetchCustomers();
+          setProgress(100);
+          setResultMessage({
+            success: true,
+            text: restoreRes.message || `Successfully restored database from backup!`,
+          });
+          return;
+        } else {
+          throw new Error(restoreRes?.message || 'Restore failed');
         }
       }
 
-      // 2. High-speed Bulk Import Customers & update Sequence counter
+      // CSV Bulk Import Customers
       if (allParsedRows && allParsedRows.length > 0) {
         setProgress(40);
         const bulkRes = await api.bulkImportCustomers(allParsedRows);
         if (bulkRes && bulkRes.success) {
-          successCount = bulkRes.importedCount || allParsedRows.length;
+          const successCount = bulkRes.importedCount || allParsedRows.length;
+          if (fetchCustomers) await fetchCustomers();
+          setProgress(100);
+          setResultMessage({
+            success: true,
+            text: `Successfully imported ${successCount} customer records into CRM database! Instant mobile & desktop sync active.`,
+          });
+        } else {
+          throw new Error(bulkRes?.message || 'Bulk import failed');
         }
-        setProgress(90);
       }
-
-      // 3. Refresh CRM customer list
-      if (fetchCustomers) {
-        await fetchCustomers();
-      }
-
-      setProgress(100);
-      setResultMessage({
-        success: true,
-        text: `Successfully imported ${successCount} customer records into CRM database! Instant mobile & desktop sync active.`,
-      });
     } catch (err) {
       setError('Import process encountered an issue: ' + err.message);
     } finally {

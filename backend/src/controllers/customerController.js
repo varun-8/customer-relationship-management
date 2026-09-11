@@ -383,7 +383,28 @@ const bulkImportCustomers = async (req, res) => {
     }
 
     if (docsToInsert.length > 0) {
-      await Customer.insertMany(docsToInsert, { ordered: false });
+      const bulkOps = docsToInsert.map((doc) => ({
+        updateOne: {
+          filter: { customerId: doc.customerId },
+          update: {
+            $set: {
+              formVersion: doc.formVersion,
+              data: doc.data,
+              notes: doc.notes,
+              updatedBy: doc.createdBy,
+              updatedAt: new Date(),
+            },
+            $setOnInsert: {
+              customerId: doc.customerId,
+              createdBy: doc.createdBy,
+              createdAt: new Date(),
+            },
+          },
+          upsert: true,
+        },
+      }));
+
+      await Customer.bulkWrite(bulkOps, { ordered: false });
 
       const newMax = Math.max(currentSeqNum, maxIdVal);
       await Sequence.findOneAndUpdate(

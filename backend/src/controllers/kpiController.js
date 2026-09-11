@@ -21,7 +21,7 @@ const extractCustomerData = (customerDoc) => {
     customerName: d.customerName || 'Unnamed Customer',
     phone: d.phone || '',
     customerType: d.customerType || 'Building Owner',
-    status: d.status || 'Newly Contacted',
+    status: d.status || 'New Lead',
     leadSource: d.leadSource || 'Walk-in',
     salesperson: d.salesperson || (c.createdBy?.name || 'Showroom Staff'),
     entryDate: d.entryDate || (c.createdAt ? toDateString(c.createdAt) : toDateString(new Date())),

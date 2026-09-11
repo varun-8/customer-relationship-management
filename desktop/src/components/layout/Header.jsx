@@ -12,6 +12,9 @@ export const Header = ({
   onRetryConnection,
   onOpenPairingModal,
   onTitleClick,
+  onRefresh,
+  isRefreshing = false,
+  lastSyncTime,
 }) => {
   const [activeDeviceCount, setActiveDeviceCount] = useState(0);
 
@@ -94,6 +97,41 @@ export const Header = ({
                 {activeDeviceCount} Online
               </span>
             )}
+          </button>
+        )}
+
+        {/* Live Refresh Button */}
+        {onRefresh && (
+          <button
+            type="button"
+            onClick={onRefresh}
+            disabled={isRefreshing}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              backgroundColor: '#FFFFFF',
+              border: '1px solid #CBD5E1',
+              padding: '7px 12px',
+              borderRadius: '8px',
+              fontSize: '12px',
+              fontWeight: '700',
+              color: '#334155',
+              cursor: isRefreshing ? 'default' : 'pointer',
+              transition: 'all 0.2s ease',
+              boxShadow: '0 1px 3px rgba(0, 0, 0, 0.04)',
+            }}
+            title={lastSyncTime ? `Last synced at ${lastSyncTime}. Click to refresh CRM data now.` : 'Refresh CRM data from server'}
+          >
+            <RefreshCw
+              size={13}
+              color="#2563EB"
+              style={{
+                animation: isRefreshing ? 'spin 0.8s linear infinite' : 'none',
+                transition: 'transform 0.2s ease',
+              }}
+            />
+            <span>{isRefreshing ? 'Syncing...' : 'Refresh'}</span>
           </button>
         )}
 

@@ -201,11 +201,11 @@ export const LostSalesView = () => {
             gap: '14px',
           }}
         >
-          <div className="metric-icon-box" style={{ width: '42px', height: '42px', borderRadius: '10px', background: '#FEF2F2', color: '#DC2626', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div className="metric-icon-box" style={{ width: '42px', height: '42px', borderRadius: '10px', background: '#F8FAFC', color: '#0F172A', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <IndianRupee size={20} />
           </div>
           <div>
-            <div className="metric-value" style={{ fontSize: '20px', fontWeight: '900', color: '#DC2626', lineHeight: 1.1 }}>
+            <div className="metric-value" style={{ fontSize: '20px', fontWeight: '900', color: '#0F172A', lineHeight: 1.1 }}>
               ₹{(analytics?.totalLostValue || 0).toLocaleString('en-IN')}
             </div>
             <div className="metric-label" style={{ fontSize: '11.5px', color: '#64748B', fontWeight: '700', marginTop: '2px' }}>
@@ -231,7 +231,7 @@ export const LostSalesView = () => {
             gap: '14px',
           }}
         >
-          <div className="metric-icon-box" style={{ width: '42px', height: '42px', borderRadius: '10px', background: '#FFF7ED', color: '#EA580C', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div className="metric-icon-box" style={{ width: '42px', height: '42px', borderRadius: '10px', background: '#F8FAFC', color: '#0F172A', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <Building2 size={20} />
           </div>
           <div style={{ minWidth: 0 }}>
@@ -261,7 +261,7 @@ export const LostSalesView = () => {
             gap: '14px',
           }}
         >
-          <div className="metric-icon-box" style={{ width: '42px', height: '42px', borderRadius: '10px', background: '#FFFBEB', color: '#D97706', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div className="metric-icon-box" style={{ width: '42px', height: '42px', borderRadius: '10px', background: '#F8FAFC', color: '#0F172A', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <AlertTriangle size={20} />
           </div>
           <div style={{ minWidth: 0 }}>
@@ -291,11 +291,11 @@ export const LostSalesView = () => {
             gap: '14px',
           }}
         >
-          <div className="metric-icon-box" style={{ width: '42px', height: '42px', borderRadius: '10px', background: '#EFF6FF', color: '#2563EB', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div className="metric-icon-box" style={{ width: '42px', height: '42px', borderRadius: '10px', background: '#F8FAFC', color: '#0F172A', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <TrendingDown size={20} />
           </div>
           <div>
-            <div className="metric-value" style={{ fontSize: '20px', fontWeight: '900', color: '#2563EB', lineHeight: 1.1 }}>
+            <div className="metric-value" style={{ fontSize: '20px', fontWeight: '900', color: '#0F172A', lineHeight: 1.1 }}>
               ₹{(analytics?.averagePriceDifference || 0).toLocaleString('en-IN')}
             </div>
             <div className="metric-label" style={{ fontSize: '11.5px', color: '#64748B', fontWeight: '700', marginTop: '2px' }}>
@@ -429,20 +429,20 @@ export const LostSalesView = () => {
           backgroundColor: '#FFFFFF',
           borderRadius: '16px',
           border: '1px solid #E2E8F0',
-          boxShadow: '0 2px 10px rgba(15, 23, 42, 0.03)',
-          padding: '12px 16px',
+          boxShadow: '0 2px 8px rgba(15, 23, 42, 0.04)',
+          padding: '14px 18px',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
           flexWrap: 'wrap',
-          gap: '12px',
-          transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+          gap: '14px',
         }}
       >
+        {/* Left Filter Controls */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-          {/* Enhanced Search Input */}
-          <form onSubmit={handleSearchSubmit} style={{ position: 'relative', width: '280px' }}>
-            <Search size={15} style={{ position: 'absolute', left: '12px', top: '11px', color: '#94A3B8' }} />
+          {/* Search Box */}
+          <form onSubmit={handleSearchSubmit} style={{ position: 'relative', width: '270px' }}>
+            <Search size={15} style={{ position: 'absolute', left: '12px', top: '10px', color: '#94A3B8' }} />
             <input
               type="text"
               placeholder="Search lost deals, competitors..."
@@ -450,18 +450,19 @@ export const LostSalesView = () => {
               onChange={(e) => setSearch(e.target.value)}
               style={{
                 width: '100%',
-                paddingLeft: '36px',
-                paddingRight: search ? '32px' : '14px',
-                paddingTop: '9px',
-                paddingBottom: '9px',
+                paddingLeft: '34px',
+                paddingRight: search ? '30px' : '12px',
+                paddingTop: '8px',
+                paddingBottom: '8px',
                 backgroundColor: '#F8FAFC',
-                border: '1.2px solid #CBD5E1',
-                borderRadius: '11px',
+                border: '1.5px solid #CBD5E1',
+                borderRadius: '10px',
                 fontSize: '13px',
                 fontWeight: '600',
                 color: '#0F172A',
                 outline: 'none',
-                transition: 'all 0.2s ease',
+                boxSizing: 'border-box',
+                transition: 'all 0.15s ease',
               }}
             />
             {search && (
@@ -471,7 +472,7 @@ export const LostSalesView = () => {
                 style={{
                   position: 'absolute',
                   right: '10px',
-                  top: '9px',
+                  top: '8px',
                   background: 'none',
                   border: 'none',
                   color: '#94A3B8',
@@ -484,14 +485,14 @@ export const LostSalesView = () => {
             )}
           </form>
 
-          {/* Product Category Segmented Filter Tabs */}
+          {/* Product Category Filter Tabs */}
           <div
             style={{
               display: 'flex',
               gap: '3px',
               backgroundColor: '#F1F5F9',
-              padding: '4px',
-              borderRadius: '11px',
+              padding: '3px 4px',
+              borderRadius: '10px',
               border: '1px solid #E2E8F0',
             }}
           >
@@ -509,15 +510,15 @@ export const LostSalesView = () => {
                   type="button"
                   onClick={() => setProductFilter(p.id)}
                   style={{
-                    padding: '6px 12px',
-                    borderRadius: '8px',
+                    padding: '6px 11px',
+                    borderRadius: '7px',
                     border: 'none',
                     backgroundColor: isSelected ? '#FFFFFF' : 'transparent',
                     color: isSelected ? '#2563EB' : '#64748B',
                     fontWeight: isSelected ? '800' : '600',
                     fontSize: '12px',
                     cursor: 'pointer',
-                    boxShadow: isSelected ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
+                    boxShadow: isSelected ? '0 1px 3px rgba(0,0,0,0.06)' : 'none',
                     display: 'inline-flex',
                     alignItems: 'center',
                     gap: '4px',
@@ -539,8 +540,8 @@ export const LostSalesView = () => {
               fontWeight: '700',
               backgroundColor: '#F8FAFC',
               border: '1px solid #E2E8F0',
-              padding: '7px 12px',
-              borderRadius: '11px',
+              padding: '6px 12px',
+              borderRadius: '9px',
               display: 'inline-flex',
               alignItems: 'center',
               gap: '4px',
@@ -551,28 +552,27 @@ export const LostSalesView = () => {
         </div>
 
         {/* Right Filter & Action Group */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-          {/* Sales Staff Select with custom chevron */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+          {/* Sales Staff Select */}
           <select
             value={staffFilter}
             onChange={(e) => setStaffFilter(e.target.value)}
             style={{
-              padding: '8px 14px',
-              paddingRight: '32px',
-              borderRadius: '11px',
-              border: '1.2px solid #CBD5E1',
+              padding: '8px 30px 8px 12px',
+              borderRadius: '9px',
+              border: '1.5px solid #CBD5E1',
               fontSize: '12.5px',
               fontWeight: '700',
               color: '#0F172A',
               backgroundColor: '#FFFFFF',
-              backgroundImage: `url("data:image/svg+xml;utf8,<svg fill='%23475569' height='18' viewBox='0 0 24 24' width='18' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/></svg>")`,
+              backgroundImage: `url("data:image/svg+xml;utf8,<svg fill='%23475569' height='16' viewBox='0 0 24 24' width='16' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/></svg>")`,
               backgroundRepeat: 'no-repeat',
               backgroundPosition: 'right 8px center',
               appearance: 'none',
               WebkitAppearance: 'none',
-              boxShadow: '0 1px 3px rgba(0, 0, 0, 0.02)',
               outline: 'none',
               cursor: 'pointer',
+              minWidth: '150px',
             }}
           >
             <option value="all">All Sales Staff</option>
@@ -589,16 +589,15 @@ export const LostSalesView = () => {
             value={selectedMonth}
             onChange={(e) => setSelectedMonth(e.target.value)}
             style={{
-              padding: '8px 12px',
-              borderRadius: '11px',
-              border: '1.2px solid #CBD5E1',
+              padding: '7px 11px',
+              borderRadius: '9px',
+              border: '1.5px solid #CBD5E1',
               backgroundColor: '#FFFFFF',
               fontSize: '12.5px',
               color: '#0F172A',
               fontWeight: '700',
               outline: 'none',
               cursor: 'pointer',
-              boxShadow: '0 1px 3px rgba(0, 0, 0, 0.02)',
             }}
           />
 
@@ -608,17 +607,17 @@ export const LostSalesView = () => {
             onClick={fetchData}
             title="Refresh Intelligence Data"
             style={{
-              padding: '8px 13px',
-              borderRadius: '11px',
-              border: '1.2px solid #CBD5E1',
-              backgroundColor: '#F8FAFC',
+              padding: '8px 12px',
+              borderRadius: '9px',
+              border: '1.5px solid #CBD5E1',
+              backgroundColor: '#FFFFFF',
               color: '#0F172A',
               fontSize: '12px',
               fontWeight: '700',
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
-              gap: '6px',
+              gap: '5px',
               transition: 'all 0.15s ease',
             }}
           >
@@ -633,16 +632,16 @@ export const LostSalesView = () => {
             title="Export CSV"
             style={{
               padding: '8px 13px',
-              borderRadius: '11px',
-              border: '1.2px solid #CBD5E1',
-              backgroundColor: '#F8FAFC',
+              borderRadius: '9px',
+              border: '1.5px solid #CBD5E1',
+              backgroundColor: '#FFFFFF',
               color: '#0F172A',
               fontSize: '12px',
               fontWeight: '700',
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
-              gap: '6px',
+              gap: '5px',
               transition: 'all 0.15s ease',
             }}
           >
@@ -658,19 +657,19 @@ export const LostSalesView = () => {
               setShowModal(true);
             }}
             style={{
-              padding: '9px 18px',
-              borderRadius: '11px',
+              padding: '8.5px 16px',
+              borderRadius: '9px',
               border: 'none',
-              background: 'linear-gradient(135deg, #DC2626 0%, #B91C1C 100%)',
+              background: '#0F172A',
               color: '#FFFFFF',
               fontSize: '13px',
               fontWeight: '800',
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
-              gap: '7px',
-              boxShadow: '0 4px 14px rgba(220, 38, 38, 0.25)',
-              transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+              gap: '6px',
+              boxShadow: '0 2px 8px rgba(15, 23, 42, 0.2)',
+              transition: 'all 0.15s ease',
             }}
           >
             <Plus size={15} />
@@ -691,7 +690,7 @@ export const LostSalesView = () => {
       >
         <div style={{ padding: '14px 20px', borderBottom: '1px solid #F1F5F9', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <FileX size={16} color="#DC2626" />
+            <FileX size={16} color="#0F172A" />
             <span style={{ fontWeight: '800', fontSize: '13.5px', color: '#0F172A' }}>
               Lost Quotations Ledger
             </span>
@@ -716,7 +715,7 @@ export const LostSalesView = () => {
           </div>
         ) : lostSales.length === 0 ? (
           <div style={{ padding: '48px 24px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
-            <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: '#FEF2F2', color: '#DC2626', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: '#F8FAFC', color: '#0F172A', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <FileX size={24} />
             </div>
             <div style={{ fontWeight: '800', fontSize: '15px', color: '#0F172A' }}>No lost sales logged for {selectedMonth}</div>
@@ -731,7 +730,7 @@ export const LostSalesView = () => {
                 padding: '8px 18px',
                 borderRadius: '8px',
                 border: 'none',
-                background: '#DC2626',
+                background: '#0F172A',
                 color: '#FFFFFF',
                 fontSize: '12.5px',
                 fontWeight: '800',
@@ -787,7 +786,7 @@ export const LostSalesView = () => {
                               {s.customerName}
                             </div>
                             <div style={{ fontSize: '11px', color: '#94A3B8', display: 'flex', gap: '6px' }}>
-                              {s.customerId && <span style={{ color: '#2563EB', fontFamily: 'monospace' }}>#{s.customerId}</span>}
+                              {s.customerId && <span style={{ color: '#475569', fontFamily: 'monospace' }}>#{s.customerId}</span>}
                               {s.phone && <span>{s.phone}</span>}
                             </div>
                           </div>
@@ -795,7 +794,7 @@ export const LostSalesView = () => {
                       </td>
 
                       {/* Quote Value */}
-                      <td style={{ padding: '10px 16px', fontWeight: '800', color: '#DC2626', fontSize: '13px', whiteSpace: 'nowrap' }}>
+                      <td style={{ padding: '10px 16px', fontWeight: '800', color: '#0F172A', fontSize: '13px', whiteSpace: 'nowrap' }}>
                         ₹{(s.quoteValue || 0).toLocaleString('en-IN')}
                       </td>
 
@@ -806,7 +805,7 @@ export const LostSalesView = () => {
                             {s.lostReason}
                           </div>
                           <div style={{ fontSize: '11px', color: '#64748B' }}>
-                            via <strong style={{ color: '#C2410C' }}>{s.competitor}</strong>
+                            via <strong style={{ color: '#0F172A' }}>{s.competitor}</strong>
                           </div>
                         </div>
                       </td>
@@ -814,7 +813,7 @@ export const LostSalesView = () => {
                       {/* Price Difference */}
                       <td style={{ padding: '10px 16px', whiteSpace: 'nowrap' }}>
                         {s.priceDifference > 0 ? (
-                          <span style={{ fontSize: '11.5px', fontWeight: '700', color: '#DC2626', background: '#FEF2F2', padding: '2px 6px', borderRadius: '4px' }}>
+                          <span style={{ fontSize: '11.5px', fontWeight: '700', color: '#475569', background: '#F8FAFC', border: '1px solid #E2E8F0', padding: '2px 6px', borderRadius: '4px' }}>
                             -₹{s.priceDifference.toLocaleString('en-IN')} {s.priceDiffPercentage > 0 ? `(${s.priceDiffPercentage}%)` : ''}
                           </span>
                         ) : (
@@ -834,7 +833,7 @@ export const LostSalesView = () => {
                             ⚡ Win-Back
                           </span>
                         ) : (
-                          <span style={{ fontSize: '11px', fontWeight: '700', color: '#991B1B', background: '#FEF2F2', padding: '2px 8px', borderRadius: '12px' }}>
+                          <span style={{ fontSize: '11px', fontWeight: '700', color: '#64748B', background: '#F8FAFC', border: '1px solid #CBD5E1', padding: '2px 8px', borderRadius: '12px' }}>
                             Lost
                           </span>
                         )}

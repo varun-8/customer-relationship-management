@@ -17,6 +17,14 @@ import {
   CalendarDays,
   FileCheck,
   Check,
+  CheckCircle2,
+  BarChart3,
+  Zap,
+  User,
+  FileText,
+  Phone,
+  Clock,
+  Home,
 } from 'lucide-react';
 import { api } from '../../services/api';
 import { ConnectionErrorState } from '../common/ConnectionErrorState';
@@ -41,6 +49,7 @@ export const DailyKpiView = () => {
   // Filters
   const [staffFilter, setStaffFilter] = useState('all');
   const [selectedMonth, setSelectedMonth] = useState(todayStr.substring(0, 7));
+  const [txFilter, setTxFilter] = useState('all'); // 'all' | 'confirmed' | 'quote'
 
   // Fetch all live showroom staff members
   useEffect(() => {
@@ -117,16 +126,17 @@ export const DailyKpiView = () => {
     fetchDayPerformance(selectedDay);
   }, [selectedDay, staffFilter]);
 
-  // Navigate Days
-  const handlePrevDay = () => {
-    const prev = new Date(new Date(selectedDay).getTime() - 86400000).toISOString().split('T')[0];
-    setSelectedDay(prev);
-  };
+  // Live Auto-Sync with Mobile CRM entries (polls silently every 6 seconds when tab is visible)
+  useEffect(() => {
+    const liveTimer = setInterval(() => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
+        fetchKpiData();
+        fetchDayPerformance(selectedDay);
+      }
+    }, 6000);
+    return () => clearInterval(liveTimer);
+  }, [selectedDay, staffFilter, selectedMonth]);
 
-  const handleNextDay = () => {
-    const next = new Date(new Date(selectedDay).getTime() + 86400000).toISOString().split('T')[0];
-    setSelectedDay(next);
-  };
 
   const handleExportCSV = () => {
     if (dailyTrends.length === 0) {
@@ -171,6 +181,32 @@ export const DailyKpiView = () => {
   // Day specific variables
   const dayKpi = dayData?.kpi || {};
   const dayCustomers = dayData?.customers || [];
+
+  const totalDayBilled = useMemo(() => {
+    return dayCustomers
+      .filter((c) => c.status === 'Order Confirmed')
+      .reduce((sum, c) => sum + (Number(c.orderValue) || Number(c.quotationValue) || 0), 0);
+  }, [dayCustomers]);
+
+  const totalDayQuotes = useMemo(() => {
+    return dayCustomers
+      .filter((c) => c.status !== 'Order Confirmed')
+      .reduce((sum, c) => sum + (Number(c.quotationValue) || Number(c.orderValue) || 0), 0);
+  }, [dayCustomers]);
+
+  const closedCount = useMemo(() => {
+    return dayCustomers.filter((c) => c.status === 'Order Confirmed').length;
+  }, [dayCustomers]);
+
+  const quoteCount = useMemo(() => {
+    return dayCustomers.filter((c) => c.status === 'Quotation' || c.status === 'Negotiation').length;
+  }, [dayCustomers]);
+
+  const filteredDayCustomers = useMemo(() => {
+    if (txFilter === 'confirmed') return dayCustomers.filter((c) => c.status === 'Order Confirmed');
+    if (txFilter === 'quote') return dayCustomers.filter((c) => c.status === 'Quotation' || c.status === 'Negotiation');
+    return dayCustomers;
+  }, [dayCustomers, txFilter]);
 
   const isToday = selectedDay === todayStr;
   const formattedDayTitle = new Date(selectedDay).toLocaleDateString('en-IN', {
@@ -241,169 +277,366 @@ export const DailyKpiView = () => {
     };
   }, [dailyTrends]);
 
+  // Synchronize month when day changes
+  const handleDateChange = (newDate) => {
+    setSelectedDay(newDate);
+    const m = newDate.substring(0, 7);
+    if (m !== selectedMonth) {
+      setSelectedMonth(m);
+    }
+  };
+
+  // Synchronize day when month changes
+  const handleMonthChange = (newMonth) => {
+    setSelectedMonth(newMonth);
+    if (!selectedDay.startsWith(newMonth)) {
+      if (todayStr.startsWith(newMonth)) {
+        setSelectedDay(todayStr);
+      } else {
+        setSelectedDay(`${newMonth}-01`);
+      }
+    }
+  };
+
+  // Month Stepper Navigation
+  const navigateMonth = (direction) => {
+    const [y, m] = selectedMonth.split('-').map(Number);
+    const date = new Date(y, m - 1 + direction, 1);
+    const newY = date.getFullYear();
+    const newM = String(date.getMonth() + 1).padStart(2, '0');
+    const newMonthStr = `${newY}-${newM}`;
+    handleMonthChange(newMonthStr);
+  };
+
+  // Formatted Month Title (e.g. September 2026)
+  const formattedMonthTitle = useMemo(() => {
+    try {
+      const [y, m] = selectedMonth.split('-').map(Number);
+      const date = new Date(y, m - 1, 1);
+      return date.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
+    } catch {
+      return selectedMonth;
+    }
+  }, [selectedMonth]);
+
+  // First day of month offset for accurate 7-column calendar alignment (0 = Sun, 1 = Mon ... 6 = Sat)
+  const monthFirstDayOfWeek = useMemo(() => {
+    try {
+      const [y, m] = selectedMonth.split('-').map(Number);
+      return new Date(y, m - 1, 1).getDay();
+    } catch {
+      return 0;
+    }
+  }, [selectedMonth]);
+
+  // Horizontal Calendar Scroll Controls
+  const calendarScrollRef = React.useRef(null);
+
+  const scrollCalendar = (direction) => {
+    if (calendarScrollRef.current) {
+      const scrollAmt = direction === 'left' ? -360 : 360;
+      calendarScrollRef.current.scrollBy({ left: scrollAmt, behavior: 'smooth' });
+    }
+  };
+
+  // Auto-scroll horizontal timeline to selected day or current day
+  useEffect(() => {
+    if (calendarScrollRef.current) {
+      const selectedTile = calendarScrollRef.current.querySelector('[data-selected="true"]');
+      if (selectedTile) {
+        selectedTile.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+      }
+    }
+  }, [selectedDay, selectedMonth]);
+
+  // Navigate Days
+  const handlePrevDay = () => {
+    const prev = new Date(new Date(selectedDay).getTime() - 86400000).toISOString().split('T')[0];
+    handleDateChange(prev);
+  };
+
+  const handleNextDay = () => {
+    const next = new Date(new Date(selectedDay).getTime() + 86400000).toISOString().split('T')[0];
+    handleDateChange(next);
+  };
+
+  const handleSetYesterday = () => {
+    const yest = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+    handleDateChange(yest);
+  };
+
   return (
     <div className="daily-kpi-root" style={{ display: 'flex', flexDirection: 'column', gap: isToneDown ? '12px' : '20px' }}>
-      {/* 1. Header Toolbar */}
+      {/* 1. Header Toolbar: Executive Command & Filter Bar */}
       <div
         className="kpi-toolbar-card"
         style={{
           backgroundColor: '#FFFFFF',
-          borderRadius: isToneDown ? '8px' : '20px',
+          borderRadius: isToneDown ? '8px' : '18px',
           border: '1px solid #CBD5E1',
-          padding: isToneDown ? '10px 14px' : '16px 22px',
+          padding: isToneDown ? '10px 14px' : '16px 20px',
           boxShadow: isToneDown ? 'none' : '0 4px 20px -2px rgba(15, 23, 42, 0.05)',
           display: 'flex',
-          flexWrap: 'wrap',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: isToneDown ? '10px' : '14px',
+          flexDirection: 'column',
+          gap: '12px',
         }}
       >
-        {/* Day Stepper Navigator */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              backgroundColor: isToneDown ? '#FFFFFF' : '#F8FAFC',
-              border: '1px solid #CBD5E1',
-              borderRadius: isToneDown ? '6px' : '12px',
-              padding: isToneDown ? '3px 6px' : '5px 8px',
-              boxShadow: isToneDown ? 'none' : '0 1px 3px rgba(0, 0, 0, 0.03)',
-            }}
-          >
-            <button
-              type="button"
-              onClick={handlePrevDay}
-              style={{ background: 'none', border: 'none', color: '#475569', cursor: 'pointer', padding: '4px', display: 'flex', borderRadius: '6px' }}
-              title="Previous Day"
+        {/* Row 1: Primary Date Navigator & Presets */}
+        <div
+          style={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '12px',
+            paddingBottom: '10px',
+            borderBottom: '1px solid #F1F5F9',
+          }}
+        >
+          {/* Left: Date Stepper & Calendar Hub */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                backgroundColor: isToneDown ? '#FFFFFF' : '#F8FAFC',
+                border: '1.5px solid #CBD5E1',
+                borderRadius: isToneDown ? '6px' : '12px',
+                padding: isToneDown ? '3px 6px' : '4px 8px',
+                boxShadow: isToneDown ? 'none' : '0 1px 3px rgba(0, 0, 0, 0.04)',
+              }}
             >
-              <ChevronLeft size={16} />
-            </button>
+              <button
+                type="button"
+                onClick={handlePrevDay}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: '#475569',
+                  cursor: 'pointer',
+                  padding: '5px',
+                  display: 'flex',
+                  borderRadius: '6px',
+                  transition: 'background 0.15s ease',
+                }}
+                title="Previous Day"
+              >
+                <ChevronLeft size={16} />
+              </button>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '0 8px' }}>
-              <CalendarDays size={16} color={isToneDown ? '#0F172A' : '#2563EB'} />
-              <input
-                type="date"
-                value={selectedDay}
-                onChange={(e) => setSelectedDay(e.target.value)}
-                style={{ border: 'none', backgroundColor: 'transparent', fontSize: '13px', fontWeight: '800', color: '#0F172A', outline: 'none', cursor: 'pointer' }}
-              />
-              <span style={{ fontSize: '13px', fontWeight: '700', color: isToneDown ? '#0F172A' : '#475569' }}>({formattedDayTitle})</span>
-              {isToday && (
-                <span
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '0 8px' }}>
+                <CalendarDays size={16} color={isToneDown ? '#0F172A' : '#2563EB'} />
+                <input
+                  type="date"
+                  value={selectedDay}
+                  onChange={(e) => handleDateChange(e.target.value)}
                   style={{
-                    fontSize: '10.5px',
+                    border: 'none',
+                    backgroundColor: 'transparent',
+                    fontSize: '13.5px',
                     fontWeight: '800',
-                    backgroundColor: isToneDown ? '#F1F5F9' : '#EFF6FF',
-                    color: isToneDown ? '#0F172A' : '#2563EB',
-                    border: isToneDown ? '1px solid #CBD5E1' : '1px solid #BFDBFE',
-                    padding: '1px 7px',
-                    borderRadius: '6px',
-                    letterSpacing: '0.02em',
+                    color: '#0F172A',
+                    outline: 'none',
+                    cursor: 'pointer',
+                    fontFamily: 'inherit',
                   }}
-                >
-                  TODAY
+                />
+                <span style={{ fontSize: '13px', fontWeight: '700', color: isToneDown ? '#0F172A' : '#475569' }}>
+                  ({formattedDayTitle})
                 </span>
-              )}
+                {isToday && (
+                  <span
+                    style={{
+                      fontSize: '10px',
+                      fontWeight: '800',
+                      backgroundColor: isToneDown ? '#F1F5F9' : '#EFF6FF',
+                      color: isToneDown ? '#0F172A' : '#2563EB',
+                      border: isToneDown ? '1px solid #CBD5E1' : '1px solid #BFDBFE',
+                      padding: '2px 7px',
+                      borderRadius: '6px',
+                      letterSpacing: '0.04em',
+                    }}
+                  >
+                    TODAY
+                  </span>
+                )}
+              </div>
+
+              <button
+                type="button"
+                onClick={handleNextDay}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: '#475569',
+                  cursor: 'pointer',
+                  padding: '5px',
+                  display: 'flex',
+                  borderRadius: '6px',
+                  transition: 'background 0.15s ease',
+                }}
+                title="Next Day"
+              >
+                <ChevronRight size={16} />
+              </button>
             </div>
 
-            <button
-              type="button"
-              onClick={handleNextDay}
-              style={{ background: 'none', border: 'none', color: '#475569', cursor: 'pointer', padding: '4px', display: 'flex', borderRadius: '6px' }}
-              title="Next Day"
-            >
-              <ChevronRight size={16} />
-            </button>
+            {/* Quick Date Presets */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <button
+                type="button"
+                onClick={() => handleDateChange(todayStr)}
+                style={{
+                  backgroundColor: isToday ? (isToneDown ? '#0F172A' : '#2563EB') : '#FFFFFF',
+                  color: isToday ? '#FFFFFF' : '#475569',
+                  border: isToday ? 'none' : '1px solid #CBD5E1',
+                  borderRadius: isToneDown ? '6px' : '9px',
+                  padding: '6px 12px',
+                  fontSize: '12px',
+                  fontWeight: '700',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease',
+                  boxShadow: isToday ? '0 2px 8px rgba(37, 99, 235, 0.25)' : 'none',
+                }}
+              >
+                Today
+              </button>
+
+              <button
+                type="button"
+                onClick={handleSetYesterday}
+                style={{
+                  backgroundColor: '#FFFFFF',
+                  color: '#475569',
+                  border: '1px solid #CBD5E1',
+                  borderRadius: isToneDown ? '6px' : '9px',
+                  padding: '6px 12px',
+                  fontSize: '12px',
+                  fontWeight: '700',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                Yesterday
+              </button>
+            </div>
           </div>
 
-          {!isToday && (
+          {/* Right: Live Sync Status Badge */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                backgroundColor: '#F0FDF4',
+                border: '1px solid #BBF7D0',
+                padding: '4px 10px',
+                borderRadius: '20px',
+                fontSize: '11.5px',
+                fontWeight: '700',
+                color: '#15803D',
+              }}
+              title="Real-time silent auto-syncing with mobile phone entries every 6 seconds"
+            >
+              <span
+                style={{
+                  width: '7px',
+                  height: '7px',
+                  borderRadius: '50%',
+                  backgroundColor: '#16A34A',
+                  display: 'inline-block',
+                  boxShadow: '0 0 6px #16A34A',
+                }}
+              />
+              <span>Live Sync Active</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Row 2: Secondary Filter Controls & Action Buttons */}
+        <div
+          style={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '12px',
+          }}
+        >
+          {/* Left: Filter Group (Sales Staff) */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+            {/* Sales Staff Filter */}
+            <select
+              className="form-select"
+              value={staffFilter}
+              onChange={(e) => setStaffFilter(e.target.value)}
+              style={{
+                minWidth: '200px',
+                height: isToneDown ? '34px' : '38px',
+                fontSize: '12.5px',
+                fontWeight: '700',
+              }}
+              title="Filter performance by Sales Executive"
+            >
+              <option value="all">👥 All Sales Executives</option>
+              {staffList.map((name) => (
+                <option key={name} value={name}>
+                  👤 {name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Right: Actions Group (CSV Export & Manual Refresh) */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
             <button
               type="button"
-              onClick={() => setSelectedDay(todayStr)}
+              onClick={handleExportCSV}
               style={{
-                backgroundColor: isToneDown ? '#F1F5F9' : '#FFFFFF',
-                border: '1px solid #CBD5E1',
-                color: isToneDown ? '#0F172A' : '#2563EB',
+                backgroundColor: '#FFFFFF',
+                border: '1.5px solid #CBD5E1',
                 borderRadius: isToneDown ? '6px' : '10px',
-                padding: '6px 14px',
+                padding: '7px 13px',
                 fontSize: '12px',
                 fontWeight: '700',
+                color: '#334155',
                 cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                transition: 'all 0.15s ease',
+              }}
+              title="Download Monthly Performance CSV"
+            >
+              <Download size={14} color="#475569" />
+              <span>Export CSV</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => { fetchKpiData(); fetchDayPerformance(selectedDay); }}
+              style={{
+                backgroundColor: isToneDown ? '#F8FAFC' : '#FFFFFF',
+                border: '1.5px solid #CBD5E1',
+                borderRadius: isToneDown ? '6px' : '10px',
+                padding: '7px 13px',
+                cursor: 'pointer',
+                color: '#0F172A',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                fontSize: '12px',
+                fontWeight: '700',
                 boxShadow: isToneDown ? 'none' : '0 1px 3px rgba(0, 0, 0, 0.04)',
                 transition: 'all 0.15s ease',
               }}
+              title="Force Refresh Data"
             >
-              Jump to Today
+              <RefreshCw size={13} className={loading || dayLoading ? 'spin' : ''} />
+              <span>Refresh</span>
             </button>
-          )}
-        </div>
-
-        {/* Right Tools */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-          {/* Staff Filter */}
-          <select
-            value={staffFilter}
-            onChange={(e) => setStaffFilter(e.target.value)}
-            style={{
-              padding: isToneDown ? '5px 10px' : '7px 14px',
-              borderRadius: isToneDown ? '6px' : '10px',
-              border: '1px solid #CBD5E1',
-              fontSize: '12.5px',
-              fontWeight: '600',
-              color: '#0F172A',
-              backgroundColor: '#FFFFFF',
-              outline: 'none',
-              cursor: 'pointer',
-            }}
-          >
-            <option value="all">All Sales Staff</option>
-            {staffList.map((name) => (
-              <option key={name} value={name}>
-                {name}
-              </option>
-            ))}
-          </select>
-
-          {/* Month Selector */}
-          <input
-            type="month"
-            value={selectedMonth}
-            onChange={(e) => setSelectedMonth(e.target.value)}
-            style={{
-              padding: isToneDown ? '5px 10px' : '7px 12px',
-              borderRadius: isToneDown ? '6px' : '10px',
-              border: '1px solid #CBD5E1',
-              fontSize: '12.5px',
-              fontWeight: '600',
-              color: '#0F172A',
-              backgroundColor: '#FFFFFF',
-              outline: 'none',
-              cursor: 'pointer',
-            }}
-          >
-          </input>
-
-          <button
-            type="button"
-            onClick={() => { fetchKpiData(); fetchDayPerformance(selectedDay); }}
-            style={{
-              backgroundColor: isToneDown ? '#F8FAFC' : '#FFFFFF',
-              border: '1px solid #CBD5E1',
-              borderRadius: isToneDown ? '6px' : '10px',
-              padding: isToneDown ? '5px 8px' : '7px 12px',
-              cursor: 'pointer',
-              color: '#0F172A',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              boxShadow: isToneDown ? 'none' : '0 1px 3px rgba(0, 0, 0, 0.04)',
-            }}
-            title="Refresh"
-          >
-            <RefreshCw size={14} className={loading || dayLoading ? 'spin' : ''} />
-          </button>
+          </div>
         </div>
       </div>
 
@@ -422,19 +655,18 @@ export const DailyKpiView = () => {
             <div
               style={{
                 backgroundColor: '#FFFFFF',
-                borderRadius: isToneDown ? '8px' : '18px',
-                border: '1px solid #CBD5E1',
-                borderTop: !isToneDown ? '4px solid #3B82F6' : '1px solid #CBD5E1',
+                borderRadius: isToneDown ? '8px' : '16px',
+                border: '1px solid #E2E8F0',
                 padding: isToneDown ? '12px 14px' : '18px 20px',
-                boxShadow: isToneDown ? 'none' : '0 4px 15px rgba(59, 130, 246, 0.06)',
+                boxShadow: isToneDown ? 'none' : '0 2px 8px rgba(15, 23, 42, 0.04)',
                 transition: 'transform 0.2s ease, box-shadow 0.2s ease',
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <span style={{ fontSize: '11px', fontWeight: '800', color: isToneDown ? '#0F172A' : '#64748B', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                <span style={{ fontSize: '11px', fontWeight: '800', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                   SHOWROOM FOOTFALL
                 </span>
-                <div style={{ width: isToneDown ? '28px' : '36px', height: isToneDown ? '28px' : '36px', borderRadius: isToneDown ? '6px' : '10px', backgroundColor: isToneDown ? '#F1F5F9' : '#EFF6FF', color: isToneDown ? '#0F172A' : '#2563EB', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div style={{ width: isToneDown ? '28px' : '36px', height: isToneDown ? '28px' : '36px', borderRadius: isToneDown ? '6px' : '10px', backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0', color: '#334155', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <Users size={isToneDown ? 14 : 18} />
                 </div>
               </div>
@@ -450,25 +682,24 @@ export const DailyKpiView = () => {
             <div
               style={{
                 backgroundColor: '#FFFFFF',
-                borderRadius: isToneDown ? '8px' : '18px',
-                border: '1px solid #CBD5E1',
-                borderTop: !isToneDown ? '4px solid #8B5CF6' : '1px solid #CBD5E1',
+                borderRadius: isToneDown ? '8px' : '16px',
+                border: '1px solid #E2E8F0',
                 padding: isToneDown ? '12px 14px' : '18px 20px',
-                boxShadow: isToneDown ? 'none' : '0 4px 15px rgba(139, 92, 246, 0.06)',
+                boxShadow: isToneDown ? 'none' : '0 2px 8px rgba(15, 23, 42, 0.04)',
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <span style={{ fontSize: '11px', fontWeight: '800', color: isToneDown ? '#0F172A' : '#64748B', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                <span style={{ fontSize: '11px', fontWeight: '800', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                   QUOTATIONS SHARED
                 </span>
-                <div style={{ width: isToneDown ? '28px' : '36px', height: isToneDown ? '28px' : '36px', borderRadius: isToneDown ? '6px' : '10px', backgroundColor: isToneDown ? '#F1F5F9' : '#F5F3FF', color: isToneDown ? '#0F172A' : '#7C3AED', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div style={{ width: isToneDown ? '28px' : '36px', height: isToneDown ? '28px' : '36px', borderRadius: isToneDown ? '6px' : '10px', backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0', color: '#334155', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <Receipt size={isToneDown ? 14 : 18} />
                 </div>
               </div>
-              <div style={{ fontSize: isToneDown ? '20px' : '26px', fontWeight: '900', color: isToneDown ? '#0F172A' : '#7C3AED', marginTop: '6px' }}>
+              <div style={{ fontSize: isToneDown ? '20px' : '26px', fontWeight: '900', color: '#0F172A', marginTop: '6px' }}>
                 {dayKpi.walkins?.quotes ?? 0} <span style={{ fontSize: '13px', fontWeight: '600', color: '#64748B' }}>quotes</span>
               </div>
-              <div style={{ fontSize: '12px', color: isToneDown ? '#475569' : '#7C3AED', marginTop: '4px', fontWeight: '700' }}>
+              <div style={{ fontSize: '12px', color: '#64748B', marginTop: '4px', fontWeight: '600' }}>
                 Quote Rate: {dayKpi.quoteRate || 0}% of walk-ins
               </div>
             </div>
@@ -476,26 +707,26 @@ export const DailyKpiView = () => {
             {/* Closed Revenue */}
             <div
               style={{
-                background: isToneDown ? '#FFFFFF' : 'linear-gradient(135deg, #ECFDF5 0%, #D1FAE5 100%)',
-                borderRadius: isToneDown ? '8px' : '18px',
-                border: isToneDown ? '1px solid #CBD5E1' : '1.5px solid #6EE7B7',
+                backgroundColor: '#FFFFFF',
+                borderRadius: isToneDown ? '8px' : '16px',
+                border: '1px solid #CBD5E1',
                 padding: isToneDown ? '12px 14px' : '18px 20px',
-                boxShadow: isToneDown ? 'none' : '0 4px 18px rgba(16, 185, 129, 0.12)',
+                boxShadow: isToneDown ? 'none' : '0 2px 8px rgba(15, 23, 42, 0.04)',
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <span style={{ fontSize: '11px', fontWeight: '800', color: isToneDown ? '#0F172A' : '#047857', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                <span style={{ fontSize: '11px', fontWeight: '800', color: '#0F172A', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                   CLOSED REVENUE & DEALS
                 </span>
-                <div style={{ width: isToneDown ? '28px' : '36px', height: isToneDown ? '28px' : '36px', borderRadius: isToneDown ? '6px' : '10px', backgroundColor: '#FFFFFF', color: '#059669', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 6px rgba(0,0,0,0.06)' }}>
+                <div style={{ width: isToneDown ? '28px' : '36px', height: isToneDown ? '28px' : '36px', borderRadius: isToneDown ? '6px' : '10px', backgroundColor: '#F0FDF4', border: '1px solid #BBF7D0', color: '#059669', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <IndianRupee size={isToneDown ? 14 : 18} />
                 </div>
               </div>
-              <div style={{ fontSize: isToneDown ? '20px' : '26px', fontWeight: '900', color: isToneDown ? '#0F172A' : '#047857', marginTop: '6px' }}>
+              <div style={{ fontSize: isToneDown ? '20px' : '26px', fontWeight: '900', color: '#059669', marginTop: '6px' }}>
                 ₹{(dayKpi.salesValue || 0).toLocaleString('en-IN')}
               </div>
-              <div style={{ fontSize: '12px', fontWeight: '800', color: isToneDown ? '#0F172A' : '#065F46', marginTop: '4px' }}>
-                🎉 {dayKpi.ordersCount || 0} {dayKpi.ordersCount === 1 ? 'deal' : 'deals'} confirmed ({dayKpi.conversionRate || 0}% conv.)
+              <div style={{ fontSize: '12px', fontWeight: '700', color: '#475569', marginTop: '4px' }}>
+                {dayKpi.ordersCount || 0} {dayKpi.ordersCount === 1 ? 'deal' : 'deals'} confirmed ({dayKpi.conversionRate || 0}% conv.)
               </div>
             </div>
 
@@ -503,22 +734,21 @@ export const DailyKpiView = () => {
             <div
               style={{
                 backgroundColor: '#FFFFFF',
-                borderRadius: isToneDown ? '8px' : '18px',
-                border: '1px solid #CBD5E1',
-                borderTop: !isToneDown ? '4px solid #0284C7' : '1px solid #CBD5E1',
+                borderRadius: isToneDown ? '8px' : '16px',
+                border: '1px solid #E2E8F0',
                 padding: isToneDown ? '12px 14px' : '18px 20px',
-                boxShadow: isToneDown ? 'none' : '0 4px 15px rgba(2, 132, 199, 0.06)',
+                boxShadow: isToneDown ? 'none' : '0 2px 8px rgba(15, 23, 42, 0.04)',
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <span style={{ fontSize: '11px', fontWeight: '800', color: isToneDown ? '#0F172A' : '#64748B', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                <span style={{ fontSize: '11px', fontWeight: '800', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                   FOLLOW-UPS LOGGED
                 </span>
-                <div style={{ width: isToneDown ? '28px' : '36px', height: isToneDown ? '28px' : '36px', borderRadius: isToneDown ? '6px' : '10px', backgroundColor: isToneDown ? '#F1F5F9' : '#F0F9FF', color: isToneDown ? '#0F172A' : '#0284C7', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div style={{ width: isToneDown ? '28px' : '36px', height: isToneDown ? '28px' : '36px', borderRadius: isToneDown ? '6px' : '10px', backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0', color: '#334155', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <PhoneCall size={isToneDown ? 14 : 18} />
                 </div>
               </div>
-              <div style={{ fontSize: isToneDown ? '20px' : '26px', fontWeight: '900', color: isToneDown ? '#0F172A' : '#0284C7', marginTop: '6px' }}>
+              <div style={{ fontSize: isToneDown ? '20px' : '26px', fontWeight: '900', color: '#0F172A', marginTop: '6px' }}>
                 {dayKpi.followUpsCount || 0} <span style={{ fontSize: '13px', fontWeight: '600', color: '#64748B' }}>calls/visits</span>
               </div>
               <div style={{ fontSize: '12px', color: '#64748B', marginTop: '4px', fontWeight: '500' }}>
@@ -527,8 +757,542 @@ export const DailyKpiView = () => {
             </div>
           </div>
 
-          {/* 3. Executive Split View: Side-by-Side Leaderboard & Monthly Performance */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: isToneDown ? '12px' : '20px', alignItems: 'start' }}>
+          {/* Executive Showroom Analytics & Conversion Intelligence Bar */}
+          {(() => {
+            const avgDealSize = dayKpi.ordersCount > 0 ? Math.round(dayKpi.salesValue / dayKpi.ordersCount) : 0;
+            const walkinToQuotePct = dayKpi.walkins?.visits > 0
+              ? Math.round(((dayKpi.walkins?.quotes || 0) / dayKpi.walkins.visits) * 100)
+              : 0;
+            const quoteToClosePct = (dayKpi.walkins?.quotes || 0) > 0
+              ? Math.round(((dayKpi.ordersCount || 0) / dayKpi.walkins.quotes) * 100)
+              : 0;
+
+            return (
+              <div
+                style={{
+                  backgroundColor: '#FFFFFF',
+                  borderRadius: isToneDown ? '8px' : '16px',
+                  border: '1px solid #E2E8F0',
+                  padding: isToneDown ? '12px 14px' : '16px 20px',
+                  boxShadow: isToneDown ? 'none' : '0 2px 8px rgba(15, 23, 42, 0.03)',
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))',
+                  gap: '16px',
+                  alignItems: 'center',
+                }}
+              >
+                {/* 1. Avg Deal Size */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <div style={{ width: '38px', height: '38px', borderRadius: '10px', backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0', color: '#334155', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Zap size={18} />
+                  </div>
+                  <div>
+                    <span style={{ fontSize: '10.5px', fontWeight: '800', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block' }}>
+                      AVG DEAL VALUE
+                    </span>
+                    <span style={{ fontSize: '16px', fontWeight: '900', color: '#0F172A' }}>
+                      ₹{avgDealSize.toLocaleString('en-IN')}
+                    </span>
+                  </div>
+                </div>
+
+                {/* 2. Walk-in to Quote Rate */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <div style={{ width: '38px', height: '38px', borderRadius: '10px', backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0', color: '#334155', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <BarChart3 size={18} />
+                  </div>
+                  <div>
+                    <span style={{ fontSize: '10.5px', fontWeight: '800', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block' }}>
+                      WALK-IN → QUOTE RATE
+                    </span>
+                    <span style={{ fontSize: '16px', fontWeight: '900', color: '#0F172A' }}>
+                      {walkinToQuotePct}%
+                    </span>
+                    <span style={{ fontSize: '11px', color: '#64748B', marginLeft: '4px' }}>
+                      ({dayKpi.walkins?.quotes || 0}/{dayKpi.walkins?.visits || 0})
+                    </span>
+                  </div>
+                </div>
+
+                {/* 3. Quote to Won Deal Conversion */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <div style={{ width: '38px', height: '38px', borderRadius: '10px', backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0', color: '#334155', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <TrendingUp size={18} />
+                  </div>
+                  <div>
+                    <span style={{ fontSize: '10.5px', fontWeight: '800', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block' }}>
+                      QUOTE → WON CONVERSION
+                    </span>
+                    <span style={{ fontSize: '16px', fontWeight: '900', color: '#0F172A' }}>
+                      {quoteToClosePct}%
+                    </span>
+                    <span style={{ fontSize: '11px', color: '#64748B', marginLeft: '4px' }}>
+                      ({dayKpi.ordersCount || 0} won)
+                    </span>
+                  </div>
+                </div>
+
+                {/* 4. Active Floor Staff */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <div style={{ width: '38px', height: '38px', borderRadius: '10px', backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0', color: '#334155', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Users size={18} />
+                  </div>
+                  <div>
+                    <span style={{ fontSize: '10.5px', fontWeight: '800', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block' }}>
+                      ACTIVE SALES STAFF
+                    </span>
+                    <span style={{ fontSize: '16px', fontWeight: '900', color: '#0F172A' }}>
+                      {todayStaffPerformance.length} on floor
+                    </span>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
+
+          {/* 3. Full-Width Horizontal Monthly Performance Calendar */}
+          <div
+            style={{
+              backgroundColor: '#FFFFFF',
+              borderRadius: isToneDown ? '8px' : '20px',
+              border: '1px solid #CBD5E1',
+              padding: isToneDown ? '14px 16px' : '20px 24px',
+              boxShadow: isToneDown ? 'none' : '0 4px 20px rgba(15, 23, 42, 0.04)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '16px',
+            }}
+          >
+            {/* Header: Title + Dedicated Month Stepper + Executive Month Badges */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: '14px',
+                paddingBottom: '14px',
+                borderBottom: '1px solid #F1F5F9',
+              }}
+            >
+              {/* Left: Title & Subtitle */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div
+                  style={{
+                    width: isToneDown ? '30px' : '40px',
+                    height: isToneDown ? '30px' : '40px',
+                    borderRadius: isToneDown ? '8px' : '12px',
+                    backgroundColor: isToneDown ? '#F1F5F9' : '#EFF6FF',
+                    color: isToneDown ? '#0F172A' : '#2563EB',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <CalendarDays size={isToneDown ? 16 : 20} />
+                </div>
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <h2 style={{ fontSize: isToneDown ? '14px' : '16px', fontWeight: '800', color: '#0F172A', margin: 0 }}>
+                      Monthly Performance Calendar
+                    </h2>
+                    <span
+                      style={{
+                        fontSize: '11px',
+                        fontWeight: '800',
+                        backgroundColor: '#EFF6FF',
+                        color: '#2563EB',
+                        border: '1px solid #BFDBFE',
+                        padding: '2px 8px',
+                        borderRadius: '6px',
+                        letterSpacing: '0.02em',
+                      }}
+                    >
+                      HORIZONTAL VIEW
+                    </span>
+                  </div>
+                  <p style={{ fontSize: '12px', color: '#64748B', margin: '2px 0 0', fontWeight: '500' }}>
+                    Day-by-day showroom revenue tracking & daily drill-down selector
+                  </p>
+                </div>
+              </div>
+
+              {/* Center: Month Stepper & Quick Return */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    backgroundColor: '#F8FAFC',
+                    border: '1.5px solid #CBD5E1',
+                    borderRadius: isToneDown ? '6px' : '11px',
+                    padding: '3px 8px',
+                  }}
+                >
+                  <button
+                    type="button"
+                    onClick={() => navigateMonth(-1)}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: '#475569',
+                      cursor: 'pointer',
+                      padding: '5px',
+                      display: 'flex',
+                      borderRadius: '6px',
+                      transition: 'all 0.15s ease',
+                    }}
+                    title="Previous Month"
+                  >
+                    <ChevronLeft size={16} />
+                  </button>
+
+                  <div style={{ padding: '0 12px', fontSize: '13.5px', fontWeight: '800', color: '#0F172A', whiteSpace: 'nowrap' }}>
+                    {formattedMonthTitle}
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => navigateMonth(1)}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: '#475569',
+                      cursor: 'pointer',
+                      padding: '5px',
+                      display: 'flex',
+                      borderRadius: '6px',
+                      transition: 'all 0.15s ease',
+                    }}
+                    title="Next Month"
+                  >
+                    <ChevronRight size={16} />
+                  </button>
+                </div>
+
+                {selectedMonth !== todayStr.substring(0, 7) && (
+                  <button
+                    type="button"
+                    onClick={() => handleMonthChange(todayStr.substring(0, 7))}
+                    style={{
+                      backgroundColor: '#EFF6FF',
+                      border: '1.5px solid #BFDBFE',
+                      borderRadius: isToneDown ? '6px' : '10px',
+                      padding: '7px 12px',
+                      fontSize: '12px',
+                      fontWeight: '800',
+                      color: '#2563EB',
+                      cursor: 'pointer',
+                      whiteSpace: 'nowrap',
+                      transition: 'all 0.15s ease',
+                    }}
+                  >
+                    This Month
+                  </button>
+                )}
+              </div>
+
+              {/* Right: High-Level Metric Pills */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    backgroundColor: '#F8FAFC',
+                    border: '1px solid #E2E8F0',
+                    padding: '6px 12px',
+                    borderRadius: '8px',
+                  }}
+                >
+                  <span style={{ fontSize: '10.5px', fontWeight: '800', color: '#64748B', textTransform: 'uppercase' }}>TOTAL:</span>
+                  <span style={{ fontSize: '13.5px', fontWeight: '900', color: '#059669' }}>
+                    ₹{monthlyMetrics.totalRevenue.toLocaleString('en-IN')}
+                  </span>
+                </div>
+
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    backgroundColor: '#F8FAFC',
+                    border: '1px solid #E2E8F0',
+                    padding: '6px 12px',
+                    borderRadius: '8px',
+                  }}
+                >
+                  <span style={{ fontSize: '10.5px', fontWeight: '800', color: '#64748B', textTransform: 'uppercase' }}>WON:</span>
+                  <span style={{ fontSize: '13.5px', fontWeight: '900', color: '#0F172A' }}>
+                    {monthlyMetrics.totalOrders} Deals
+                  </span>
+                </div>
+
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    backgroundColor: '#F8FAFC',
+                    border: '1px solid #E2E8F0',
+                    padding: '6px 12px',
+                    borderRadius: '8px',
+                  }}
+                >
+                  <span style={{ fontSize: '10.5px', fontWeight: '800', color: '#64748B', textTransform: 'uppercase' }}>PEAK:</span>
+                  <span style={{ fontSize: '13px', fontWeight: '900', color: '#0F172A' }}>
+                    {monthlyMetrics.bestDay ? `Day ${monthlyMetrics.bestDay.dayNumber} (₹${Math.round(monthlyMetrics.bestDay.salesValue / 1000)}k)` : '—'}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Horizontal Timeline Ribbon with Scroll Controls */}
+            <div style={{ position: 'relative' }}>
+              {/* Left Scroll Overlay Button */}
+              <button
+                type="button"
+                onClick={() => scrollCalendar('left')}
+                style={{
+                  position: 'absolute',
+                  left: '-10px',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  zIndex: 5,
+                  width: '32px',
+                  height: '32px',
+                  borderRadius: '50%',
+                  backgroundColor: '#FFFFFF',
+                  border: '1.5px solid #CBD5E1',
+                  boxShadow: '0 4px 12px rgba(15, 23, 42, 0.12)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  color: '#334155',
+                  transition: 'all 0.15s ease',
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#F8FAFC'; e.currentTarget.style.borderColor = '#94A3B8'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#FFFFFF'; e.currentTarget.style.borderColor = '#CBD5E1'; }}
+                title="Scroll Days Left"
+              >
+                <ChevronLeft size={18} />
+              </button>
+
+              {/* Horizontal Days Strip */}
+              <div
+                ref={calendarScrollRef}
+                style={{
+                  display: 'flex',
+                  gap: '10px',
+                  overflowX: 'auto',
+                  padding: '8px 4px 12px',
+                  scrollBehavior: 'smooth',
+                  scrollbarWidth: 'thin',
+                  scrollbarColor: '#CBD5E1 transparent',
+                }}
+              >
+                {dailyTrends.map((t) => {
+                  const isSelected = t.date === selectedDay;
+                  const isCurrentDay = t.date === todayStr;
+                  const hasSales = Number(t.salesValue) > 0;
+                  const isWeekend = t.dayOfWeek === 'Sun' || t.dayOfWeek === 'Sat';
+
+                  return (
+                    <button
+                      key={t.date}
+                      type="button"
+                      data-selected={isSelected ? 'true' : 'false'}
+                      onClick={() => handleDateChange(t.date)}
+                      style={{
+                        flex: '0 0 78px',
+                        minWidth: '78px',
+                        height: '106px',
+                        borderRadius: isToneDown ? '6px' : '12px',
+                        border: isSelected
+                          ? '2px solid #0F172A'
+                          : isToneDown
+                          ? '1px solid #CBD5E1'
+                          : hasSales
+                          ? '1.5px solid #CBD5E1'
+                          : '1px solid #E2E8F0',
+                        backgroundColor: isSelected
+                          ? '#0F172A'
+                          : isCurrentDay
+                          ? '#F8FAFC'
+                          : isWeekend
+                          ? '#F8FAFC'
+                          : '#FFFFFF',
+                        color: isSelected ? '#FFFFFF' : '#0F172A',
+                        cursor: 'pointer',
+                        textAlign: 'center',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        padding: '10px 4px 8px',
+                        position: 'relative',
+                        transition: 'all 0.18s cubic-bezier(0.16, 1, 0.3, 1)',
+                        boxShadow: isSelected
+                          ? '0 4px 14px rgba(15, 23, 42, 0.25)'
+                          : '0 1px 3px rgba(15, 23, 42, 0.03)',
+                        transform: isSelected ? 'translateY(-2px)' : 'none',
+                      }}
+                      title={`${t.date}: ₹${(t.salesValue || 0).toLocaleString('en-IN')} (${t.ordersCount || 0} orders, ${t.visits || 0} visits)`}
+                    >
+                      {/* Top: Day of Week & Today Marker */}
+                      <div style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
+                        <span
+                          style={{
+                            fontSize: '10px',
+                            fontWeight: '800',
+                            color: isSelected ? '#94A3B8' : isWeekend ? '#94A3B8' : '#64748B',
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.04em',
+                          }}
+                        >
+                          {t.dayOfWeek}
+                        </span>
+                        {isCurrentDay && !isSelected && (
+                          <span
+                            style={{
+                              position: 'absolute',
+                              top: '-2px',
+                              right: '2px',
+                              width: '6px',
+                              height: '6px',
+                              borderRadius: '50%',
+                              backgroundColor: '#0F172A',
+                            }}
+                            title="Today"
+                          />
+                        )}
+                      </div>
+
+                      {/* Center: Large Day Number */}
+                      <div
+                        style={{
+                          fontSize: '18px',
+                          fontWeight: '900',
+                          color: isSelected ? '#FFFFFF' : '#0F172A',
+                          lineHeight: 1,
+                        }}
+                      >
+                        {t.dayNumber}
+                      </div>
+
+                      {/* Bottom: Sales Revenue Badge */}
+                      <div style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
+                        {hasSales ? (
+                          <span
+                            style={{
+                              fontSize: '9.5px',
+                              fontWeight: '800',
+                              color: isSelected ? '#34D399' : '#059669',
+                              backgroundColor: isSelected ? 'rgba(255, 255, 255, 0.1)' : '#F1F5F9',
+                              border: isSelected ? '1px solid rgba(255, 255, 255, 0.15)' : '1px solid #E2E8F0',
+                              padding: '1.5px 5px',
+                              borderRadius: '5px',
+                              whiteSpace: 'nowrap',
+                              lineHeight: 1.1,
+                            }}
+                          >
+                            ₹{Math.round(t.salesValue / 1000)}k
+                          </span>
+                        ) : (
+                          <span style={{ fontSize: '10px', color: isSelected ? '#64748B' : '#CBD5E1', fontWeight: '500' }}>—</span>
+                        )}
+
+                        {Number(t.ordersCount) > 0 && (
+                          <span
+                            style={{
+                              fontSize: '8.5px',
+                              fontWeight: '700',
+                              color: isSelected ? '#CBD5E1' : '#64748B',
+                              lineHeight: 1,
+                            }}
+                          >
+                            {t.ordersCount} won
+                          </span>
+                        )}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Right Scroll Overlay Button */}
+              <button
+                type="button"
+                onClick={() => scrollCalendar('right')}
+                style={{
+                  position: 'absolute',
+                  right: '-10px',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  zIndex: 5,
+                  width: '32px',
+                  height: '32px',
+                  borderRadius: '50%',
+                  backgroundColor: '#FFFFFF',
+                  border: '1.5px solid #CBD5E1',
+                  boxShadow: '0 4px 12px rgba(15, 23, 42, 0.12)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  color: '#334155',
+                  transition: 'all 0.15s ease',
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#F8FAFC'; e.currentTarget.style.borderColor = '#94A3B8'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#FFFFFF'; e.currentTarget.style.borderColor = '#CBD5E1'; }}
+                title="Scroll Days Right"
+              >
+                <ChevronRight size={18} />
+              </button>
+            </div>
+
+            {/* Bottom Legend Bar */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                paddingTop: '6px',
+                borderTop: '1px solid #F1F5F9',
+                fontSize: '11.5px',
+                color: '#64748B',
+                fontWeight: '600',
+                flexWrap: 'wrap',
+                gap: '8px',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                  <span style={{ width: '9px', height: '9px', borderRadius: '3px', backgroundColor: '#059669' }} /> Sales Day
+                </span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                  <span style={{ width: '9px', height: '9px', borderRadius: '3px', backgroundColor: '#0F172A' }} /> Selected Day
+                </span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                  <span style={{ width: '9px', height: '9px', borderRadius: '3px', backgroundColor: '#94A3B8' }} /> Non-Active Day
+                </span>
+              </div>
+              <span style={{ fontSize: '11px', color: '#94A3B8' }}>
+                Tip: Click any day tile to inspect live sales breakdown & staff activity below
+              </span>
+            </div>
+          </div>
+
+          {/* 4. Selected Day Deep-Dive: Staff Leaderboard & Live Transactions Split */}
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(420px, 1fr))',
+              gap: isToneDown ? '12px' : '20px',
+              alignItems: 'start',
+            }}
+          >
             {/* Sales Staff Performance Leaderboard */}
             <div
               style={{
@@ -562,22 +1326,22 @@ export const DailyKpiView = () => {
               </div>
 
               {todayStaffPerformance.length === 0 ? (
-                <div style={{ padding: '24px', textAlign: 'center', color: '#64748B', fontSize: '13px', fontWeight: '500' }}>
-                  No staff activity recorded for this date.
+                <div style={{ padding: '36px 20px', textAlign: 'center', color: '#64748B', fontSize: '13px', fontWeight: '500' }}>
+                  No staff activity recorded for {formattedDayTitle}.
                 </div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: isToneDown ? '6px' : '10px' }}>
                   {todayStaffPerformance.map((s, idx) => {
-                    const rankBadge = idx === 0 ? '👑 #1' : idx === 1 ? '🥈 #2' : idx === 2 ? '🥉 #3' : `#${idx + 1}`;
-                    const rankBg = isToneDown ? '#F1F5F9' : (idx === 0 ? '#FEF3C7' : idx === 1 ? '#F1F5F9' : idx === 2 ? '#FFEDD5' : '#F8FAFC');
-                    const rankColor = isToneDown ? '#0F172A' : (idx === 0 ? '#B45309' : idx === 1 ? '#475569' : idx === 2 ? '#C2410C' : '#64748B');
+                    const rankBadge = `RANK #${idx + 1}`;
+                    const rankBg = isToneDown ? '#F1F5F9' : (idx === 0 ? '#F8FAFC' : '#FFFFFF');
+                    const rankColor = isToneDown ? '#0F172A' : '#334155';
 
                     return (
                       <div
                         key={s.staffName}
                         style={{
-                          backgroundColor: isToneDown ? '#FFFFFF' : '#F8FAFC',
-                          borderRadius: isToneDown ? '6px' : '12px',
+                          backgroundColor: '#FFFFFF',
+                          borderRadius: isToneDown ? '6px' : '10px',
                           padding: isToneDown ? '8px 10px' : '12px 16px',
                           display: 'flex',
                           alignItems: 'center',
@@ -593,7 +1357,7 @@ export const DailyKpiView = () => {
                               fontWeight: '800',
                               backgroundColor: rankBg,
                               color: rankColor,
-                              border: isToneDown ? '1px solid #CBD5E1' : 'none',
+                              border: '1px solid #E2E8F0',
                               padding: '3px 8px',
                               borderRadius: '6px',
                             }}
@@ -611,10 +1375,10 @@ export const DailyKpiView = () => {
                         </div>
 
                         <div style={{ textAlign: 'right' }}>
-                          <div style={{ fontSize: isToneDown ? '13px' : '15px', fontWeight: '900', color: s.salesValue > 0 ? (isToneDown ? '#0F172A' : '#059669') : '#0F172A' }}>
+                          <div style={{ fontSize: isToneDown ? '13px' : '15px', fontWeight: '900', color: s.salesValue > 0 ? '#059669' : '#0F172A' }}>
                             ₹{(s.salesValue || 0).toLocaleString('en-IN')}
                           </div>
-                          <div style={{ fontSize: '11px', fontWeight: '700', color: isToneDown ? '#475569' : '#2563EB', marginTop: '1px' }}>
+                          <div style={{ fontSize: '11px', fontWeight: '700', color: '#64748B', marginTop: '1px' }}>
                             {s.ordersCount} deals ({s.conversionRate}% conv.)
                           </div>
                         </div>
@@ -625,314 +1389,377 @@ export const DailyKpiView = () => {
               )}
             </div>
 
-            {/* Monthly Day-by-Day Performance Calendar & Overview */}
+            {/* Executive Showroom Transactions Card Stream */}
             <div
               style={{
                 backgroundColor: '#FFFFFF',
                 borderRadius: isToneDown ? '8px' : '20px',
                 border: '1px solid #CBD5E1',
-                padding: isToneDown ? '12px 14px' : '22px',
                 boxShadow: isToneDown ? 'none' : '0 4px 18px rgba(0, 0, 0, 0.03)',
+                overflow: 'hidden',
                 display: 'flex',
                 flexDirection: 'column',
-                gap: isToneDown ? '10px' : '14px',
               }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <div style={{ width: isToneDown ? '26px' : '34px', height: isToneDown ? '26px' : '34px', borderRadius: isToneDown ? '6px' : '10px', backgroundColor: isToneDown ? '#F1F5F9' : '#EFF6FF', color: isToneDown ? '#0F172A' : '#2563EB', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <CalendarDays size={isToneDown ? 14 : 18} />
+              {/* Header Bar: Title, Live Billed Pill, and Quick Filter Tabs */}
+              <div
+                style={{
+                  padding: isToneDown ? '12px 14px' : '16px 20px',
+                  backgroundColor: '#F8FAFC',
+                  borderBottom: '1px solid #E2E8F0',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  flexWrap: 'wrap',
+                  gap: '12px',
+                }}
+              >
+                {/* Left: Icon, Title & Date */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <div
+                    style={{
+                      width: isToneDown ? '28px' : '36px',
+                      height: isToneDown ? '28px' : '36px',
+                      borderRadius: isToneDown ? '6px' : '10px',
+                      backgroundColor: isToneDown ? '#F1F5F9' : '#ECFDF5',
+                      color: isToneDown ? '#0F172A' : '#059669',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    <Receipt size={isToneDown ? 15 : 18} />
                   </div>
                   <div>
-                    <div style={{ fontSize: isToneDown ? '13px' : '14.5px', fontWeight: '800', color: '#0F172A' }}>
-                      Monthly Performance Calendar
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ fontSize: isToneDown ? '13px' : '15px', fontWeight: '800', color: '#0F172A' }}>
+                        Showroom Transactions
+                      </span>
+                      <span
+                        style={{
+                          fontSize: '11px',
+                          fontWeight: '800',
+                          backgroundColor: '#EFF6FF',
+                          color: '#2563EB',
+                          border: '1px solid #BFDBFE',
+                          padding: '1.5px 7px',
+                          borderRadius: '6px',
+                        }}
+                      >
+                        {filteredDayCustomers.length} Records
+                      </span>
                     </div>
-                    {!isToneDown && (
-                      <div style={{ fontSize: '11px', color: '#64748B', fontWeight: '600' }}>
-                        {new Date(selectedMonth + '-01').toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })}
-                      </div>
-                    )}
+                    <div style={{ fontSize: '11.5px', color: '#64748B', fontWeight: '500', marginTop: '1px' }}>
+                      {formattedDayTitle}
+                    </div>
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-                  <span
-                    style={{
-                      fontSize: '11px',
-                      fontWeight: '700',
-                      backgroundColor: isToneDown ? '#F1F5F9' : '#ECFDF5',
-                      color: isToneDown ? '#0F172A' : '#047857',
-                      padding: '3px 8px',
-                      borderRadius: '6px',
-                      border: isToneDown ? '1px solid #CBD5E1' : '1px solid #A7F3D0',
-                    }}
-                  >
-                    {monthlyMetrics.activeDaysCount} Active Days
-                  </span>
-                  <span
-                    style={{
-                      fontSize: '11px',
-                      fontWeight: '800',
-                      backgroundColor: isToneDown ? '#F1F5F9' : '#EFF6FF',
-                      color: isToneDown ? '#0F172A' : '#1D4ED8',
-                      padding: '3px 8px',
-                      borderRadius: '6px',
-                      border: isToneDown ? '1px solid #CBD5E1' : '1px solid #BFDBFE',
-                    }}
-                  >
-                    ₹{monthlyMetrics.totalRevenue.toLocaleString('en-IN')} Total
-                  </span>
-                </div>
-              </div>
-
-              {/* Day Tiles Grid */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '6px', maxHeight: '250px', overflowY: 'auto', paddingRight: '2px' }}>
-                {dailyTrends.map((t) => {
-                  const isSelected = t.date === selectedDay;
-                  const isCurrentDay = t.date === todayStr;
-                  const hasSales = Number(t.salesValue) > 0;
-                  const isHighSales = Number(t.salesValue) >= 50000;
-
-                  return (
-                    <button
-                      key={t.date}
-                      type="button"
-                      onClick={() => setSelectedDay(t.date)}
+                {/* Right: Quick Filter Tabs & Billed Value Badge */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                  {/* Billed Total Badge */}
+                  {totalDayBilled > 0 && (
+                    <div
                       style={{
-                        padding: '8px 4px',
-                        borderRadius: isToneDown ? '6px' : '12px',
-                        border: isSelected
-                          ? (isToneDown ? '2px solid #0F172A' : '2px solid #2563EB')
-                          : isToneDown
-                          ? '1px solid #CBD5E1'
-                          : isHighSales
-                          ? '1px solid #6EE7B7'
-                          : hasSales
-                          ? '1px solid #A7F3D0'
-                          : '1px solid #E2E8F0',
-                        backgroundColor: isToneDown
-                          ? (isSelected ? '#F1F5F9' : '#FFFFFF')
-                          : isSelected
-                          ? '#EFF6FF'
-                          : isHighSales
-                          ? '#D1FAE5'
-                          : hasSales
-                          ? '#ECFDF5'
-                          : isCurrentDay
-                          ? '#FEF3C7'
-                          : '#F8FAFC',
-                        color: isSelected ? (isToneDown ? '#0F172A' : '#1D4ED8') : '#0F172A',
-                        cursor: 'pointer',
-                        textAlign: 'center',
                         display: 'flex',
-                        flexDirection: 'column',
                         alignItems: 'center',
-                        gap: '2px',
-                        position: 'relative',
-                        transition: 'all 0.15s ease',
-                        boxShadow: isSelected && !isToneDown ? '0 0 0 3px rgba(37, 99, 235, 0.18)' : 'none',
+                        gap: '6px',
+                        backgroundColor: '#ECFDF5',
+                        border: '1px solid #A7F3D0',
+                        padding: '4px 10px',
+                        borderRadius: '8px',
                       }}
-                      title={`${t.date}: ₹${(t.salesValue || 0).toLocaleString('en-IN')} (${t.ordersCount || 0} orders, ${t.visits || 0} visits)`}
                     >
-                      {isCurrentDay && (
-                        <span style={{ position: 'absolute', top: '2px', right: '3px', fontSize: '7px', fontWeight: '900', color: isToneDown ? '#0F172A' : '#D97706' }}>
-                          ●
-                        </span>
-                      )}
-                      <span style={{ fontSize: '9.5px', fontWeight: '700', color: isSelected ? (isToneDown ? '#0F172A' : '#2563EB') : '#64748B', textTransform: 'uppercase' }}>
-                        {t.dayOfWeek}
+                      <span style={{ fontSize: '10px', fontWeight: '800', color: '#047857', textTransform: 'uppercase' }}>
+                        BILLED:
                       </span>
-                      <span style={{ fontSize: '13px', fontWeight: '900', color: isSelected ? (isToneDown ? '#0F172A' : '#1E40AF') : '#0F172A' }}>
-                        {t.dayNumber}
+                      <span style={{ fontSize: '13px', fontWeight: '900', color: '#065F46' }}>
+                        ₹{totalDayBilled.toLocaleString('en-IN')}
                       </span>
-                      {hasSales ? (
-                        <span style={{ fontSize: '9.5px', fontWeight: '800', color: isToneDown ? '#0F172A' : (isHighSales ? '#047857' : '#059669') }}>
-                          ₹{Math.round(t.salesValue / 1000)}k
-                        </span>
-                      ) : (
-                        <span style={{ fontSize: '9.5px', color: '#94A3B8' }}>—</span>
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
+                    </div>
+                  )}
 
-              {/* Legend Bar */}
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '6px', borderTop: '1px solid #F1F5F9', fontSize: '10.5px', color: '#64748B', fontWeight: '600' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: isToneDown ? '#0F172A' : '#059669' }} /> Sales Day
-                  </span>
-                  <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: isToneDown ? '#64748B' : '#D97706' }} /> Today
-                  </span>
-                  <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#CBD5E1' }} /> No Sales
-                  </span>
-                </div>
-                <span>Click tile for day breakdown</span>
-              </div>
-            </div>
-          </div>
-
-          {/* 4. Streamlined 5-Column High-Density Transaction Table */}
-          <div
-            style={{
-              backgroundColor: '#FFFFFF',
-              borderRadius: isToneDown ? '8px' : '20px',
-              border: '1px solid #CBD5E1',
-              boxShadow: isToneDown ? 'none' : '0 4px 18px rgba(0, 0, 0, 0.03)',
-              overflow: 'hidden',
-            }}
-          >
-            <div style={{ padding: isToneDown ? '10px 14px' : '16px 22px', backgroundColor: '#F8FAFC', borderBottom: '1px solid #CBD5E1', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <FileCheck size={isToneDown ? 15 : 18} color={isToneDown ? '#0F172A' : '#059669'} />
-                <span style={{ fontSize: isToneDown ? '13px' : '14.5px', fontWeight: '800', color: '#0F172A' }}>
-                  Showroom Transactions on {formattedDayTitle}
-                </span>
-                <span
-                  style={{
-                    fontSize: '11px',
-                    fontWeight: '800',
-                    backgroundColor: isToneDown ? '#F1F5F9' : '#EFF6FF',
-                    color: isToneDown ? '#0F172A' : '#2563EB',
-                    border: isToneDown ? '1px solid #CBD5E1' : '1px solid #BFDBFE',
-                    padding: '2px 8px',
-                    borderRadius: '8px',
-                  }}
-                >
-                  {dayCustomers.length} Records
-                </span>
-              </div>
-              {!isToneDown && (
-                <span style={{ fontSize: '12px', color: '#64748B', fontWeight: '500' }}>
-                  Automatic CRM live log
-                </span>
-              )}
-            </div>
-
-            {dayCustomers.length === 0 ? (
-              <div style={{ padding: '50px 20px', textAlign: 'center', color: '#64748B' }}>
-                <div style={{ fontSize: '32px', marginBottom: '8px' }}>📅</div>
-                <div style={{ fontSize: '15px', fontWeight: '800', color: '#0F172A' }}>
-                  No transactions recorded on {formattedDayTitle}
-                </div>
-                <p style={{ fontSize: '12.5px', color: '#64748B', maxWidth: '360px', margin: '4px auto 0' }}>
-                  Leads registered, quoted, or confirmed on this date automatically populate here.
-                </p>
-              </div>
-            ) : (
-              <div style={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
-                  <thead>
-                    <tr style={{ backgroundColor: isToneDown ? '#F1F5F9' : '#F8FAFC', borderBottom: '1px solid #CBD5E1' }}>
-                      <th style={{ padding: isToneDown ? '8px 12px' : '14px 18px', fontSize: '11px', fontWeight: '800', color: '#0F172A', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                        1. Customer Lead
-                      </th>
-                      <th style={{ padding: isToneDown ? '8px 12px' : '14px 18px', fontSize: '11px', fontWeight: '800', color: '#0F172A', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                        2. Status & Source
-                      </th>
-                      <th style={{ padding: isToneDown ? '8px 12px' : '14px 18px', fontSize: '11px', fontWeight: '800', color: '#0F172A', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                        3. Material Specifications
-                      </th>
-                      <th style={{ padding: isToneDown ? '8px 12px' : '14px 18px', fontSize: '11px', fontWeight: '800', color: '#0F172A', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                        4. Sales Executive
-                      </th>
-                      <th style={{ padding: isToneDown ? '8px 12px' : '14px 18px', fontSize: '11px', fontWeight: '800', color: '#0F172A', textTransform: 'uppercase', letterSpacing: '0.04em', textAlign: 'right' }}>
-                        5. Deal Value
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {dayCustomers.map((c, idx) => {
-                      const isClosed = c.status === 'Order Confirmed';
-                      const isQuote = c.status === 'Quotation' || c.status === 'Negotiation';
-
+                  {/* Filter Pills */}
+                  <div
+                    style={{
+                      display: 'flex',
+                      backgroundColor: '#FFFFFF',
+                      border: '1.5px solid #CBD5E1',
+                      borderRadius: '8px',
+                      padding: '2px',
+                    }}
+                  >
+                    {[
+                      { id: 'all', label: `All (${dayCustomers.length})` },
+                      { id: 'confirmed', label: `Won (${closedCount})` },
+                      { id: 'quote', label: `Quotes (${quoteCount})` },
+                    ].map((tab) => {
+                      const active = txFilter === tab.id;
                       return (
-                        <tr
-                          key={c._id || c.customerId}
+                        <button
+                          key={tab.id}
+                          type="button"
+                          onClick={() => setTxFilter(tab.id)}
                           style={{
-                            borderBottom: idx < dayCustomers.length - 1 ? '1px solid #E2E8F0' : 'none',
-                            backgroundColor: isToneDown ? '#FFFFFF' : (isClosed ? '#F0FDF4' : '#FFFFFF'),
+                            background: active ? '#EFF6FF' : 'transparent',
+                            color: active ? '#1D4ED8' : '#64748B',
+                            fontWeight: active ? '800' : '600',
+                            border: 'none',
+                            borderRadius: '6px',
+                            padding: '4px 9px',
+                            fontSize: '11.5px',
+                            cursor: 'pointer',
+                            transition: 'all 0.15s ease',
                           }}
                         >
-                          {/* Column 1: Customer Lead */}
-                          <td style={{ padding: isToneDown ? '8px 12px' : '14px 18px', verticalAlign: 'middle' }}>
-                            <div style={{ fontSize: '13.5px', fontWeight: '800', color: '#0F172A' }}>
-                              {c.customerName}
-                            </div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '3px' }}>
-                              <span style={{ fontSize: '11px', color: isToneDown ? '#0F172A' : '#2563EB', fontWeight: '800', fontFamily: 'monospace', backgroundColor: isToneDown ? '#F1F5F9' : '#EFF6FF', border: isToneDown ? '1px solid #CBD5E1' : 'none', padding: '1px 6px', borderRadius: '4px' }}>
-                                #{c.customerId}
-                              </span>
-                              {c.phone && (
-                                <span style={{ fontSize: '12px', color: '#475569', fontWeight: '600' }}>
-                                  📞 {c.phone}
-                                </span>
-                              )}
-                            </div>
-                          </td>
-
-                          {/* Column 2: Status & Source */}
-                          <td style={{ padding: isToneDown ? '8px 12px' : '14px 18px', verticalAlign: 'middle' }}>
-                            <span
-                              style={{
-                                fontSize: '11.5px',
-                                fontWeight: '800',
-                                padding: '3px 9px',
-                                borderRadius: isToneDown ? '4px' : '10px',
-                                display: 'inline-block',
-                                backgroundColor: isToneDown ? '#F1F5F9' : (isClosed ? '#DCFCE7' : isQuote ? '#FEF3C7' : '#EFF6FF'),
-                                color: isToneDown ? '#0F172A' : (isClosed ? '#15803D' : isQuote ? '#B45309' : '#1D4ED8'),
-                                border: `1px solid ${isToneDown ? '#CBD5E1' : (isClosed ? '#86EFAC' : isQuote ? '#FDE68A' : '#BFDBFE')}`,
-                              }}
-                            >
-                              {isClosed ? '🎉 Order Confirmed' : isQuote ? `📄 ${c.status}` : `💬 ${c.status}`}
-                            </span>
-                            <div style={{ fontSize: '11px', color: '#64748B', marginTop: '3px', fontWeight: '600' }}>
-                              Source: {c.leadSource || 'Direct Walk-in'}
-                            </div>
-                          </td>
-
-                          {/* Column 3: Material Specs */}
-                          <td style={{ padding: isToneDown ? '8px 12px' : '14px 18px', verticalAlign: 'middle' }}>
-                            <div style={{ fontSize: '12.5px', fontWeight: '700', color: '#334155' }}>
-                              {c.requirement || 'Tiles & Sanitary'}
-                            </div>
-                            {c.approxQuantity && (
-                              <div style={{ fontSize: '11px', color: '#64748B', marginTop: '2px' }}>
-                                Quantity: {c.approxQuantity}
-                              </div>
-                            )}
-                          </td>
-
-                          {/* Column 4: Sales Executive */}
-                          <td style={{ padding: isToneDown ? '8px 12px' : '14px 18px', verticalAlign: 'middle' }}>
-                            <div style={{ fontSize: '13px', fontWeight: '700', color: '#0F172A' }}>
-                              {c.salesperson || 'Showroom Staff'}
-                            </div>
-                            <div style={{ fontSize: '11px', color: '#64748B', marginTop: '2px' }}>
-                              {c.customerType || 'Building Owner'}
-                            </div>
-                          </td>
-
-                          {/* Column 5: Deal Value */}
-                          <td style={{ padding: isToneDown ? '8px 12px' : '14px 18px', verticalAlign: 'middle', textAlign: 'right' }}>
-                            <div style={{ fontSize: '15px', fontWeight: '900', color: isToneDown ? '#0F172A' : (isClosed ? '#059669' : '#0F172A') }}>
-                              ₹{(c.orderValue || c.quotationValue || 0).toLocaleString('en-IN')}
-                            </div>
-                            <div style={{ fontSize: '11px', color: isToneDown ? '#475569' : (isClosed ? '#059669' : '#64748B'), fontWeight: '600', marginTop: '2px' }}>
-                              {isClosed ? 'Billed Order' : 'Quotation Estimate'}
-                            </div>
-                          </td>
-                        </tr>
+                          {tab.label}
+                        </button>
                       );
                     })}
-                  </tbody>
-                </table>
+                  </div>
+                </div>
               </div>
-            )}
+
+              {/* Transactions List */}
+              {dayCustomers.length === 0 ? (
+                <div style={{ padding: '60px 20px', textAlign: 'center', color: '#64748B' }}>
+                  <div style={{ fontSize: '36px', marginBottom: '10px' }}>📋</div>
+                  <div style={{ fontSize: '15px', fontWeight: '800', color: '#0F172A' }}>
+                    No transactions recorded on {formattedDayTitle}
+                  </div>
+                  <p style={{ fontSize: '12.5px', color: '#64748B', maxWidth: '380px', margin: '6px auto 0', lineHeight: 1.5 }}>
+                    Client footfalls, quotations, and confirmed billing recorded for this date automatically populate here in real time.
+                  </p>
+                </div>
+              ) : filteredDayCustomers.length === 0 ? (
+                <div style={{ padding: '40px 20px', textAlign: 'center', color: '#64748B' }}>
+                  <div style={{ fontSize: '13.5px', fontWeight: '700', color: '#0F172A' }}>
+                    No transactions match the "{txFilter === 'confirmed' ? 'Won' : 'Quotes'}" filter.
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setTxFilter('all')}
+                    style={{
+                      marginTop: '8px',
+                      background: 'none',
+                      border: 'none',
+                      color: '#2563EB',
+                      fontSize: '12px',
+                      fontWeight: '800',
+                      cursor: 'pointer',
+                      textDecoration: 'underline',
+                    }}
+                  >
+                    View All {dayCustomers.length} Records
+                  </button>
+                </div>
+              ) : (
+                <div
+                  style={{
+                    maxHeight: '460px',
+                    overflowY: 'auto',
+                    padding: '12px 14px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '10px',
+                  }}
+                >
+                  {filteredDayCustomers.map((c) => {
+                    const isClosed = c.status === 'Order Confirmed';
+                    const isQuote = c.status === 'Quotation' || c.status === 'Negotiation';
+                    const val = Number(c.orderValue || c.quotationValue || 0);
+                    const initial = (c.customerName || c.name || 'C').charAt(0).toUpperCase();
+
+                    return (
+                      <div
+                        key={c._id || c.customerId}
+                        style={{
+                          backgroundColor: '#FFFFFF',
+                          borderRadius: isToneDown ? '6px' : '12px',
+                          border: '1px solid #E2E8F0',
+                          borderLeftWidth: '3.5px',
+                          borderLeftColor: isClosed ? '#059669' : isQuote ? '#475569' : '#CBD5E1',
+                          padding: '12px 16px',
+                          boxShadow: '0 1px 3px rgba(15, 23, 42, 0.03)',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '8px',
+                          transition: 'all 0.15s ease',
+                        }}
+                      >
+                        {/* Top Row: Customer Identity & Value */}
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <div
+                              style={{
+                                width: '32px',
+                                height: '32px',
+                                borderRadius: '50%',
+                                backgroundColor: isClosed ? '#F0FDF4' : '#F8FAFC',
+                                border: isClosed ? '1px solid #BBF7D0' : '1px solid #E2E8F0',
+                                color: isClosed ? '#059669' : '#334155',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                fontSize: '13px',
+                                fontWeight: '900',
+                              }}
+                            >
+                              {initial}
+                            </div>
+                            <div>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <span style={{ fontSize: '14px', fontWeight: '800', color: '#0F172A' }}>
+                                  {c.customerName || c.name || 'Unnamed Client'}
+                                </span>
+                                <span
+                                  style={{
+                                    fontFamily: 'monospace',
+                                    fontSize: '11px',
+                                    fontWeight: '700',
+                                    color: '#64748B',
+                                    backgroundColor: '#F1F5F9',
+                                    padding: '1.5px 6px',
+                                    borderRadius: '5px',
+                                  }}
+                                >
+                                  #{c.customerId}
+                                </span>
+                              </div>
+                              {c.phone && (
+                                <div style={{ fontSize: '11.5px', color: '#64748B', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}>
+                                  <Phone size={11} color="#64748B" />
+                                  <span>{c.phone}</span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Right: Status Pill & Deal Value */}
+                          <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '3px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              <span
+                                style={{
+                                  fontSize: '11px',
+                                  fontWeight: '800',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '4px',
+                                  padding: '2.5px 8px',
+                                  borderRadius: '6px',
+                                  backgroundColor: isClosed ? '#F0FDF4' : '#F8FAFC',
+                                  color: isClosed ? '#059669' : '#334155',
+                                  border: isClosed ? '1px solid #BBF7D0' : '1px solid #E2E8F0',
+                                }}
+                              >
+                                {isClosed && <CheckCircle2 size={12} />}
+                                {isQuote && <FileText size={12} />}
+                                {!isClosed && !isQuote && <Clock size={12} />}
+                                <span>{c.status || 'Active Lead'}</span>
+                              </span>
+
+                              <span style={{ fontSize: '15.5px', fontWeight: '900', color: isClosed ? '#059669' : '#0F172A' }}>
+                                ₹{val.toLocaleString('en-IN')}
+                              </span>
+                            </div>
+                            <span style={{ fontSize: '10px', color: isClosed ? '#059669' : '#64748B', fontWeight: '600' }}>
+                              {isClosed ? 'Confirmed Billed Order' : 'Quotation Estimate'}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Bottom Row: Context Badges & Sales Executive */}
+                        <div
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            flexWrap: 'wrap',
+                            gap: '6px',
+                            paddingTop: '6px',
+                            borderTop: '1px dashed #E2E8F0',
+                            fontSize: '11px',
+                          }}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                            <span
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                                color: '#334155',
+                                backgroundColor: '#F8FAFC',
+                                border: '1px solid #E2E8F0',
+                                padding: '2px 7px',
+                                borderRadius: '5px',
+                                fontWeight: '600',
+                              }}
+                            >
+                              <Layers size={11} color="#64748B" />
+                              <span>{c.requirement || c.houseStage || 'General Materials'}</span>
+                            </span>
+
+                            {c.approxQuantity && (
+                              <span
+                                style={{
+                                  color: '#475569',
+                                  backgroundColor: '#F8FAFC',
+                                  border: '1px solid #E2E8F0',
+                                  padding: '2px 7px',
+                                  borderRadius: '5px',
+                                  fontWeight: '600',
+                                }}
+                              >
+                                📐 {c.approxQuantity} sq.ft
+                              </span>
+                            )}
+
+                            {c.customerType && (
+                              <span
+                                style={{
+                                  color: '#475569',
+                                  backgroundColor: '#F1F5F9',
+                                  padding: '2px 7px',
+                                  borderRadius: '5px',
+                                  fontWeight: '600',
+                                }}
+                              >
+                                🏢 {c.customerType}
+                              </span>
+                            )}
+                          </div>
+
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <span
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                                color: '#334155',
+                                backgroundColor: '#F8FAFC',
+                                border: '1px solid #E2E8F0',
+                                padding: '2px 8px',
+                                borderRadius: '6px',
+                                fontWeight: '700',
+                              }}
+                            >
+                              <User size={11} color="#64748B" />
+                              <span>{c.salesperson || 'Showroom Staff'}</span>
+                            </span>
+
+                            {c.leadSource && (
+                              <span style={{ color: '#94A3B8', fontSize: '10.5px' }}>
+                                via {c.leadSource}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           </div>
         </>
       )}

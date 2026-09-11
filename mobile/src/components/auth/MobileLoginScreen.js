@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -10,30 +10,37 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  Keyboard,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { apiClient } from '../../api/client';
+import { colors } from '../../theme/colors';
 
 const APP_LOGO = require('../../../assets/logo.png');
 
-export const MobileLoginScreen = ({
+function MobileLoginScreenComponent({
   onLoginSuccess,
   onDisconnectServer,
+  onOpenQrScanner,
   serverHost,
-}) => {
+}) {
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [focusedField, setFocusedField] = useState(null);
+
+  const passwordInputRef = useRef(null);
 
   // Handle Credential Login for Owner or Employee
   const handleLogin = async () => {
+    Keyboard.dismiss();
     const loginId = identifier.trim();
     const loginPass = password;
 
     if (!loginId) {
-      setError('Please enter your username or email');
+      setError('Please enter your staff username or email');
       return;
     }
     if (!loginPass) {
@@ -60,9 +67,9 @@ export const MobileLoginScreen = ({
           icon: isOwner ? '👑' : '💼',
           roleTitle: isOwner ? 'Showroom Owner' : 'Sales Executive',
           subtitle: isOwner ? 'Full Showroom Command & Oversight' : 'Showroom Sales & Assigned Leads',
-          color: isOwner ? '#D97706' : '#2563EB',
-          bg: isOwner ? '#FEF3C7' : '#EFF6FF',
-          border: isOwner ? '#FDE68A' : '#BFDBFE',
+          color: isOwner ? '#D97706' : '#0F766E',
+          bg: isOwner ? '#FEF3C7' : '#ECFEF8',
+          border: isOwner ? '#FDE68A' : '#CCFBF1',
         };
 
         await apiClient.sendDeviceHeartbeat(profile, 'Mobile App Login');
@@ -76,142 +83,206 @@ export const MobileLoginScreen = ({
           });
         }
       } else {
-        setError(res?.message || 'Invalid credentials. Please check your username and password.');
+        setError(res?.message || 'Invalid credentials. Please verify your employee username/password from the Desktop CRM.');
       }
     } catch (err) {
-      setError(err.message || 'Unable to connect to server. Please check connection.');
+      setError(err.message || 'Unable to reach Desktop CRM. Please verify your server connection.');
     } finally {
       setLoading(false);
     }
   };
 
+  const cleanHostDisplay = (serverHost || 'Desktop CRM')
+    .replace(/^https?:\/\//, '')
+    .replace(/\/api.*$/, '');
+
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView edges={['top', 'left', 'right']} style={styles.safeArea}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        enabled={Platform.OS === 'ios'}
         style={{ flex: 1 }}
       >
         <ScrollView
           contentContainerStyle={styles.scrollContent}
-          keyboardShouldPersistTaps="handled"
+          keyboardShouldPersistTaps="always"
           showsVerticalScrollIndicator={false}
+          bounces={false}
+          overScrollMode="never"
         >
-          {/* Paired Server Status Bar */}
-          <View style={styles.serverBar}>
-            <View style={styles.serverStatusRow}>
-              <View style={styles.onlineDot} />
-              <Text style={styles.serverHostText} numberOfLines={1}>
-                Paired: {serverHost || 'Desktop Server'}
-              </Text>
-            </View>
-
-            <TouchableOpacity
-              style={styles.disconnectBtn}
-              onPress={onDisconnectServer}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.disconnectBtnText}>Re-pair</Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* Minimalist Executive Login Card */}
-          <View style={styles.loginCard}>
-            {/* Logo Badge */}
-            <View style={styles.logoBadge}>
-              <Image source={APP_LOGO} style={styles.logoImage} resizeMode="contain" />
-            </View>
-
-            {/* Brand Title & Subtitle */}
-            <Text style={styles.brandTitle}>Vasantham CRM</Text>
-            <Text style={styles.brandSubtitle}>
-              Sign in to access your showroom workspace
-            </Text>
-
-            {/* Error Message */}
-            {error ? (
-              <View style={styles.errorBanner}>
-                <Text style={styles.errorIcon}>⚠️</Text>
-                <Text style={styles.errorText}>{error}</Text>
-              </View>
-            ) : null}
-
-            {/* Form Fields */}
-            <View style={styles.formContainer}>
-              {/* Username or Email Input */}
-              <View style={styles.fieldGroup}>
-                <Text style={styles.fieldLabel}>USERNAME OR EMAIL</Text>
-                <View style={styles.inputContainer}>
-                  <Text style={styles.inputIcon}>👤</Text>
-                  <TextInput
-                    style={styles.textInput}
-                    placeholder="Enter username or email"
-                    placeholderTextColor="#94A3B8"
-                    value={identifier}
-                    onChangeText={(val) => {
-                      setIdentifier(val);
-                      setError('');
-                    }}
-                    autoCapitalize="none"
-                    autoCorrect={false}
-                  />
+            {/* Top Paired Server Status Pill */}
+            <View style={styles.serverPill}>
+              <View style={styles.serverPillLeft}>
+                <View style={styles.statusLiveDot} />
+                <Text style={styles.serverHostValue} numberOfLines={1}>
+                  {cleanHostDisplay}
+                </Text>
+                <View style={styles.connectedBadge}>
+                  <Text style={styles.connectedBadgeText}>PAIRED</Text>
                 </View>
               </View>
 
-              {/* Password Input */}
-              <View style={styles.fieldGroup}>
-                <Text style={styles.fieldLabel}>PASSWORD</Text>
-                <View style={styles.inputContainer}>
-                  <Text style={styles.inputIcon}>🔒</Text>
-                  <TextInput
-                    style={[styles.textInput, { paddingRight: 40 }]}
-                    placeholder="Enter password"
-                    placeholderTextColor="#94A3B8"
-                    value={password}
-                    onChangeText={(val) => {
-                      setPassword(val);
-                      setError('');
-                    }}
-                    secureTextEntry={!showPassword}
-                    autoCapitalize="none"
-                  />
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                {onOpenQrScanner && (
                   <TouchableOpacity
-                    style={styles.eyeBtn}
-                    onPress={() => setShowPassword(!showPassword)}
+                    style={styles.rePairBtn}
+                    onPress={onOpenQrScanner}
                     activeOpacity={0.7}
                     hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                   >
-                    <Text style={{ fontSize: 16 }}>{showPassword ? '👁️' : '🙈'}</Text>
+                    <Text style={styles.rePairBtnText}>📷 Scan QR</Text>
                   </TouchableOpacity>
+                )}
+                <TouchableOpacity
+                  style={styles.rePairBtn}
+                  onPress={onDisconnectServer}
+                  activeOpacity={0.7}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  <Text style={styles.rePairBtnText}>Change</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {/* Minimalist Executive Login Card */}
+            <View style={styles.cardContainer}>
+              {/* Header Brand Section */}
+              <View style={styles.brandSection}>
+                <View style={styles.logoElevatedWrapper}>
+                  <Image source={APP_LOGO} style={styles.logoImg} resizeMode="contain" />
                 </View>
+
+                <Text style={styles.brandTitle}>Vasantham CRM</Text>
+                <Text style={styles.brandSubtitle}>
+                  Showroom Workspace • Sign in with your Desktop credentials
+                </Text>
               </View>
 
-              {/* Sign In Button */}
-              <TouchableOpacity
-                style={[styles.primaryBtn, loading && styles.primaryBtnDisabled]}
-                onPress={handleLogin}
-                disabled={loading}
-                activeOpacity={0.85}
-              >
-                {loading ? (
-                  <ActivityIndicator size="small" color="#FFFFFF" style={{ marginRight: 8 }} />
-                ) : null}
-                <Text style={styles.primaryBtnText}>
-                  {loading ? 'Signing in...' : 'Sign In  →'}
-                </Text>
-              </TouchableOpacity>
-            </View>
+              {/* Error Notification Banner */}
+              {error ? (
+                <View style={styles.errorBanner}>
+                  <Text style={styles.errorIcon}>⚠️</Text>
+                  <Text style={styles.errorText}>{error}</Text>
+                </View>
+              ) : null}
 
-            {/* Subtle Security Badge */}
-            <View style={styles.securityFooter}>
-              <Text style={{ fontSize: 13, marginRight: 6 }}>🛡️</Text>
-              <Text style={styles.securityFooterText}>Vasantham Secure Login</Text>
+              {/* Input Form Fields */}
+              <View style={styles.form}>
+                {/* Username or Email Input */}
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>USERNAME OR EMAIL</Text>
+                  <View
+                    style={[
+                      styles.inputFieldBox,
+                      focusedField === 'username' && styles.inputFieldBoxFocused,
+                    ]}
+                  >
+                    <Text style={styles.inputPrefixIcon}>👤</Text>
+                    <TextInput
+                      style={styles.textInput}
+                      placeholder="Enter username or email"
+                      placeholderTextColor="#94A3B8"
+                      value={identifier}
+                      onChangeText={(val) => {
+                        setIdentifier(val);
+                        setError('');
+                      }}
+                      onFocus={() => setFocusedField('username')}
+                      onBlur={() => setFocusedField(null)}
+                      returnKeyType="next"
+                      onSubmitEditing={() => passwordInputRef.current?.focus()}
+                      blurOnSubmit={false}
+                      autoCapitalize="none"
+                      autoCorrect={false}
+                      spellCheck={false}
+                    />
+                    {identifier.length > 0 && (
+                      <TouchableOpacity
+                        onPress={() => setIdentifier('')}
+                        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                        style={styles.clearBtn}
+                      >
+                        <Text style={styles.clearBtnText}>✕</Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                </View>
+
+                {/* Password Input */}
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>PASSWORD</Text>
+                  <View
+                    style={[
+                      styles.inputFieldBox,
+                      focusedField === 'password' && styles.inputFieldBoxFocused,
+                    ]}
+                  >
+                    <Text style={styles.inputPrefixIcon}>🔒</Text>
+                    <TextInput
+                      ref={passwordInputRef}
+                      style={styles.textInput}
+                      placeholder="Enter password"
+                      placeholderTextColor="#94A3B8"
+                      value={password}
+                      onChangeText={(val) => {
+                        setPassword(val);
+                        setError('');
+                      }}
+                      onFocus={() => setFocusedField('password')}
+                      onBlur={() => setFocusedField(null)}
+                      secureTextEntry={!showPassword}
+                      returnKeyType="go"
+                      onSubmitEditing={handleLogin}
+                      autoCapitalize="none"
+                      autoCorrect={false}
+                      spellCheck={false}
+                    />
+                    <TouchableOpacity
+                      style={styles.passwordToggleBtn}
+                      onPress={() => setShowPassword(!showPassword)}
+                      activeOpacity={0.7}
+                      hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                    >
+                      <Text style={{ fontSize: 15 }}>{showPassword ? '👁️' : '🙈'}</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+
+                {/* Sign In Primary Action Button */}
+                <TouchableOpacity
+                  style={[styles.signInBtn, loading && styles.signInBtnLoading]}
+                  onPress={handleLogin}
+                  disabled={loading}
+                  activeOpacity={0.85}
+                >
+                  {loading ? (
+                    <ActivityIndicator size="small" color="#FFFFFF" style={{ marginRight: 8 }} />
+                  ) : null}
+                  <Text style={styles.signInBtnText}>
+                    {loading ? 'Authenticating with Desktop...' : 'Sign In to Workspace  →'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* Desktop Verification Note */}
+              <View style={styles.desktopNoticeCard}>
+                <Text style={styles.noticeDesc}>
+                  Employee accounts are managed in Desktop CRM under <Text style={{ fontWeight: '800', color: '#0F172A' }}>Employees</Text>. Both Sales Executives and Showroom Admins can log in using their credentials.
+                </Text>
+              </View>
+
+              {/* Security Assurance Footer */}
+              <View style={styles.securityBadgeRow}>
+                <Text style={styles.securityBadgeText}>🔒 Encrypted Direct Showroom Network</Text>
+              </View>
             </View>
-          </View>
-        </ScrollView>
+          </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
-};
+}
+
+export const MobileLoginScreen = React.memo(MobileLoginScreenComponent);
 
 const styles = StyleSheet.create({
   safeArea: {
@@ -219,102 +290,126 @@ const styles = StyleSheet.create({
     backgroundColor: '#F8FAFC',
   },
   scrollContent: {
-    padding: 20,
-    paddingTop: 16,
+    paddingHorizontal: 20,
+    paddingTop: 14,
     paddingBottom: 40,
     alignItems: 'center',
   },
-  serverBar: {
+  serverPill: {
     width: '100%',
     maxWidth: 400,
-    backgroundColor: '#F1F5F9',
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
     borderColor: '#E2E8F0',
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     marginBottom: 20,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
+    elevation: 1,
   },
-  serverStatusRow: {
+  serverPillLeft: {
     flexDirection: 'row',
     alignItems: 'center',
     flex: 1,
-    marginRight: 8,
+    marginRight: 10,
+    gap: 8,
   },
-  onlineDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#10B981',
-    marginRight: 8,
+  statusLiveDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
+    backgroundColor: '#059669',
   },
-  serverHostText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#475569',
+  serverHostValue: {
+    fontSize: 12.5,
+    fontWeight: '700',
+    color: '#0F172A',
   },
-  disconnectBtn: {
-    backgroundColor: '#E2E8F0',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
+  connectedBadge: {
+    backgroundColor: '#ECFDF5',
+    borderWidth: 1,
+    borderColor: '#A7F3D0',
+    paddingHorizontal: 6,
+    paddingVertical: 1.5,
     borderRadius: 6,
   },
-  disconnectBtnText: {
-    color: '#475569',
-    fontSize: 11,
-    fontWeight: '700',
+  connectedBadgeText: {
+    fontSize: 9,
+    fontWeight: '800',
+    color: '#059669',
+    letterSpacing: 0.4,
   },
-  loginCard: {
+  rePairBtn: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  rePairBtnText: {
+    color: '#0F766E',
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  cardContainer: {
     width: '100%',
     maxWidth: 400,
     backgroundColor: '#FFFFFF',
-    borderRadius: 20,
+    borderRadius: 22,
     borderWidth: 1,
     borderColor: '#E2E8F0',
-    padding: 26,
+    padding: 24,
     alignItems: 'center',
     shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.04,
-    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.05,
+    shadowRadius: 18,
     elevation: 3,
   },
-  logoBadge: {
-    width: 60,
-    height: 60,
-    borderRadius: 16,
+  brandSection: {
+    alignItems: 'center',
+    width: '100%',
+    marginBottom: 22,
+  },
+  logoElevatedWrapper: {
+    width: 68,
+    height: 68,
+    borderRadius: 20,
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
     borderColor: '#E2E8F0',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 14,
-    padding: 8,
+    padding: 7,
+    shadowColor: '#0F766E',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 2,
   },
-  logoImage: {
+  logoImg: {
     width: '100%',
     height: '100%',
   },
   brandTitle: {
     fontSize: 22,
-    fontWeight: '800',
+    fontWeight: '900',
     color: '#0F172A',
-    letterSpacing: -0.3,
+    letterSpacing: -0.4,
     marginBottom: 4,
     textAlign: 'center',
   },
   brandSubtitle: {
-    fontSize: 13,
+    fontSize: 12.5,
     color: '#64748B',
     textAlign: 'center',
-    lineHeight: 18,
-    marginBottom: 22,
-  },
-  formContainer: {
-    width: '100%',
+    lineHeight: 17,
+    paddingHorizontal: 10,
   },
   errorBanner: {
     width: '100%',
@@ -323,10 +418,10 @@ const styles = StyleSheet.create({
     backgroundColor: '#FEF2F2',
     borderWidth: 1,
     borderColor: '#FEE2E2',
-    borderRadius: 10,
+    borderRadius: 12,
     paddingHorizontal: 12,
-    paddingVertical: 9,
-    marginBottom: 16,
+    paddingVertical: 10,
+    marginBottom: 18,
     gap: 8,
   },
   errorIcon: {
@@ -335,32 +430,39 @@ const styles = StyleSheet.create({
   errorText: {
     flex: 1,
     color: '#DC2626',
-    fontSize: 12.5,
-    fontWeight: '600',
+    fontSize: 12,
+    fontWeight: '700',
     lineHeight: 16,
   },
-  fieldGroup: {
+  form: {
+    width: '100%',
+  },
+  inputGroup: {
     marginBottom: 16,
     width: '100%',
   },
-  fieldLabel: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#64748B',
-    letterSpacing: 0.3,
+  inputLabel: {
+    fontSize: 10.5,
+    fontWeight: '800',
+    color: '#475569',
+    letterSpacing: 0.5,
     marginBottom: 6,
   },
-  inputContainer: {
+  inputFieldBox: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#F8FAFC',
-    borderWidth: 1,
-    borderColor: '#CBD5E1',
+    borderWidth: 1.5,
+    borderColor: '#E2E8F0',
     borderRadius: 12,
     paddingHorizontal: 12,
-    height: 46,
+    height: 48,
   },
-  inputIcon: {
+  inputFieldBoxFocused: {
+    borderColor: '#0F766E',
+    backgroundColor: '#FFFFFF',
+  },
+  inputPrefixIcon: {
     fontSize: 15,
     marginRight: 8,
   },
@@ -368,45 +470,69 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 14,
     color: '#0F172A',
-    fontWeight: '500',
+    fontWeight: '600',
     paddingVertical: 0,
+    paddingRight: 6,
   },
-  eyeBtn: {
-    position: 'absolute',
-    right: 12,
+  clearBtn: {
     padding: 4,
+    marginLeft: 4,
   },
-  primaryBtn: {
+  clearBtnText: {
+    fontSize: 11,
+    color: '#94A3B8',
+    fontWeight: '800',
+  },
+  passwordToggleBtn: {
+    padding: 4,
+    marginLeft: 4,
+  },
+  signInBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#0F172A',
+    backgroundColor: '#0F766E',
     borderRadius: 12,
     height: 48,
-    marginTop: 8,
-    shadowColor: '#0F172A',
+    marginTop: 6,
+    shadowColor: '#0F766E',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.12,
+    shadowOpacity: 0.2,
     shadowRadius: 8,
-    elevation: 2,
+    elevation: 3,
   },
-  primaryBtnDisabled: {
-    opacity: 0.7,
+  signInBtnLoading: {
+    opacity: 0.8,
   },
-  primaryBtnText: {
+  signInBtnText: {
     color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '700',
+    fontSize: 14.5,
+    fontWeight: '800',
     letterSpacing: -0.2,
   },
-  securityFooter: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  desktopNoticeCard: {
+    width: '100%',
+    backgroundColor: '#F8FAFC',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    padding: 12,
     marginTop: 20,
   },
-  securityFooterText: {
-    fontSize: 11.5,
-    fontWeight: '500',
+  noticeDesc: {
+    fontSize: 11,
+    color: '#64748B',
+    lineHeight: 16,
+    textAlign: 'center',
+  },
+  securityBadgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 18,
+  },
+  securityBadgeText: {
+    fontSize: 11,
+    fontWeight: '600',
     color: '#94A3B8',
   },
 });

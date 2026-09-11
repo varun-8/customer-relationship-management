@@ -21,6 +21,134 @@ import { DynamicFieldInput } from './DynamicFieldInput';
 import { useCustomer } from '../../context/CustomerContext';
 import { api } from '../../services/api';
 
+const STANDARD_MOBILE_FIELDS = [
+  // Section 1: Contact & Profile
+  { id: 'field_customer_id', name: 'customerId', label: 'Customer ID', type: 'auto_number', active: true, order: 0 },
+  { id: 'field_date', name: 'entryDate', label: 'Date', type: 'date', required: true, active: true, order: 1 },
+  { id: 'field_customer_number', name: 'customerName', label: 'Customer Name', type: 'text', required: true, active: true, order: 2, placeholder: 'Enter client or firm name' },
+  { id: 'field_mobile_number', name: 'phone', label: 'Mobile Number', type: 'phone', required: true, active: true, order: 3, placeholder: '10-digit mobile number' },
+  { id: 'field_location', name: 'location', label: 'Location / City', type: 'text', active: true, order: 4, placeholder: 'e.g. Madurai, Bypass Road' },
+  {
+    id: 'field_lead_source',
+    name: 'leadSource',
+    label: 'Lead Source',
+    type: 'select',
+    active: true,
+    order: 5,
+    options: [
+      { label: 'Walk-in', value: 'Walk-in' },
+      { label: 'Existing Customer', value: 'Existing Customer' },
+      { label: 'Engineer', value: 'Engineer' },
+      { label: 'Contractor', value: 'Contractor' },
+      { label: 'Builder', value: 'Builder' },
+      { label: 'Referral', value: 'Referral' },
+      { label: 'Other', value: 'Other' },
+    ],
+  },
+  {
+    id: 'field_salesperson',
+    name: 'salesperson',
+    label: 'Salesperson Assigned',
+    type: 'select',
+    active: true,
+    order: 6,
+    options: [],
+  },
+  {
+    id: 'field_customer_type',
+    name: 'customerType',
+    label: 'Customer Type',
+    type: 'select',
+    required: true,
+    active: true,
+    order: 7,
+    options: [
+      { label: 'Building Owner', value: 'Building Owner' },
+      { label: 'Mason', value: 'Mason' },
+      { label: 'Architect', value: 'Architect' },
+    ],
+  },
+
+  // Section 2: Project Requirements
+  {
+    id: 'field_house_stage',
+    name: 'houseStage',
+    label: 'House / Project Stage',
+    type: 'select',
+    active: true,
+    order: 8,
+    options: [
+      { label: 'Foundation', value: 'Foundation' },
+      { label: 'Brickwork', value: 'Brickwork' },
+      { label: 'Plastering', value: 'Plastering' },
+      { label: 'Painting', value: 'Painting' },
+      { label: 'Building Completion', value: 'Building Completion' },
+    ],
+  },
+  {
+    id: 'field_requirement',
+    name: 'requirement',
+    label: 'Requirement Categories',
+    type: 'multiselect',
+    active: true,
+    order: 9,
+    options: [
+      { label: 'Tiles', value: 'Tiles' },
+      { label: 'Sanitary', value: 'Sanitary' },
+      { label: 'Adhesive / Epoxy', value: 'Adhesive / Epoxy' },
+      { label: 'CP Fittings', value: 'CP Fittings' },
+    ],
+  },
+  { id: 'field_approx_quantity', name: 'approxQuantity', label: 'Approx. Quantity (Sq.Ft / Units)', type: 'number', active: true, order: 10, placeholder: 'e.g. 1200 sq.ft' },
+  { id: 'field_tile_budget', name: 'tileBudget', label: 'Tile Budget', type: 'currency', active: true, order: 11, placeholder: '50000' },
+  { id: 'field_adhesive_req', name: 'adhesiveRequirement', label: 'Adhesive Requirement', type: 'radio', active: true, order: 12, options: [{ label: 'Yes', value: 'Yes' }, { label: 'No', value: 'No' }] },
+
+  // Section 3: Quotation & Commercials
+  { id: 'field_quotation_val', name: 'quotationValue', label: 'Quotation Value', type: 'currency', active: true, order: 13, placeholder: '75000' },
+  { id: 'field_quotation_date', name: 'quotationDate', label: 'Quotation Date', type: 'date', active: true, order: 14 },
+  {
+    id: 'field_status',
+    name: 'status',
+    label: 'Pipeline Status',
+    type: 'select',
+    required: true,
+    active: true,
+    order: 15,
+    options: [
+      { label: 'New Lead', value: 'New Lead' },
+      { label: 'Quotation', value: 'Quotation' },
+      { label: 'Follow-up', value: 'Follow-up' },
+      { label: 'Negotiation', value: 'Negotiation' },
+      { label: 'Order Confirmed', value: 'Order Confirmed' },
+      { label: 'Lost', value: 'Lost' },
+      { label: 'Future Requirement', value: 'Future Requirement' },
+    ],
+  },
+  { id: 'field_order_value', name: 'orderValue', label: 'Order Value', type: 'currency', active: true, order: 16, placeholder: '0' },
+  {
+    id: 'field_cross_sell',
+    name: 'crossSell',
+    label: 'Cross-sell Products',
+    type: 'multiselect',
+    active: true,
+    order: 17,
+    options: [
+      { label: 'Grout & Epoxy', value: 'Grout & Epoxy' },
+      { label: 'Tile Spacers & Levellers', value: 'Tile Spacers & Levellers' },
+      { label: 'Waterproofing Chemicals', value: 'Waterproofing Chemicals' },
+      { label: 'Bath Fittings & Faucets', value: 'Bath Fittings & Faucets' },
+      { label: 'Kitchen Sinks', value: 'Kitchen Sinks' },
+      { label: 'Mirror Cabinets & Vanity', value: 'Mirror Cabinets & Vanity' },
+    ],
+  },
+
+  // Section 4: Follow-up & Activity
+  { id: 'field_next_follow_up', name: 'nextFollowUp', label: 'Next Follow-up', type: 'date', active: true, order: 18 },
+  { id: 'field_last_follow_up', name: 'lastFollowUp', label: 'Last Follow-up', type: 'date', readOnly: true, active: true, order: 19 },
+  { id: 'field_follow_up_count', name: 'followUpCount', label: 'Follow-up Count', type: 'number', readOnly: true, active: true, order: 20 },
+  { id: 'field_last_reason', name: 'lastReason', label: 'Last Reason / Notes', type: 'text', active: true, order: 21, placeholder: 'e.g. Needs quote revision with 800x1600 tiles' },
+];
+
 const FIELD_SECTIONS = [
   {
     id: 'contact',
@@ -35,8 +163,8 @@ const FIELD_SECTIONS = [
     title: '2. Project & Material Specifications',
     shortTitle: 'Material Specs',
     icon: Layers,
-    fieldNames: ['houseStage', 'requirement', 'approxQuantity', 'tileBudget', 'sanitaryRequirement', 'adhesiveRequirement'],
-    description: 'Flooring stage, tile area, sanitary ware, and adhesive requirements.',
+    fieldNames: ['houseStage', 'requirement', 'approxQuantity', 'tileBudget', 'adhesiveRequirement'],
+    description: 'Flooring stage, tile area, and adhesive requirements.',
   },
   {
     id: 'quotation',
@@ -68,6 +196,23 @@ export const CustomerFormModal = ({ customer, onClose, onSuccess }) => {
   const [generalError, setGeneralError] = useState('');
   const [existingCustomer, setExistingCustomer] = useState(null);
   const [lookingUpPhone, setLookingUpPhone] = useState(false);
+  const [staffOptions, setStaffOptions] = useState([]);
+
+  // Fetch live showroom sales executives to populate salesperson dropdown
+  useEffect(() => {
+    const fetchStaff = async () => {
+      try {
+        const res = await api.getUsers();
+        if (res && res.success && Array.isArray(res.data)) {
+          const activeUsers = res.data.filter((u) => u.active !== false);
+          setStaffOptions(activeUsers.map((u) => ({ label: u.name, value: u.name })));
+        }
+      } catch (e) {
+        console.warn('Error fetching staff in CustomerFormModal:', e);
+      }
+    };
+    fetchStaff();
+  }, []);
 
   useEffect(() => {
     if (isEdit && customer) {
@@ -81,21 +226,32 @@ export const CustomerFormModal = ({ customer, onClose, onSuccess }) => {
       }
       setFormData(initialData);
       setNotes(customer.notes || '');
-    } else if (activeForm && activeForm.fields) {
+    } else {
       const initialData = {};
-      activeForm.fields.forEach((field) => {
+      // Populate defaults from STANDARD_MOBILE_FIELDS and activeForm
+      STANDARD_MOBILE_FIELDS.forEach((field) => {
         if (field.defaultValue !== null && field.defaultValue !== undefined) {
           initialData[field.name] = field.defaultValue;
         }
       });
+      if (activeForm && activeForm.fields) {
+        activeForm.fields.forEach((field) => {
+          if (field.defaultValue !== null && field.defaultValue !== undefined) {
+            initialData[field.name] = field.defaultValue;
+          }
+        });
+      }
       if (!initialData.entryDate) {
         initialData.entryDate = new Date().toISOString().split('T')[0];
       }
       if (!initialData.status) {
-        initialData.status = 'Newly Contacted';
+        initialData.status = 'New Lead';
       }
       if (!initialData.customerType) {
         initialData.customerType = 'Building Owner';
+      }
+      if (!initialData.requirement) {
+        initialData.requirement = ['Tiles'];
       }
       setFormData(initialData);
     }
@@ -140,9 +296,7 @@ export const CustomerFormModal = ({ customer, onClose, onSuccess }) => {
 
   const validate = () => {
     const newErrors = {};
-    if (!activeForm || !activeForm.fields) return true;
-
-    activeForm.fields.forEach((field) => {
+    activeFields.forEach((field) => {
       if (!field.active) return;
       const val = formData[field.name];
       const isMissing = val === undefined || val === null || val === '' || (Array.isArray(val) && val.length === 0);
@@ -207,42 +361,41 @@ export const CustomerFormModal = ({ customer, onClose, onSuccess }) => {
     }
   };
 
-  const rawActiveFields = activeForm ? activeForm.fields.filter((f) => f.active) : [];
-  const activeFields = rawActiveFields.filter((f, idx, self) => self.findIndex((x) => x.name === f.name) === idx);
+  // Merge standard mobile 23 fields with any custom fields defined in activeForm
+  const customSchemaFields = (activeForm?.fields || []).filter(
+    (f) => !STANDARD_MOBILE_FIELDS.some((sm) => sm.name === f.name) && f.active
+  );
+
+  const mergedFields = STANDARD_MOBILE_FIELDS.map((sm) => {
+    // Inject dynamic staff options into salesperson field
+    if (sm.name === 'salesperson') {
+      const activeStaff = staffOptions.length > 0
+        ? staffOptions
+        : (activeForm?.fields?.find((f) => f.name === 'salesperson')?.options || []);
+      return { ...sm, options: activeStaff };
+    }
+    // Allow custom options or labels from activeForm if configured
+    const override = activeForm?.fields?.find((f) => f.name === sm.name);
+    if (override && override.options && override.options.length > 0) {
+      return { ...sm, options: override.options };
+    }
+    return sm;
+  });
+
+  const activeFields = [...mergedFields, ...customSchemaFields];
 
   const getFieldsForSection = (fieldNames) => {
-    return activeFields.filter((f) => fieldNames.includes(f.name));
+    return activeFields
+      .filter((f) => fieldNames.includes(f.name))
+      .filter((f) => {
+        if (f.name === 'orderValue' && formData.status !== 'Order Confirmed') {
+          return false;
+        }
+        return true;
+      });
   };
 
-  const activeSections = isEdit
-    ? [
-        {
-          id: 'contact',
-          title: '1. Contact & Lead Profile',
-          shortTitle: 'Contact Profile',
-          icon: User,
-          fieldNames: ['customerId', 'entryDate', 'customerName', 'phone', 'location', 'leadSource', 'salesperson', 'customerType'],
-          description: 'Client personal details, contact number, location, and showroom sales assignment.',
-        },
-        {
-          id: 'requirements',
-          title: '2. Project & Material Specifications',
-          shortTitle: 'Material Specs',
-          icon: Layers,
-          fieldNames: ['houseStage', 'requirement', 'approxQuantity', 'tileBudget', 'sanitaryRequirement', 'adhesiveRequirement'],
-          description: 'Flooring stage, tile area, sanitary ware, and adhesive requirements.',
-        },
-        {
-          id: 'quotation',
-          title: '3. Commercial & Quotation Value',
-          shortTitle: 'Quotation & Value',
-          icon: IndianRupee,
-          fieldNames: ['quotationValue', 'quotationDate', 'orderValue', 'crossSell'],
-          description: 'Shared quotation price, quotation date, confirmed order value, and cross-sell items.',
-        },
-      ]
-    : FIELD_SECTIONS;
-
+  const activeSections = FIELD_SECTIONS;
   const predefinedNames = activeSections.flatMap((s) => s.fieldNames);
   const extraFields = activeFields.filter((f) => !predefinedNames.includes(f.name));
 
@@ -250,7 +403,25 @@ export const CustomerFormModal = ({ customer, onClose, onSuccess }) => {
   const currentSection = activeSections[currentSectionIndex] || activeSections[0];
 
   return (
-    <div className="modal-backdrop" onClick={onClose} style={{ zIndex: 110 }}>
+    <div
+      className="modal-backdrop"
+      onClick={onClose}
+      style={{
+        position: 'fixed',
+        inset: 0,
+        width: '100vw',
+        height: '100vh',
+        backgroundColor: 'rgba(15, 23, 42, 0.75)',
+        backdropFilter: 'blur(16px)',
+        WebkitBackdropFilter: 'blur(16px)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 99999,
+        padding: '20px',
+        margin: 0,
+      }}
+    >
       <div
         className="modal-card"
         style={{
@@ -595,25 +766,6 @@ export const CustomerFormModal = ({ customer, onClose, onSuccess }) => {
               </div>
             )}
 
-            {/* Extra custom fields if any */}
-            {extraFields.length > 0 && (
-              <div style={{ marginTop: '18px', background: '#FFFFFF', borderRadius: '14px', border: '1px solid #E2E8F0', padding: '20px 22px' }}>
-                <h4 style={{ fontSize: '13.5px', fontWeight: '800', color: '#0F172A', marginBottom: '14px' }}>
-                  Additional Showroom Fields
-                </h4>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: '16px 20px' }}>
-                  {extraFields.map((field) => (
-                    <DynamicFieldInput
-                      key={field.id}
-                      field={field}
-                      value={formData[field.name]}
-                      onChange={handleFieldChange}
-                      error={errors[field.name]}
-                    />
-                  ))}
-                </div>
-              </div>
-            )}
 
             {/* General Internal Remarks */}
             {(activeTab === 'followup' || activeTab === 'all') && (
@@ -701,7 +853,7 @@ export const CustomerFormModal = ({ customer, onClose, onSuccess }) => {
                     ? 'Saving Profile...'
                     : isEdit
                     ? 'Save Customer Profile'
-                    : '✓ Register Customer Profile'}
+                    : 'Register Customer Profile'}
                 </span>
               </button>
             )}

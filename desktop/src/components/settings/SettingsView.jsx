@@ -24,6 +24,7 @@ import {
   MessageSquare,
   RotateCcw,
   Terminal,
+  FolderOpen,
 } from 'lucide-react';
 import { api } from '../../services/api';
 import { useBranding } from '../../context/BrandingContext';
@@ -42,6 +43,7 @@ export const SettingsView = ({
   onOpenPairingModal,
   devModeUnlocked = false,
   onUnlockDevMode,
+  onLockDevMode,
 }) => {
   const [activeSettingsTab, setActiveSettingsTab] = useState(initialTab);
   const [importModalMode, setImportModalMode] = useState(null); // 'csv' | 'json' | null
@@ -94,6 +96,72 @@ export const SettingsView = ({
   const [wipeSuccess, setWipeSuccess] = useState('');
   const [showWipeConfirm, setShowWipeConfirm] = useState(false);
 
+  // AI Strategic Intelligence Configuration (Developer Mode)
+  const [aiConfig, setAiConfig] = useState({ hasApiKey: false, maskedKey: '', model: 'gemini-1.5-flash' });
+  const [aiApiKeyInput, setAiApiKeyInput] = useState('');
+  const [aiModelInput, setAiModelInput] = useState('gemini-1.5-flash');
+  const [showAiKey, setShowAiKey] = useState(false);
+  const [testingAi, setTestingAi] = useState(false);
+  const [savingAi, setSavingAi] = useState(false);
+  const [aiTestResult, setAiTestResult] = useState(null);
+  const [aiSaveSuccess, setAiSaveSuccess] = useState(false);
+
+  useEffect(() => {
+    if (devModeUnlocked && activeSettingsTab === 'dev') {
+      const loadAiConfig = async () => {
+        try {
+          const res = await api.getAiConfig();
+          if (res && res.success) {
+            setAiConfig(res);
+            if (res.model) setAiModelInput(res.model);
+          }
+        } catch (e) {
+          console.warn('Could not load AI config:', e);
+        }
+      };
+      loadAiConfig();
+    }
+  }, [devModeUnlocked, activeSettingsTab]);
+
+  const handleTestAiConnection = async () => {
+    setTestingAi(true);
+    setAiTestResult(null);
+    try {
+      const res = await api.testAiConfig({
+        apiKey: aiApiKeyInput.trim() || undefined,
+        model: aiModelInput,
+      });
+      setAiTestResult({ success: true, message: res.message || 'Connection Verified!' });
+    } catch (err) {
+      setAiTestResult({ success: false, message: err.message || 'API Key Test Failed' });
+    } finally {
+      setTestingAi(false);
+    }
+  };
+
+  const handleSaveAiConfig = async () => {
+    setSavingAi(true);
+    setAiSaveSuccess(false);
+    try {
+      const res = await api.updateAiConfig({
+        apiKey: aiApiKeyInput.trim() || undefined,
+        model: aiModelInput,
+      });
+      if (res && res.success) {
+        setAiSaveSuccess(true);
+        setAiApiKeyInput('');
+        const refreshed = await api.getAiConfig();
+        if (refreshed && refreshed.success) setAiConfig(refreshed);
+        setTimeout(() => setAiSaveSuccess(false), 3000);
+      }
+    } catch (err) {
+      alert(err.message || 'Failed to save AI configuration');
+    } finally {
+      setSavingAi(false);
+    }
+  };
+
+
   // Daily Auto-Backup & 30-Day Retention Policy State
   const [backupConfig, setBackupConfig] = useState(null);
   const [backupPathInput, setBackupPathInput] = useState('');
@@ -133,6 +201,18 @@ export const SettingsView = ({
       alert(e.message || 'Failed to update backup directory path');
     } finally {
       setSavingBackupPath(false);
+    }
+  };
+
+  const [openingFolder, setOpeningFolder] = useState(false);
+  const handleOpenBackupFolder = async () => {
+    setOpeningFolder(true);
+    try {
+      await api.openBackupFolder();
+    } catch (e) {
+      alert(e.message || 'Could not open folder in Explorer');
+    } finally {
+      setOpeningFolder(false);
     }
   };
 
@@ -351,17 +431,14 @@ export const SettingsView = ({
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '14px' }}>
         {/* Card 1: Branding */}
         <div
-          onClick={onUnlockDevMode}
           style={{
             backgroundColor: '#FFFFFF',
             borderRadius: '18px',
             border: '1px solid #E2E8F0',
             padding: '16px 20px',
             boxShadow: '0 2px 8px rgba(0,0,0,0.02)',
-            cursor: 'pointer',
             userSelect: 'none',
           }}
-          title="Settings & System Configuration — Click 5 times on title to toggle Developer Mode"
         >
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <span style={{ fontSize: '11px', fontWeight: '800', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
@@ -915,9 +992,29 @@ export const SettingsView = ({
 
             {/* Configurable Backup Storage Directory */}
             <div style={{ backgroundColor: '#F8FAFC', borderRadius: '14px', border: '1px solid #E2E8F0', padding: '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              <label style={{ fontSize: '12px', fontWeight: '800', color: '#0F172A', display: 'block' }}>
-                BACKUP STORAGE FOLDER LOCATION (CONFIGURABLE)
-              </label>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
+                <label style={{ fontSize: '12px', fontWeight: '800', color: '#0F172A', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <FolderOpen size={16} color="#2563EB" />
+                  <span>BACKUP STORAGE FOLDER LOCATION (CONFIGURABLE)</span>
+                </label>
+                <div style={{ display: 'flex', gap: '6px' }}>
+                  <button
+                    type="button"
+                    onClick={() => setBackupPathInput('C:\\Vasantham_CRM_Backups')}
+                    style={{ fontSize: '11px', fontWeight: '700', padding: '4px 10px', borderRadius: '6px', border: '1px solid #CBD5E1', backgroundColor: '#FFFFFF', color: '#334155', cursor: 'pointer' }}
+                  >
+                    Preset: C:\Vasantham_CRM_Backups
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setBackupPathInput('C:\\Users\\Public\\Vasantham_CRM_Backups')}
+                    style={{ fontSize: '11px', fontWeight: '700', padding: '4px 10px', borderRadius: '6px', border: '1px solid #CBD5E1', backgroundColor: '#FFFFFF', color: '#334155', cursor: 'pointer' }}
+                  >
+                    Preset: Public Share
+                  </button>
+                </div>
+              </div>
+
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <input
                   type="text"
@@ -933,6 +1030,15 @@ export const SettingsView = ({
                   style={{ backgroundColor: '#0F172A', color: '#FFFFFF', border: 'none', borderRadius: '10px', padding: '10px 18px', fontSize: '12.5px', fontWeight: '800', cursor: 'pointer', whiteSpace: 'nowrap' }}
                 >
                   {savingBackupPath ? 'Saving...' : 'Set Storage Path'}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleOpenBackupFolder}
+                  disabled={openingFolder}
+                  style={{ backgroundColor: '#EFF6FF', color: '#1D4ED8', border: '1px solid #BFDBFE', borderRadius: '10px', padding: '10px 16px', fontSize: '12.5px', fontWeight: '800', cursor: 'pointer', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '6px' }}
+                >
+                  <FolderOpen size={14} />
+                  <span>{openingFolder ? 'Opening...' : 'Open in Explorer'}</span>
                 </button>
               </div>
               <p style={{ fontSize: '11.5px', color: '#64748B', margin: 0 }}>
@@ -1095,12 +1201,216 @@ export const SettingsView = ({
                   </p>
                 </div>
               </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  if (onLockDevMode) onLockDevMode();
+                  setActiveSettingsTab('branding');
+                }}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '9px 16px',
+                  backgroundColor: '#334155',
+                  color: '#F8FAFC',
+                  border: '1px solid #475569',
+                  borderRadius: '10px',
+                  fontSize: '12.5px',
+                  fontWeight: '700',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease',
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = '#475569'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = '#334155'; }}
+                title="Lock developer mode and return to showroom identity"
+              >
+                <Lock size={14} />
+                <span>Lock & Hide Developer Mode</span>
+              </button>
+            </div>
+          </div>
+          {/* AI Intelligence Configuration (Developer Mode) */}
+          <div style={{ backgroundColor: '#F8FAFC', borderRadius: '20px', border: '1.5px solid #E2E8F0', padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: 'linear-gradient(135deg, #7C3AED 0%, #6366F1 100%)', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 12px rgba(124, 58, 237, 0.25)' }}>
+                  <Sparkles size={20} />
+                </div>
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <h3 style={{ fontSize: '15.5px', fontWeight: '800', color: '#1E293B', margin: 0 }}>
+                      AI Strategic Intelligence Configuration (Google Gemini)
+                    </h3>
+                    <span style={{
+                      fontSize: '11px',
+                      fontWeight: '700',
+                      padding: '2px 8px',
+                      borderRadius: '12px',
+                      backgroundColor: aiConfig.hasApiKey ? '#DCFCE7' : '#FEF3C7',
+                      color: aiConfig.hasApiKey ? '#15803D' : '#B45309',
+                      border: `1px solid ${aiConfig.hasApiKey ? '#86EFAC' : '#FDE68A'}`
+                    }}>
+                      {aiConfig.hasApiKey ? `Configured (${aiConfig.maskedKey || 'Saved'})` : 'Key Missing'}
+                    </span>
+                  </div>
+                  <p style={{ fontSize: '12.5px', color: '#64748B', margin: '3px 0 0' }}>
+                    Powers automated monthly and yearly Lost Sales executive intelligence reports. Keys are securely saved to database settings.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {aiSaveSuccess && (
+              <div style={{ padding: '10px 14px', borderRadius: '10px', backgroundColor: '#DCFCE7', border: '1px solid #86EFAC', color: '#15803D', fontSize: '12.5px', fontWeight: '700' }}>
+                AI Configuration saved successfully! You can now generate strategic lost sales reports.
+              </div>
+            )}
+
+            {aiTestResult && (
+              <div style={{
+                padding: '10px 14px',
+                borderRadius: '10px',
+                backgroundColor: aiTestResult.success ? '#DCFCE7' : '#FEE2E2',
+                border: `1px solid ${aiTestResult.success ? '#86EFAC' : '#FECDD3'}`,
+                color: aiTestResult.success ? '#15803D' : '#DC2626',
+                fontSize: '12.5px',
+                fontWeight: '600'
+              }}>
+                {aiTestResult.message}
+              </div>
+            )}
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px', marginTop: '4px' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '12.5px', fontWeight: '700', color: '#334155', marginBottom: '6px' }}>
+                  Gemini API Key
+                </label>
+                <div style={{ position: 'relative' }}>
+                  <input
+                    type={showAiKey ? 'text' : 'password'}
+                    placeholder={aiConfig.hasApiKey ? 'Enter new key to replace current key...' : 'AIzaSy...'}
+                    value={aiApiKeyInput}
+                    onChange={(e) => setAiApiKeyInput(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '10px 42px 10px 14px',
+                      borderRadius: '10px',
+                      border: '1.5px solid #CBD5E1',
+                      fontSize: '13px',
+                      fontFamily: 'monospace',
+                      outline: 'none',
+                      backgroundColor: '#FFFFFF',
+                      boxSizing: 'border-box'
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowAiKey(!showAiKey)}
+                    style={{
+                      position: 'absolute',
+                      right: '10px',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      border: 'none',
+                      backgroundColor: 'transparent',
+                      color: '#64748B',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      padding: '4px'
+                    }}
+                    title={showAiKey ? 'Hide key' : 'Show key'}
+                  >
+                    {showAiKey ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
+                <span style={{ fontSize: '11px', color: '#64748B', display: 'block', marginTop: '4px' }}>
+                  Get an API key from Google AI Studio (free tier available).
+                </span>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '12.5px', fontWeight: '700', color: '#334155', marginBottom: '6px' }}>
+                  AI Model
+                </label>
+                <select
+                  value={aiModelInput}
+                  onChange={(e) => setAiModelInput(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '10px 14px',
+                    borderRadius: '10px',
+                    border: '1.5px solid #CBD5E1',
+                    fontSize: '13px',
+                    outline: 'none',
+                    backgroundColor: '#FFFFFF',
+                    cursor: 'pointer',
+                    boxSizing: 'border-box'
+                  }}
+                >
+                  <option value="gemini-1.5-flash">gemini-1.5-flash (Fast, recommended)</option>
+                  <option value="gemini-1.5-pro">gemini-1.5-pro (High intelligence & reasoning)</option>
+                  <option value="gemini-2.0-flash">gemini-2.0-flash (Next-generation fast model)</option>
+                </select>
+                <span style={{ fontSize: '11px', color: '#64748B', display: 'block', marginTop: '4px' }}>
+                  Select the model used to analyze lost leads and generate recommendations.
+                </span>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '10px', marginTop: '6px' }}>
+              <button
+                type="button"
+                onClick={handleTestAiConnection}
+                disabled={testingAi}
+                style={{
+                  padding: '9px 16px',
+                  borderRadius: '10px',
+                  border: '1.5px solid #CBD5E1',
+                  backgroundColor: '#FFFFFF',
+                  color: '#334155',
+                  fontSize: '13px',
+                  fontWeight: '700',
+                  cursor: testingAi ? 'not-allowed' : 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  opacity: testingAi ? 0.7 : 1
+                }}
+              >
+                <RefreshCw size={14} className={testingAi ? 'spin' : ''} />
+                <span>{testingAi ? 'Testing...' : 'Test Connection'}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleSaveAiConfig}
+                disabled={savingAi}
+                style={{
+                  padding: '9px 18px',
+                  borderRadius: '10px',
+                  border: 'none',
+                  background: 'linear-gradient(135deg, #7C3AED 0%, #6366F1 100%)',
+                  color: '#FFFFFF',
+                  fontSize: '13px',
+                  fontWeight: '700',
+                  cursor: savingAi ? 'not-allowed' : 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  boxShadow: '0 2px 8px rgba(124, 58, 237, 0.3)',
+                  opacity: savingAi ? 0.7 : 1
+                }}
+              >
+                <Save size={14} />
+                <span>{savingAi ? 'Saving...' : 'Save AI Configuration'}</span>
+              </button>
             </div>
           </div>
 
 
-
-          {/* Developer Reset Danger Zone */}
           <div style={{ backgroundColor: '#FEF2F2', borderRadius: '20px', border: '1.5px solid #FECDD3', padding: '24px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               <div style={{ width: '36px', height: '36px', borderRadius: '10px', backgroundColor: '#FEE2E2', color: '#DC2626', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>

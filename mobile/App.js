@@ -21,7 +21,9 @@ import {
   AppState,
   Easing,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { colors } from './src/theme/colors';
+import { typography } from './src/theme/typography';
 import { apiClient, FALLBACK_SCHEMA } from './src/api/client';
 import { DynamicFieldRenderer } from './src/components/DynamicFieldRenderer';
 import { PROFILES } from './src/components/profile/ProfileSelectorModal';
@@ -73,11 +75,11 @@ const formatStatusLabel = (status) => {
 
 const getRequirementChipStyle = (val) => {
   const v = (val || '').toLowerCase();
-  if (v.includes('tile')) return { icon: '🧱', bg: '#EFF6FF', border: '#BFDBFE', text: '#1D4ED8' };
-  if (v.includes('sanitary') || v.includes('bath') || v.includes('toilet') || v.includes('basin')) return { icon: '🚿', bg: '#ECFDF5', border: '#A7F3D0', text: '#059669' };
-  if (v.includes('cp') || v.includes('tap') || v.includes('faucet') || v.includes('shower')) return { icon: '🚰', bg: '#F0FDFA', border: '#99F6E4', text: '#0F766E' };
-  if (v.includes('adhesive') || v.includes('grout')) return { icon: '🧪', bg: '#FAF5FF', border: '#DDD6FE', text: '#7E22CE' };
-  return { icon: '✨', bg: '#FFF7ED', border: '#FED7AA', text: '#C2410C' };
+  if (v.includes('tile')) return { bg: '#EFF6FF', border: '#BFDBFE', text: '#1D4ED8', dot: '#2563EB' };
+  if (v.includes('sanitary') || v.includes('bath') || v.includes('toilet') || v.includes('basin')) return { bg: '#ECFDF5', border: '#A7F3D0', text: '#059669', dot: '#10B981' };
+  if (v.includes('cp') || v.includes('tap') || v.includes('faucet') || v.includes('shower')) return { bg: '#F0FDFA', border: '#99F6E4', text: '#0F766E', dot: '#14B8A6' };
+  if (v.includes('adhesive') || v.includes('grout')) return { bg: '#FAF5FF', border: '#DDD6FE', text: '#7E22CE', dot: '#8B5CF6' };
+  return { bg: '#FFF7ED', border: '#FED7AA', text: '#C2410C', dot: '#F97316' };
 };
 
 const renderRequirementPills = (req) => {
@@ -107,7 +109,7 @@ const renderRequirementPills = (req) => {
               gap: 5,
             }}
           >
-            <Text style={{ fontSize: 12 }}>{style.icon}</Text>
+            <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: style.dot }} />
             <Text style={{ fontSize: 12, fontWeight: '700', color: style.text }}>
               {item}
             </Text>
@@ -276,13 +278,13 @@ const SECTIONS = [
     id: 'requirements',
     title: 'Project Requirements',
     shortTitle: '2. Project',
-    fieldNames: ['houseStage', 'requirement', 'approxQuantity', 'tileBudget', 'sanitaryRequirement', 'adhesiveRequirement'],
+    fieldNames: ['houseStage', 'requirement', 'approxQuantity', 'tileBudget', 'adhesiveRequirement'],
   },
   {
     id: 'quotation',
     title: 'Quotation & Financials',
     shortTitle: '3. Quotation',
-    fieldNames: ['quotationValue', 'status', 'orderValue', 'crossSell'],
+    fieldNames: ['quotationValue', 'quotationDate', 'status', 'orderValue', 'crossSell'],
   },
   {
     id: 'followup',
@@ -292,14 +294,25 @@ const SECTIONS = [
   },
 ];
 
-// Professional Executive Lead / Customer Saved Confirmation Modal Component
+// Professional Executive Lead / Customer Saved Confirmation Modal Component with Cool Celebration Animation
 function LeadSuccessCelebrationModal({ visible, customer, orderValue, isOrder = false, onClose, branding }) {
-  const scaleAnim = React.useRef(new Animated.Value(0)).current;
+  const scaleAnim = React.useRef(new Animated.Value(0.85)).current;
   const opacityAnim = React.useRef(new Animated.Value(0)).current;
+  const glowAnim = React.useRef(new Animated.Value(0)).current;
+
+  // Particle confetti animation states
+  const confettiAnims = React.useRef(
+    CONFETTI_PIECES.map(() => ({
+      y: new Animated.Value(-60),
+      x: new Animated.Value(0),
+      rot: new Animated.Value(0),
+      opacity: new Animated.Value(0),
+    }))
+  ).current;
 
   React.useEffect(() => {
     if (visible) {
-      scaleAnim.setValue(0.85);
+      scaleAnim.setValue(0.8);
       opacityAnim.setValue(0);
 
       Animated.parallel([
@@ -310,13 +323,84 @@ function LeadSuccessCelebrationModal({ visible, customer, orderValue, isOrder = 
         }),
         Animated.spring(scaleAnim, {
           toValue: 1,
-          friction: 6,
-          tension: 60,
+          friction: 5,
+          tension: 75,
           useNativeDriver: true,
         }),
       ]).start();
+
+      if (isOrder) {
+        const screenHeight = Dimensions.get('window').height;
+
+        // Animate each confetti particle
+        confettiAnims.forEach((anim, idx) => {
+          anim.y.setValue(-40 - (idx * 15));
+          anim.x.setValue((Math.random() - 0.5) * 40);
+          anim.rot.setValue(0);
+          anim.opacity.setValue(1);
+
+          const delay = (idx % 8) * 80;
+          const duration = 2200 + ((idx % 5) * 250);
+
+          Animated.sequence([
+            Animated.delay(delay),
+            Animated.parallel([
+              Animated.timing(anim.y, {
+                toValue: screenHeight * 0.9,
+                duration,
+                easing: Easing.bezier(0.25, 0.1, 0.25, 1),
+                useNativeDriver: true,
+              }),
+              Animated.timing(anim.rot, {
+                toValue: 1,
+                duration,
+                easing: Easing.linear,
+                useNativeDriver: true,
+              }),
+              Animated.sequence([
+                Animated.timing(anim.x, {
+                  toValue: (idx % 2 === 0 ? 1 : -1) * (24 + (idx * 2)),
+                  duration: duration * 0.5,
+                  useNativeDriver: true,
+                }),
+                Animated.timing(anim.x, {
+                  toValue: (idx % 2 === 0 ? -1 : 1) * (24 + (idx * 2)),
+                  duration: duration * 0.5,
+                  useNativeDriver: true,
+                }),
+              ]),
+              Animated.sequence([
+                Animated.delay(duration - 600),
+                Animated.timing(anim.opacity, {
+                  toValue: 0,
+                  duration: 600,
+                  useNativeDriver: true,
+                }),
+              ]),
+            ]),
+          ]).start();
+        });
+
+        // Pulsing glow loop
+        Animated.loop(
+          Animated.sequence([
+            Animated.timing(glowAnim, {
+              toValue: 1,
+              duration: 900,
+              easing: Easing.out(Easing.ease),
+              useNativeDriver: true,
+            }),
+            Animated.timing(glowAnim, {
+              toValue: 0,
+              duration: 900,
+              easing: Easing.in(Easing.ease),
+              useNativeDriver: true,
+            }),
+          ])
+        ).start();
+      }
     }
-  }, [visible]);
+  }, [visible, isOrder]);
 
   if (!visible) return null;
 
@@ -354,8 +438,63 @@ function LeadSuccessCelebrationModal({ visible, customer, orderValue, isOrder = 
   return (
     <Modal visible={visible} transparent animationType="none" onRequestClose={onClose}>
       <Animated.View style={[styles.celebrationOverlay, { opacity: opacityAnim }]}>
+        {/* Dynamic Falling Confetti Particles for Order Confirmed Celebration */}
+        {isOrder && (
+          <View pointerEvents="none" style={StyleSheet.absoluteFill}>
+            {CONFETTI_PIECES.map((piece, idx) => {
+              const anim = confettiAnims[idx];
+              if (!anim) return null;
+              const spin = anim.rot.interpolate({
+                inputRange: [0, 1],
+                outputRange: ['0deg', `${piece.rot}deg`],
+              });
+
+              return (
+                <Animated.View
+                  key={piece.id}
+                  style={{
+                    position: 'absolute',
+                    left: `${piece.left}%`,
+                    width: piece.width,
+                    height: piece.height,
+                    backgroundColor: piece.color,
+                    borderRadius: piece.radius,
+                    opacity: anim.opacity,
+                    transform: [
+                      { translateY: anim.y },
+                      { translateX: anim.x },
+                      { rotate: spin },
+                    ],
+                  }}
+                />
+              );
+            })}
+          </View>
+        )}
+
         <Animated.View style={[styles.celebrationCard, { transform: [{ scale: scaleAnim }] }]}>
-          {/* Executive Header Badge */}
+          {/* Executive Glowing Header Badge */}
+          {isOrder ? (
+            <View style={{ alignItems: 'center', marginBottom: 12 }}>
+              <Animated.View
+                style={{
+                  position: 'absolute',
+                  width: 72,
+                  height: 72,
+                  borderRadius: 36,
+                  backgroundColor: '#FEF3C7',
+                  opacity: glowAnim.interpolate({ inputRange: [0, 1], outputRange: [0.3, 0.8] }),
+                  transform: [{ scale: glowAnim.interpolate({ inputRange: [0, 1], outputRange: [1, 1.25] }) }],
+                }}
+              />
+              <View style={{ width: 56, height: 56, borderRadius: 28, backgroundColor: '#FEF3C7', borderWidth: 2, borderColor: '#FDE68A', alignItems: 'center', justifyContent: 'center' }}>
+                <View style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: '#D97706', alignItems: 'center', justifyContent: 'center' }}>
+                  <Text style={{ color: '#FFFFFF', fontSize: 18, fontWeight: '900' }}>★</Text>
+                </View>
+              </View>
+            </View>
+          ) : null}
+
           <View
             style={[
               styles.celebrationBadgeChip,
@@ -436,7 +575,7 @@ function LeadSuccessCelebrationModal({ visible, customer, orderValue, isOrder = 
             ) : null}
           </View>
 
-          {/* Action Buttons (NO tick mark symbol) */}
+          {/* Action Buttons */}
           <View style={{ gap: 10, width: '100%', marginTop: 8 }}>
             {phone ? (
               <TouchableOpacity
@@ -458,6 +597,66 @@ function LeadSuccessCelebrationModal({ visible, customer, orderValue, isOrder = 
               <Text style={styles.celebrationContinueBtnText}>Continue to CRM</Text>
             </TouchableOpacity>
           </View>
+        </Animated.View>
+      </Animated.View>
+    </Modal>
+  );
+}
+
+// Custom Professional Lead Updated Confirmation Modal
+function LeadUpdateSuccessModal({ visible, leadName, customerId, onDone }) {
+  const scaleAnim = React.useRef(new Animated.Value(0.85)).current;
+  const opacityAnim = React.useRef(new Animated.Value(0)).current;
+
+  React.useEffect(() => {
+    if (visible) {
+      scaleAnim.setValue(0.85);
+      opacityAnim.setValue(0);
+      Animated.parallel([
+        Animated.timing(opacityAnim, { toValue: 1, duration: 200, useNativeDriver: true }),
+        Animated.spring(scaleAnim, { toValue: 1, friction: 6, tension: 70, useNativeDriver: true }),
+      ]).start();
+    }
+  }, [visible]);
+
+  if (!visible) return null;
+
+  return (
+    <Modal visible={visible} transparent animationType="none" onRequestClose={onDone}>
+      <Animated.View style={[styles.celebrationOverlay, { opacity: opacityAnim }]}>
+        <Animated.View style={[styles.celebrationCard, { transform: [{ scale: scaleAnim }], maxWidth: 340, padding: 22, alignItems: 'center' }]}>
+          {/* Executive Verified Shield */}
+          <View style={{ width: 56, height: 56, borderRadius: 28, backgroundColor: '#ECFDF5', borderWidth: 1.5, borderColor: '#A7F3D0', alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}>
+            <View style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: '#10B981', alignItems: 'center', justifyContent: 'center' }}>
+              <Text style={{ color: '#FFFFFF', fontSize: 17, fontWeight: '900' }}>✓</Text>
+            </View>
+          </View>
+
+          <Text style={{ fontSize: 18, fontWeight: '900', color: '#0F172A', textAlign: 'center', letterSpacing: -0.3 }}>
+            Lead Profile Updated
+          </Text>
+
+          <Text style={{ fontSize: 13, fontWeight: '600', color: '#64748B', textAlign: 'center', marginTop: 6, lineHeight: 18 }}>
+            Details for <Text style={{ color: '#0F172A', fontWeight: '800' }}>"{leadName || 'Customer'}"</Text> have been updated and synchronized with showroom database.
+          </Text>
+
+          {customerId ? (
+            <View style={{ marginTop: 12, backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 8, paddingVertical: 5, paddingHorizontal: 12 }}>
+              <Text style={{ fontSize: 11.5, fontWeight: '800', color: '#2563EB', fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' }}>
+                Ref #{customerId}
+              </Text>
+            </View>
+          ) : null}
+
+          <TouchableOpacity
+            style={{ marginTop: 18, width: '100%', backgroundColor: '#0F172A', borderRadius: 12, paddingVertical: 13, alignItems: 'center', justifyContent: 'center' }}
+            onPress={onDone}
+            activeOpacity={0.8}
+          >
+            <Text style={{ color: '#FFFFFF', fontSize: 13.5, fontWeight: '800', letterSpacing: 0.2 }}>
+              Done & View Lead
+            </Text>
+          </TouchableOpacity>
         </Animated.View>
       </Animated.View>
     </Modal>
@@ -585,6 +784,7 @@ export default function App() {
   const [authRoleState, setAuthRoleState] = useState(null); // null (role select) | 'sales_executive'
 
   const [activeScreen, setActiveScreen] = useState('list'); // 'list' | 'followups' | 'add' | 'detail'
+  const [editingCustomerId, setEditingCustomerId] = useState(null);
   const [formSection, setFormSection] = useState('contact');
   const [formSchema, setFormSchema] = useState(FALLBACK_SCHEMA);
   const [branding, setBranding] = useState({
@@ -609,6 +809,22 @@ export default function App() {
   const [existingCustomerAlert, setExistingCustomerAlert] = useState(null);
   const [checkingMobilePhone, setCheckingMobilePhone] = useState(false);
 
+  // Smooth Detail Screen Entry Transition
+  const detailScreenFadeAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (activeScreen === 'detail') {
+      Animated.timing(detailScreenFadeAnim, {
+        toValue: 1,
+        duration: 220,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }).start();
+    } else {
+      detailScreenFadeAnim.setValue(0);
+    }
+  }, [activeScreen]);
+
   // Active Staff / Owner Profile State
   const [profiles, setProfiles] = useState(PROFILES);
   const [currentProfile, setCurrentProfile] = useState(PROFILES[0]);
@@ -628,6 +844,7 @@ export default function App() {
   // Celebration Animation Modal State
   const [showOrderCelebration, setShowOrderCelebration] = useState(false);
   const [celebrationData, setCelebrationData] = useState(null);
+  const [updatedLeadModal, setUpdatedLeadModal] = useState({ visible: false, leadName: '', customerId: '', customer: null });
   const [whatsAppModalCustomer, setWhatsAppModalCustomer] = useState(null);
 
   // Server IP & Diagnostic Settings Modal
@@ -723,7 +940,7 @@ export default function App() {
     };
   }, []);
 
-  const handleConnectedServer = async (connectedHost) => {
+  const handleConnectedServer = useCallback(async (connectedHost) => {
     if (connectedHost) {
       setServerHost(connectedHost);
       await apiClient.setApiBase(connectedHost);
@@ -732,43 +949,24 @@ export default function App() {
     setIsPairedState(true);
     setIsOnline(true);
     setShowQrScanner(false);
-    const savedRole = await apiClient.getSavedAuthRole();
-    const savedUser = await apiClient.getSavedUser();
-    if ((savedRole === 'owner' || savedRole === 'employee' || savedRole === 'sales_executive') && savedUser) {
-      const isOwner = savedUser.role === 'owner' || savedUser.role === 'admin' || savedRole === 'owner';
-      const profile = {
-        id: isOwner ? 'owner' : `staff_${savedUser._id}`,
-        name: savedUser.name,
-        email: savedUser.email,
-        role: isOwner ? 'owner' : 'employee',
-        phone: savedUser.phone || '',
-        icon: isOwner ? '👑' : '💼',
-        roleTitle: isOwner ? 'Showroom Owner' : 'Sales Executive',
-        subtitle: isOwner ? 'Full Showroom Command' : 'Showroom Sales & Leads',
-        color: isOwner ? '#D97706' : '#2563EB',
-        bg: isOwner ? '#FEF3C7' : '#EFF6FF',
-        border: isOwner ? '#FDE68A' : '#BFDBFE',
-      };
-      setCurrentProfile(profile);
-      setAuthRoleState(isOwner ? 'owner' : 'employee');
-    }
-    await initData(true);
-  };
+    // Show login screen immediately after successful connection
+    setAuthRoleState(null);
+  }, []);
 
-  const handleLoginSuccess = async ({ role, profile, user, token }) => {
+  const handleLoginSuccess = useCallback(async ({ role, profile, user, token }) => {
     const activeRole = role || (profile?.role === 'owner' ? 'owner' : 'employee');
     setAuthRoleState(activeRole);
     if (profile) {
       setCurrentProfile(profile);
     }
     await initData(true);
-  };
+  }, [initData]);
 
-  const handleDisconnectServer = async () => {
+  const handleDisconnectServer = useCallback(async () => {
     await apiClient.clearPairing();
     setIsPairedState(false);
     setAuthRoleState(null);
-  };
+  }, []);
 
   const handleLogoutRole = async () => {
     setShowLogoutModal(false);
@@ -781,16 +979,17 @@ export default function App() {
 
   // Periodic Device Heartbeat Registration on Desktop Server
   useEffect(() => {
+    if (!authRoleState) return;
     apiClient.sendDeviceHeartbeat(currentProfile, 'Mobile CRM Online');
 
     const interval = setInterval(() => {
-      if (isOnline) {
+      if (isOnline && authRoleState) {
         apiClient.sendDeviceHeartbeat(currentProfile, 'Active Session');
       }
     }, 20000);
 
     return () => clearInterval(interval);
-  }, [currentProfile, isOnline]);
+  }, [currentProfile, isOnline, authRoleState]);
 
   const loadBranding = useCallback(async () => {
     try {
@@ -973,7 +1172,9 @@ export default function App() {
   }, [loadBranding, loadFormSchema, loadStaffProfiles, loadCustomers, loadFollowups]);
 
   useEffect(() => {
-    // 1. Fetch live data from backend server on initial app startup
+    if (!authRoleState) return;
+
+    // 1. Fetch live data from backend server when authenticated
     initData(true);
 
     // 2. Auto-sync whenever the app is opened or brought back into foreground
@@ -983,24 +1184,36 @@ export default function App() {
       }
     });
 
-    // 3. Periodic background sync polling every 15s to capture real-time desktop updates / wipes
+    // 3. Periodic real-time background sync polling every 5s to capture desktop updates / entries
     const pollInterval = setInterval(() => {
       initData(false);
-    }, 15000);
+    }, 5000);
 
     return () => {
       appStateSub.remove();
       clearInterval(pollInterval);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [initData]);
+  }, [initData, authRoleState]);
+
+  // When active screen switches to followups or list, immediately refresh live counts & records
+  useEffect(() => {
+    if (!authRoleState) return;
+    if (activeScreen === 'followups') {
+      loadFollowups();
+    } else if (activeScreen === 'list') {
+      loadCustomers(search);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeScreen, authRoleState]);
 
   // When profile changes, re-fetch followups for that staff member
   const currentStaffKey = `${currentProfile?.role}_${currentProfile?.id || currentProfile?.name || 'all'}`;
   useEffect(() => {
+    if (!authRoleState) return;
     loadFollowups();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentStaffKey]);
+  }, [currentStaffKey, authRoleState]);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -1025,6 +1238,17 @@ export default function App() {
   const handleSelectCustomer = (item) => {
     setSelectedCustomer(item);
     setActiveScreen('detail');
+  };
+
+  const handleEditCustomer = (customer) => {
+    if (!customer) return;
+    const customerData = customer.data instanceof Map ? Object.fromEntries(customer.data) : (customer.data || customer);
+    setFormData({ ...customerData });
+    setEditingCustomerId(customer._id || customer.customerId);
+    setErrors({});
+    setExistingCustomerAlert(null);
+    setFormSection('contact');
+    setActiveScreen('add');
   };
 
   const openWhatsApp = (phoneOrCustomer, customerName = '', requirement = '', extraInfo = {}) => {
@@ -1258,6 +1482,36 @@ export default function App() {
     }
   };
 
+  const validateCurrentSection = (sectionId) => {
+    const activeFields = (formSchema?.fields || []).filter((f) => f.active);
+    const sec = SECTIONS.find((s) => s.id === sectionId);
+    if (!sec) return true;
+
+    const sectionFields = activeFields.filter((f) => sec.fieldNames.includes(f.name));
+    const secErrors = {};
+
+    sectionFields.forEach((field) => {
+      const val = formData[field.name];
+      const isMissing = val === undefined || val === null || String(val).trim() === '' || (Array.isArray(val) && val.length === 0);
+      if (field.required && isMissing && field.type !== 'auto_number') {
+        secErrors[field.name] = `${field.label || field.name} is required`;
+      }
+
+      if (field.name === 'phone' && val) {
+        const clean = String(val).replace(/[^0-9]/g, '');
+        if (clean.length < 10) {
+          secErrors[field.name] = 'Mobile number must contain at least 10 digits';
+        }
+      }
+    });
+
+    if (Object.keys(secErrors).length > 0) {
+      setErrors((prev) => ({ ...prev, ...secErrors }));
+      return false;
+    }
+    return true;
+  };
+
   const handleCreateCustomer = async () => {
     const activeFields = (formSchema?.fields || []).filter((f) => f.active);
     const newErrors = {};
@@ -1265,7 +1519,7 @@ export default function App() {
     const payload = {
       ...formData,
       entryDate: formData.entryDate || new Date().toISOString().split('T')[0],
-      status: formData.status || 'Newly Contacted',
+      status: formData.status || 'New Lead',
       customerType: formData.customerType || 'Building Owner',
       salesperson: formData.salesperson || (currentProfile.role === 'employee' ? currentProfile.name : (profiles.find((p) => p.role === 'employee')?.name || '')),
     };
@@ -1274,7 +1528,7 @@ export default function App() {
 
     activeFields.forEach((field) => {
       const val = payload[field.name];
-      const isMissing = val === undefined || val === null || val === '' || (Array.isArray(val) && val.length === 0);
+      const isMissing = val === undefined || val === null || String(val).trim() === '' || (Array.isArray(val) && val.length === 0);
       if (field.required && isMissing && field.type !== 'auto_number') {
         newErrors[field.name] = `${field.label || field.name} is required`;
         if (!firstFailingSection) {
@@ -1305,26 +1559,42 @@ export default function App() {
 
     setSubmitting(true);
     try {
-      const res = await apiClient.createCustomer(payload);
+      let res;
+      if (editingCustomerId) {
+        res = await apiClient.updateCustomer(editingCustomerId, payload);
+      } else {
+        res = await apiClient.createCustomer(payload);
+      }
+
       if (res && res.success && res.data) {
-        setCelebrationData({
-          customer: res.data,
-          orderValue: payload.orderValue || payload.quotationValue || payload.tileBudget,
-          isOrder: payload.status === 'Order Confirmed',
-        });
-        setShowOrderCelebration(true);
+        if (editingCustomerId) {
+          setEditingCustomerId(null);
+          setUpdatedLeadModal({
+            visible: true,
+            leadName: payload.customerName || 'Lead',
+            customerId: res.data.customerId || '',
+            customer: res.data,
+          });
+        } else {
+          setCelebrationData({
+            customer: res.data,
+            orderValue: payload.orderValue || payload.quotationValue || payload.tileBudget,
+            isOrder: payload.status === 'Order Confirmed',
+          });
+          setShowOrderCelebration(true);
+          setActiveScreen('list');
+        }
         setFormData({});
         setErrors({});
         setExistingCustomerAlert(null);
-        setActiveScreen('list');
         await loadCustomers();
         await loadFollowups();
       } else {
         const isConnErr = (res?.message || '').toLowerCase().includes('connection') || (res?.message || '').toLowerCase().includes('network');
         if (isConnErr) {
           Alert.alert(
-            '📡 Server Connection Error',
-            `Could not reach the CRM backend server to register "${payload.customerName || 'Lead'}". Your form entries have been preserved safely.\n\nPlease check your Wi-Fi or server IP in Settings.`,
+            'Server Connection Error',
+            `Could not reach the CRM backend server to ${editingCustomerId ? 'update' : 'register'} "${payload.customerName || 'Lead'}". Your form entries have been preserved safely.\n\nPlease check your Wi-Fi or server IP in Settings.`,
             [
               { text: 'Server Settings', onPress: () => setShowSettingsModal(true) },
               { text: 'Try Again', onPress: handleCreateCustomer },
@@ -1341,13 +1611,13 @@ export default function App() {
           }
           const errorDetails = Object.keys(serverErrors).length > 0
             ? Object.values(serverErrors).join('\n• ')
-            : (res?.message || 'Could not register customer');
-          Alert.alert('Registration Failed', `Validation message:\n• ${errorDetails}`);
+            : (res?.message || (editingCustomerId ? 'Could not update customer' : 'Could not register customer'));
+          Alert.alert(editingCustomerId ? 'Update Failed' : 'Registration Failed', `Validation message:\n• ${errorDetails}`);
         }
       }
     } catch (e) {
       Alert.alert(
-        '📡 Network Error',
+        'Network Error',
         `Connection failed: ${e.message}. Your form entries have been preserved safely.`,
         [
           { text: 'Server Settings', onPress: () => setShowSettingsModal(true) },
@@ -1412,11 +1682,15 @@ export default function App() {
     return true;
   });
 
-  // Calculate Metrics from active non-lost pipeline
+  // Calculate Metrics from active non-lost pipeline (scoped by role)
   const totalPipeline = customers.reduce((acc, c) => {
     const d = c.data instanceof Map ? Object.fromEntries(c.data) : (c.data || c);
     const s = (d.status || c.status || '').toLowerCase();
     if (s.includes('lost')) return acc;
+    if (currentProfile?.role === 'employee') {
+      const isAssigned = (d.salesperson || '').toLowerCase().includes((currentProfile.name || '').toLowerCase());
+      if (!isAssigned) return acc;
+    }
     return acc + (Number(d.quotationValue) || Number(d.tileBudget) || 0);
   }, 0);
 
@@ -1439,6 +1713,7 @@ export default function App() {
         return { bg: '#EFF6FF', border: '#BFDBFE', text: '#1D4ED8', dot: '#2563EB', icon: '📄' };
       case 'Follow-up':
         return { bg: '#EEF2FF', border: '#C7D2FE', text: '#4338CA', dot: '#4F46E5', icon: '📞' };
+      case 'New Lead':
       case 'Newly Contacted':
         return { bg: '#F0F9FF', border: '#BAE6FD', text: '#0369A1', dot: '#0284C7', icon: '✨' };
       case 'Walk-in':
@@ -1486,6 +1761,7 @@ export default function App() {
         <MobileLoginScreen
           onLoginSuccess={handleLoginSuccess}
           onDisconnectServer={handleDisconnectServer}
+          onOpenQrScanner={() => setShowQrScanner(true)}
           serverHost={serverHost}
         />
         <MobileQrScannerModal
@@ -1680,64 +1956,57 @@ export default function App() {
               <View style={styles.statTileRow}>
                 {/* 1. Pipeline */}
                 <View style={styles.statTile}>
-                  <View style={styles.statTileTopRow}>
-                    <View style={[styles.statTileIconBadge, { backgroundColor: '#F0FDFA', borderColor: '#CCFBF1' }]}>
-                      <Text style={[styles.statTileIconGlyph, { color: '#0F766E' }]}>₹</Text>
-                    </View>
-                    <Text style={styles.statTileLabel}>{isOwner ? 'PIPELINE' : 'MY PIPELINE'}</Text>
-                  </View>
-                  <Text style={styles.statTileValue} numberOfLines={1}>{pipelineStr}</Text>
+                  <Text style={styles.statTileLabel} numberOfLines={1}>
+                    {isOwner ? 'PIPELINE' : 'MY PIPELINE'}
+                  </Text>
+                  <Text
+                    style={styles.statTileValue}
+                    numberOfLines={1}
+                    adjustsFontSizeToFit={true}
+                    minimumFontScale={0.75}
+                  >
+                    {pipelineStr}
+                  </Text>
                   <View style={[styles.statTileSubBadge, { backgroundColor: '#F0FDFA' }]}>
-                    <Text style={[styles.statTileSubText, { color: '#0F766E' }]}>
-                      {roleCustomers.length} Total Deals
+                    <Text style={[styles.statTileSubText, { color: '#0F766E' }]} numberOfLines={1}>
+                      {roleCustomers.length} Deals
                     </Text>
                   </View>
                 </View>
 
                 {/* 2. Active Leads */}
                 <View style={styles.statTile}>
-                  <View style={styles.statTileTopRow}>
-                    <View style={[styles.statTileIconBadge, { backgroundColor: '#F8FAFC', borderColor: '#E2E8F0' }]}>
-                      <Text style={[styles.statTileIconGlyph, { color: '#0F172A' }]}>👥</Text>
-                    </View>
-                    <Text style={styles.statTileLabel}>{isOwner ? 'ALL LEADS' : 'MY LEADS'}</Text>
-                  </View>
-                  <Text style={styles.statTileValue} numberOfLines={1}>{roleCustomers.length}</Text>
+                  <Text style={styles.statTileLabel} numberOfLines={1}>
+                    {isOwner ? 'TOTAL LEADS' : 'MY LEADS'}
+                  </Text>
+                  <Text
+                    style={styles.statTileValue}
+                    numberOfLines={1}
+                    adjustsFontSizeToFit={true}
+                    minimumFontScale={0.75}
+                  >
+                    {roleCustomers.length}
+                  </Text>
                   <View style={[styles.statTileSubBadge, { backgroundColor: '#F1F5F9' }]}>
-                    <Text style={[styles.statTileSubText, { color: '#475569' }]}>
+                    <Text style={[styles.statTileSubText, { color: '#334155' }]} numberOfLines={1}>
                       {inProgressCount} Active
                     </Text>
                   </View>
                 </View>
 
-                {/* 3. Urgent Actions / Calls */}
+                {/* 3. Urgent Due Actions / Calls */}
                 <View style={styles.statTile}>
-                  <View style={styles.statTileTopRow}>
-                    <View
-                      style={[
-                        styles.statTileIconBadge,
-                        urgentCount > 0
-                          ? { backgroundColor: '#FEF2F2', borderColor: '#FECACA' }
-                          : { backgroundColor: '#F0FDF4', borderColor: '#BBF7D0' },
-                      ]}
-                    >
-                      <Text
-                        style={[
-                          styles.statTileIconGlyph,
-                          { color: urgentCount > 0 ? '#DC2626' : '#16A34A', fontSize: urgentCount > 0 ? 11 : 12 },
-                        ]}
-                      >
-                        {urgentCount > 0 ? '⏱' : '•'}
-                      </Text>
-                    </View>
-                    <Text style={styles.statTileLabel}>DUE CALLS</Text>
-                  </View>
+                  <Text style={styles.statTileLabel} numberOfLines={1}>
+                    DUE CALLS
+                  </Text>
                   <Text
                     style={[
                       styles.statTileValue,
                       urgentCount > 0 ? { color: '#DC2626' } : { color: '#0F766E' },
                     ]}
                     numberOfLines={1}
+                    adjustsFontSizeToFit={true}
+                    minimumFontScale={0.75}
                   >
                     {urgentCount}
                   </Text>
@@ -1755,8 +2024,8 @@ export default function App() {
                       numberOfLines={1}
                     >
                       {urgentCount > 0
-                        ? (followupCounts.overdue > 0 ? `${followupCounts.overdue} overdue` : 'Due today')
-                        : 'Caught up'}
+                        ? (followupCounts.overdue > 0 ? `${followupCounts.overdue} Overdue` : 'Due Today')
+                        : 'All Clear'}
                     </Text>
                   </View>
                 </View>
@@ -1797,7 +2066,7 @@ export default function App() {
                   );
                 })
               ) : (
-                [['all', 'All', ''], ['Building Owner', 'Owner', '🏢'], ['Architect', 'Architect', '📐'], ['Mason', 'Mason', '🧱']].map(([type, label, icon]) => {
+                [['all', 'All'], ['Building Owner', 'Owner'], ['Architect', 'Architect'], ['Mason', 'Mason']].map(([type, label]) => {
                   const isSelected = typeFilter === type;
                   const count = type === 'all'
                     ? filteredCustomers.length
@@ -1815,7 +2084,6 @@ export default function App() {
                       style={[styles.filterTab, isSelected && styles.filterTabActive]}
                       activeOpacity={0.75}
                     >
-                      {icon ? <Text style={{ fontSize: 12, marginRight: 4 }}>{icon}</Text> : null}
                       <Text style={[styles.filterTabText, isSelected && styles.filterTabTextActive]}>{label}</Text>
                       <View style={[styles.filterTabBadge, isSelected && styles.filterTabBadgeActive]}>
                         <Text style={[styles.filterTabBadgeText, isSelected && styles.filterTabBadgeTextActive]}>{count}</Text>
@@ -1978,23 +2246,29 @@ export default function App() {
         >
           <View style={styles.screenBody}>
             {/* Top Form Header Bar */}
-            {/* Top Form Header Bar */}
             <View style={styles.formTopHeaderBar}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                <View style={styles.formHeaderIconCircle}>
-                  <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#0F766E' }} />
-                </View>
-                <View>
-                  <Text style={styles.formHeaderTitle}>Add New Customer</Text>
-                  <Text style={styles.formHeaderSub}>
-                    {branding.appName || 'Vasantham CRM'} • Step {currentSectionIndex + 1} of {SECTIONS.length} ({Math.round(((currentSectionIndex + 1) / SECTIONS.length) * 100)}%)
-                  </Text>
-                </View>
+              <View>
+                <Text style={styles.formHeaderTitle}>
+                  {editingCustomerId ? 'Edit Lead Profile' : 'Add New Customer'}
+                </Text>
+                <Text style={styles.formHeaderSub}>
+                  {branding.appName || 'Vasantham CRM'} • Step {currentSectionIndex + 1} of {SECTIONS.length} ({Math.round(((currentSectionIndex + 1) / SECTIONS.length) * 100)}%)
+                </Text>
               </View>
 
               <TouchableOpacity
                 style={styles.formCloseBtn}
-                onPress={() => setActiveScreen('list')}
+                onPress={() => {
+                  const wasEditing = Boolean(editingCustomerId);
+                  setEditingCustomerId(null);
+                  setFormData({});
+                  setErrors({});
+                  if (wasEditing && selectedCustomer) {
+                    setActiveScreen('detail');
+                  } else {
+                    setActiveScreen('list');
+                  }
+                }}
                 activeOpacity={0.75}
               >
                 <Text style={styles.formCloseBtnText}>✕ Exit</Text>
@@ -2017,6 +2291,7 @@ export default function App() {
                 {SECTIONS.map((sec, idx) => {
                   const isActive = sec.id === formSection;
                   const isCompleted = idx < currentSectionIndex;
+                  const hasSectionErrors = sec.fieldNames.some((fName) => Boolean(errors[fName]));
 
                   return (
                     <TouchableOpacity
@@ -2025,19 +2300,26 @@ export default function App() {
                       style={[
                         styles.sectionTabChip,
                         isActive && styles.sectionTabChipActive,
-                        isCompleted && styles.sectionTabChipCompleted,
+                        isCompleted && !hasSectionErrors && styles.sectionTabChipCompleted,
+                        hasSectionErrors && !isActive && styles.sectionTabChipError,
                       ]}
                       activeOpacity={0.75}
                     >
-                      <Text
-                        style={[
-                          styles.sectionTabChipText,
-                          isActive && styles.sectionTabChipTextActive,
-                          isCompleted && styles.sectionTabChipTextCompleted,
-                        ]}
-                      >
-                        {sec.shortTitle}
-                      </Text>
+                      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                        <Text
+                          style={[
+                            styles.sectionTabChipText,
+                            isActive && styles.sectionTabChipTextActive,
+                            isCompleted && !hasSectionErrors && styles.sectionTabChipTextCompleted,
+                            hasSectionErrors && !isActive && styles.sectionTabChipTextError,
+                          ]}
+                        >
+                          {sec.shortTitle}
+                        </Text>
+                        {hasSectionErrors && !isActive && (
+                          <View style={styles.sectionTabErrorDot} />
+                        )}
+                      </View>
                     </TouchableOpacity>
                   );
                 })}
@@ -2070,6 +2352,16 @@ export default function App() {
                   </View>
                 </View>
               </View>
+
+              {/* Section Error Notice */}
+              {SECTIONS[currentSectionIndex]?.fieldNames.some((f) => Boolean(errors[f])) && (
+                <View style={styles.formSectionErrorBanner}>
+                  <Ionicons name="alert-circle-outline" size={16} color="#DC2626" />
+                  <Text style={styles.formSectionErrorBannerText}>
+                    Please fill in the required fields highlighted in red below.
+                  </Text>
+                </View>
+              )}
 
               {/* Real-time Existing Customer Auto-Detection Banner */}
               {existingCustomerAlert && (
@@ -2118,6 +2410,14 @@ export default function App() {
                     sectionFields = [...sectionFields, ...unmappedFields];
                   }
 
+                  // Only show orderValue if status is Order Confirmed
+                  sectionFields = sectionFields.filter((f) => {
+                    if (f.name === 'orderValue' && formData.status !== 'Order Confirmed') {
+                      return false;
+                    }
+                    return true;
+                  });
+
                   return sectionFields.map((field) => (
                     <DynamicFieldRenderer
                       key={field.id || field.name}
@@ -2145,7 +2445,11 @@ export default function App() {
                 {currentSectionIndex < SECTIONS.length - 1 ? (
                   <TouchableOpacity
                     style={styles.nextSectionBtn}
-                    onPress={() => setFormSection(SECTIONS[currentSectionIndex + 1].id)}
+                    onPress={() => {
+                      const isValid = validateCurrentSection(formSection);
+                      if (!isValid) return;
+                      setFormSection(SECTIONS[currentSectionIndex + 1].id);
+                    }}
                     activeOpacity={0.8}
                   >
                     <Text style={styles.nextSectionBtnText}>Next Section →</Text>
@@ -2158,7 +2462,9 @@ export default function App() {
                     activeOpacity={0.8}
                   >
                     <Text style={styles.submitFinalBtnText}>
-                      {submitting ? 'Saving Customer...' : 'Save & Register Customer'}
+                      {submitting
+                        ? (editingCustomerId ? 'Saving Changes...' : 'Saving Customer...')
+                        : (editingCustomerId ? 'Save & Update Lead Profile' : 'Save & Register Customer')}
                     </Text>
                   </TouchableOpacity>
                 )}
@@ -2228,7 +2534,7 @@ export default function App() {
             };
 
             return (
-              <View>
+              <Animated.View style={{ opacity: detailScreenFadeAnim }}>
                 {/* 1. Top Navigation Bar with Back Button & Quick Action Shortcuts */}
                 <View style={styles.detailNavBar}>
                   <TouchableOpacity
@@ -2236,29 +2542,19 @@ export default function App() {
                     onPress={() => setActiveScreen('list')}
                     activeOpacity={0.75}
                   >
-                    <Text style={styles.detailNavBackIcon}>‹</Text>
+                    <Ionicons name="chevron-back" size={17} color="#0F172A" style={{ marginRight: 2 }} />
                     <Text style={styles.detailNavBackText}>Back to Leads</Text>
                   </TouchableOpacity>
 
                   <View style={styles.detailNavRightGroup}>
-                    {phone ? (
-                      <TouchableOpacity
-                        style={styles.detailNavIconBtn}
-                        onPress={() => Linking.openURL(`tel:${phone}`)}
-                        activeOpacity={0.8}
-                      >
-                        <Text style={{ fontSize: 15 }}>📞</Text>
-                      </TouchableOpacity>
-                    ) : null}
-                    {phone ? (
-                      <TouchableOpacity
-                        style={[styles.detailNavIconBtn, { backgroundColor: '#DCFCE7', borderColor: '#86EFAC' }]}
-                        onPress={() => openWhatsApp(data)}
-                        activeOpacity={0.8}
-                      >
-                        <Text style={{ fontSize: 15 }}>💬</Text>
-                      </TouchableOpacity>
-                    ) : null}
+                    <TouchableOpacity
+                      style={styles.detailNavEditBtn}
+                      onPress={() => handleEditCustomer(selectedCustomer)}
+                      activeOpacity={0.8}
+                    >
+                      <Ionicons name="create-outline" size={15} color="#0F172A" style={{ marginRight: 4 }} />
+                      <Text style={styles.detailNavEditText}>Edit</Text>
+                    </TouchableOpacity>
                   </View>
                 </View>
 
@@ -2277,7 +2573,10 @@ export default function App() {
                           <Text style={styles.detailIdPillText}>#{selectedCustomer.customerId || 'CUS-000000'}</Text>
                         </View>
                         {data.location ? (
-                          <Text style={styles.detailLocationText} numberOfLines={1}>📍 {data.location}</Text>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
+                            <Ionicons name="location-outline" size={12} color="#64748B" />
+                            <Text style={styles.detailLocationText} numberOfLines={1}>{data.location}</Text>
+                          </View>
                         ) : null}
                       </View>
                     </View>
@@ -2307,116 +2606,146 @@ export default function App() {
                     </Text>
                   </View>
 
-                  {/* 1-Tap Action Call & WhatsApp Buttons */}
-                  {phone ? (
-                    <View style={styles.detailHeroActionsRow}>
-                      <TouchableOpacity
-                        style={styles.detailActionBtnCall}
-                        onPress={() => Linking.openURL(`tel:${phone}`)}
-                        activeOpacity={0.85}
-                      >
-                        <Text style={styles.detailActionBtnCallIcon}>📞</Text>
-                        <Text style={styles.detailActionBtnCallText}>Call</Text>
-                      </TouchableOpacity>
+                  {/* Quick Action Buttons: Call, WhatsApp, and Log Activity */}
+                  <View style={styles.detailHeroActionsRow}>
+                    {phone ? (
+                      <>
+                        <TouchableOpacity
+                          style={styles.detailActionBtnCall}
+                          onPress={() => Linking.openURL(`tel:${phone}`)}
+                          activeOpacity={0.82}
+                        >
+                          <Ionicons name="call" size={15} color="#0F172A" style={{ marginRight: 6 }} />
+                          <Text style={styles.detailActionBtnCallText}>Call</Text>
+                        </TouchableOpacity>
 
-                      <TouchableOpacity
-                        style={styles.detailActionBtnWhatsApp}
-                        onPress={() => openWhatsApp(data)}
-                        activeOpacity={0.85}
-                      >
-                        <Text style={styles.detailActionBtnWhatsAppIcon}>💬</Text>
-                        <Text style={styles.detailActionBtnWhatsAppText}>WhatsApp</Text>
-                      </TouchableOpacity>
-                    </View>
-                  ) : null}
+                        <TouchableOpacity
+                          style={styles.detailActionBtnWhatsApp}
+                          onPress={() => openWhatsApp(data)}
+                          activeOpacity={0.82}
+                        >
+                          <Ionicons name="logo-whatsapp" size={16} color="#15803D" style={{ marginRight: 6 }} />
+                          <Text style={styles.detailActionBtnWhatsAppText}>WhatsApp</Text>
+                        </TouchableOpacity>
+                      </>
+                    ) : null}
+
+                    <TouchableOpacity
+                      style={styles.detailActionBtnLog}
+                      onPress={() => setLoggingFollowupItem(selectedCustomer)}
+                      activeOpacity={0.82}
+                    >
+                      <Ionicons name="chatbubble-ellipses" size={15} color="#2563EB" style={{ marginRight: 6 }} />
+                      <Text style={styles.detailActionBtnLogText}>Log Activity</Text>
+                    </TouchableOpacity>
+                  </View>
                 </View>
 
-                {/* 3. 4 Key Financial & Deal Metrics (2x2 Grid) */}
+                {/* 3. 4 Key Financial & Deal Metrics (Clean White Executive Grid) */}
                 <View style={styles.statTilesGrid}>
-                  <View style={[styles.statTileItem, { backgroundColor: '#FFFBEB', borderColor: '#FDE68A' }]}>
+                  <View style={styles.statTileItem}>
                     <View style={styles.statTileHeaderRow}>
-                      <Text style={styles.statTileEmoji}>💰</Text>
-                      <Text style={[styles.statTileLabel, { color: '#92400E' }]}>QUOTATION VALUE</Text>
+                      <Ionicons name="receipt-outline" size={13} color="#2563EB" />
+                      <Text style={styles.statTileLabel}>QUOTATION VALUE</Text>
                     </View>
-                    <Text style={[styles.statTileValue, { color: '#B45309' }]} numberOfLines={1}>
+                    <Text style={styles.statTileValue} numberOfLines={1}>
                       {data.quotationValue ? `₹ ${Number(data.quotationValue).toLocaleString('en-IN')}` : '₹ 0'}
                     </Text>
-                    <Text style={styles.statTileSubtext}>Estimated Deal</Text>
+                    <Text style={styles.statTileSubtext}>Quoted Deal Amount</Text>
                   </View>
 
-                  <View style={[styles.statTileItem, { backgroundColor: '#EFF6FF', borderColor: '#BFDBFE' }]}>
+                  <View style={styles.statTileItem}>
                     <View style={styles.statTileHeaderRow}>
-                      <Text style={styles.statTileEmoji}>🧱</Text>
-                      <Text style={[styles.statTileLabel, { color: '#1E40AF' }]}>TILE BUDGET</Text>
+                      <Ionicons name="cash-outline" size={13} color="#059669" />
+                      <Text style={styles.statTileLabel}>TILE BUDGET</Text>
                     </View>
-                    <Text style={[styles.statTileValue, { color: '#1D4ED8' }]} numberOfLines={1}>
+                    <Text style={styles.statTileValue} numberOfLines={1}>
                       {data.tileBudget ? `₹ ${Number(data.tileBudget).toLocaleString('en-IN')}` : '₹ 0'}
                     </Text>
-                    <Text style={styles.statTileSubtext}>Client Budget</Text>
+                    <Text style={styles.statTileSubtext}>Client Target Budget</Text>
                   </View>
 
-                  <View style={[styles.statTileItem, { backgroundColor: '#F0FDF4', borderColor: '#BBF7D0' }]}>
+                  <View style={styles.statTileItem}>
                     <View style={styles.statTileHeaderRow}>
-                      <Text style={styles.statTileEmoji}>📐</Text>
-                      <Text style={[styles.statTileLabel, { color: '#166534' }]}>APPROX AREA</Text>
+                      <Ionicons name="grid-outline" size={13} color="#D97706" />
+                      <Text style={styles.statTileLabel}>APPROX AREA</Text>
                     </View>
-                    <Text style={[styles.statTileValue, { color: '#15803D' }]} numberOfLines={1}>
+                    <Text style={styles.statTileValue} numberOfLines={1}>
                       {data.approxQuantity ? `${data.approxQuantity} sq.ft` : '—'}
                     </Text>
-                    <Text style={styles.statTileSubtext}>Flooring Area</Text>
+                    <Text style={styles.statTileSubtext}>Flooring Coverage</Text>
                   </View>
 
-                  <View style={[styles.statTileItem, { backgroundColor: '#F8FAFC', borderColor: '#E2E8F0' }]}>
+                  <View style={styles.statTileItem}>
                     <View style={styles.statTileHeaderRow}>
-                      <Text style={styles.statTileEmoji}>🏗️</Text>
-                      <Text style={[styles.statTileLabel, { color: '#475569' }]}>HOUSE STAGE</Text>
+                      <Ionicons name="home-outline" size={13} color="#7C3AED" />
+                      <Text style={styles.statTileLabel}>HOUSE STAGE</Text>
                     </View>
-                    <Text style={[styles.statTileValue, { color: '#0F172A' }]} numberOfLines={1}>
-                      {data.houseStage || 'Flooring Stage'}
+                    <Text style={[styles.statTileValue, { color: '#2563EB' }]} numberOfLines={1}>
+                      {data.houseStage || 'Planning'}
                     </Text>
                     <Text style={styles.statTileSubtext}>Current Phase</Text>
                   </View>
                 </View>
 
-                {/* 4. Structured Sections: Contact & Project Info (No Table Borders) */}
+                {/* 4. Structured Sections: Contact & Project Info */}
                 {/* Section A: Contact & Profile */}
                 <View style={styles.cleanDetailSectionCard}>
                   <View style={styles.cleanSectionHeader}>
-                    <Text style={styles.cleanSectionIcon}>👤</Text>
+                    <View style={styles.cleanSectionIconBadge}>
+                      <Ionicons name="person-outline" size={15} color="#2563EB" />
+                    </View>
                     <Text style={styles.cleanSectionTitle}>Contact & Profile</Text>
                   </View>
                   <View style={styles.cleanSectionBody}>
                     <View style={styles.cleanDetailRow}>
-                      <Text style={styles.cleanRowLabel}>Mobile Phone</Text>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                        <Ionicons name="call-outline" size={13} color="#64748B" />
+                        <Text style={styles.cleanRowLabel}>Mobile Phone</Text>
+                      </View>
                       <Text style={styles.cleanRowValueBold}>{phone || '—'}</Text>
                     </View>
                     <View style={styles.cleanDetailRow}>
-                      <Text style={styles.cleanRowLabel}>Site / Location</Text>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                        <Ionicons name="location-outline" size={13} color="#64748B" />
+                        <Text style={styles.cleanRowLabel}>Site / Location</Text>
+                      </View>
                       <Text style={styles.cleanRowValue}>{data.location || '—'}</Text>
                     </View>
                     <View style={styles.cleanDetailRow}>
-                      <Text style={styles.cleanRowLabel}>Customer Type</Text>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                        <Ionicons name="business-outline" size={13} color="#64748B" />
+                        <Text style={styles.cleanRowLabel}>Customer Type</Text>
+                      </View>
                       <Text style={[styles.cleanRowValue, { color: badgeStyle.text, fontWeight: '800' }]}>
                         {data.customerType || 'Building Owner'}
                       </Text>
                     </View>
                     <View style={styles.cleanDetailRow}>
-                      <Text style={styles.cleanRowLabel}>Lead Source</Text>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                        <Ionicons name="megaphone-outline" size={13} color="#64748B" />
+                        <Text style={styles.cleanRowLabel}>Lead Source</Text>
+                      </View>
                       <Text style={styles.cleanRowValue}>{data.leadSource || 'Showroom Walk-in'}</Text>
                     </View>
                     <View style={styles.cleanDetailRow}>
-                      <Text style={styles.cleanRowLabel}>Sales Executive</Text>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                        <Ionicons name="id-card-outline" size={13} color="#2563EB" />
+                        <Text style={styles.cleanRowLabel}>Sales Executive</Text>
+                      </View>
                       <Text style={[styles.cleanRowValueBold, { color: '#2563EB' }]}>
-                        👤 {data.salesperson || 'Showroom Team'}
+                        {data.salesperson || 'Showroom Team'}
                       </Text>
                     </View>
                   </View>
                 </View>
 
-                {/* Section B: Material & Project Specs (With Visual Requirement Pills) */}
+                {/* Section B: Material & Project Specs */}
                 <View style={styles.cleanDetailSectionCard}>
                   <View style={styles.cleanSectionHeader}>
-                    <Text style={styles.cleanSectionIcon}>📐</Text>
+                    <View style={[styles.cleanSectionIconBadge, { backgroundColor: '#ECFDF5' }]}>
+                      <Ionicons name="cube-outline" size={15} color="#059669" />
+                    </View>
                     <Text style={styles.cleanSectionTitle}>Material & Project Specs</Text>
                   </View>
                   <View style={styles.cleanSectionBody}>
@@ -2430,21 +2759,26 @@ export default function App() {
                     ) : null}
 
                     <View style={styles.cleanDetailRow}>
-                      <Text style={styles.cleanRowLabel}>Approx Area</Text>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                        <Ionicons name="grid-outline" size={13} color="#64748B" />
+                        <Text style={styles.cleanRowLabel}>Approx Area</Text>
+                      </View>
                       <Text style={styles.cleanRowValueBold}>
                         {data.approxQuantity ? `${data.approxQuantity} sq.ft` : '—'}
                       </Text>
                     </View>
                     <View style={styles.cleanDetailRow}>
-                      <Text style={styles.cleanRowLabel}>Sanitary Ware</Text>
-                      <Text style={styles.cleanRowValue}>{data.sanitaryRequirement || '—'}</Text>
-                    </View>
-                    <View style={styles.cleanDetailRow}>
-                      <Text style={styles.cleanRowLabel}>Adhesive & Grouts</Text>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                        <Ionicons name="construct-outline" size={13} color="#64748B" />
+                        <Text style={styles.cleanRowLabel}>Adhesive / Epoxy Req.</Text>
+                      </View>
                       <Text style={styles.cleanRowValue}>{data.adhesiveRequirement || '—'}</Text>
                     </View>
                     <View style={styles.cleanDetailRow}>
-                      <Text style={styles.cleanRowLabel}>Cross-Sell Interest</Text>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                        <Ionicons name="cart-outline" size={13} color="#64748B" />
+                        <Text style={styles.cleanRowLabel}>Cross-Sell Interest</Text>
+                      </View>
                       <Text style={styles.cleanRowValue}>{data.crossSell || '—'}</Text>
                     </View>
                   </View>
@@ -2464,7 +2798,9 @@ export default function App() {
                   return (
                     <View style={styles.cleanDetailSectionCard}>
                       <View style={styles.cleanSectionHeader}>
-                        <Text style={styles.cleanSectionIcon}>🏷️</Text>
+                        <View style={[styles.cleanSectionIconBadge, { backgroundColor: '#FAF5FF' }]}>
+                          <Ionicons name="sparkles-outline" size={15} color="#7C3AED" />
+                        </View>
                         <Text style={styles.cleanSectionTitle}>Custom Specifications & Fields</Text>
                       </View>
                       <View style={styles.cleanSectionBody}>
@@ -2495,7 +2831,9 @@ export default function App() {
                 {/* Section C: Activity Timeline (Vertical History List) */}
                 <View style={styles.cleanDetailSectionCard}>
                   <View style={styles.cleanSectionHeader}>
-                    <Text style={styles.cleanSectionIcon}>⏳</Text>
+                    <View style={[styles.cleanSectionIconBadge, { backgroundColor: '#EFF6FF' }]}>
+                      <Ionicons name="time-outline" size={15} color="#2563EB" />
+                    </View>
                     <Text style={styles.cleanSectionTitle}>Activity Timeline</Text>
                   </View>
 
@@ -2523,7 +2861,7 @@ export default function App() {
                                 </Text>
                                 {act.date ? (
                                   <Text style={styles.timelineDate}>
-                                    🕒 {formatTimelineDate(act.date)}
+                                    {formatTimelineDate(act.date)}
                                   </Text>
                                 ) : null}
                               </View>
@@ -2543,7 +2881,7 @@ export default function App() {
 
                   {data.lastReason && data.lastReason.trim() !== '' && (
                     <View style={styles.timelineObjectiveBox}>
-                      <Text style={styles.timelineObjectiveLabel}>🎯 Latest Target Objective:</Text>
+                      <Text style={styles.timelineObjectiveLabel}>Latest Target Objective:</Text>
                       <Text style={styles.timelineObjectiveVal}>
                         {data.lastReason.split(': ').slice(1).join(': ') || data.lastReason}
                       </Text>
@@ -2551,15 +2889,27 @@ export default function App() {
                   )}
                 </View>
 
-                {/* Bottom Dismiss / Back Button */}
-                <TouchableOpacity
-                  style={styles.detailBottomBackBtn}
-                  onPress={() => setActiveScreen('list')}
-                  activeOpacity={0.8}
-                >
-                  <Text style={styles.detailBottomBackBtnText}>← Back to All Leads</Text>
-                </TouchableOpacity>
-              </View>
+                {/* Bottom Action Group */}
+                <View style={styles.detailBottomActionsRow}>
+                  <TouchableOpacity
+                    style={styles.detailBottomEditBtn}
+                    onPress={() => handleEditCustomer(selectedCustomer)}
+                    activeOpacity={0.8}
+                  >
+                    <Ionicons name="create-outline" size={16} color="#1D4ED8" style={{ marginRight: 6 }} />
+                    <Text style={styles.detailBottomEditText}>Edit Profile</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={styles.detailBottomBackBtn}
+                    onPress={() => setActiveScreen('list')}
+                    activeOpacity={0.8}
+                  >
+                    <Ionicons name="arrow-back" size={16} color="#334155" style={{ marginRight: 6 }} />
+                    <Text style={styles.detailBottomBackBtnText}>Back to Leads</Text>
+                  </TouchableOpacity>
+                </View>
+              </Animated.View>
             );
           })()}
         </ScrollView>
@@ -2601,6 +2951,20 @@ export default function App() {
         isOrder={celebrationData?.isOrder}
         onClose={() => setShowOrderCelebration(false)}
         branding={branding}
+      />
+
+      {/* Professional Lead Updated Confirmation Modal */}
+      <LeadUpdateSuccessModal
+        visible={updatedLeadModal.visible}
+        leadName={updatedLeadModal.leadName}
+        customerId={updatedLeadModal.customerId}
+        onDone={() => {
+          if (updatedLeadModal.customer) {
+            setSelectedCustomer(updatedLeadModal.customer);
+            setActiveScreen('detail');
+          }
+          setUpdatedLeadModal({ visible: false, leadName: '', customerId: '', customer: null });
+        }}
       />
 
       {/* Daily Shift Performance Snapshot for Mobile (Auto-Fetched) */}
@@ -2827,8 +3191,9 @@ const styles = StyleSheet.create({
   },
   headerBrandTitle: {
     color: '#0F172A',
+    fontFamily: typography.fontHeading,
     fontWeight: '900',
-    fontSize: 16,
+    fontSize: 16.5,
     letterSpacing: -0.3,
   },
   headerStatusPill: {
@@ -2979,65 +3344,76 @@ const styles = StyleSheet.create({
   statTileRow: {
     flexDirection: 'row',
     gap: 8,
-    marginBottom: 12,
+    marginBottom: 14,
   },
   statTile: {
     flex: 1,
     backgroundColor: '#FFFFFF',
-    borderRadius: 14,
+    borderRadius: 16,
     paddingVertical: 11,
-    paddingHorizontal: 10,
+    paddingHorizontal: 6,
     borderWidth: 1,
     borderColor: '#E2E8F0',
+    alignItems: 'center',
     justifyContent: 'space-between',
-    minHeight: 90,
+    minHeight: 110,
     shadowColor: '#0F172A',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.03,
-    shadowRadius: 4,
-    elevation: 1,
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    elevation: 2,
   },
   statTileTopRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 4,
+    justifyContent: 'center',
+    gap: 4,
+    width: '100%',
   },
   statTileIconBadge: {
-    width: 24,
-    height: 24,
-    borderRadius: 7,
+    width: 20,
+    height: 20,
+    borderRadius: 6,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
   },
   statTileIconGlyph: {
-    fontSize: 12,
+    fontSize: 10.5,
     fontWeight: '800',
   },
   statTileLabel: {
+    fontFamily: typography.fontHeading,
     fontSize: 9,
     fontWeight: '800',
     color: '#64748B',
     letterSpacing: 0.5,
+    textTransform: 'uppercase',
+    textAlign: 'center',
   },
   statTileValue: {
-    fontSize: 18,
+    fontFamily: typography.fontHeading,
+    fontSize: 20,
     fontWeight: '900',
     color: '#0F172A',
-    letterSpacing: -0.4,
-    marginVertical: 2,
+    letterSpacing: -0.5,
+    marginVertical: 4,
+    textAlign: 'center',
+    fontVariant: ['tabular-nums'],
   },
   statTileSubBadge: {
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
-    alignSelf: 'flex-start',
-    marginTop: 2,
+    paddingHorizontal: 4,
+    paddingVertical: 3.5,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    alignSelf: 'stretch',
   },
   statTileSubText: {
+    fontFamily: typography.fontFamily,
     fontSize: 9.5,
-    fontWeight: '600',
+    fontWeight: '700',
+    textAlign: 'center',
   },
   // Filter Tab Bar
   filterTabBar: {
@@ -3389,16 +3765,18 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   formHeaderTitle: {
-    fontSize: 15,
-    fontWeight: '700',
+    fontFamily: typography.fontHeading,
+    fontSize: 16.5,
+    fontWeight: '900',
     color: '#0F172A',
-    letterSpacing: -0.1,
+    letterSpacing: -0.2,
   },
   formHeaderSub: {
-    fontSize: 10.5,
+    fontFamily: typography.fontFamily,
+    fontSize: 11,
     color: '#64748B',
     fontWeight: '500',
-    marginTop: 1,
+    marginTop: 1.5,
   },
   formCloseBtn: {
     backgroundColor: '#F8FAFC',
@@ -3457,6 +3835,40 @@ const styles = StyleSheet.create({
   sectionTabChipTextCompleted: {
     color: '#0F766E',
     fontWeight: '600',
+  },
+  sectionTabChipError: {
+    backgroundColor: '#FEF2F2',
+    borderColor: '#FECDD3',
+  },
+  sectionTabChipTextError: {
+    color: '#DC2626',
+    fontWeight: '700',
+  },
+  sectionTabErrorDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#DC2626',
+    marginLeft: 4,
+  },
+  formSectionErrorBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#FEF2F2',
+    borderWidth: 1,
+    borderColor: '#FECDD3',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: 12,
+  },
+  formSectionErrorBannerText: {
+    flex: 1,
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#B91C1C',
+    lineHeight: 16,
   },
   formScrollView: {
     flex: 1,
@@ -3603,6 +4015,33 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
   },
+  detailNavEditBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: '#EFF6FF',
+    borderWidth: 1.2,
+    borderColor: '#93C5FD',
+    paddingHorizontal: 13,
+    paddingVertical: 6.5,
+    borderRadius: 18,
+    shadowColor: '#2563EB',
+    shadowOffset: { width: 0, height: 1.5 },
+    shadowOpacity: 0.08,
+    shadowRadius: 3,
+    elevation: 1,
+  },
+  detailNavEditIcon: {
+    fontSize: 13,
+    color: '#2563EB',
+    fontWeight: '800',
+  },
+  detailNavEditText: {
+    fontSize: 12.5,
+    fontWeight: '800',
+    color: '#1D4ED8',
+    letterSpacing: 0.1,
+  },
   detailNavIconBtn: {
     width: 36,
     height: 36,
@@ -3615,13 +4054,13 @@ const styles = StyleSheet.create({
   },
   detailHeroCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderRadius: 22,
+    borderWidth: 1.5,
+    borderColor: '#CBD5E1',
     padding: 18,
     marginBottom: 14,
     shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: 3 },
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.05,
     shadowRadius: 10,
     elevation: 2,
@@ -3634,11 +4073,13 @@ const styles = StyleSheet.create({
   detailAvatar: {
     width: 52,
     height: 52,
-    borderRadius: 26,
-    backgroundColor: '#2563EB',
+    borderRadius: 18,
+    backgroundColor: '#1E40AF',
+    borderWidth: 2,
+    borderColor: '#3B82F6',
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#2563EB',
+    shadowColor: '#1E40AF',
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.25,
     shadowRadius: 6,
@@ -3734,32 +4175,29 @@ const styles = StyleSheet.create({
   },
   detailHeroActionsRow: {
     flexDirection: 'row',
-    gap: 10,
+    gap: 8,
     marginTop: 14,
-    paddingTop: 12,
+    paddingTop: 14,
     borderTopWidth: 1,
     borderTopColor: '#F1F5F9',
   },
   detailActionBtnCall: {
-    flex: 1.2,
+    flex: 1,
     backgroundColor: '#FFFFFF',
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    borderRadius: 12,
+    paddingVertical: 11,
+    paddingHorizontal: 10,
+    borderRadius: 13,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 7,
-    borderWidth: 1,
+    gap: 6,
+    borderWidth: 1.5,
     borderColor: '#CBD5E1',
     shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 2,
-    elevation: 1,
-  },
-  detailActionBtnCallIcon: {
-    fontSize: 14,
+    shadowOffset: { width: 0, height: 1.5 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 1.5,
   },
   detailActionBtnCallText: {
     color: '#0F172A',
@@ -3767,24 +4205,49 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
   detailActionBtnWhatsApp: {
-    flex: 1,
-    backgroundColor: '#DCFCE7',
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    borderRadius: 12,
+    flex: 1.15,
+    backgroundColor: '#F0FDF4',
+    paddingVertical: 11,
+    paddingHorizontal: 10,
+    borderRadius: 13,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 7,
-    borderWidth: 1,
-    borderColor: '#86EFAC',
-  },
-  detailActionBtnWhatsAppIcon: {
-    fontSize: 14,
+    gap: 6,
+    borderWidth: 1.5,
+    borderColor: '#BBF7D0',
+    shadowColor: '#16A34A',
+    shadowOffset: { width: 0, height: 1.5 },
+    shadowOpacity: 0.06,
+    shadowRadius: 3,
+    elevation: 1.5,
   },
   detailActionBtnWhatsAppText: {
     color: '#15803D',
-    fontWeight: '800',
+    fontWeight: '700',
+    fontSize: 13,
+  },
+  detailActionBtnLog: {
+    flex: 1.25,
+    backgroundColor: '#EFF6FF',
+    paddingVertical: 11,
+    paddingHorizontal: 10,
+    borderRadius: 13,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    borderWidth: 1.5,
+    borderColor: '#BFDBFE',
+    shadowColor: '#2563EB',
+    shadowOffset: { width: 0, height: 1.5 },
+    shadowOpacity: 0.06,
+    shadowRadius: 3,
+    elevation: 1.5,
+  },
+  detailActionBtnLogText: {
+    color: '#1D4ED8',
+    fontWeight: '700',
     fontSize: 13,
   },
   statTilesGrid: {
@@ -3792,49 +4255,54 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     justifyContent: 'space-between',
     marginBottom: 14,
+    rowGap: 10,
   },
   statTileItem: {
     width: '48.5%',
-    borderRadius: 14,
-    borderWidth: 1,
-    padding: 12,
-    marginBottom: 10,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    borderWidth: 1.5,
+    borderColor: '#CBD5E1',
+    padding: 13,
     shadowColor: '#0F172A',
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.02,
-    shadowRadius: 2,
+    shadowOpacity: 0.03,
+    shadowRadius: 3,
     elevation: 1,
   },
   statTileHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
-    marginBottom: 4,
+    marginBottom: 6,
   },
   statTileEmoji: {
     fontSize: 13,
   },
   statTileLabel: {
-    fontSize: 9.5,
+    fontSize: 10,
     fontWeight: '800',
-    letterSpacing: 0.4,
+    letterSpacing: 0.5,
+    color: '#64748B',
+    textTransform: 'uppercase',
   },
   statTileValue: {
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: '900',
-    letterSpacing: -0.3,
+    color: '#0F172A',
+    letterSpacing: -0.4,
   },
   statTileSubtext: {
-    fontSize: 10,
-    color: '#64748B',
+    fontSize: 10.5,
+    color: '#94A3B8',
     fontWeight: '600',
-    marginTop: 2,
+    marginTop: 3,
   },
   cleanDetailSectionCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderRadius: 20,
+    borderWidth: 1.5,
+    borderColor: '#CBD5E1',
     marginBottom: 14,
     padding: 16,
     shadowColor: '#0F172A',
@@ -3847,10 +4315,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    marginBottom: 10,
-    paddingBottom: 8,
+    marginBottom: 12,
+    paddingBottom: 10,
     borderBottomWidth: 1,
-    borderBottomColor: '#F8FAFC',
+    borderBottomColor: '#F1F5F9',
+  },
+  cleanSectionIconBadge: {
+    width: 26,
+    height: 26,
+    borderRadius: 8,
+    backgroundColor: '#EFF6FF',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   cleanSectionIcon: {
     fontSize: 15,
@@ -3870,13 +4346,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 6,
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F8FAFC',
   },
   cleanRowLabel: {
-    fontSize: 13,
+    fontSize: 12.5,
     color: '#64748B',
     fontWeight: '600',
-    flex: 1,
   },
   cleanRowValue: {
     fontSize: 13.5,
@@ -3920,24 +4397,53 @@ const styles = StyleSheet.create({
     color: '#64748B',
     fontWeight: '600',
   },
-  detailBottomBackBtn: {
-    backgroundColor: '#0F172A',
+  detailBottomActionsRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 6,
+    marginBottom: 24,
+  },
+  detailBottomEditBtn: {
+    flex: 1,
+    backgroundColor: '#EFF6FF',
     borderRadius: 14,
-    paddingVertical: 14,
+    paddingVertical: 13,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 6,
-    marginBottom: 20,
+    flexDirection: 'row',
+    borderWidth: 1.5,
+    borderColor: '#BFDBFE',
+    shadowColor: '#2563EB',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    elevation: 1,
+  },
+  detailBottomEditText: {
+    color: '#1D4ED8',
+    fontSize: 13.5,
+    fontWeight: '800',
+  },
+  detailBottomBackBtn: {
+    flex: 1.15,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
+    paddingVertical: 13,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    borderWidth: 1.5,
+    borderColor: '#CBD5E1',
     shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 1.5 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 1.5,
   },
   detailBottomBackBtnText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '800',
+    color: '#334155',
+    fontSize: 13.5,
+    fontWeight: '700',
   },
   // Diagnostic Settings Modal Styles
   modalOverlay: {

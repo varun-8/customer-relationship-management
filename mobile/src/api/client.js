@@ -174,16 +174,15 @@ export const FALLBACK_SCHEMA = {
       options: [
         { label: 'Tiles', value: 'Tiles' },
         { label: 'Sanitary', value: 'Sanitary' },
-        { label: 'Adhesive', value: 'Adhesive' },
-        { label: 'Clipping', value: 'Clipping' },
+        { label: 'Adhesive / Epoxy', value: 'Adhesive / Epoxy' },
+        { label: 'CP Fittings', value: 'CP Fittings' },
       ],
     },
     { id: 'field_approx_quantity', name: 'approxQuantity', label: 'Approx. Quantity (Sq.Ft / Units)', type: 'number', active: true, order: 10 },
-    { id: 'field_tile_budget', name: 'tileBudget', label: 'Tile Budget (₹)', type: 'currency', active: true, order: 11 },
-    { id: 'field_sanitary_req', name: 'sanitaryRequirement', label: 'Sanitary Requirement', type: 'radio', active: true, order: 12, options: [{ label: 'Yes', value: 'Yes' }, { label: 'No', value: 'No' }] },
-    { id: 'field_adhesive_req', name: 'adhesiveRequirement', label: 'Adhesive Requirement', type: 'radio', active: true, order: 13, options: [{ label: 'Yes', value: 'Yes' }, { label: 'No', value: 'No' }] },
-    { id: 'field_quotation_val', name: 'quotationValue', label: 'Quotation Value (₹)', type: 'currency', active: true, order: 14 },
-    { id: 'field_quotation_date', name: 'quotationDate', label: 'Quotation Date', type: 'date', active: false, order: 15 },
+    { id: 'field_tile_budget', name: 'tileBudget', label: 'Tile Budget', type: 'currency', active: true, order: 11 },
+    { id: 'field_adhesive_req', name: 'adhesiveRequirement', label: 'Adhesive Requirement', type: 'radio', active: true, order: 12, options: [{ label: 'Yes', value: 'Yes' }, { label: 'No', value: 'No' }] },
+    { id: 'field_quotation_val', name: 'quotationValue', label: 'Quotation Value', type: 'currency', active: true, order: 13 },
+    { id: 'field_quotation_date', name: 'quotationDate', label: 'Quotation Date', type: 'date', active: true, order: 14 },
     {
       id: 'field_status',
       name: 'status',
@@ -191,10 +190,9 @@ export const FALLBACK_SCHEMA = {
       type: 'select',
       required: true,
       active: true,
-      order: 16,
+      order: 15,
       options: [
-        { label: 'Newly Contacted', value: 'Newly Contacted' },
-        { label: 'Walk-in', value: 'Walk-in' },
+        { label: 'New Lead', value: 'New Lead' },
         { label: 'Quotation', value: 'Quotation' },
         { label: 'Follow-up', value: 'Follow-up' },
         { label: 'Negotiation', value: 'Negotiation' },
@@ -203,11 +201,11 @@ export const FALLBACK_SCHEMA = {
         { label: 'Future Requirement', value: 'Future Requirement' },
       ],
     },
-    { id: 'field_next_follow_up', name: 'nextFollowUp', label: 'Next Follow-up', type: 'date', active: true, order: 17 },
-    { id: 'field_last_follow_up', name: 'lastFollowUp', label: 'Last Follow-up', type: 'date', active: true, order: 18 },
-    { id: 'field_follow_up_count', name: 'followUpCount', label: 'Follow-up Count', type: 'number', active: true, order: 19 },
-    { id: 'field_order_value', name: 'orderValue', label: 'Order Value (₹)', type: 'currency', active: true, order: 20 },
-    { id: 'field_last_reason', name: 'lastReason', label: 'Last Reason / Notes', type: 'text', active: true, order: 21 },
+    { id: 'field_next_follow_up', name: 'nextFollowUp', label: 'Next Follow-up', type: 'date', active: true, order: 16 },
+    { id: 'field_last_follow_up', name: 'lastFollowUp', label: 'Last Follow-up', type: 'date', active: true, readOnly: true, order: 17 },
+    { id: 'field_follow_up_count', name: 'followUpCount', label: 'Follow-up Count', type: 'number', active: true, readOnly: true, order: 18 },
+    { id: 'field_order_value', name: 'orderValue', label: 'Order Value', type: 'currency', active: true, order: 19 },
+    { id: 'field_last_reason', name: 'lastReason', label: 'Last Reason / Notes', type: 'text', active: true, order: 20 },
     {
       id: 'field_cross_sell',
       name: 'crossSell',
@@ -354,15 +352,6 @@ export const apiClient = {
   async getHeaders() {
     let token = await this.getToken();
     const deviceId = await this.getDeviceId();
-    if (!token) {
-      try {
-        const loginRes = await this.login('owner@vasantham.com', 'admin123');
-        if (loginRes && loginRes.success && loginRes.data?.token) {
-          token = loginRes.data.token;
-          await this.setToken(token);
-        }
-      } catch (e) {}
-    }
     return {
       'Content-Type': 'application/json',
       'X-Device-Id': deviceId,

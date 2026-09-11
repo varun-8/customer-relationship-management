@@ -5,6 +5,22 @@ const http = require('http');
 const net = require('net');
 const { spawn, exec } = require('child_process');
 
+// Chromium switches to prevent Windows cache conflicts & GPU disk cache locking
+app.commandLine.appendSwitch('disable-gpu-shader-disk-cache');
+
+// Single Instance Lock: Prevent multiple Electron instances from colliding on cache files
+const gotTheLock = app.requestSingleInstanceLock();
+if (!gotTheLock) {
+  app.quit();
+} else {
+  app.on('second-instance', () => {
+    if (mainWindow) {
+      if (mainWindow.isMinimized()) mainWindow.restore();
+      mainWindow.focus();
+    }
+  });
+}
+
 let mainWindow = null;
 let mongoProcess = null;
 let backendProcess = null;

@@ -35,16 +35,19 @@ const extractCustomerData = (customerDoc) => {
     customerName: d.customerName || 'Unnamed Customer',
     phone: d.phone || '',
     customerType: d.customerType || 'Building Owner',
-    status: d.status || 'Newly Contacted',
+    status: d.status || 'New Lead',
     salesperson: d.salesperson || (c.createdBy?.name || 'Showroom Staff'),
     requirement: d.requirement || 'Tiles & Sanitary',
     approxQuantity: d.approxQuantity || '',
     quotationValue: qVal,
     nextFollowUp: d.nextFollowUp || '',
     lastFollowUp: d.lastFollowUp || '',
+    followUpCount: Number(d.followUpCount) || 0,
     lastReason: d.lastReason || '',
     leadTemperature: temp, // 'Hot', 'Warm', 'Future'
     notes: d.notes || '',
+    discussionNotes: d.discussionNotes || '',
+    conversationRemarks: d.conversationRemarks || d.remarks || '',
     createdAt: c.createdAt,
     updatedAt: c.updatedAt,
   };
@@ -221,6 +224,8 @@ exports.logFollowupActivity = async (req, res) => {
       leadTemperature,
       statusUpdate,
       quotationValue,
+      houseStage,
+      requirement,
     } = req.body;
 
     const customer = await Customer.findById(id);
@@ -232,8 +237,9 @@ exports.logFollowupActivity = async (req, res) => {
 
     const todayStr = toDateString(new Date());
 
-    // Update last follow-up history
+    // Update last follow-up history automatically to the date of follow-up
     currentData.lastFollowUp = todayStr;
+    currentData.followUpCount = (Number(currentData.followUpCount) || 0) + 1;
     if (nextFollowUp) {
       currentData.nextFollowUp = toDateString(nextFollowUp);
     }
@@ -246,6 +252,12 @@ exports.logFollowupActivity = async (req, res) => {
     }
     if (quotationValue !== undefined && Number(quotationValue) >= 0) {
       currentData.quotationValue = Number(quotationValue);
+    }
+    if (houseStage) {
+      currentData.houseStage = houseStage;
+    }
+    if (requirement) {
+      currentData.requirement = requirement;
     }
 
     // Build discussion notes snippet

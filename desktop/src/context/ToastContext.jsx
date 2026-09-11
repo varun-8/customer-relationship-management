@@ -39,33 +39,40 @@ export const ToastProvider = ({ children }) => {
       {children}
 
       <style>{`
-        @keyframes slideInToast {
-          from {
+        @keyframes toastSlideIn {
+          0% {
             opacity: 0;
-            transform: translateX(40px) scale(0.95);
+            transform: translateX(36px) scale(0.94);
           }
-          to {
+          60% {
+            transform: translateX(-4px) scale(1.01);
+          }
+          100% {
             opacity: 1;
             transform: translateX(0) scale(1);
           }
         }
-        @keyframes toastProgress {
-          from { width: 100%; }
-          to { width: 0%; }
+        @keyframes toastProgressCountdown {
+          from { transform: scaleX(1); }
+          to { transform: scaleX(0); }
+        }
+        @keyframes toastPulseGlow {
+          0%, 100% { opacity: 0.6; }
+          50% { opacity: 1; }
         }
       `}</style>
 
-      {/* Toast Notification Floating Container */}
+      {/* Modern Aesthetic Floating Toast Container */}
       <div
         style={{
           position: 'fixed',
-          top: '20px',
+          top: '22px',
           right: '24px',
-          zIndex: 99999,
+          zIndex: 999999,
           display: 'flex',
           flexDirection: 'column',
-          gap: '10px',
-          maxWidth: '420px',
+          gap: '12px',
+          maxWidth: '430px',
           width: 'calc(100vw - 48px)',
           pointerEvents: 'none',
         }}
@@ -76,45 +83,35 @@ export const ToastProvider = ({ children }) => {
           const isWarning = t.type === 'warning';
           const isBackup = t.type === 'backup';
 
-          const bg = isBackup
-            ? 'rgba(240, 253, 250, 0.96)'
+          const accentColor = isBackup
+            ? '#0D9488' // Teal
             : isSuccess
-            ? 'rgba(240, 253, 244, 0.96)'
+            ? '#059669' // Emerald
             : isError
-            ? 'rgba(254, 242, 242, 0.96)'
+            ? '#E11D48' // Rose
             : isWarning
-            ? 'rgba(255, 251, 235, 0.96)'
-            : 'rgba(239, 246, 255, 0.96)';
+            ? '#D97706' // Amber
+            : '#2563EB'; // Blue
 
-          const borderColor = isBackup
+          const badgeBg = isBackup
+            ? '#F0FDFA'
+            : isSuccess
+            ? '#ECFDF5'
+            : isError
+            ? '#FFF1F2'
+            : isWarning
+            ? '#FFFBEB'
+            : '#EFF6FF';
+
+          const badgeBorder = isBackup
             ? '#99F6E4'
             : isSuccess
-            ? '#BBF7D0'
+            ? '#A7F3D0'
             : isError
             ? '#FECDD3'
             : isWarning
             ? '#FDE68A'
             : '#BFDBFE';
-
-          const accentColor = isBackup
-            ? '#0D9488'
-            : isSuccess
-            ? '#16A34A'
-            : isError
-            ? '#DC2626'
-            : isWarning
-            ? '#D97706'
-            : '#2563EB';
-
-          const textColor = isBackup
-            ? '#0F766E'
-            : isSuccess
-            ? '#166534'
-            : isError
-            ? '#991B1B'
-            : isWarning
-            ? '#92400E'
-            : '#1E40AF';
 
           const IconComponent = isBackup
             ? Database
@@ -130,23 +127,23 @@ export const ToastProvider = ({ children }) => {
             <div
               key={t.id}
               style={{
-                backgroundColor: bg,
-                border: `1.5px solid ${borderColor}`,
+                backgroundColor: 'rgba(255, 255, 255, 0.98)',
+                border: '1px solid #E2E8F0',
                 borderRadius: '16px',
                 padding: '14px 16px',
-                boxShadow: '0 12px 30px -6px rgba(15, 23, 42, 0.12), 0 4px 12px -2px rgba(15, 23, 42, 0.06)',
-                backdropFilter: 'blur(12px)',
-                WebkitBackdropFilter: 'blur(12px)',
+                boxShadow: '0 12px 32px -4px rgba(15, 23, 42, 0.12), 0 4px 12px rgba(15, 23, 42, 0.05), inset 0 1px 0 #FFFFFF',
+                backdropFilter: 'blur(20px)',
+                WebkitBackdropFilter: 'blur(20px)',
                 display: 'flex',
                 alignItems: 'flex-start',
-                gap: '12px',
+                gap: '13px',
                 pointerEvents: 'auto',
-                animation: 'slideInToast 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+                animation: 'toastSlideIn 0.32s cubic-bezier(0.16, 1, 0.3, 1)',
                 position: 'relative',
                 overflow: 'hidden',
               }}
             >
-              {/* Left Accent Color Indicator */}
+              {/* Left Color Accent Strip */}
               <div
                 style={{
                   width: '4px',
@@ -155,16 +152,17 @@ export const ToastProvider = ({ children }) => {
                   top: 0,
                   bottom: 0,
                   backgroundColor: accentColor,
-                  borderRadius: '16px 0 0 16px',
                 }}
               />
 
+              {/* Light Pastel Icon Badge */}
               <div
                 style={{
-                  width: '32px',
-                  height: '32px',
+                  width: '34px',
+                  height: '34px',
                   borderRadius: '10px',
-                  backgroundColor: `${accentColor}15`,
+                  backgroundColor: badgeBg,
+                  border: `1px solid ${badgeBorder}`,
                   color: accentColor,
                   display: 'flex',
                   alignItems: 'center',
@@ -173,44 +171,70 @@ export const ToastProvider = ({ children }) => {
                   marginTop: '1px',
                 }}
               >
-                <IconComponent size={18} />
+                <IconComponent size={18} strokeWidth={2.2} />
               </div>
 
-              <div style={{ flex: 1, minWidth: 0 }}>
+              {/* Text Information */}
+              <div style={{ flex: 1, minWidth: 0, paddingTop: '1px' }}>
                 {t.title ? (
-                  <div style={{ fontWeight: '800', fontSize: '13.5px', color: textColor, marginBottom: '2px' }}>
+                  <div
+                    style={{
+                      fontWeight: '800',
+                      fontSize: '13.5px',
+                      color: '#0F172A',
+                      marginBottom: '2px',
+                      letterSpacing: '-0.01em',
+                    }}
+                  >
                     {t.title}
                   </div>
                 ) : null}
-                <div style={{ fontSize: '12.5px', color: textColor, lineHeight: '1.4', wordBreak: 'break-word', fontWeight: '500' }}>
+                <div
+                  style={{
+                    fontSize: '12.5px',
+                    color: '#334155',
+                    lineHeight: '1.45',
+                    wordBreak: 'break-word',
+                    fontWeight: '500',
+                  }}
+                >
                   {t.message}
                 </div>
               </div>
 
+              {/* Close Dismiss Button */}
               <button
                 type="button"
                 onClick={() => removeToast(t.id)}
                 style={{
-                  background: 'none',
+                  background: 'transparent',
                   border: 'none',
-                  color: textColor,
-                  opacity: 0.6,
+                  color: '#64748B',
                   cursor: 'pointer',
-                  padding: '4px',
-                  borderRadius: '6px',
+                  padding: '5px',
+                  borderRadius: '8px',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   flexShrink: 0,
-                  transition: 'opacity 0.15s ease',
+                  marginTop: '-2px',
+                  marginRight: '-4px',
+                  transition: 'all 0.15s ease',
                 }}
-                onMouseEnter={(e) => { e.currentTarget.style.opacity = '1'; }}
-                onMouseLeave={(e) => { e.currentTarget.style.opacity = '0.6'; }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.color = '#0F172A';
+                  e.currentTarget.style.backgroundColor = '#F1F5F9';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.color = '#64748B';
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                }}
+                title="Dismiss"
               >
                 <X size={15} />
               </button>
 
-              {/* Progress Line */}
+              {/* Modern Countdown Timer Line */}
               {t.duration > 0 && (
                 <div
                   style={{
@@ -219,14 +243,17 @@ export const ToastProvider = ({ children }) => {
                     left: 0,
                     right: 0,
                     height: '2.5px',
-                    backgroundColor: `${accentColor}30`,
+                    backgroundColor: '#F1F5F9',
+                    overflow: 'hidden',
                   }}
                 >
                   <div
                     style={{
                       height: '100%',
+                      width: '100%',
+                      transformOrigin: 'left center',
                       backgroundColor: accentColor,
-                      animation: `toastProgress ${t.duration}ms linear forwards`,
+                      animation: `toastProgressCountdown ${t.duration}ms linear forwards`,
                     }}
                   />
                 </div>

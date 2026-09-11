@@ -24,7 +24,7 @@ const extractCustomerData = (customerDoc) => {
     customerName: d.customerName || 'Unnamed Customer',
     phone: d.phone || '',
     customerType: d.customerType || 'Building Owner',
-    status: d.status || 'Newly Contacted',
+    status: d.status || 'New Lead',
     leadSource: d.leadSource || 'Walk-in',
     salesperson: d.salesperson || (c.createdBy?.name || 'Showroom Staff'),
     entryDate: d.entryDate || (c.createdAt ? toDateString(c.createdAt) : toDateString(new Date())),
@@ -189,7 +189,7 @@ exports.getDashboardMetrics = async (req, res) => {
           } else {
             pendingFollowupsCount += 1;
           }
-        } else if (c.status === 'Follow-up' || c.status === 'Newly Contacted') {
+        } else if (c.status === 'Follow-up' || c.status === 'Newly Contacted' || c.status === 'New Lead') {
           pendingFollowupsCount += 1;
         }
       }

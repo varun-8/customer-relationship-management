@@ -146,58 +146,24 @@ export const CustomerListTable = ({ onAddCustomer, onEditCustomer, onViewCustome
 
   const getAvatarStyle = (name = '') => {
     const char = (name.charAt(0) || 'C').toUpperCase();
-    switch (char) {
-      case 'A': case 'B': case 'C': return { bg: '#EFF6FF', text: '#2563EB', char };
-      case 'D': case 'E': case 'F': return { bg: '#ECFDF5', text: '#059669', char };
-      case 'G': case 'H': case 'I': return { bg: '#FFFBEB', text: '#D97706', char };
-      case 'J': case 'K': case 'L': return { bg: '#F5F3FF', text: '#7C3AED', char };
-      case 'M': case 'N': case 'O': return { bg: '#FEF2F2', text: '#DC2626', char };
-      default: return { bg: '#F1F5F9', text: '#475569', char };
-    }
+    return { bg: '#F1F5F9', text: '#334155', border: '#E2E8F0', char };
   };
 
-  const getTypeStyle = (type = '') => {
-    switch (type) {
-      case 'Building Owner':
-      case 'BUILDING OWNER':
-        return { bg: '#ECFDF5', text: '#059669' };
-      case 'Mason':
-      case 'MASON':
-        return { bg: '#FFFBEB', text: '#D97706' };
-      case 'Architect':
-      case 'ARCHITECT':
-        return { bg: '#EFF6FF', text: '#2563EB' };
-      case 'Engineer':
-      case 'Contractor':
-      case 'Builder':
-        return { bg: '#F5F3FF', text: '#7C3AED' };
-      default:
-        return { bg: '#F1F5F9', text: '#64748B' };
-    }
+  const getTypeStyle = () => {
+    return { bg: '#F8FAFC', text: '#475569', border: '#E2E8F0' };
   };
 
   const getStatusStyle = (statusVal = '') => {
     switch (statusVal) {
       case 'Order Confirmed':
       case 'ORDER CONFIRMED':
-        return { bg: '#ECFDF5', text: '#059669', dot: '#10B981' };
-      case 'Quotation':
-      case 'QUOTATION':
-        return { bg: '#FFFBEB', text: '#D97706', dot: '#F59E0B' };
-      case 'Negotiation':
-      case 'NEGOTIATION':
-        return { bg: '#FFFBEB', text: '#B45309', dot: '#F59E0B' };
-      case 'Newly Contacted':
-      case 'NEWLY CONTACTED':
-        return { bg: '#F5F3FF', text: '#7C3AED', dot: '#8B5CF6' };
-      case 'Follow-up':
-      case 'FOLLOW-UP':
-        return { bg: '#EFF6FF', text: '#2563EB', dot: '#3B82F6' };
+        return { bg: '#ECFDF5', text: '#059669', border: '#A7F3D0', dot: '#10B981' };
       case 'Lost':
       case 'LOST':
-        return { bg: '#F1F5F9', text: '#64748B', dot: '#94A3B8' };
+        return { bg: '#F1F5F9', text: '#64748B', border: '#CBD5E1', dot: '#94A3B8' };
       default:
-        return { bg: '#F8FAFC', text: '#475569', dot: '#94A3B8' };
+        // Unified clean pipeline styling
+        return { bg: '#F8FAFC', text: '#1E293B', border: '#E2E8F0', dot: '#475569' };
     }
   };
 
@@ -223,7 +189,7 @@ export const CustomerListTable = ({ onAddCustomer, onEditCustomer, onViewCustome
       {/* 5 Real Metric Cards */}
       <div className="metrics-row-5">
         <div className="metric-card-item">
-          <div className="metric-icon-box" style={{ background: '#EFF6FF', color: '#2563EB' }}>
+          <div className="metric-icon-box" style={{ background: '#F8FAFC', color: '#0F172A', border: '1px solid #E2E8F0' }}>
             <Users size={18} />
           </div>
           <div>
@@ -233,7 +199,7 @@ export const CustomerListTable = ({ onAddCustomer, onEditCustomer, onViewCustome
         </div>
 
         <div className="metric-card-item">
-          <div className="metric-icon-box" style={{ background: '#ECFDF5', color: '#10B981' }}>
+          <div className="metric-icon-box" style={{ background: '#F8FAFC', color: '#0F172A', border: '1px solid #E2E8F0' }}>
             <UserCheck size={18} />
           </div>
           <div>
@@ -243,7 +209,7 @@ export const CustomerListTable = ({ onAddCustomer, onEditCustomer, onViewCustome
         </div>
 
         <div className="metric-card-item">
-          <div className="metric-icon-box" style={{ background: '#FEF3C7', color: '#D97706' }}>
+          <div className="metric-icon-box" style={{ background: '#F8FAFC', color: '#0F172A', border: '1px solid #E2E8F0' }}>
             <FileText size={18} />
           </div>
           <div>
@@ -253,7 +219,7 @@ export const CustomerListTable = ({ onAddCustomer, onEditCustomer, onViewCustome
         </div>
 
         <div className="metric-card-item">
-          <div className="metric-icon-box" style={{ background: '#EFF6FF', color: '#3B82F6' }}>
+          <div className="metric-icon-box" style={{ background: '#F8FAFC', color: '#0F172A', border: '1px solid #E2E8F0' }}>
             <Clock size={18} />
           </div>
           <div>
@@ -263,11 +229,11 @@ export const CustomerListTable = ({ onAddCustomer, onEditCustomer, onViewCustome
         </div>
 
         <div className="metric-card-item">
-          <div className="metric-icon-box" style={{ background: '#ECFDF5', color: '#059669' }}>
+          <div className="metric-icon-box" style={{ background: '#ECFDF5', color: '#059669', border: '1px solid #A7F3D0' }}>
             <Calendar size={18} />
           </div>
           <div>
-            <div className="metric-value">{confirmedOrdersCount}</div>
+            <div className="metric-value" style={{ color: '#059669' }}>{confirmedOrdersCount}</div>
             <div className="metric-label">Confirmed Orders</div>
           </div>
         </div>
@@ -436,7 +402,7 @@ export const CustomerListTable = ({ onAddCustomer, onEditCustomer, onViewCustome
                   padding: '6px',
                 }}
               >
-                {['all', 'Follow-up', 'Quotation', 'Negotiation', 'Order Confirmed', 'Lost'].map((s) => (
+                {['all', 'New Lead', 'Follow-up', 'Quotation', 'Negotiation', 'Order Confirmed', 'Lost', 'Future Requirement'].map((s) => (
                   <div
                     key={s}
                     onClick={() => {

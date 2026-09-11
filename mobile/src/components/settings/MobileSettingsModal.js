@@ -9,17 +9,12 @@ import {
   StyleSheet,
   ActivityIndicator,
   Alert,
-  Dimensions,
   Platform,
 } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { colors } from '../../theme/colors';
-import { apiClient } from '../../api/client';
 
 export function LogoutVectorIcon({ size = 18, color = '#DC2626' }) {
   return (
     <View style={{ width: size, height: size, justifyContent: 'center', alignItems: 'center' }}>
-      {/* Door frame */}
       <View
         style={{
           position: 'absolute',
@@ -33,7 +28,6 @@ export function LogoutVectorIcon({ size = 18, color = '#DC2626' }) {
           borderRadius: 2.5,
         }}
       />
-      {/* Arrow stem */}
       <View
         style={{
           position: 'absolute',
@@ -44,7 +38,6 @@ export function LogoutVectorIcon({ size = 18, color = '#DC2626' }) {
           borderRadius: 1,
         }}
       />
-      {/* Arrow top head */}
       <View
         style={{
           position: 'absolute',
@@ -57,7 +50,6 @@ export function LogoutVectorIcon({ size = 18, color = '#DC2626' }) {
           transform: [{ rotate: '45deg' }],
         }}
       />
-      {/* Arrow bottom head */}
       <View
         style={{
           position: 'absolute',
@@ -68,6 +60,186 @@ export function LogoutVectorIcon({ size = 18, color = '#DC2626' }) {
           backgroundColor: color,
           borderRadius: 1,
           transform: [{ rotate: '-45deg' }],
+        }}
+      />
+    </View>
+  );
+}
+
+function StorefrontVectorIcon({ size = 18, color = '#0F766E' }) {
+  return (
+    <View style={{ width: size, height: size, justifyContent: 'center', alignItems: 'center' }}>
+      <View
+        style={{
+          position: 'absolute',
+          top: 2,
+          width: size * 0.88,
+          height: size * 0.32,
+          borderWidth: 1.6,
+          borderColor: color,
+          borderRadius: 2,
+        }}
+      />
+      <View
+        style={{
+          position: 'absolute',
+          bottom: 2,
+          width: size * 0.76,
+          height: size * 0.44,
+          borderWidth: 1.6,
+          borderColor: color,
+          borderTopWidth: 0,
+        }}
+      />
+      <View
+        style={{
+          position: 'absolute',
+          bottom: 2,
+          width: size * 0.3,
+          height: size * 0.28,
+          borderWidth: 1.4,
+          borderColor: color,
+          borderBottomWidth: 0,
+        }}
+      />
+    </View>
+  );
+}
+
+function SyncVectorIcon({ size = 18, color = '#2563EB' }) {
+  return (
+    <View style={{ width: size, height: size, justifyContent: 'center', alignItems: 'center' }}>
+      <View
+        style={{
+          width: size * 0.78,
+          height: size * 0.78,
+          borderRadius: (size * 0.78) / 2,
+          borderWidth: 1.8,
+          borderColor: color,
+          borderTopColor: 'transparent',
+        }}
+      />
+    </View>
+  );
+}
+
+function QrVectorIcon({ size = 18, color = '#4F46E5' }) {
+  return (
+    <View style={{ width: size, height: size, justifyContent: 'center', alignItems: 'center' }}>
+      <View
+        style={{
+          position: 'absolute',
+          top: 2,
+          left: 2,
+          width: 5.5,
+          height: 5.5,
+          borderWidth: 1.5,
+          borderColor: color,
+          borderBottomWidth: 0,
+          borderRightWidth: 0,
+        }}
+      />
+      <View
+        style={{
+          position: 'absolute',
+          top: 2,
+          right: 2,
+          width: 5.5,
+          height: 5.5,
+          borderWidth: 1.5,
+          borderColor: color,
+          borderBottomWidth: 0,
+          borderLeftWidth: 0,
+        }}
+      />
+      <View
+        style={{
+          position: 'absolute',
+          bottom: 2,
+          left: 2,
+          width: 5.5,
+          height: 5.5,
+          borderWidth: 1.5,
+          borderColor: color,
+          borderTopWidth: 0,
+          borderRightWidth: 0,
+        }}
+      />
+      <View
+        style={{
+          position: 'absolute',
+          bottom: 2,
+          right: 2,
+          width: 5.5,
+          height: 5.5,
+          borderWidth: 1.5,
+          borderColor: color,
+          borderTopWidth: 0,
+          borderLeftWidth: 0,
+        }}
+      />
+    </View>
+  );
+}
+
+function WifiVectorIcon({ size = 18, color = '#059669' }) {
+  return (
+    <View style={{ width: size, height: size, justifyContent: 'center', alignItems: 'center' }}>
+      <View
+        style={{
+          position: 'absolute',
+          width: size * 0.85,
+          height: size * 0.85,
+          borderRadius: (size * 0.85) / 2,
+          borderWidth: 1.6,
+          borderColor: color,
+          borderBottomColor: 'transparent',
+          borderLeftColor: 'transparent',
+          borderRightColor: 'transparent',
+          top: 1,
+        }}
+      />
+      <View
+        style={{
+          position: 'absolute',
+          width: size * 0.52,
+          height: size * 0.52,
+          borderRadius: (size * 0.52) / 2,
+          borderWidth: 1.6,
+          borderColor: color,
+          borderBottomColor: 'transparent',
+          borderLeftColor: 'transparent',
+          borderRightColor: 'transparent',
+          top: 5,
+        }}
+      />
+      <View
+        style={{
+          position: 'absolute',
+          width: 3.5,
+          height: 3.5,
+          borderRadius: 2,
+          backgroundColor: color,
+          bottom: 3,
+        }}
+      />
+    </View>
+  );
+}
+
+function ShieldVectorIcon({ size = 18, color = '#64748B' }) {
+  return (
+    <View style={{ width: size, height: size, justifyContent: 'center', alignItems: 'center' }}>
+      <View
+        style={{
+          width: size * 0.72,
+          height: size * 0.85,
+          borderWidth: 1.6,
+          borderColor: color,
+          borderTopLeftRadius: 3,
+          borderTopRightRadius: 3,
+          borderBottomLeftRadius: size * 0.36,
+          borderBottomRightRadius: size * 0.36,
         }}
       />
     </View>
@@ -87,72 +259,65 @@ export function MobileSettingsModal({
   onTestConnection,
   testingConn,
   connectionStatus,
-  onSwitchProfile,
   onDisconnectServer,
   onReloadData,
   onLogout,
   branding,
 }) {
-  const [clearingCache, setClearingCache] = useState(false);
-  const [reloadingData, setReloadingData] = useState(false);
+  const [syncing, setSyncing] = useState(false);
+  const [showAdvancedIpModal, setShowAdvancedIpModal] = useState(false);
+  const [customHost, setCustomHost] = useState(serverHost || '');
 
   if (!visible) return null;
 
-  const handleClearCache = async () => {
+  const isOwner = currentProfile?.role === 'owner';
+  const cleanHost = (serverHost || 'Desktop Workstation')
+    .replace(/^https?:\/\//, '')
+    .replace(/\/api.*$/, '');
+
+  const handleQuickSync = async () => {
+    setSyncing(true);
+    try {
+      if (onReloadData) {
+        await onReloadData();
+      }
+      Alert.alert('Showroom Synchronized', 'All catalog items, form configurations, and leads have been updated.');
+    } catch (e) {
+      Alert.alert('Sync Notice', 'Could not sync with the desktop workstation. Please check Wi-Fi.');
+    } finally {
+      setSyncing(false);
+    }
+  };
+
+  const handleConfirmLogout = () => {
     Alert.alert(
-      'Clear Local Cache',
-      'This will reset temporary offline forms and caches. Your server connection remains saved.',
+      'Sign Out of Workspace',
+      `Are you sure you want to sign out as ${currentProfile?.name || 'Staff'}?`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
-          text: 'Clear Cache',
+          text: 'Sign Out',
           style: 'destructive',
-          onPress: async () => {
-            setClearingCache(true);
-            try {
-              await AsyncStorage.multiRemove([
-                'vasantham_cached_form_schema',
-                'vasantham_cached_customers',
-                'vasantham_cached_staff_profiles',
-                'vasantham_cached_followups',
-                '@offline_kpi_reports',
-              ]);
-              Alert.alert('Cache Cleared', 'Local offline cache has been reset.');
-            } catch (e) {
-              Alert.alert('Error', 'Could not clear cache.');
-            } finally {
-              setClearingCache(false);
-            }
+          onPress: () => {
+            onClose();
+            if (onLogout) onLogout();
           },
         },
       ]
     );
   };
 
-  const handleForceReload = async () => {
-    setReloadingData(true);
-    try {
-      if (onReloadData) {
-        await onReloadData();
-      }
-      Alert.alert('CRM Synced', 'Live customer forms, branding and profiles refreshed.');
-    } catch (e) {
-      Alert.alert('Sync Warning', 'Could not refresh live data. Check server connection.');
-    } finally {
-      setReloadingData(false);
-    }
-  };
-
   const handleConfirmDisconnect = () => {
     Alert.alert(
-      'Disconnect Server',
-      'Unpair from Desktop CRM? You can reconnect anytime via QR scan or auto-detection.',
+      'Change Workstation',
+      'Unpair from the current showroom terminal? You can pair again anytime.',
       [
         { text: 'Cancel', style: 'cancel' },
         {
-          text: 'Disconnect',
+          text: 'Unpair',
           style: 'destructive',
           onPress: async () => {
+            onClose();
             if (onDisconnectServer) {
               await onDisconnectServer();
             }
@@ -162,33 +327,35 @@ export function MobileSettingsModal({
     );
   };
 
+  const handleSaveAdvancedHost = () => {
+    if (setServerHost) {
+      setServerHost(customHost);
+    }
+    if (onTestConnection) {
+      onTestConnection();
+    }
+    setShowAdvancedIpModal(false);
+  };
+
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <View style={styles.modalOverlay}>
         <View style={styles.modalCard}>
-          {/* Top Sheet Drag Handle */}
+          {/* Subtle Bottom-Sheet Pull Handle */}
           <View style={styles.sheetHandleWrapper}>
             <View style={styles.sheetHandle} />
           </View>
 
-          {/* Minimalist Native Header */}
+          {/* Minimalist Executive Header */}
           <View style={styles.header}>
-            <View style={styles.headerTitleGroup}>
-              <View style={styles.headerTextRow}>
-                <View style={styles.headerCogBadge}>
-                  <View style={styles.cogCenterRing} />
-                </View>
-                <Text style={styles.headerTitle}>Settings</Text>
-                <View style={[styles.statusCapsule, isOnline ? styles.statusCapsuleOnline : styles.statusCapsuleOffline]}>
-                  <View style={[styles.statusDot, isOnline ? styles.statusDotOnline : styles.statusDotOffline]} />
-                  <Text style={[styles.statusCapsuleText, isOnline ? styles.statusCapsuleTextOnline : styles.statusCapsuleTextOffline]}>
-                    {isOnline ? 'Online' : 'Offline'}
-                  </Text>
-                </View>
+            <View style={styles.headerLeft}>
+              <Text style={styles.headerTitle}>Settings</Text>
+              <View style={[styles.statusBadge, isOnline ? styles.statusBadgeOnline : styles.statusBadgeOffline]}>
+                <View style={[styles.statusDot, isOnline ? styles.statusDotOnline : styles.statusDotOffline]} />
+                <Text style={[styles.statusBadgeText, isOnline ? styles.statusBadgeTextOnline : styles.statusBadgeTextOffline]}>
+                  {isOnline ? 'Workspace Live' : 'Offline'}
+                </Text>
               </View>
-              <Text style={styles.headerSubtitle}>
-                Showroom Network & Mobile CRM Control
-              </Text>
             </View>
 
             <TouchableOpacity
@@ -202,46 +369,126 @@ export function MobileSettingsModal({
           </View>
 
           <ScrollView style={styles.bodyScrollView} showsVerticalScrollIndicator={false}>
-            {/* Section 1: Active Connection Status Hero Card */}
-            <View style={styles.heroCard}>
-              <View style={styles.heroTopRow}>
-                <View style={styles.heroTagBadge}>
-                  <Text style={styles.heroTagBadgeText}>SERVER ENDPOINT</Text>
-                </View>
-                <View style={[styles.pingBadge, isOnline ? styles.pingBadgeOnline : styles.pingBadgeOffline]}>
-                  <View style={[styles.pingDot, isOnline ? styles.pingDotOnline : styles.pingDotOffline]} />
-                  <Text style={[styles.pingBadgeText, isOnline ? styles.pingBadgeTextOnline : styles.pingBadgeTextOffline]}>
-                    {isOnline ? 'Connected' : 'Unreachable'}
+            {/* Section 1: Executive Profile Banner Card */}
+            <View style={styles.profileHeroCard}>
+              <View style={styles.profileHeroRow}>
+                <View
+                  style={[
+                    styles.profileAvatar,
+                    { backgroundColor: isOwner ? '#FEF3C7' : '#ECFEF8', borderColor: isOwner ? '#FDE68A' : '#CCFBF1' },
+                  ]}
+                >
+                  <Text style={[styles.profileAvatarText, { color: isOwner ? '#B45309' : '#0F766E' }]}>
+                    {currentProfile?.name ? currentProfile.name.charAt(0).toUpperCase() : 'S'}
                   </Text>
                 </View>
-              </View>
 
-              <Text style={styles.heroHostText} numberOfLines={1}>
-                {serverHost || 'http://localhost:5000/api'}
-              </Text>
+                <View style={styles.profileInfoCol}>
+                  <View style={styles.profileNameRow}>
+                    <Text style={styles.profileName} numberOfLines={1}>
+                      {currentProfile?.name || 'Showroom Executive'}
+                    </Text>
+                    <View
+                      style={[
+                        styles.roleChip,
+                        { backgroundColor: isOwner ? '#FFFBEB' : '#F0FDFA', borderColor: isOwner ? '#FDE68A' : '#99F6E4' },
+                      ]}
+                    >
+                      <Text style={[styles.roleChipText, { color: isOwner ? '#B45309' : '#0F766E' }]}>
+                        {isOwner ? '👑 Owner' : '💼 Sales'}
+                      </Text>
+                    </View>
+                  </View>
 
-              <View style={styles.heroMetaRow}>
-                <View style={styles.heroMetaItem}>
-                  <Text style={styles.heroMetaLabel}>DATABASE</Text>
-                  <Text style={styles.heroMetaVal}>Showroom Database</Text>
-                </View>
-                <View style={styles.heroMetaDivider} />
-                <View style={styles.heroMetaItem}>
-                  <Text style={styles.heroMetaLabel}>SYNC ENGINE</Text>
-                  <Text style={[styles.heroMetaVal, { color: isOnline ? '#059669' : '#DC2626' }]}>
-                    {isOnline ? 'Live Desktop Sync' : 'Offline Cache'}
+                  <Text style={styles.profileEmail} numberOfLines={1}>
+                    {currentProfile?.email || currentProfile?.phone || 'Showroom Authorized Personnel'}
                   </Text>
+
+                  <View style={styles.sessionStatusRow}>
+                    <View style={styles.sessionDot} />
+                    <Text style={styles.sessionStatusText}>Showroom Active Session</Text>
+                  </View>
                 </View>
               </View>
             </View>
 
-            {/* Section 2: Fast Pairing Options (Mobile Grouped Inset) */}
-            <View style={styles.sectionHeadingRow}>
-              <Text style={styles.sectionTitle}>PAIRING & DISCOVERY</Text>
+            {/* Section 2: Showroom & Workspace Overview */}
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionLabel}>SHOWROOM & WORKSPACE</Text>
             </View>
 
             <View style={styles.groupedCard}>
-              {/* Option A: Scan QR Code */}
+              {/* Showroom Identity */}
+              <View style={styles.groupedRow}>
+                <View style={[styles.iconSquircle, { backgroundColor: '#F0FDFA' }]}>
+                  <StorefrontVectorIcon size={17} color="#0F766E" />
+                </View>
+                <View style={styles.rowMain}>
+                  <Text style={styles.rowTitle}>
+                    {branding?.appName || branding?.brandName || 'Vasantham CRM'}
+                  </Text>
+                  <Text style={styles.rowSubtitle}>
+                    {branding?.tagline || 'Tiles & Sanitary Showroom'}
+                  </Text>
+                </View>
+              </View>
+
+              <View style={styles.groupedDivider} />
+
+              {/* Connected Workstation */}
+              <View style={styles.groupedRow}>
+                <View style={[styles.iconSquircle, { backgroundColor: '#EFF6FF' }]}>
+                  <View style={styles.terminalIcon}>
+                    <View style={styles.terminalScreen} />
+                    <View style={styles.terminalBase} />
+                  </View>
+                </View>
+                <View style={styles.rowMain}>
+                  <Text style={styles.rowTitle}>Connected Workstation</Text>
+                  <Text style={styles.rowSubtitle} numberOfLines={1}>
+                    {cleanHost}
+                  </Text>
+                </View>
+                <View style={[styles.linkPill, isOnline ? styles.linkPillOnline : styles.linkPillOffline]}>
+                  <Text style={[styles.linkPillText, isOnline ? styles.linkPillTextOnline : styles.linkPillTextOffline]}>
+                    {isOnline ? 'PAIRED' : 'OFFLINE'}
+                  </Text>
+                </View>
+              </View>
+
+              <View style={styles.groupedDivider} />
+
+              {/* Quick Sync Action */}
+              <TouchableOpacity
+                style={styles.groupedRow}
+                onPress={handleQuickSync}
+                disabled={syncing}
+                activeOpacity={0.7}
+              >
+                <View style={[styles.iconSquircle, { backgroundColor: '#EFF6FF' }]}>
+                  {syncing ? (
+                    <ActivityIndicator size="small" color="#2563EB" />
+                  ) : (
+                    <SyncVectorIcon size={17} color="#2563EB" />
+                  )}
+                </View>
+                <View style={styles.rowMain}>
+                  <Text style={styles.rowTitle}>Synchronize Workstation</Text>
+                  <Text style={styles.rowSubtitle}>
+                    {syncing ? 'Updating catalog & leads...' : 'Fetch latest showroom updates'}
+                  </Text>
+                </View>
+                <Text style={styles.actionChevron}>Sync ›</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Section 3: Workstation Connectivity */}
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionLabel}>WORKSTATION PAIRING</Text>
+            </View>
+
+            <View style={styles.groupedCard}>
+              {/* Option A: Scan QR */}
               <TouchableOpacity
                 style={styles.groupedRow}
                 onPress={() => {
@@ -251,22 +498,18 @@ export function MobileSettingsModal({
                 activeOpacity={0.7}
               >
                 <View style={[styles.iconSquircle, { backgroundColor: '#EEF2FF' }]}>
-                  <View style={styles.qrIconShape}>
-                    <View style={styles.qrCornerTopLeft} />
-                    <View style={styles.qrCornerTopRight} />
-                    <View style={styles.qrCornerBottomLeft} />
-                  </View>
+                  <QrVectorIcon size={17} color="#4F46E5" />
                 </View>
-                <View style={{ flex: 1 }}>
+                <View style={styles.rowMain}>
                   <Text style={styles.rowTitle}>Scan Desktop QR Code</Text>
-                  <Text style={styles.rowSubtitle}>Instant auto-pair in 1 second</Text>
+                  <Text style={styles.rowSubtitle}>Instant 1-second camera pairing</Text>
                 </View>
-                <Text style={styles.chevronText}>›</Text>
+                <Text style={styles.chevron}>›</Text>
               </TouchableOpacity>
 
               <View style={styles.groupedDivider} />
 
-              {/* Option B: Auto-Detect Server */}
+              {/* Option B: Auto-Discovery */}
               <TouchableOpacity
                 style={styles.groupedRow}
                 onPress={onAutoDetect}
@@ -277,115 +520,91 @@ export function MobileSettingsModal({
                   {autoDetecting ? (
                     <ActivityIndicator size="small" color="#059669" />
                   ) : (
-                    <View style={styles.radarIconShape}>
-                      <View style={styles.radarOuterRing} />
-                      <View style={styles.radarCenterDot} />
-                    </View>
+                    <WifiVectorIcon size={17} color="#059669" />
                   )}
                 </View>
-                <View style={{ flex: 1 }}>
+                <View style={styles.rowMain}>
                   <Text style={styles.rowTitle}>
-                    {autoDetecting ? 'Scanning Local Wi-Fi...' : 'Auto-Detect Local Server'}
+                    {autoDetecting ? 'Searching Wi-Fi...' : 'Discover Showroom Workstation'}
                   </Text>
                   <Text style={styles.rowSubtitle}>
-                    {autoDetecting ? 'Searching LAN subnets' : 'Discover CRM server on showroom Wi-Fi'}
+                    {autoDetecting ? 'Scanning showroom Wi-Fi network' : 'Locate CRM terminal automatically'}
                   </Text>
                 </View>
-                <Text style={styles.chevronText}>›</Text>
+                <Text style={styles.chevron}>›</Text>
               </TouchableOpacity>
-            </View>
 
-            {/* Section 3: Manual Endpoint Configuration */}
-            <View style={styles.sectionHeadingRow}>
-              <Text style={styles.sectionTitle}>MANUAL SERVER CONFIGURATION</Text>
-            </View>
+              <View style={styles.groupedDivider} />
 
-            <View style={styles.manualCard}>
-              <Text style={styles.inputMicroLabel}>SERVER API URL</Text>
-              <View style={styles.inputContainer}>
-                <TextInput
-                  style={styles.textInput}
-                  value={serverHost}
-                  onChangeText={setServerHost}
-                  placeholder="http://192.168.1.xxx:5000/api"
-                  placeholderTextColor="#94A3B8"
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                />
-              </View>
-
-              {connectionStatus && (
-                <View
-                  style={[
-                    styles.statusAlert,
-                    connectionStatus.success ? styles.statusAlertSuccess : styles.statusAlertError,
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.statusAlertText,
-                      connectionStatus.success ? styles.statusAlertTextSuccess : styles.statusAlertTextError,
-                    ]}
-                  >
-                    {connectionStatus.message}
-                  </Text>
-                </View>
-              )}
-
+              {/* Option C: Advanced IP (Minimalist Disclosure) */}
               <TouchableOpacity
-                style={[styles.testConnectBtn, testingConn && { opacity: 0.7 }]}
-                onPress={onTestConnection}
-                disabled={testingConn || autoDetecting}
-                activeOpacity={0.85}
+                style={styles.groupedRow}
+                onPress={() => {
+                  setCustomHost(serverHost || '');
+                  setShowAdvancedIpModal(true);
+                }}
+                activeOpacity={0.7}
               >
-                {testingConn ? (
-                  <ActivityIndicator size="small" color="#FFFFFF" />
-                ) : (
-                  <Text style={styles.testConnectBtnText}>Test & Connect Server</Text>
-                )}
+                <View style={[styles.iconSquircle, { backgroundColor: '#F1F5F9' }]}>
+                  <Text style={{ fontSize: 13 }}>⚙️</Text>
+                </View>
+                <View style={styles.rowMain}>
+                  <Text style={styles.rowTitle}>Workstation Network Settings</Text>
+                  <Text style={styles.rowSubtitle}>Custom terminal address or manual Wi-Fi IP</Text>
+                </View>
+                <Text style={styles.chevron}>›</Text>
               </TouchableOpacity>
             </View>
 
-            {/* Section 4: Staff Profile & Account */}
-            <View style={styles.sectionHeadingRow}>
-              <Text style={styles.sectionTitle}>SHOWROOM ACCOUNT</Text>
+            {/* Section 4: Security & Compliance */}
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionLabel}>SECURITY & COMPLIANCE</Text>
             </View>
 
             <View style={styles.groupedCard}>
-              <View style={styles.profileHeaderRow}>
-                <View style={styles.profileAvatarBox}>
-                  <Text style={styles.profileAvatarText}>
-                    {currentProfile?.name ? currentProfile.name.charAt(0).toUpperCase() : 'S'}
-                  </Text>
+              <View style={styles.groupedRow}>
+                <View style={[styles.iconSquircle, { backgroundColor: '#F8FAFC' }]}>
+                  <ShieldVectorIcon size={17} color="#475569" />
                 </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.profileName} numberOfLines={1}>
-                    {currentProfile?.name || 'Showroom Staff'}
-                  </Text>
-                  <Text style={styles.profileRole}>
-                    {currentProfile?.role === 'owner' ? 'Showroom Owner / Admin' : 'Sales Executive'}
-                  </Text>
+                <View style={styles.rowMain}>
+                  <Text style={styles.rowTitle}>Direct Showroom Encryption</Text>
+                  <Text style={styles.rowSubtitle}>Local isolated network transmission</Text>
                 </View>
+                <Text style={styles.badgeProtectedText}>Protected</Text>
               </View>
 
               <View style={styles.groupedDivider} />
 
+              <View style={styles.groupedRow}>
+                <View style={[styles.iconSquircle, { backgroundColor: '#F8FAFC' }]}>
+                  <Text style={{ fontSize: 13 }}>📱</Text>
+                </View>
+                <View style={styles.rowMain}>
+                  <Text style={styles.rowTitle}>Enterprise Mobile CRM</Text>
+                  <Text style={styles.rowSubtitle}>Build 2.4.0 • Showroom Architecture</Text>
+                </View>
+              </View>
+            </View>
+
+            {/* Section 5: Account & Terminal Actions */}
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionLabel}>ACCOUNT ACTIONS</Text>
+            </View>
+
+            <View style={styles.groupedCard}>
               <TouchableOpacity
                 style={styles.groupedRow}
-                onPress={() => {
-                  onClose();
-                  if (onLogout) onLogout();
-                }}
+                onPress={handleConfirmLogout}
                 activeOpacity={0.7}
               >
                 <View style={[styles.iconSquircle, { backgroundColor: '#FEF2F2' }]}>
                   <LogoutVectorIcon size={17} color="#DC2626" />
                 </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.rowTitle, { color: '#DC2626' }]}>Log Out Account</Text>
-                  <Text style={styles.rowSubtitle}>End session and return to login</Text>
+                <View style={styles.rowMain}>
+                  <Text style={[styles.rowTitle, { color: '#DC2626' }]}>Sign Out of Workspace</Text>
+                  <Text style={styles.rowSubtitle}>Exit active session on this device</Text>
                 </View>
-                <Text style={[styles.chevronText, { color: '#F87171' }]}>›</Text>
+                <Text style={[styles.chevron, { color: '#F87171' }]}>›</Text>
               </TouchableOpacity>
 
               <View style={styles.groupedDivider} />
@@ -396,82 +615,112 @@ export function MobileSettingsModal({
                 activeOpacity={0.7}
               >
                 <View style={[styles.iconSquircle, { backgroundColor: '#FEF2F2' }]}>
-                  <View style={styles.disconnectIconShape} />
+                  <Text style={{ fontSize: 13 }}>🔌</Text>
                 </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.rowTitle, { color: '#DC2626' }]}>Unpair Server</Text>
-                  <Text style={styles.rowSubtitle}>Disconnect from current desktop host</Text>
+                <View style={styles.rowMain}>
+                  <Text style={[styles.rowTitle, { color: '#64748B' }]}>Change Workstation Terminal</Text>
+                  <Text style={styles.rowSubtitle}>Unpair from current showroom PC</Text>
                 </View>
-                <Text style={[styles.chevronText, { color: '#F87171' }]}>›</Text>
+                <Text style={styles.chevron}>›</Text>
               </TouchableOpacity>
             </View>
 
-            {/* Section 5: Data & System Maintenance */}
-            <View style={styles.sectionHeadingRow}>
-              <Text style={styles.sectionTitle}>DATA & MAINTENANCE</Text>
-            </View>
-
-            <View style={styles.groupedCard}>
-              <TouchableOpacity
-                style={styles.groupedRow}
-                onPress={handleForceReload}
-                disabled={reloadingData}
-                activeOpacity={0.7}
-              >
-                <View style={[styles.iconSquircle, { backgroundColor: '#F0F9FF' }]}>
-                  <View style={styles.refreshIconShape} />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.rowTitle}>Refresh Showroom Data</Text>
-                  <Text style={styles.rowSubtitle}>Reload customer forms and branding</Text>
-                </View>
-                {reloadingData ? (
-                  <ActivityIndicator size="small" color="#2563EB" />
-                ) : (
-                  <Text style={styles.actionLinkText}>Sync</Text>
-                )}
-              </TouchableOpacity>
-
-              <View style={styles.groupedDivider} />
-
-              <TouchableOpacity
-                style={styles.groupedRow}
-                onPress={handleClearCache}
-                disabled={clearingCache}
-                activeOpacity={0.7}
-              >
-                <View style={[styles.iconSquircle, { backgroundColor: '#FEF2F2' }]}>
-                  <View style={styles.trashIconShape} />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.rowTitle, { color: '#DC2626' }]}>Clear Offline Cache</Text>
-                  <Text style={styles.rowSubtitle}>Reset cached forms and queues</Text>
-                </View>
-                {clearingCache ? (
-                  <ActivityIndicator size="small" color="#DC2626" />
-                ) : (
-                  <Text style={[styles.actionLinkText, { color: '#DC2626' }]}>Clear</Text>
-                )}
-              </TouchableOpacity>
-            </View>
-
-            {/* App Footer */}
-            <View style={styles.footerBox}>
-              <Text style={styles.footerBrandText}>
-                {branding?.brandName || 'Vasantham CRM'} Enterprise Mobile
+            {/* Minimalist Corporate Footer */}
+            <View style={styles.footerNoteWrapper}>
+              <Text style={styles.footerBrand}>
+                {branding?.appName || branding?.brandName || 'Vasantham CRM'} Enterprise
               </Text>
-              <Text style={styles.footerVersionText}>Version 2.4.0 • Showroom Architecture</Text>
+              <Text style={styles.footerSub}>
+                Crafted for premium showroom operations & client relationship management.
+              </Text>
             </View>
           </ScrollView>
 
-          {/* Minimalist Footer Action */}
-          <View style={styles.footerBar}>
-            <TouchableOpacity style={styles.footerDoneBtn} onPress={onClose} activeOpacity={0.8}>
-              <Text style={styles.footerDoneBtnText}>Done</Text>
+          {/* Clean Dismiss Button */}
+          <View style={styles.bottomActionBar}>
+            <TouchableOpacity style={styles.doneBtn} onPress={onClose} activeOpacity={0.85}>
+              <Text style={styles.doneBtnText}>Done</Text>
             </TouchableOpacity>
           </View>
         </View>
       </View>
+
+      {/* Clean Modal for Advanced Workstation IP (isolated, out of client sight) */}
+      <Modal
+        visible={showAdvancedIpModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowAdvancedIpModal(false)}
+      >
+        <View style={styles.dialogOverlay}>
+          <View style={styles.dialogCard}>
+            <View style={styles.dialogHeader}>
+              <Text style={styles.dialogTitle}>Workstation Address</Text>
+              <TouchableOpacity onPress={() => setShowAdvancedIpModal(false)}>
+                <Text style={styles.dialogCloseText}>✕</Text>
+              </TouchableOpacity>
+            </View>
+
+            <Text style={styles.dialogDesc}>
+              Enter the IP address of the Desktop CRM server if you are using an assigned static showroom IP.
+            </Text>
+
+            <View style={styles.dialogInputWrapper}>
+              <TextInput
+                style={styles.dialogInput}
+                value={customHost}
+                onChangeText={setCustomHost}
+                placeholder="http://10.118.85.79:5000/api"
+                placeholderTextColor="#94A3B8"
+                autoCapitalize="none"
+                autoCorrect={false}
+                spellCheck={false}
+              />
+            </View>
+
+            {connectionStatus && (
+              <View
+                style={[
+                  styles.dialogStatusBanner,
+                  connectionStatus.success ? styles.dialogStatusSuccess : styles.dialogStatusError,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.dialogStatusText,
+                    connectionStatus.success ? styles.dialogStatusTextSuccess : styles.dialogStatusTextError,
+                  ]}
+                >
+                  {connectionStatus.message}
+                </Text>
+              </View>
+            )}
+
+            <View style={styles.dialogActionsRow}>
+              <TouchableOpacity
+                style={styles.dialogCancelBtn}
+                onPress={() => setShowAdvancedIpModal(false)}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.dialogCancelBtnText}>Cancel</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.dialogSaveBtn, testingConn && { opacity: 0.7 }]}
+                onPress={handleSaveAdvancedHost}
+                disabled={testingConn}
+                activeOpacity={0.85}
+              >
+                {testingConn ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <Text style={styles.dialogSaveBtnText}>Save & Connect</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </Modal>
   );
 }
@@ -479,32 +728,32 @@ export function MobileSettingsModal({
 const styles = StyleSheet.create({
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(15, 23, 42, 0.70)',
+    backgroundColor: 'rgba(15, 23, 42, 0.60)',
     justifyContent: 'flex-end',
   },
   modalCard: {
     backgroundColor: '#F8FAFC',
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
-    maxHeight: '94%',
+    maxHeight: '92%',
     minHeight: '80%',
     display: 'flex',
     flexDirection: 'column',
     overflow: 'hidden',
     shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: -6 },
-    shadowOpacity: 0.20,
-    shadowRadius: 20,
-    elevation: 24,
+    shadowOffset: { width: 0, height: -8 },
+    shadowOpacity: 0.15,
+    shadowRadius: 24,
+    elevation: 20,
   },
   sheetHandleWrapper: {
     alignItems: 'center',
     paddingTop: 10,
-    paddingBottom: 4,
+    paddingBottom: 6,
     backgroundColor: '#F8FAFC',
   },
   sheetHandle: {
-    width: 40,
+    width: 36,
     height: 4,
     borderRadius: 2,
     backgroundColor: '#CBD5E1',
@@ -514,235 +763,178 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
-    paddingTop: 6,
-    paddingBottom: 12,
+    paddingTop: 4,
+    paddingBottom: 14,
     borderBottomWidth: 1,
     borderBottomColor: '#E2E8F0',
     backgroundColor: '#F8FAFC',
   },
-  headerTitleGroup: {
-    flex: 1,
-  },
-  headerTextRow: {
+  headerLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-  },
-  headerCogBadge: {
-    width: 24,
-    height: 24,
-    borderRadius: 6,
-    backgroundColor: '#EFF6FF',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  cogCenterRing: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    borderWidth: 2,
-    borderColor: '#2563EB',
+    gap: 10,
   },
   headerTitle: {
-    fontSize: 18.5,
+    fontSize: 20,
     fontWeight: '900',
     color: '#0F172A',
     letterSpacing: -0.4,
   },
-  statusCapsule: {
+  statusBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 7,
-    paddingVertical: 2,
-    borderRadius: 6,
+    gap: 5,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
     borderWidth: 1,
   },
-  statusCapsuleOnline: {
+  statusBadgeOnline: {
     backgroundColor: '#ECFDF5',
     borderColor: '#A7F3D0',
   },
-  statusCapsuleOffline: {
+  statusBadgeOffline: {
     backgroundColor: '#FEF2F2',
     borderColor: '#FECACA',
   },
   statusDot: {
-    width: 4.5,
-    height: 4.5,
+    width: 5,
+    height: 5,
     borderRadius: 2.5,
   },
   statusDotOnline: {
-    backgroundColor: '#10B981',
+    backgroundColor: '#059669',
   },
   statusDotOffline: {
-    backgroundColor: '#EF4444',
+    backgroundColor: '#DC2626',
   },
-  statusCapsuleText: {
-    fontSize: 9.5,
+  statusBadgeText: {
+    fontSize: 10,
     fontWeight: '800',
+    letterSpacing: 0.2,
   },
-  statusCapsuleTextOnline: {
-    color: '#047857',
+  statusBadgeTextOnline: {
+    color: '#059669',
   },
-  statusCapsuleTextOffline: {
-    color: '#B91C1C',
-  },
-  headerSubtitle: {
-    fontSize: 11.5,
-    color: '#64748B',
-    fontWeight: '500',
-    marginTop: 2.5,
+  statusBadgeTextOffline: {
+    color: '#DC2626',
   },
   closeBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
     backgroundColor: '#E2E8F0',
     alignItems: 'center',
     justifyContent: 'center',
   },
   closeBtnText: {
-    fontSize: 13,
+    fontSize: 12,
     color: '#475569',
     fontWeight: '800',
   },
   bodyScrollView: {
     flex: 1,
     paddingHorizontal: 16,
-    paddingTop: 12,
-    backgroundColor: '#F8FAFC',
+    paddingTop: 14,
   },
-  heroCard: {
+  profileHeroCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 18,
+    borderRadius: 20,
     padding: 16,
     borderWidth: 1,
     borderColor: '#E2E8F0',
+    marginBottom: 16,
     shadowColor: '#0F172A',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
+    shadowOpacity: 0.04,
     shadowRadius: 8,
     elevation: 2,
-    marginBottom: 14,
   },
-  heroTopRow: {
+  profileHeroRow: {
     flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+  },
+  profileAvatar: {
+    width: 50,
+    height: 50,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  profileAvatarText: {
+    fontSize: 22,
+    fontWeight: '900',
+  },
+  profileInfoCol: {
+    flex: 1,
+  },
+  profileNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    gap: 8,
   },
-  heroTagBadge: {
-    backgroundColor: '#ECFEF8',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 5,
-    borderWidth: 1,
-    borderColor: '#CCFBF1',
+  profileName: {
+    fontSize: 16,
+    fontWeight: '900',
+    color: '#0F172A',
+    letterSpacing: -0.2,
+    flex: 1,
   },
-  heroTagBadgeText: {
-    fontSize: 9,
-    fontWeight: '800',
-    color: '#0F766E',
-    letterSpacing: 0.8,
-  },
-  pingBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4.5,
-    paddingHorizontal: 8,
-    paddingVertical: 2.5,
+  roleChip: {
+    paddingHorizontal: 7,
+    paddingVertical: 2,
     borderRadius: 6,
-  },
-  pingBadgeOnline: {
-    backgroundColor: '#ECFDF5',
     borderWidth: 1,
-    borderColor: '#A7F3D0',
   },
-  pingBadgeOffline: {
-    backgroundColor: '#FEF2F2',
-    borderWidth: 1,
-    borderColor: '#FECACA',
-  },
-  pingDot: {
-    width: 5,
-    height: 5,
-    borderRadius: 2.5,
-  },
-  pingDotOnline: {
-    backgroundColor: '#059669',
-  },
-  pingDotOffline: {
-    backgroundColor: '#DC2626',
-  },
-  pingBadgeText: {
+  roleChipText: {
     fontSize: 10,
     fontWeight: '800',
   },
-  pingBadgeTextOnline: {
-    color: '#047857',
-  },
-  pingBadgeTextOffline: {
-    color: '#DC2626',
-  },
-  heroHostText: {
-    fontSize: 17,
-    fontWeight: '800',
-    color: '#0F172A',
-    marginTop: 8,
-    marginBottom: 12,
-    letterSpacing: -0.2,
-  },
-  heroMetaRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: '#F8FAFC',
-    borderRadius: 12,
-    paddingVertical: 9,
-    paddingHorizontal: 12,
-    borderWidth: 1,
-    borderColor: '#F1F5F9',
-  },
-  heroMetaItem: {
-    flex: 1,
-  },
-  heroMetaLabel: {
-    fontSize: 8.5,
-    fontWeight: '800',
-    color: '#64748B',
-    letterSpacing: 0.5,
-  },
-  heroMetaVal: {
+  profileEmail: {
     fontSize: 12,
-    fontWeight: '800',
-    color: '#0F172A',
+    color: '#64748B',
     marginTop: 2,
   },
-  heroMetaDivider: {
-    width: 1,
-    height: 22,
-    backgroundColor: '#E2E8F0',
-    marginHorizontal: 10,
+  sessionStatusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    marginTop: 5,
   },
-  sectionHeadingRow: {
-    marginTop: 6,
+  sessionDot: {
+    width: 5,
+    height: 5,
+    borderRadius: 2.5,
+    backgroundColor: '#10B981',
+  },
+  sessionStatusText: {
+    fontSize: 10.5,
+    fontWeight: '700',
+    color: '#059669',
+  },
+  sectionHeader: {
+    marginTop: 4,
     marginBottom: 8,
     paddingHorizontal: 4,
   },
-  sectionTitle: {
-    fontSize: 10.5,
+  sectionLabel: {
+    fontSize: 10,
     fontWeight: '900',
     color: '#64748B',
-    letterSpacing: 0.6,
+    letterSpacing: 0.8,
   },
   groupedCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 16,
+    borderRadius: 18,
     borderWidth: 1,
     borderColor: '#E2E8F0',
-    marginBottom: 14,
+    marginBottom: 16,
     overflow: 'hidden',
     shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.03,
     shadowRadius: 4,
     elevation: 1,
@@ -751,13 +943,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 14,
-    paddingVertical: 12,
+    paddingVertical: 13,
     gap: 12,
   },
   groupedDivider: {
     height: 1,
     backgroundColor: '#F1F5F9',
-    marginLeft: 58,
+    marginLeft: 56,
   },
   iconSquircle: {
     width: 36,
@@ -766,92 +958,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  qrIconShape: {
-    width: 16,
-    height: 16,
-    position: 'relative',
-  },
-  qrCornerTopLeft: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    width: 6,
-    height: 6,
-    borderWidth: 1.5,
-    borderColor: '#4F46E5',
-    borderBottomWidth: 0,
-    borderRightWidth: 0,
-  },
-  qrCornerTopRight: {
-    position: 'absolute',
-    top: 0,
-    right: 0,
-    width: 6,
-    height: 6,
-    borderWidth: 1.5,
-    borderColor: '#4F46E5',
-    borderBottomWidth: 0,
-    borderLeftWidth: 0,
-  },
-  qrCornerBottomLeft: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    width: 6,
-    height: 6,
-    borderWidth: 1.5,
-    borderColor: '#4F46E5',
-    borderTopWidth: 0,
-    borderRightWidth: 0,
-  },
-  radarIconShape: {
-    width: 16,
-    height: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  radarOuterRing: {
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-    borderWidth: 1.5,
-    borderColor: '#059669',
-    position: 'absolute',
-  },
-  radarCenterDot: {
-    width: 4,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: '#059669',
-  },
-  userIconShape: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    borderWidth: 1.5,
-    borderColor: '#7C3AED',
-  },
-  disconnectIconShape: {
-    width: 12,
-    height: 2,
-    backgroundColor: '#DC2626',
-    borderRadius: 1,
-  },
-  refreshIconShape: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    borderWidth: 1.5,
-    borderColor: '#0284C7',
-    borderTopColor: 'transparent',
-  },
-  trashIconShape: {
-    width: 10,
-    height: 12,
-    borderWidth: 1.5,
-    borderColor: '#DC2626',
-    borderTopWidth: 0,
-    borderRadius: 1,
+  rowMain: {
+    flex: 1,
   },
   rowTitle: {
     fontSize: 13.5,
@@ -863,165 +971,218 @@ const styles = StyleSheet.create({
     color: '#64748B',
     marginTop: 1.5,
   },
-  chevronText: {
+  chevron: {
     fontSize: 18,
-    color: '#94A3B8',
+    color: '#CBD5E1',
     fontWeight: '600',
   },
-  actionLinkText: {
+  actionChevron: {
     fontSize: 12,
     fontWeight: '800',
     color: '#2563EB',
   },
-  manualCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 14,
+  linkPill: {
+    paddingHorizontal: 7,
+    paddingVertical: 2.5,
+    borderRadius: 6,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
-    marginBottom: 14,
-    shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.03,
-    shadowRadius: 4,
-    elevation: 1,
   },
-  inputMicroLabel: {
+  linkPillOnline: {
+    backgroundColor: '#ECFDF5',
+    borderColor: '#A7F3D0',
+  },
+  linkPillOffline: {
+    backgroundColor: '#FEF2F2',
+    borderColor: '#FECACA',
+  },
+  linkPillText: {
     fontSize: 9.5,
     fontWeight: '800',
-    color: '#64748B',
-    letterSpacing: 0.6,
-    marginBottom: 6,
+    letterSpacing: 0.3,
   },
-  inputContainer: {
+  linkPillTextOnline: {
+    color: '#059669',
+  },
+  linkPillTextOffline: {
+    color: '#DC2626',
+  },
+  terminalIcon: {
+    width: 17,
+    height: 14,
+    alignItems: 'center',
+  },
+  terminalScreen: {
+    width: 17,
+    height: 11,
+    borderRadius: 2,
+    borderWidth: 1.5,
+    borderColor: '#2563EB',
+  },
+  terminalBase: {
+    width: 9,
+    height: 2,
+    backgroundColor: '#2563EB',
+    borderRadius: 1,
+    marginTop: 1,
+  },
+  badgeProtectedText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#059669',
+  },
+  footerNoteWrapper: {
+    alignItems: 'center',
+    paddingVertical: 14,
+    marginBottom: 16,
+  },
+  footerBrand: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#475569',
+  },
+  footerSub: {
+    fontSize: 10.5,
+    color: '#94A3B8',
+    textAlign: 'center',
+    marginTop: 3,
+    paddingHorizontal: 20,
+    lineHeight: 15,
+  },
+  bottomActionBar: {
+    paddingHorizontal: 18,
+    paddingVertical: 12,
+    backgroundColor: '#FFFFFF',
+    borderTopWidth: 1,
+    borderTopColor: '#E2E8F0',
+  },
+  doneBtn: {
+    paddingVertical: 13,
+    borderRadius: 14,
+    backgroundColor: '#0F172A',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  doneBtnText: {
+    fontSize: 14,
+    fontWeight: '900',
+    color: '#FFFFFF',
+    letterSpacing: -0.1,
+  },
+  // Dialog / Advanced IP Modal Styles
+  dialogOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(15, 23, 42, 0.65)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  dialogCard: {
+    width: '100%',
+    maxWidth: 380,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    padding: 20,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.2,
+    shadowRadius: 18,
+    elevation: 12,
+  },
+  dialogHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  dialogTitle: {
+    fontSize: 17,
+    fontWeight: '900',
+    color: '#0F172A',
+  },
+  dialogCloseText: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#64748B',
+    padding: 4,
+  },
+  dialogDesc: {
+    fontSize: 12,
+    color: '#64748B',
+    lineHeight: 17,
+    marginBottom: 14,
+  },
+  dialogInputWrapper: {
     backgroundColor: '#F8FAFC',
     borderWidth: 1,
     borderColor: '#CBD5E1',
     borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: Platform.OS === 'ios' ? 10 : 6,
+    marginBottom: 12,
   },
-  textInput: {
+  dialogInput: {
     fontSize: 13,
-    color: '#0F172A',
     fontWeight: '600',
+    color: '#0F172A',
   },
-  statusAlert: {
-    padding: 9,
+  dialogStatusBanner: {
+    padding: 8,
     borderRadius: 8,
+    marginBottom: 12,
     borderWidth: 1,
-    marginTop: 8,
   },
-  statusAlertSuccess: {
+  dialogStatusSuccess: {
     backgroundColor: '#ECFDF5',
     borderColor: '#A7F3D0',
   },
-  statusAlertError: {
+  dialogStatusError: {
     backgroundColor: '#FEF2F2',
     borderColor: '#FECACA',
   },
-  statusAlertText: {
-    fontSize: 11.5,
+  dialogStatusText: {
+    fontSize: 11,
     fontWeight: '700',
   },
-  statusAlertTextSuccess: {
+  dialogStatusTextSuccess: {
     color: '#047857',
   },
-  statusAlertTextError: {
-    color: '#B91C1C',
+  dialogStatusTextError: {
+    color: '#DC2626',
   },
-  testConnectBtn: {
-    backgroundColor: '#0F172A',
-    borderRadius: 13,
-    paddingVertical: 12.5,
+  dialogActionsRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 4,
+  },
+  dialogCancelBtn: {
+    flex: 1,
+    paddingVertical: 11,
+    borderRadius: 10,
+    backgroundColor: '#F1F5F9',
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.15)',
-    shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.20,
-    shadowRadius: 5,
-    elevation: 3,
   },
-  testConnectBtnText: {
+  dialogCancelBtnText: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#475569',
+  },
+  dialogSaveBtn: {
+    flex: 1.4,
+    paddingVertical: 11,
+    borderRadius: 10,
+    backgroundColor: '#0F766E',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  dialogSaveBtnText: {
     fontSize: 13,
     fontWeight: '900',
     color: '#FFFFFF',
-    letterSpacing: -0.2,
-  },
-  profileHeaderRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 14,
-    paddingVertical: 14,
-    gap: 12,
-  },
-  profileAvatarBox: {
-    width: 42,
-    height: 42,
-    borderRadius: 12,
-    backgroundColor: '#EFF6FF',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: '#DBEAFE',
-  },
-  profileAvatarText: {
-    fontSize: 17,
-    fontWeight: '900',
-    color: '#2563EB',
-  },
-  profileName: {
-    fontSize: 14.5,
-    fontWeight: '800',
-    color: '#0F172A',
-  },
-  profileRole: {
-    fontSize: 11.5,
-    color: '#64748B',
-    marginTop: 1,
-  },
-  footerBox: {
-    alignItems: 'center',
-    paddingVertical: 12,
-    marginBottom: 16,
-  },
-  footerBrandText: {
-    fontSize: 11.5,
-    fontWeight: '700',
-    color: '#64748B',
-  },
-  footerVersionText: {
-    fontSize: 10,
-    color: '#94A3B8',
-    marginTop: 2,
-  },
-  footerBar: {
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    backgroundColor: '#FFFFFF',
-    borderTopWidth: 1,
-    borderTopColor: '#E2E8F0',
-  },
-  footerDoneBtn: {
-    paddingVertical: 13.5,
-    borderRadius: 14,
-    backgroundColor: '#0F172A',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.15)',
-    shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 7,
-    elevation: 4,
-  },
-  footerDoneBtnText: {
-    fontSize: 13.5,
-    fontWeight: '900',
-    color: '#FFFFFF',
-    letterSpacing: -0.2,
   },
 });

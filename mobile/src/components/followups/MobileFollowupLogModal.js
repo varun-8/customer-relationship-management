@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Modal,
   View,
@@ -10,19 +10,39 @@ import {
   Alert,
   Platform,
   ActivityIndicator,
+  Animated,
+  Easing,
+  Linking,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
 import { apiClient } from '../../api/client';
+import { MobileCalendarModal } from '../common/MobileCalendarModal';
 
 const OUTCOMES = [
-  { label: 'Spoke with Customer / Positive Interest', shortLabel: 'Positive Interest', icon: '✓', color: '#1D4ED8', bg: '#EFF6FF', border: '#BFDBFE' },
-  { label: 'Customer Visiting Showroom Today / Soon', shortLabel: 'Visiting Showroom', icon: '→', color: '#047857', bg: '#ECFDF5', border: '#A7F3D0' },
-  { label: 'Sent Revised Quotation / Discount Provided', shortLabel: 'Sent Revised Quote', icon: '•', color: '#7E22CE', bg: '#FAF5FF', border: '#DDD6FE' },
-  { label: 'No Answer / Customer Busy / Callback Requested', shortLabel: 'No Answer / Busy', icon: '!', color: '#B45309', bg: '#FFFBEB', border: '#FDE68A' },
-  { label: 'Negotiating Final Price / Competitor Comparison', shortLabel: 'Price Negotiation', icon: '₹', color: '#0369A1', bg: '#F0F9FF', border: '#BAE6FD' },
-  { label: 'Site Measurement Scheduled', shortLabel: 'Site Measurement', icon: '✦', color: '#4338CA', bg: '#EEF2FF', border: '#C7D2FE' },
-  { label: 'Order Confirmed / Ready for Billing', shortLabel: 'Order Confirmed', icon: '★', color: '#059669', bg: '#D1FAE5', border: '#6EE7B7' },
-  { label: 'Deal Lost / Postponed', shortLabel: 'Deal Lost / Postponed', icon: '✕', color: '#DC2626', bg: '#FEF2F2', border: '#FECACA' },
+  { label: 'Spoke with Customer / Positive Interest', shortLabel: 'Positive Interest', icon: 'checkmark-circle', color: '#2563EB' },
+  { label: 'Customer Visiting Showroom Today / Soon', shortLabel: 'Visiting Showroom', icon: 'storefront-outline', color: '#059669' },
+  { label: 'Sent Revised Quotation / Discount Provided', shortLabel: 'Sent Revised Quote', icon: 'document-text-outline', color: '#7C3AED' },
+  { label: 'No Answer / Customer Busy / Callback Requested', shortLabel: 'No Answer / Busy', icon: 'time-outline', color: '#D97706' },
+  { label: 'Negotiating Final Price / Competitor Comparison', shortLabel: 'Price Negotiation', icon: 'cash-outline', color: '#0284C7' },
+  { label: 'Site Measurement Scheduled', shortLabel: 'Site Measurement', icon: 'compass-outline', color: '#4F46E5' },
+  { label: 'Order Confirmed / Ready for Billing', shortLabel: 'Order Confirmed', icon: 'ribbon-outline', color: '#10B981' },
+  { label: 'Deal Lost / Postponed', shortLabel: 'Deal Lost / Postponed', icon: 'close-circle-outline', color: '#DC2626' },
+];
+
+const STAGES = [
+  'Foundation',
+  'Brickwork',
+  'Plastering',
+  'Painting',
+  'Building Completion',
+  'Renovation',
+];
+
+const TEMPERATURES = [
+  { label: 'Hot', title: 'Hot Deal', icon: 'flame', color: '#DC2626', bg: '#FEF2F2', border: '#FECACA' },
+  { label: 'Warm', title: 'Warm Lead', icon: 'flash', color: '#D97706', bg: '#FFFBEB', border: '#FDE68A' },
+  { label: 'Future', title: 'Future', icon: 'calendar', color: '#0F766E', bg: '#F0FDFA', border: '#99F6E4' },
 ];
 
 const QUICK_SNIPPETS = [
@@ -31,7 +51,67 @@ const QUICK_SNIPPETS = [
   'Scheduled site measurement',
   'Shared quote PDF on WhatsApp',
   'Callback requested in evening',
-];
+  'Comparing with competitor rates',
+// Parse historical discussion notes and conversation remarks
+const parseNotesHistory = (followUp) => {
+  if (!followUp) return [];
+  const f = followUp || {};
+  const d = (f.data instanceof Map) ? Object.fromEntries(f.data) : (f.data || f || {});
+  const rawNotes = f.notes || d.notes || '';
+  const rawDiscussion = f.discussionNotes || d.discussionNotes || '';
+  const rawRemarks = f.conversationRemarks || d.conversationRemarks || '';
+  const lastReason = f.lastReason || d.lastReason || '';
+
+  const combined = [rawNotes, rawRemarks, rawDiscussion].filter(Boolean).join('\n');
+  const lines = combined
+    .split('\n')
+    .map((l) => l.trim())
+    .filter(Boolean);
+
+  if (lastReason && lastReason.trim() && !lines.includes(lastReason.trim())) {
+    lines.push(lastReason.trim());
+  }
+
+  const uniqueLines = [];
+  const seen = new Set();
+  for (const line of lines) {
+    if (!seen.has(line)) {
+      seen.add(line);
+      uniqueLines.push(line);
+    }
+  }
+
+  const parsed = uniqueLines.map((line, idx) => {
+    const dateMatch = line.match(/^\[(.*?)\]\s*(.*)$/);
+    if (dateMatch) {
+      const dateStr = dateMatch[1];
+      const rest = dateMatch[2];
+      const outcomeMatch = rest.match(/^(.*?):\s*(.*)$/);
+      if (outcomeMatch) {
+        return {
+          id: `note-${idx}`,
+          date: dateStr,
+          outcome: outcomeMatch[1],
+          text: outcomeMatch[2],
+        };
+      }
+      return {
+        id: `note-${idx}`,
+        date: dateStr,
+        outcome: null,
+        text: rest,
+      };
+    }
+    return {
+      id: `note-${idx}`,
+      date: null,
+      outcome: null,
+      text: line,
+    };
+  });
+
+  return parsed.reverse();
+};
 
 export function MobileFollowupLogModal({
   visible,
@@ -40,27 +120,118 @@ export function MobileFollowupLogModal({
   onSaved,
   onOpenLostSale,
 }) {
-  if (!followUp) return null;
+
+  const safeFollowUp = followUp || {};
+  const data = safeFollowUp?.data instanceof Map
+    ? Object.fromEntries(safeFollowUp.data)
+    : (safeFollowUp?.data || safeFollowUp || {});
 
   const today = new Date();
   const tomorrow = new Date(today);
   tomorrow.setDate(tomorrow.getDate() + 1);
 
+  // Active section: 'log' (Active by default) | 'info' (Customer Information)
+  const [activeTab, setActiveTab] = useState('log');
+
   const [outcome, setOutcome] = useState('Spoke with Customer / Positive Interest');
-  const [leadTemperature, setLeadTemperature] = useState(followUp.leadTemperature || 'Hot');
-  const [customerName, setCustomerName] = useState(followUp.customerName || '');
-  const [phone, setPhone] = useState(followUp.phone || '');
+  const [leadTemperature, setLeadTemperature] = useState(safeFollowUp.leadTemperature || data.leadTemperature || 'Hot');
+  const [customerName, setCustomerName] = useState(safeFollowUp.customerName || data.customerName || data.name || '');
+  const [phone, setPhone] = useState(safeFollowUp.phone || data.phone || data.mobilePhone || data.mobileNumber || '');
+  const [houseStage, setHouseStage] = useState(safeFollowUp.houseStage || data.houseStage || data.stage || 'Plastering');
+  const [requirements, setRequirements] = useState(() => {
+    const r = safeFollowUp.requirement || data.requirement;
+    if (Array.isArray(r)) return r;
+    if (typeof r === 'string' && r) {
+      return r.split(',').map((x) => x.trim()).filter(Boolean);
+    }
+    return ['Tiles'];
+  });
   const [nextFollowUp, setNextFollowUp] = useState(
-    followUp.nextFollowUp || tomorrow.toISOString().split('T')[0]
+    safeFollowUp.nextFollowUp || data.nextFollowUp || tomorrow.toISOString().split('T')[0]
   );
   const [discussionNotes, setDiscussionNotes] = useState('');
-  const [quotationValue, setQuotationValue] = useState(
-    followUp.quotationValue !== undefined ? String(followUp.quotationValue) : ''
-  );
+  const [quotationValue, setQuotationValue] = useState(() => {
+    const q = safeFollowUp.quotationValue !== undefined ? safeFollowUp.quotationValue : data.quotationValue;
+    return q !== undefined && q !== null ? String(q) : '';
+  });
+
+  // Notes history stream state
+  const [notesHistory, setNotesHistory] = useState([]);
+  const [savingQuickNote, setSavingQuickNote] = useState(false);
+
   const [submitting, setSubmitting] = useState(false);
   const [outcomeModalVisible, setOutcomeModalVisible] = useState(false);
+  const [stageModalVisible, setStageModalVisible] = useState(false);
+  const [calendarVisible, setCalendarVisible] = useState(false);
+
+  // Smooth slide animation
+  const slideAnim = useRef(new Animated.Value(50)).current;
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (visible && followUp) {
+      setActiveTab('log'); // Always default to logging section when opened
+      const f = followUp || {};
+      const d = (f.data instanceof Map) ? Object.fromEntries(f.data) : (f.data || f || {});
+      setLeadTemperature(f.leadTemperature || d.leadTemperature || 'Hot');
+      setCustomerName(f.customerName || d.customerName || d.name || '');
+      setPhone(f.phone || d.phone || d.mobilePhone || d.mobileNumber || '');
+      setHouseStage(f.houseStage || d.houseStage || d.stage || 'Plastering');
+      const r = f.requirement || d.requirement;
+      setRequirements(Array.isArray(r) ? r : (typeof r === 'string' && r ? r.split(',').map((x) => x.trim()).filter(Boolean) : ['Tiles']));
+      setNextFollowUp(f.nextFollowUp || d.nextFollowUp || tomorrow.toISOString().split('T')[0]);
+      const q = f.quotationValue !== undefined ? f.quotationValue : d.quotationValue;
+      setQuotationValue(q !== undefined && q !== null ? String(q) : '');
+      setDiscussionNotes('');
+      setNotesHistory(parseNotesHistory(followUp));
+
+      Animated.parallel([
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 220,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: true,
+        }),
+        Animated.timing(slideAnim, {
+          toValue: 0,
+          duration: 250,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: true,
+        }),
+      ]).start();
+    } else {
+      fadeAnim.setValue(0);
+      slideAnim.setValue(50);
+    }
+  }, [visible, followUp]);
+
+  const handleSmoothClose = () => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 0,
+        duration: 180,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 50,
+        duration: 180,
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      if (onClose) onClose();
+    });
+  };
 
   const selectedOutcomeObj = OUTCOMES.find((o) => o.label === outcome) || OUTCOMES[0];
+
+  const handleToggleRequirement = (req) => {
+    setRequirements((prev) => {
+      if (prev.includes(req)) {
+        return prev.filter((r) => r !== req);
+      }
+      return [...prev, req];
+    });
+  };
 
   const handleQuickDays = (days) => {
     const d = new Date();
@@ -76,6 +247,70 @@ export function MobileFollowupLogModal({
     });
   };
 
+  const handleAddQuickNote = async () => {
+    const noteText = discussionNotes.trim();
+    if (!noteText || !followUp) return;
+    setSavingQuickNote(true);
+    try {
+      const todayStr = new Date().toISOString().split('T')[0];
+      const newEntry = `[${todayStr}] Remark: ${noteText}`;
+      const f = followUp || {};
+      const d = (f.data instanceof Map) ? Object.fromEntries(f.data) : (f.data || f || {});
+      const existingNotes = f.notes || d.notes || '';
+      const updatedNotes = existingNotes ? `${existingNotes}\n${newEntry}` : newEntry;
+
+      const recordId = f._id || f.customerId || d.customerId;
+      const res = await apiClient.updateCustomer(recordId, {
+        notes: updatedNotes,
+        lastReason: newEntry,
+        conversationRemarks: (f.conversationRemarks || d.conversationRemarks)
+          ? `${f.conversationRemarks || d.conversationRemarks}\n${newEntry}`
+          : newEntry,
+      });
+
+      if (res && res.success) {
+        Alert.alert('Note Recorded', 'Discussion note added to customer history!');
+        const updated = {
+          ...f,
+          notes: updatedNotes,
+          lastReason: newEntry,
+        };
+        setNotesHistory(parseNotesHistory(updated));
+        setDiscussionNotes('');
+        if (onSaved) onSaved();
+      } else {
+        Alert.alert('Error', res?.message || 'Failed to record discussion note');
+      }
+    } catch (err) {
+      Alert.alert('Error', err.message || 'Error saving discussion note');
+    } finally {
+      setSavingQuickNote(false);
+    }
+  };
+
+  const formatDisplayDate = (dStr) => {
+    if (!dStr) return 'Select Date';
+    try {
+      const parts = dStr.split('-');
+      if (parts.length === 3) {
+        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        const m = months[parseInt(parts[1], 10) - 1];
+        return `${parseInt(parts[2], 10)} ${m} ${parts[0]}`;
+      }
+      return dStr;
+    } catch (e) {
+      return dStr;
+    }
+  };
+
+  const openWhatsApp = () => {
+    if (!phone) return;
+    const cleanPhone = phone.replace(/[^0-9]/g, '');
+    const formattedPhone = cleanPhone.startsWith('91') ? cleanPhone : `91${cleanPhone}`;
+    const text = encodeURIComponent(`Hello ${customerName || 'Customer'}, following up on your tile requirement.`);
+    Linking.openURL(`https://wa.me/${formattedPhone}?text=${text}`);
+  };
+
   const handleSubmit = async () => {
     if (outcome === 'Deal Lost / Postponed') {
       if (onOpenLostSale) {
@@ -87,13 +322,16 @@ export function MobileFollowupLogModal({
 
     setSubmitting(true);
     try {
-      const res = await apiClient.logFollowupActivity(followUp._id, {
+      const recordId = followUp._id || followUp.customerId || data.customerId;
+      const res = await apiClient.logFollowupActivity(recordId, {
         outcome,
         customerName: customerName.trim(),
         phone: phone.trim(),
         discussionNotes: discussionNotes.trim(),
         nextFollowUp,
         leadTemperature,
+        houseStage,
+        requirement: requirements,
         quotationValue: quotationValue ? Number(quotationValue) : undefined,
         statusUpdate: outcome === 'Order Confirmed / Ready for Billing' ? 'Order Confirmed' : undefined,
       });
@@ -101,7 +339,7 @@ export function MobileFollowupLogModal({
       if (res && res.success) {
         Alert.alert('Activity Logged', `Follow-up updated for ${customerName || 'Customer'}!`);
         if (onSaved) onSaved();
-        onClose();
+        handleSmoothClose();
       } else {
         Alert.alert(
           'Connection Issue',
@@ -126,36 +364,102 @@ export function MobileFollowupLogModal({
     }
   };
 
+  const customerId = followUp?.customerId || data.customerId || 'CUS-000000';
+  const customerType = followUp?.customerType || data.customerType || 'Building Owner';
+  const location = followUp?.location || data.location || '';
+  const leadSource = followUp?.leadSource || data.leadSource || 'Showroom Walk-in';
+  const salesperson = followUp?.salesperson || data.salesperson || 'Showroom Team';
+  const approxQuantity = followUp?.approxQuantity || data.approxQuantity || '';
+  const tileBudget = followUp?.tileBudget || data.tileBudget || '';
+  const adhesiveRequirement = followUp?.adhesiveRequirement || data.adhesiveRequirement || 'No';
+  const orderValue = followUp?.orderValue || data.orderValue || '';
+  const crossSell = followUp?.crossSell || data.crossSell || '';
+  const followUpCount = followUp?.followUpCount || data.followUpCount || 0;
+  const lastFollowUp = followUp?.lastFollowUp || data.lastFollowUp || '';
+  const lastReason = followUp?.lastReason || data.lastReason || '';
+  const registeredDate = followUp?.entryDate || data.entryDate || followUp?.createdAt || '';
+
+  if (!visible || !followUp) return null;
+
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <View style={styles.modalOverlay}>
-        <View style={styles.modalCard}>
+    <Modal visible={visible} transparent animationType="none" onRequestClose={handleSmoothClose}>
+      <Animated.View style={[styles.modalOverlay, { opacity: fadeAnim }]}>
+        <Animated.View
+          style={[
+            styles.modalCard,
+            {
+              transform: [{ translateY: slideAnim }],
+            },
+          ]}
+        >
           {/* Top Drag Handle */}
           <View style={styles.sheetHandleWrapper}>
             <View style={styles.sheetHandle} />
           </View>
 
-          {/* Modern App Header Bar */}
+          {/* Executive Header Bar */}
           <View style={styles.headerLight}>
             <View style={styles.headerIconBoxLight}>
-              <Text style={styles.headerIconGlyph}>✎</Text>
+              <Ionicons name="create-outline" size={20} color="#0F766E" />
             </View>
             <View style={{ flex: 1 }}>
               <Text style={styles.headerTitleMain}>Log Follow-up Activity</Text>
               <Text style={styles.headerSubtitleText}>Record conversation remarks & schedule reminder</Text>
             </View>
             <TouchableOpacity
-              onPress={onClose}
+              onPress={handleSmoothClose}
               style={styles.headerCloseBtnLight}
               activeOpacity={0.7}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
-              <Text style={styles.headerCloseBtnTextLight}>✕</Text>
+              <Ionicons name="close" size={18} color="#64748B" />
+            </TouchableOpacity>
+          </View>
+
+          {/* Top Segmented Navigation Switcher: [Log Activity (Default)] vs [Customer Info] */}
+          <View style={styles.segmentedTabWrapper}>
+            <TouchableOpacity
+              style={[
+                styles.segmentedTabBtn,
+                activeTab === 'log' && styles.segmentedTabBtnActive,
+              ]}
+              onPress={() => setActiveTab('log')}
+              activeOpacity={0.8}
+            >
+              <Ionicons
+                name="clipboard-outline"
+                size={14}
+                color={activeTab === 'log' ? '#0F766E' : '#64748B'}
+                style={{ marginRight: 6 }}
+              />
+              <Text style={[styles.segmentedTabText, activeTab === 'log' && styles.segmentedTabTextActive]}>
+                Log Activity
+              </Text>
+              {activeTab === 'log' && <View style={styles.segmentedActiveDot} />}
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.segmentedTabBtn,
+                activeTab === 'info' && styles.segmentedTabBtnActive,
+              ]}
+              onPress={() => setActiveTab('info')}
+              activeOpacity={0.8}
+            >
+              <Ionicons
+                name="person-circle-outline"
+                size={15}
+                color={activeTab === 'info' ? '#0F766E' : '#64748B'}
+                style={{ marginRight: 6 }}
+              />
+              <Text style={[styles.segmentedTabText, activeTab === 'info' && styles.segmentedTabTextActive]}>
+                Customer Information
+              </Text>
             </TouchableOpacity>
           </View>
 
           <ScrollView showsVerticalScrollIndicator={false} style={styles.scroll} contentContainerStyle={{ padding: 16 }}>
-            {/* Modern Customer Target Profile Card */}
+            {/* Customer Target Profile Header Summary Bar */}
             <View style={styles.customerCard}>
               <View style={styles.customerAvatarCircle}>
                 <Text style={styles.customerAvatarText}>
@@ -165,313 +469,702 @@ export function MobileFollowupLogModal({
 
               <View style={{ flex: 1 }}>
                 <View style={styles.customerNameRow}>
-                  <TextInput
-                    style={styles.customerNameInput}
-                    value={customerName}
-                    onChangeText={setCustomerName}
-                    placeholder="Customer Name"
-                    placeholderTextColor="#94A3B8"
-                  />
-                  {followUp.customerId && (
+                  <Text style={styles.customerNameText} numberOfLines={1}>
+                    {customerName || 'Customer Lead'}
+                  </Text>
+                  {customerId && (
                     <View style={styles.headerIdBadgeLight}>
-                      <Text style={styles.headerIdBadgeTextLight}>#{followUp.customerId}</Text>
+                      <Text style={styles.headerIdBadgeTextLight}>#{customerId}</Text>
                     </View>
                   )}
                 </View>
 
                 <View style={styles.customerMetaRow}>
-                  <View style={styles.phoneInputWrap}>
-                    <Text style={styles.phoneIconSmall}>📞</Text>
-                    <TextInput
-                      style={styles.customerPhoneInput}
-                      value={phone}
-                      onChangeText={setPhone}
-                      placeholder="Mobile Phone"
-                      placeholderTextColor="#94A3B8"
-                      keyboardType="phone-pad"
-                    />
-                  </View>
+                  {phone ? (
+                    <View style={styles.phoneBadge}>
+                      <Ionicons name="call-outline" size={12} color="#475569" />
+                      <Text style={styles.phoneText}>{phone}</Text>
+                    </View>
+                  ) : null}
 
-                  {followUp.customerType ? (
+                  {customerType ? (
                     <View style={styles.customerTypePill}>
-                      <Text style={styles.customerTypePillText}>{followUp.customerType}</Text>
+                      <Text style={styles.customerTypePillText}>{customerType}</Text>
                     </View>
                   ) : null}
                 </View>
               </View>
+
+              {/* Quick Communication Shortcuts */}
+              {phone ? (
+                <View style={{ flexDirection: 'row', gap: 6, alignItems: 'center' }}>
+                  <TouchableOpacity
+                    style={styles.headerActionBtnCall}
+                    onPress={() => Linking.openURL(`tel:${phone}`)}
+                    activeOpacity={0.8}
+                  >
+                    <Ionicons name="call" size={13} color="#2563EB" />
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.headerActionBtnWa}
+                    onPress={openWhatsApp}
+                    activeOpacity={0.8}
+                  >
+                    <Ionicons name="logo-whatsapp" size={14} color="#15803D" />
+                  </TouchableOpacity>
+                </View>
+              ) : null}
             </View>
 
-            {/* 1. Discussion Outcome Dropdown List Box */}
-            <View style={styles.sectionCard}>
-              <View style={styles.sectionHeadingRow}>
-                <View style={styles.sectionHeadingIconCircle}>
-                  <Text style={styles.sectionHeadingIcon}>✓</Text>
-                </View>
-                <Text style={styles.sectionHeading}>1. Call Outcome & Priority</Text>
-              </View>
-              
-              {/* Outcome Dropdown Trigger Box */}
-              <TouchableOpacity
-                style={[
-                  styles.dropdownTriggerBox,
-                  { backgroundColor: selectedOutcomeObj.bg, borderColor: selectedOutcomeObj.border },
-                ]}
-                onPress={() => setOutcomeModalVisible(true)}
-                activeOpacity={0.8}
-              >
-                <View style={styles.dropdownTriggerLeftGroup}>
-                  <View style={[styles.outcomeIconBadge, { backgroundColor: selectedOutcomeObj.color }]}>
-                    <Text style={styles.outcomeIconBadgeText}>{selectedOutcomeObj.icon}</Text>
+            {/* TAB 1: LOG ACTIVITY FORM (Active by default) */}
+            {activeTab === 'log' ? (
+              <View>
+                {/* CARD 1: DISCUSSION OUTCOME & PRIORITY DROPDOWN */}
+                <View style={styles.sectionCard}>
+                  <View style={styles.sectionHeadingRow}>
+                    <Ionicons name="checkmark-circle-outline" size={16} color="#0F766E" />
+                    <Text style={styles.sectionHeading}>Call Outcome & Lead Priority</Text>
                   </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.dropdownTriggerHint}>Selected Outcome</Text>
-                    <Text style={[styles.dropdownTriggerValueText, { color: selectedOutcomeObj.color }]} numberOfLines={1}>
-                      {selectedOutcomeObj.label}
-                    </Text>
-                  </View>
-                </View>
-                <View style={styles.dropdownTriggerChevronBox}>
-                  <Text style={{ fontSize: 13, color: selectedOutcomeObj.color, fontWeight: '800' }}>▼</Text>
-                </View>
-              </TouchableOpacity>
 
-              {/* Outcome Selection Modal Sheet */}
-              <Modal
-                visible={outcomeModalVisible}
-                transparent
-                animationType="slide"
-                onRequestClose={() => setOutcomeModalVisible(false)}
-              >
-                <View style={styles.outcomeModalBackdrop}>
-                  <View style={styles.outcomeModalSheet}>
-                    <View style={styles.modalHandleWrapper}>
-                      <View style={styles.modalHandle} />
+                  {/* Outcome Dropdown List Box */}
+                  <Text style={styles.fieldMicroLabel}>CALL OUTCOME *</Text>
+                  <TouchableOpacity
+                    style={styles.dropdownTriggerBox}
+                    onPress={() => setOutcomeModalVisible(true)}
+                    activeOpacity={0.8}
+                  >
+                    <View style={styles.dropdownTriggerLeftGroup}>
+                      <View style={[styles.outcomeIconBadge, { backgroundColor: selectedOutcomeObj.color }]}>
+                        <Ionicons name={selectedOutcomeObj.icon} size={15} color="#FFFFFF" />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={[styles.dropdownTriggerValueText, { color: selectedOutcomeObj.color }]} numberOfLines={1}>
+                          {selectedOutcomeObj.label}
+                        </Text>
+                        <Text style={styles.dropdownTriggerHint}>Tap to change outcome</Text>
+                      </View>
                     </View>
+                    <Ionicons name="chevron-down" size={18} color="#64748B" />
+                  </TouchableOpacity>
 
-                    <View style={styles.outcomeModalHeader}>
-                      <Text style={styles.outcomeModalTitle}>Select Call Outcome</Text>
-                      <TouchableOpacity onPress={() => setOutcomeModalVisible(false)} style={styles.modalCloseBtn}>
-                        <Text style={styles.modalCloseBtnText}>Done</Text>
+                  {/* Outcome Selection Modal */}
+                  <Modal
+                    visible={outcomeModalVisible}
+                    transparent
+                    animationType="fade"
+                    onRequestClose={() => setOutcomeModalVisible(false)}
+                  >
+                    <View style={styles.outcomeModalBackdrop}>
+                      <View style={styles.outcomeModalSheet}>
+                        <View style={styles.modalHandleWrapper}>
+                          <View style={styles.modalHandle} />
+                        </View>
+
+                        <View style={styles.outcomeModalHeader}>
+                          <Text style={styles.outcomeModalTitle}>Select Call Outcome</Text>
+                          <TouchableOpacity onPress={() => setOutcomeModalVisible(false)} style={styles.modalCloseBtn}>
+                            <Text style={styles.modalCloseBtnText}>Done</Text>
+                          </TouchableOpacity>
+                        </View>
+
+                        <ScrollView style={{ maxHeight: 380 }} showsVerticalScrollIndicator={false}>
+                          {OUTCOMES.map((o) => {
+                            const isSelected = outcome === o.label;
+                            return (
+                              <TouchableOpacity
+                                key={o.label}
+                                style={[
+                                  styles.outcomeListItem,
+                                  isSelected && { borderColor: o.color, backgroundColor: '#F8FAFC' },
+                                ]}
+                                onPress={() => {
+                                  setOutcome(o.label);
+                                  setOutcomeModalVisible(false);
+                                }}
+                                activeOpacity={0.75}
+                              >
+                                <View style={[styles.outcomeListIconBadge, { backgroundColor: o.color }]}>
+                                  <Ionicons name={o.icon} size={14} color="#FFFFFF" />
+                                </View>
+                                <Text style={[styles.outcomeListItemText, isSelected && { color: o.color, fontWeight: '900' }]}>
+                                  {o.label}
+                                </Text>
+                                {isSelected && (
+                                  <Ionicons name="checkmark-sharp" size={18} color={o.color} />
+                                )}
+                              </TouchableOpacity>
+                            );
+                          })}
+                        </ScrollView>
+                      </View>
+                    </View>
+                  </Modal>
+
+                  {/* Lead Priority Selector */}
+                  <View style={[styles.subHeadingRow, { marginTop: 14 }]}>
+                    <Text style={styles.fieldMicroLabel}>LEAD PRIORITY TEMPERATURE</Text>
+                  </View>
+                  <View style={styles.tempRow}>
+                    {TEMPERATURES.map((temp) => {
+                      const isSelected = leadTemperature === temp.label;
+                      return (
+                        <TouchableOpacity
+                          key={temp.label}
+                          style={[
+                            styles.tempBtn,
+                            isSelected && { backgroundColor: temp.bg, borderColor: temp.border, borderWidth: 1.5 },
+                          ]}
+                          onPress={() => setLeadTemperature(temp.label)}
+                          activeOpacity={0.75}
+                        >
+                          <Ionicons name={temp.icon} size={14} color={isSelected ? temp.color : '#94A3B8'} />
+                          <Text style={[styles.tempBtnText, isSelected && { color: temp.color, fontWeight: '800' }]}>
+                            {temp.title}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                </View>
+
+                {/* CARD 2: SITE STAGE & MATERIAL REQUIREMENTS */}
+                <View style={styles.sectionCard}>
+                  <View style={styles.sectionHeadingRow}>
+                    <Ionicons name="business-outline" size={16} color="#0F766E" />
+                    <Text style={styles.sectionHeading}>Site Stage & Requirements</Text>
+                  </View>
+
+                  {/* Construction Stage Dropdown List Box */}
+                  <Text style={styles.fieldMicroLabel}>CONSTRUCTION / PROJECT STAGE *</Text>
+                  <TouchableOpacity
+                    style={styles.dropdownTriggerBox}
+                    onPress={() => setStageModalVisible(true)}
+                    activeOpacity={0.8}
+                  >
+                    <View style={styles.dropdownTriggerLeftGroup}>
+                      <View style={[styles.outcomeIconBadge, { backgroundColor: '#0F766E' }]}>
+                        <Ionicons name="home-outline" size={15} color="#FFFFFF" />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={[styles.dropdownTriggerValueText, { color: '#0F172A' }]}>
+                          {houseStage}
+                        </Text>
+                        <Text style={styles.dropdownTriggerHint}>Tap to change construction phase</Text>
+                      </View>
+                    </View>
+                    <Ionicons name="chevron-down" size={18} color="#64748B" />
+                  </TouchableOpacity>
+
+                  {/* House Stage Selection Modal Sheet */}
+                  <Modal
+                    visible={stageModalVisible}
+                    transparent
+                    animationType="fade"
+                    onRequestClose={() => setStageModalVisible(false)}
+                  >
+                    <View style={styles.outcomeModalBackdrop}>
+                      <View style={styles.outcomeModalSheet}>
+                        <View style={styles.modalHandleWrapper}>
+                          <View style={styles.modalHandle} />
+                        </View>
+
+                        <View style={styles.outcomeModalHeader}>
+                          <Text style={styles.outcomeModalTitle}>Select Construction Stage</Text>
+                          <TouchableOpacity onPress={() => setStageModalVisible(false)} style={styles.modalCloseBtn}>
+                            <Text style={styles.modalCloseBtnText}>Done</Text>
+                          </TouchableOpacity>
+                        </View>
+
+                        <ScrollView style={{ maxHeight: 300 }} showsVerticalScrollIndicator={false}>
+                          {STAGES.map((stg) => {
+                            const isSelected = houseStage === stg;
+                            return (
+                              <TouchableOpacity
+                                key={stg}
+                                style={[
+                                  styles.outcomeListItem,
+                                  isSelected && { borderColor: '#0F766E', backgroundColor: '#F0FDFA' },
+                                ]}
+                                onPress={() => {
+                                  setHouseStage(stg);
+                                  setStageModalVisible(false);
+                                }}
+                                activeOpacity={0.75}
+                              >
+                                <View style={[styles.outcomeListIconBadge, { backgroundColor: isSelected ? '#0F766E' : '#E2E8F0' }]}>
+                                  <Ionicons name="hammer-outline" size={14} color={isSelected ? '#FFFFFF' : '#64748B'} />
+                                </View>
+                                <Text style={[styles.outcomeListItemText, isSelected && { color: '#0F766E', fontWeight: '900' }]}>
+                                  {stg}
+                                </Text>
+                                {isSelected && (
+                                  <Ionicons name="checkmark-sharp" size={18} color="#0F766E" />
+                                )}
+                              </TouchableOpacity>
+                            );
+                          })}
+                        </ScrollView>
+                      </View>
+                    </View>
+                  </Modal>
+
+                  {/* Tile & Floor Material Requirements (Multi-select) */}
+                  <View style={[styles.subHeadingRow, { marginTop: 14 }]}>
+                    <Text style={styles.fieldMicroLabel}>MATERIAL REQUIREMENTS CATEGORIES</Text>
+                  </View>
+                  <View style={styles.reqTagsWrap}>
+                    {['Tiles', 'Sanitary', 'Adhesive / Epoxy', 'CP Fittings', 'Bath Fittings', 'Kitchen Sinks'].map((req) => {
+                      const isSelected = requirements.includes(req);
+                      return (
+                        <TouchableOpacity
+                          key={req}
+                          onPress={() => handleToggleRequirement(req)}
+                          style={[styles.reqTagBtn, isSelected && styles.reqTagBtnActive]}
+                          activeOpacity={0.75}
+                        >
+                          <Text style={[styles.reqTagBtnText, isSelected && styles.reqTagBtnTextActive]}>
+                            {isSelected ? '✓ ' : '+ '}{req}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+
+                  {/* Deal / Quotation Value */}
+                  <View style={[styles.subHeadingRow, { marginTop: 14 }]}>
+                    <Text style={styles.fieldMicroLabel}>DEAL / QUOTATION VALUE (₹)</Text>
+                  </View>
+                  <View style={styles.quoteValueInputWrapper}>
+                    <View style={styles.currencyPrefixBadgeEmerald}>
+                      <Text style={styles.currencyPrefixTextEmerald}>₹</Text>
+                    </View>
+                    <TextInput
+                      style={[styles.quoteTextInput, { flex: 1 }]}
+                      value={quotationValue}
+                      onChangeText={setQuotationValue}
+                      keyboardType="numeric"
+                      placeholder="e.g. 150000"
+                      placeholderTextColor="#94A3B8"
+                    />
+                  </View>
+                </View>
+
+                {/* CARD 3: SCHEDULE REMINDER DATE */}
+                <View style={styles.sectionCard}>
+                  <View style={styles.sectionHeadingRow}>
+                    <Ionicons name="calendar-outline" size={16} color="#0F766E" />
+                    <Text style={styles.sectionHeading}>Next Follow-up Reminder Schedule</Text>
+                  </View>
+
+                  <View style={styles.scheduleRowHeader}>
+                    <Text style={styles.fieldMicroLabel}>SCHEDULED REMINDER DATE *</Text>
+                    <View style={{ flexDirection: 'row', gap: 5 }}>
+                      <TouchableOpacity style={styles.quickDayBtn} onPress={() => handleQuickDays(1)}>
+                        <Text style={styles.quickDayText}>+1d</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity style={styles.quickDayBtn} onPress={() => handleQuickDays(3)}>
+                        <Text style={styles.quickDayText}>+3d</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity style={styles.quickDayBtn} onPress={() => handleQuickDays(7)}>
+                        <Text style={styles.quickDayText}>+1w</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity style={styles.quickDayBtn} onPress={() => handleQuickDays(15)}>
+                        <Text style={styles.quickDayText}>+15d</Text>
                       </TouchableOpacity>
                     </View>
+                  </View>
 
-                    <ScrollView style={{ maxHeight: 360 }} showsVerticalScrollIndicator={false}>
-                      {OUTCOMES.map((o) => {
-                        const isSelected = outcome === o.label;
-                        return (
-                          <TouchableOpacity
-                            key={o.label}
-                            style={[
-                              styles.outcomeListItem,
-                              isSelected && { backgroundColor: o.bg, borderColor: o.border },
-                            ]}
-                            onPress={() => {
-                              setOutcome(o.label);
-                              setOutcomeModalVisible(false);
-                            }}
-                            activeOpacity={0.75}
-                          >
-                            <Text style={{ fontSize: 14, fontWeight: '800', marginRight: 10, color: o.color }}>{o.icon}</Text>
-                            <Text style={[styles.outcomeListItemText, isSelected && { color: o.color, fontWeight: '800' }]}>
-                              {o.label}
-                            </Text>
-                            {isSelected && (
-                              <View style={[styles.outcomeCheckmarkBadge, { backgroundColor: o.color }]}>
-                                <Text style={{ color: '#FFFFFF', fontSize: 11, fontWeight: '900' }}>✓</Text>
+                  <TouchableOpacity
+                    style={styles.modernDateTrigger}
+                    onPress={() => setCalendarVisible(true)}
+                    activeOpacity={0.8}
+                  >
+                    <View style={styles.dateTriggerLeft}>
+                      <View style={styles.calendarIconCircle}>
+                        <Ionicons name="calendar" size={16} color="#0F766E" />
+                      </View>
+                      <View>
+                        <Text style={styles.dateTriggerLabel}>SCHEDULED FOR</Text>
+                        <Text style={styles.dateTriggerVal}>{formatDisplayDate(nextFollowUp)}</Text>
+                      </View>
+                    </View>
+                    <View style={styles.changeDatePill}>
+                      <Text style={styles.changeDatePillText}>Change Date ›</Text>
+                    </View>
+                  </TouchableOpacity>
+
+                  {/* Reusable Calendar Modal */}
+                  <MobileCalendarModal
+                    visible={calendarVisible}
+                    value={nextFollowUp}
+                    onSelect={(date) => setNextFollowUp(date)}
+                    onClose={() => setCalendarVisible(false)}
+                    title="Schedule Follow-up Date"
+                    accentColor="#0F766E"
+                  />
+                </View>
+
+                {/* CARD 4: SEPARATE DEDICATED SECTION FOR DISCUSSION & CUSTOMER NOTES */}
+                <View style={[styles.sectionCard, styles.notesDedicatedCard]}>
+                  {/* Section Heading & Notes Counter Badge */}
+                  <View style={[styles.sectionHeadingRow, { justifyContent: 'space-between' }]}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
+                      <View style={styles.notesSectionIconCircle}>
+                        <Ionicons name="chatbubble-ellipses" size={16} color="#0F766E" />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.sectionHeading}>4. Discussion & Customer Notes</Text>
+                        <Text style={styles.notesSectionSubtext}>Conversation summary, commitments, & history</Text>
+                      </View>
+                    </View>
+                    <View style={styles.notesCountBadge}>
+                      <Text style={styles.notesCountBadgeText}>{notesHistory.length} {notesHistory.length === 1 ? 'Note' : 'Notes'}</Text>
+                    </View>
+                  </View>
+
+                  {/* A: Previous Customer Notes Stream */}
+                  <View style={{ marginTop: 10, marginBottom: 12 }}>
+                    <Text style={[styles.fieldMicroLabel, { marginBottom: 6 }]}>PREVIOUS DISCUSSION NOTES & REMARKS</Text>
+                    {notesHistory.length === 0 ? (
+                      <View style={styles.noNotesBox}>
+                        <Text style={styles.noNotesText}>
+                          💬 No previous conversation notes found. Enter your first note below.
+                        </Text>
+                      </View>
+                    ) : (
+                      <ScrollView style={{ maxHeight: 180 }} nestedScrollEnabled showsVerticalScrollIndicator={false}>
+                        {notesHistory.map((n) => (
+                          <View key={n.id} style={styles.noteHistoryCard}>
+                            <View style={styles.noteCardHeader}>
+                              <View style={styles.noteDateBadge}>
+                                <Text style={styles.noteDateBadgeText}>📅 {n.date || 'Recorded'}</Text>
                               </View>
-                            )}
-                          </TouchableOpacity>
-                        );
-                      })}
-                    </ScrollView>
+                              {n.outcome ? (
+                                <View style={styles.noteOutcomeBadge}>
+                                  <Text style={styles.noteOutcomeBadgeText} numberOfLines={1}>{n.outcome}</Text>
+                                </View>
+                              ) : null}
+                            </View>
+                            <Text style={styles.noteBodyText}>{n.text}</Text>
+                          </View>
+                        ))}
+                      </ScrollView>
+                    )}
+                  </View>
+
+                  {/* B: Quick Discussion Snippets */}
+                  <Text style={[styles.fieldMicroLabel, { marginTop: 4 }]}>QUICK REMARK SNIPPETS (TAP TO APPEND)</Text>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6, paddingVertical: 6 }}>
+                    {QUICK_SNIPPETS.map((snip, idx) => (
+                      <TouchableOpacity
+                        key={idx}
+                        style={styles.snippetChip}
+                        onPress={() => handleAppendSnippet(snip)}
+                        activeOpacity={0.75}
+                      >
+                        <Text style={styles.snippetChipText}>+ {snip}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+
+                  {/* Multi-line Notes Text Input */}
+                  <Text style={[styles.fieldMicroLabel, { marginTop: 8 }]}>NEW DISCUSSION REMARK / CUSTOMER NOTES</Text>
+                  <TextInput
+                    style={styles.notesTextInput}
+                    value={discussionNotes}
+                    onChangeText={setDiscussionNotes}
+                    multiline
+                    placeholder="Type detailed customer conversation notes, requirements, objections or price negotiations..."
+                    placeholderTextColor="#94A3B8"
+                  />
+
+                  {/* Sub-bar with quick save note option */}
+                  <View style={styles.addNoteActionRow}>
+                    <Text style={styles.notesSubHint} numberOfLines={1}>
+                      💡 Auto-saved to history on submit.
+                    </Text>
+                    <TouchableOpacity
+                      style={[
+                        styles.addNoteBtn,
+                        (!discussionNotes.trim() || savingQuickNote) && { opacity: 0.5 },
+                      ]}
+                      onPress={handleAddQuickNote}
+                      disabled={!discussionNotes.trim() || savingQuickNote}
+                      activeOpacity={0.75}
+                    >
+                      <Ionicons name="add" size={14} color="#0F172A" />
+                      <Text style={styles.addNoteBtnText}>
+                        {savingQuickNote ? 'Saving...' : 'Add Note Now'}
+                      </Text>
+                    </TouchableOpacity>
                   </View>
                 </View>
-              </Modal>
-
-              {/* Lead Priority Temperature Selector */}
-              <View style={styles.subHeadingRow}>
-                <Text style={styles.subHeadingLabel}>Lead Priority Temperature</Text>
               </View>
-              <View style={styles.tempRow}>
+            ) : (
+              /* TAB 2: CUSTOMER INFORMATION VIEW */
+              <View>
+                {/* 1. Contact & Profile Details Card */}
+                <View style={styles.sectionCard}>
+                  <View style={styles.sectionHeadingRow}>
+                    <Ionicons name="person-outline" size={16} color="#2563EB" />
+                    <Text style={styles.sectionHeading}>1. Contact & Profile Information</Text>
+                  </View>
+
+                  <View style={styles.infoRow}>
+                    <Text style={styles.infoLabel}>Customer ID</Text>
+                    <Text style={[styles.infoValue, { fontFamily: 'monospace', fontWeight: '800', color: '#2563EB' }]}>
+                      {customerId}
+                    </Text>
+                  </View>
+
+                  <View style={styles.infoRow}>
+                    <Text style={styles.infoLabel}>Client Name</Text>
+                    <Text style={[styles.infoValue, { fontWeight: '800' }]}>
+                      {customerName || '—'}
+                    </Text>
+                  </View>
+
+                  <View style={styles.infoRow}>
+                    <Text style={styles.infoLabel}>Mobile Number</Text>
+                    <Text style={[styles.infoValue, { fontFamily: 'monospace', fontWeight: '800' }]}>
+                      {phone || '—'}
+                    </Text>
+                  </View>
+
+                  <View style={styles.infoRow}>
+                    <Text style={styles.infoLabel}>Site / Location</Text>
+                    <Text style={styles.infoValue}>
+                      {location || '—'}
+                    </Text>
+                  </View>
+
+                  <View style={styles.infoRow}>
+                    <Text style={styles.infoLabel}>Customer Type</Text>
+                    <View style={styles.infoBadge}>
+                      <Text style={styles.infoBadgeText}>{customerType}</Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.infoRow}>
+                    <Text style={styles.infoLabel}>Lead Source</Text>
+                    <Text style={styles.infoValue}>
+                      {leadSource}
+                    </Text>
+                  </View>
+
+                  <View style={styles.infoRow}>
+                    <Text style={styles.infoLabel}>Salesperson Assigned</Text>
+                    <Text style={[styles.infoValue, { color: '#2563EB', fontWeight: '800' }]}>
+                      {salesperson}
+                    </Text>
+                  </View>
+
+                  <View style={[styles.infoRow, { borderBottomWidth: 0 }]}>
+                    <Text style={styles.infoLabel}>Registration Date</Text>
+                    <Text style={styles.infoValue}>
+                      {registeredDate ? formatDisplayDate(registeredDate) : 'Recent'}
+                    </Text>
+                  </View>
+                </View>
+
+                {/* 2. Project & Material Specifications Card */}
+                <View style={styles.sectionCard}>
+                  <View style={styles.sectionHeadingRow}>
+                    <Ionicons name="cube-outline" size={16} color="#059669" />
+                    <Text style={styles.sectionHeading}>2. Project & Material Specifications</Text>
+                  </View>
+
+                  <View style={styles.infoRow}>
+                    <Text style={styles.infoLabel}>House Stage</Text>
+                    <View style={[styles.infoBadge, { backgroundColor: '#EFF6FF', borderColor: '#BFDBFE' }]}>
+                      <Text style={[styles.infoBadgeText, { color: '#1D4ED8' }]}>{houseStage}</Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.infoRow}>
+                    <Text style={styles.infoLabel}>Requirements</Text>
+                    <Text style={[styles.infoValue, { fontWeight: '700' }]}>
+                      {requirements.join(', ') || 'Tiles'}
+                    </Text>
+                  </View>
+
+                  <View style={styles.infoRow}>
+                    <Text style={styles.infoLabel}>Approx Coverage Area</Text>
+                    <Text style={[styles.infoValue, { fontWeight: '800' }]}>
+                      {approxQuantity ? `${approxQuantity} sq.ft` : '—'}
+                    </Text>
+                  </View>
+
+                  <View style={styles.infoRow}>
+                    <Text style={styles.infoLabel}>Tile Target Budget</Text>
+                    <Text style={[styles.infoValue, { fontWeight: '800', color: '#0F172A' }]}>
+                      {tileBudget ? `₹ ${Number(tileBudget).toLocaleString('en-IN')}` : '—'}
+                    </Text>
+                  </View>
+
+                  <View style={[styles.infoRow, { borderBottomWidth: 0 }]}>
+                    <Text style={styles.infoLabel}>Adhesive / Epoxy Req.</Text>
+                    <Text style={[styles.infoValue, { fontWeight: '700' }]}>
+                      {adhesiveRequirement}
+                    </Text>
+                  </View>
+                </View>
+
+                {/* 3. Quotation & Commercial Details Card */}
+                <View style={styles.sectionCard}>
+                  <View style={styles.sectionHeadingRow}>
+                    <Ionicons name="cash-outline" size={16} color="#EA580C" />
+                    <Text style={styles.sectionHeading}>3. Quotation & Commercial Details</Text>
+                  </View>
+
+                  <View style={styles.infoRow}>
+                    <Text style={styles.infoLabel}>Quotation Value</Text>
+                    <Text style={[styles.infoValue, { fontSize: 15, fontWeight: '900', color: '#0F172A' }]}>
+                      {quotationValue ? `₹ ${Number(quotationValue).toLocaleString('en-IN')}` : '—'}
+                    </Text>
+                  </View>
+
+                  <View style={styles.infoRow}>
+                    <Text style={styles.infoLabel}>Pipeline Status</Text>
+                    <Text style={[styles.infoValue, { fontWeight: '800', color: '#2563EB' }]}>
+                      {data.status || 'Follow-up'}
+                    </Text>
+                  </View>
+
+                  <View style={styles.infoRow}>
+                    <Text style={styles.infoLabel}>Confirmed Order Value</Text>
+                    <Text style={[styles.infoValue, { fontWeight: '800', color: orderValue ? '#15803D' : '#94A3B8' }]}>
+                      {orderValue ? `₹ ${Number(orderValue).toLocaleString('en-IN')}` : 'Pending Confirmation'}
+                    </Text>
+                  </View>
+
+                  <View style={[styles.infoRow, { borderBottomWidth: 0 }]}>
+                    <Text style={styles.infoLabel}>Cross-Sell Interest</Text>
+                    <Text style={styles.infoValue}>
+                      {crossSell || 'None specified'}
+                    </Text>
+                  </View>
+                </View>
+
+                {/* 4. Follow-up History & Activity Summary Card */}
+                <View style={styles.sectionCard}>
+                  <View style={styles.sectionHeadingRow}>
+                    <Ionicons name="time-outline" size={16} color="#2563EB" />
+                    <Text style={styles.sectionHeading}>4. Follow-up Activity Records</Text>
+                  </View>
+
+                  <View style={styles.infoRow}>
+                    <Text style={styles.infoLabel}>Total Follow-ups Logged</Text>
+                    <Text style={[styles.infoValue, { fontWeight: '800' }]}>
+                      {followUpCount} interaction(s)
+                    </Text>
+                  </View>
+
+                  <View style={styles.infoRow}>
+                    <Text style={styles.infoLabel}>Last Follow-up Date</Text>
+                    <Text style={styles.infoValue}>
+                      {lastFollowUp || 'Not yet logged'}
+                    </Text>
+                  </View>
+
+                  <View style={[styles.infoRow, { borderBottomWidth: 0 }]}>
+                    <Text style={styles.infoLabel}>Next Scheduled Follow-up</Text>
+                    <Text style={[styles.infoValue, { fontWeight: '800', color: '#2563EB' }]}>
+                      {formatDisplayDate(nextFollowUp)}
+                    </Text>
+                  </View>
+
+                  {lastReason ? (
+                    <View style={[styles.previousContextBox, { marginTop: 10 }]}>
+                      <Text style={styles.previousContextLabel}>LAST DISCUSSION REMARKS:</Text>
+                      <Text style={styles.previousContextText}>
+                        "{lastReason}"
+                      </Text>
+                    </View>
+                  ) : null}
+                </View>
+
+                {/* Switch back button */}
                 <TouchableOpacity
-                  style={[
-                    styles.tempBtn,
-                    leadTemperature === 'Hot' && styles.tempBtnHotActive,
-                  ]}
-                  onPress={() => setLeadTemperature('Hot')}
-                  activeOpacity={0.75}
+                  style={styles.switchBackToLogBtn}
+                  onPress={() => setActiveTab('log')}
+                  activeOpacity={0.8}
                 >
-                  <Text style={{ fontSize: 12 }}>🔥</Text>
-                  <Text style={[styles.tempBtnText, leadTemperature === 'Hot' && styles.tempBtnHotText]}>
-                    Hot Deal
-                  </Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={[
-                    styles.tempBtn,
-                    leadTemperature === 'Warm' && styles.tempBtnWarmActive,
-                  ]}
-                  onPress={() => setLeadTemperature('Warm')}
-                  activeOpacity={0.75}
-                >
-                  <Text style={{ fontSize: 12 }}>⚡</Text>
-                  <Text style={[styles.tempBtnText, leadTemperature === 'Warm' && styles.tempBtnWarmText]}>
-                    Warm Lead
-                  </Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={[
-                    styles.tempBtn,
-                    leadTemperature === 'Future' && styles.tempBtnFutureActive,
-                  ]}
-                  onPress={() => setLeadTemperature('Future')}
-                  activeOpacity={0.75}
-                >
-                  <Text style={{ fontSize: 12 }}>✦</Text>
-                  <Text style={[styles.tempBtnText, leadTemperature === 'Future' && styles.tempBtnFutureText]}>
-                    Future
-                  </Text>
+                  <Ionicons name="arrow-back-outline" size={15} color="#0F766E" />
+                  <Text style={styles.switchBackToLogText}>Return to Logging Form</Text>
                 </TouchableOpacity>
               </View>
-            </View>
+            )}
 
-            {/* 2. Next Follow-up Schedule & Valuation */}
-            <View style={styles.sectionCard}>
-              <View style={styles.sectionHeadingRow}>
-                <View style={styles.sectionHeadingIconCircle}>
-                  <Text style={styles.sectionHeadingIcon}>📅</Text>
-                </View>
-                <Text style={styles.sectionHeading}>2. Next Schedule & Value</Text>
-              </View>
-              
-              {/* Next Follow-up Date */}
-              <View style={styles.scheduleRowHeader}>
-                <Text style={styles.subHeadingLabel}>Next Reminder Date *</Text>
-                <View style={{ flexDirection: 'row', gap: 5 }}>
-                  <TouchableOpacity style={styles.quickDayBtn} onPress={() => handleQuickDays(1)}>
-                    <Text style={styles.quickDayText}>+1d</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={styles.quickDayBtn} onPress={() => handleQuickDays(3)}>
-                    <Text style={styles.quickDayText}>+3d</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={styles.quickDayBtn} onPress={() => handleQuickDays(7)}>
-                    <Text style={styles.quickDayText}>+1w</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={styles.quickDayBtn} onPress={() => handleQuickDays(15)}>
-                    <Text style={styles.quickDayText}>+15d</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-
-              <View style={styles.dateInputWrapper}>
-                <Text style={{ fontSize: 13, marginRight: 8 }}>📅</Text>
-                <TextInput
-                  style={styles.dateTextInput}
-                  value={nextFollowUp}
-                  onChangeText={setNextFollowUp}
-                  placeholder="YYYY-MM-DD"
-                  placeholderTextColor="#94A3B8"
-                />
-              </View>
-
-              {/* Deal / Quotation Value */}
-              <View style={[styles.scheduleRowHeader, { marginTop: 14 }]}>
-                <Text style={styles.subHeadingLabel}>Deal / Quotation Value (₹)</Text>
-              </View>
-              <View style={styles.quoteValueInputWrapper}>
-                <View style={styles.currencyPrefixBadgeEmerald}>
-                  <Text style={styles.currencyPrefixTextEmerald}>₹</Text>
-                </View>
-                <TextInput
-                  style={[styles.quoteTextInput, { flex: 1 }]}
-                  value={quotationValue}
-                  onChangeText={setQuotationValue}
-                  keyboardType="numeric"
-                  placeholder="e.g. 150000"
-                  placeholderTextColor="#94A3B8"
-                />
-              </View>
-            </View>
-
-            {/* 3. Discussion Remarks & 1-Tap Snippets */}
-            <View style={styles.sectionCard}>
-              <View style={styles.sectionHeadingRow}>
-                <View style={styles.sectionHeadingIconCircle}>
-                  <Text style={styles.sectionHeadingIcon}>💬</Text>
-                </View>
-                <Text style={styles.sectionHeading}>3. Discussion Remarks & Notes</Text>
-              </View>
-              
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6, paddingBottom: 8 }}>
-                {QUICK_SNIPPETS.map((snip, idx) => (
-                  <TouchableOpacity
-                    key={idx}
-                    style={styles.snippetChip}
-                    onPress={() => handleAppendSnippet(snip)}
-                    activeOpacity={0.75}
-                  >
-                    <Text style={styles.snippetChipText}>+ {snip}</Text>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-
-              <TextInput
-                style={styles.notesTextInput}
-                value={discussionNotes}
-                onChangeText={setDiscussionNotes}
-                multiline
-                placeholder="Type customer discussion notes, tile requirements, objections or next steps..."
-                placeholderTextColor="#94A3B8"
-              />
-              <Text style={styles.notesSubHint}>
-                Notes will be appended to the customer's permanent follow-up timeline.
-              </Text>
-            </View>
-
-            <View style={{ height: 10 }} />
+            <View style={{ height: 20 }} />
           </ScrollView>
 
-          {/* Action Footer */}
-          <View style={styles.footerRow}>
-            <TouchableOpacity style={styles.cancelBtn} onPress={onClose} activeOpacity={0.75}>
-              <Text style={styles.cancelBtnText}>Cancel</Text>
-            </TouchableOpacity>
+          {/* Action Footer (Only visible on Log Activity tab) */}
+          {activeTab === 'log' ? (
+            <View style={styles.footerRow}>
+              <TouchableOpacity style={styles.cancelBtn} onPress={handleSmoothClose} activeOpacity={0.75}>
+                <Text style={styles.cancelBtnText}>Cancel</Text>
+              </TouchableOpacity>
 
-            <TouchableOpacity
-              style={styles.saveBtn}
-              onPress={handleSubmit}
-              disabled={submitting}
-              activeOpacity={0.85}
-            >
-              <LinearGradient
-                colors={
-                  outcome === 'Deal Lost / Postponed'
-                    ? ['#DC2626', '#B91C1C']
-                    : ['#0F766E', '#0D9488']
-                }
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={styles.saveBtnGradient}
+              <TouchableOpacity
+                style={styles.saveBtn}
+                onPress={handleSubmit}
+                disabled={submitting}
+                activeOpacity={0.85}
               >
-                {submitting ? (
-                  <ActivityIndicator size="small" color="#FFFFFF" />
-                ) : (
+                <LinearGradient
+                  colors={
+                    outcome === 'Deal Lost / Postponed'
+                      ? ['#DC2626', '#B91C1C']
+                      : ['#0F766E', '#0D9488']
+                  }
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={styles.saveBtnGradient}
+                >
+                  {submitting ? (
+                    <ActivityIndicator size="small" color="#FFFFFF" />
+                  ) : (
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7 }}>
+                      <Ionicons
+                        name={outcome === 'Deal Lost / Postponed' ? 'close-outline' : 'checkmark-outline'}
+                        size={18}
+                        color="#FFFFFF"
+                      />
+                      <Text style={styles.saveBtnText}>
+                        {outcome === 'Deal Lost / Postponed' ? 'Record Lost Deal' : 'Save Follow-up Activity'}
+                      </Text>
+                    </View>
+                  )}
+                </LinearGradient>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <View style={styles.footerRow}>
+              <TouchableOpacity style={[styles.cancelBtn, { flex: 1 }]} onPress={handleSmoothClose} activeOpacity={0.75}>
+                <Text style={styles.cancelBtnText}>Close</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.saveBtn, { flex: 1.5 }]}
+                onPress={() => setActiveTab('log')}
+                activeOpacity={0.85}
+              >
+                <LinearGradient
+                  colors={['#0F766E', '#0D9488']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={styles.saveBtnGradient}
+                >
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7 }}>
-                    <Text style={styles.saveBtnIcon}>
-                      {outcome === 'Deal Lost / Postponed' ? '✕' : '✓'}
-                    </Text>
-                    <Text style={styles.saveBtnText}>
-                      {outcome === 'Deal Lost / Postponed' ? 'Record Lost Deal' : 'Save Follow-up Activity'}
-                    </Text>
+                    <Ionicons name="clipboard-outline" size={16} color="#FFFFFF" />
+                    <Text style={styles.saveBtnText}>Log Activity Now</Text>
                   </View>
-                )}
-              </LinearGradient>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </View>
+                </LinearGradient>
+              </TouchableOpacity>
+            </View>
+          )}
+        </Animated.View>
+      </Animated.View>
     </Modal>
   );
 }
@@ -484,9 +1177,9 @@ const styles = StyleSheet.create({
   },
   modalCard: {
     backgroundColor: '#F8FAFC',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    maxHeight: '90%',
+    borderTopLeftRadius: 26,
+    borderTopRightRadius: 26,
+    maxHeight: '94%',
   },
   sheetHandleWrapper: {
     alignItems: 'center',
@@ -501,7 +1194,7 @@ const styles = StyleSheet.create({
   headerLight: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
+    paddingHorizontal: 18,
     paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: '#E2E8F0',
@@ -511,155 +1204,220 @@ const styles = StyleSheet.create({
   headerIconBoxLight: {
     width: 38,
     height: 38,
-    borderRadius: 10,
+    borderRadius: 12,
     backgroundColor: '#F0FDFA',
-    borderWidth: 1.2,
+    borderWidth: 1,
     borderColor: '#CCFBF1',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  headerIconGlyph: {
-    fontSize: 16,
-    fontWeight: '900',
-    color: '#0F766E',
-  },
   headerTitleMain: {
-    fontSize: 15.5,
+    fontSize: 16,
     fontWeight: '800',
     color: '#0F172A',
     letterSpacing: -0.2,
   },
   headerSubtitleText: {
-    fontSize: 11,
+    fontSize: 11.5,
     color: '#64748B',
-    fontWeight: '500',
     marginTop: 1,
-  },
-  headerIdBadgeLight: {
-    backgroundColor: '#F1F5F9',
-    paddingHorizontal: 6,
-    paddingVertical: 1.5,
-    borderRadius: 5,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-  },
-  headerIdBadgeTextLight: {
-    fontSize: 10.5,
-    fontWeight: '700',
-    color: '#475569',
-    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+    fontWeight: '500',
   },
   headerCloseBtnLight: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
+    width: 32,
+    height: 32,
+    borderRadius: 10,
     backgroundColor: '#F1F5F9',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  headerCloseBtnTextLight: {
-    fontSize: 13,
-    fontWeight: '800',
-    color: '#64748B',
-  },
-  scroll: {
-    flexGrow: 0,
-  },
-
-  /* ── Customer Identity Profile Card ── */
-  customerCard: {
+  segmentedTabWrapper: {
+    flexDirection: 'row',
     backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    borderRadius: 14,
-    padding: 12,
-    marginBottom: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E2E8F0',
+    gap: 8,
+  },
+  segmentedTabBtn: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 11,
+    justifyContent: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    borderRadius: 10,
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  segmentedTabBtnActive: {
+    backgroundColor: '#F0FDFA',
+    borderColor: '#99F6E4',
+  },
+  segmentedTabText: {
+    fontSize: 12.5,
+    fontWeight: '700',
+    color: '#64748B',
+  },
+  segmentedTabTextActive: {
+    color: '#0F766E',
+    fontWeight: '800',
+  },
+  segmentedActiveDot: {
+    width: 5,
+    height: 5,
+    borderRadius: 2.5,
+    backgroundColor: '#0F766E',
+    marginLeft: 6,
+  },
+  scroll: {
+    flexGrow: 1,
+  },
+  customerCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    marginBottom: 14,
+    gap: 12,
     shadowColor: '#0F172A',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.04,
-    shadowRadius: 2,
+    shadowRadius: 3,
     elevation: 1,
   },
   customerAvatarCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 11,
-    backgroundColor: '#F0FDFA',
-    borderWidth: 1.2,
-    borderColor: '#CCFBF1',
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    backgroundColor: '#0F766E',
     alignItems: 'center',
     justifyContent: 'center',
   },
   customerAvatarText: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: '#0F766E',
+    fontSize: 18,
+    fontWeight: '900',
+    color: '#FFFFFF',
   },
   customerNameRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 8,
+    marginBottom: 4,
+    flexWrap: 'wrap',
   },
-  customerNameInput: {
-    flex: 1,
-    fontSize: 15.5,
+  customerNameText: {
+    fontSize: 15,
     fontWeight: '800',
     color: '#0F172A',
+    letterSpacing: -0.2,
+  },
+  headerIdBadgeLight: {
+    backgroundColor: '#F1F5F9',
+    paddingHorizontal: 6,
     paddingVertical: 2,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+  },
+  headerIdBadgeTextLight: {
+    fontSize: 10.5,
+    fontWeight: '800',
+    color: '#475569',
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
   },
   customerMetaRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    marginTop: 5,
+    gap: 6,
     flexWrap: 'wrap',
   },
-  phoneInputWrap: {
+  phoneBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    flex: 1,
-    minWidth: 130,
+    backgroundColor: '#F8FAFC',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
   },
-  phoneIconSmall: {
-    fontSize: 12,
-  },
-  customerPhoneInput: {
-    flex: 1,
-    fontSize: 13,
+  phoneText: {
+    fontSize: 11.5,
+    color: '#475569',
     fontWeight: '700',
-    color: '#334155',
-    paddingVertical: 1,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
   },
   customerTypePill: {
-    backgroundColor: '#F1F5F9',
+    backgroundColor: '#FEF3C7',
     paddingHorizontal: 7,
     paddingVertical: 2,
-    borderRadius: 5,
+    borderRadius: 6,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: '#FDE68A',
   },
   customerTypePillText: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: '#475569',
+    fontSize: 10.5,
+    fontWeight: '800',
+    color: '#B45309',
   },
-
-  /* ── Form Section Cards ── */
+  headerActionBtnCall: {
+    width: 32,
+    height: 32,
+    borderRadius: 9,
+    backgroundColor: '#EFF6FF',
+    borderWidth: 1,
+    borderColor: '#BFDBFE',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerActionBtnWa: {
+    width: 32,
+    height: 32,
+    borderRadius: 9,
+    backgroundColor: '#F0FDF4',
+    borderWidth: 1,
+    borderColor: '#BBF7D0',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   sectionCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 14,
-    padding: 14,
-    marginBottom: 12,
+    borderRadius: 16,
+    padding: 16,
     borderWidth: 1,
     borderColor: '#E2E8F0',
+    marginBottom: 14,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.03,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  notesDedicatedCard: {
+    borderLeftWidth: 4,
+    borderLeftColor: '#0F766E',
+    backgroundColor: '#FFFFFF',
+  },
+  notesSectionIconCircle: {
+    width: 28,
+    height: 28,
+    borderRadius: 9,
+    backgroundColor: '#F0FDFA',
+    borderWidth: 1,
+    borderColor: '#CCFBF1',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  notesSectionSubtext: {
+    fontSize: 11,
+    color: '#64748B',
+    marginTop: 1,
+    fontWeight: '500',
   },
   sectionHeadingRow: {
     flexDirection: 'row',
@@ -667,39 +1425,33 @@ const styles = StyleSheet.create({
     gap: 8,
     marginBottom: 12,
   },
-  sectionHeadingIconCircle: {
-    width: 22,
-    height: 22,
-    borderRadius: 6,
-    backgroundColor: '#F0FDFA',
-    borderWidth: 1,
-    borderColor: '#CCFBF1',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  sectionHeadingIcon: {
-    fontSize: 11,
-    fontWeight: '800',
-    color: '#0F766E',
-  },
   sectionHeading: {
-    fontSize: 12.5,
+    fontSize: 13,
     fontWeight: '800',
     color: '#0F172A',
-    textTransform: 'uppercase',
-    letterSpacing: 0.3,
+    letterSpacing: -0.1,
   },
-
-  /* ── Outcome Selector ── */
+  fieldMicroLabel: {
+    fontSize: 10.5,
+    fontWeight: '800',
+    color: '#64748B',
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
+    marginBottom: 6,
+  },
+  subHeadingRow: {
+    marginBottom: 6,
+  },
   dropdownTriggerBox: {
-    borderWidth: 1.2,
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 14,
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1.2,
+    borderColor: '#CBD5E1',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
   },
   dropdownTriggerLeftGroup: {
     flexDirection: 'row',
@@ -714,25 +1466,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  outcomeIconBadgeText: {
-    color: '#FFFFFF',
-    fontSize: 13,
-    fontWeight: '900',
-  },
-  dropdownTriggerHint: {
-    fontSize: 9.5,
-    fontWeight: '700',
-    color: '#64748B',
-    textTransform: 'uppercase',
-    letterSpacing: 0.3,
-  },
   dropdownTriggerValueText: {
     fontSize: 13,
     fontWeight: '800',
-    marginTop: 1,
   },
-  dropdownTriggerChevronBox: {
-    paddingLeft: 8,
+  dropdownTriggerHint: {
+    fontSize: 10.5,
+    color: '#94A3B8',
+    fontWeight: '500',
+    marginTop: 1,
   },
   outcomeModalBackdrop: {
     flex: 1,
@@ -741,14 +1483,14 @@ const styles = StyleSheet.create({
   },
   outcomeModalSheet: {
     backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    paddingHorizontal: 16,
-    paddingBottom: Platform.OS === 'ios' ? 40 : 20,
+    borderTopLeftRadius: 22,
+    borderTopRightRadius: 22,
+    paddingHorizontal: 18,
+    paddingBottom: 28,
   },
   modalHandleWrapper: {
     alignItems: 'center',
-    paddingVertical: 8,
+    paddingVertical: 10,
   },
   modalHandle: {
     width: 38,
@@ -758,11 +1500,11 @@ const styles = StyleSheet.create({
   },
   outcomeModalHeader: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 12,
+    justifyContent: 'space-between',
+    paddingBottom: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
+    borderBottomColor: '#E2E8F0',
     marginBottom: 10,
   },
   outcomeModalTitle: {
@@ -773,47 +1515,35 @@ const styles = StyleSheet.create({
   modalCloseBtn: {
     paddingHorizontal: 10,
     paddingVertical: 4,
-    borderRadius: 8,
-    backgroundColor: '#F0FDFA',
-    borderWidth: 1,
-    borderColor: '#CCFBF1',
   },
   modalCloseBtnText: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '800',
     color: '#0F766E',
   },
   outcomeListItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
+    paddingVertical: 10,
     paddingHorizontal: 12,
-    borderRadius: 12,
-    marginBottom: 6,
+    borderRadius: 10,
     borderWidth: 1,
     borderColor: '#F1F5F9',
+    marginBottom: 6,
+    gap: 10,
   },
-  outcomeListItemText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#334155',
-    flex: 1,
-  },
-  outcomeCheckmarkBadge: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
+  outcomeListIconBadge: {
+    width: 26,
+    height: 26,
+    borderRadius: 7,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  subHeadingRow: {
-    marginTop: 4,
-    marginBottom: 8,
-  },
-  subHeadingLabel: {
-    fontSize: 11.5,
+  outcomeListItemText: {
+    flex: 1,
+    fontSize: 13,
     fontWeight: '700',
-    color: '#64748B',
+    color: '#1E293B',
   },
   tempRow: {
     flexDirection: 'row',
@@ -822,197 +1552,385 @@ const styles = StyleSheet.create({
   tempBtn: {
     flex: 1,
     flexDirection: 'row',
-    backgroundColor: '#F8FAFC',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    borderRadius: 10,
-    paddingVertical: 8,
     alignItems: 'center',
     justifyContent: 'center',
     gap: 5,
+    paddingVertical: 9,
+    borderRadius: 10,
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
   },
   tempBtnText: {
-    fontSize: 11.5,
+    fontSize: 12,
     fontWeight: '700',
-    color: '#475569',
+    color: '#64748B',
   },
-  tempBtnHotActive: {
-    backgroundColor: '#FEF2F2',
-    borderColor: '#DC2626',
-    borderWidth: 1.5,
-  },
-  tempBtnHotText: {
-    color: '#DC2626',
-    fontWeight: '900',
-  },
-  tempBtnWarmActive: {
-    backgroundColor: '#FFFBEB',
-    borderColor: '#D97706',
-    borderWidth: 1.5,
-  },
-  tempBtnWarmText: {
-    color: '#D97706',
-    fontWeight: '900',
-  },
-  tempBtnFutureActive: {
-    backgroundColor: '#F0FDFA',
-    borderColor: '#0F766E',
-    borderWidth: 1.5,
-  },
-  tempBtnFutureText: {
-    color: '#0F766E',
-    fontWeight: '900',
-  },
-
-  /* ── Schedule & Valuation ── */
-  scheduleRowHeader: {
+  reqTagsWrap: {
     flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 6,
+    flexWrap: 'wrap',
+    gap: 6,
   },
-  quickDayBtn: {
-    backgroundColor: '#F0FDFA',
+  reqTagBtn: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    backgroundColor: '#F8FAFC',
     borderWidth: 1,
-    borderColor: '#CCFBF1',
-    paddingHorizontal: 9,
-    paddingVertical: 4,
-    borderRadius: 7,
+    borderColor: '#E2E8F0',
   },
-  quickDayText: {
-    fontSize: 11,
-    fontWeight: '800',
+  reqTagBtnActive: {
+    backgroundColor: '#F0FDFA',
+    borderColor: '#99F6E4',
+  },
+  reqTagBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#64748B',
+  },
+  reqTagBtnTextActive: {
     color: '#0F766E',
-  },
-  dateInputWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1.2,
-    borderColor: '#CBD5E1',
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    height: 42,
-  },
-  dateTextInput: {
-    flex: 1,
-    fontSize: 14.5,
     fontWeight: '800',
-    color: '#0F172A',
   },
   quoteValueInputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#F8FAFC',
     borderWidth: 1.2,
     borderColor: '#CBD5E1',
     borderRadius: 12,
     overflow: 'hidden',
-    height: 44,
   },
   currencyPrefixBadgeEmerald: {
-    backgroundColor: '#F0FDFA',
+    backgroundColor: '#CCFBF1',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
     borderRightWidth: 1,
-    borderRightColor: '#CBD5E1',
-    paddingHorizontal: 13,
-    height: '100%',
-    alignItems: 'center',
-    justifyContent: 'center',
+    borderRightColor: '#99F6E4',
   },
   currencyPrefixTextEmerald: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '900',
     color: '#0F766E',
   },
   quoteTextInput: {
     paddingHorizontal: 12,
-    fontSize: 15,
-    fontWeight: '800',
+    paddingVertical: 10,
+    fontSize: 14,
     color: '#0F172A',
+    fontWeight: '800',
   },
-
-  /* ── Discussion Notes ── */
-  snippetChip: {
+  scheduleRowHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 6,
+    flexWrap: 'wrap',
+    gap: 6,
+  },
+  quickDayBtn: {
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: 6,
     backgroundColor: '#F1F5F9',
     borderWidth: 1,
     borderColor: '#CBD5E1',
-    paddingHorizontal: 11,
-    paddingVertical: 6,
-    borderRadius: 8,
   },
-  snippetChipText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#334155',
+  quickDayText: {
+    fontSize: 10.5,
+    fontWeight: '800',
+    color: '#475569',
   },
-  notesTextInput: {
-    backgroundColor: '#FFFFFF',
+  modernDateTrigger: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#F8FAFC',
     borderWidth: 1.2,
     borderColor: '#CBD5E1',
     borderRadius: 12,
     padding: 12,
+  },
+  dateTriggerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  calendarIconCircle: {
+    width: 32,
+    height: 32,
+    borderRadius: 9,
+    backgroundColor: '#CCFBF1',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  dateTriggerLabel: {
+    fontSize: 9.5,
+    fontWeight: '800',
+    color: '#64748B',
+    letterSpacing: 0.3,
+  },
+  dateTriggerVal: {
     fontSize: 13.5,
+    fontWeight: '800',
     color: '#0F172A',
-    fontWeight: '500',
-    minHeight: 96,
-    lineHeight: 19,
+    marginTop: 1,
+  },
+  changeDatePill: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  changeDatePillText: {
+    fontSize: 11.5,
+    fontWeight: '800',
+    color: '#0F766E',
+  },
+  snippetChip: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 7,
+    backgroundColor: '#F0FDFA',
+    borderWidth: 1,
+    borderColor: '#CCFBF1',
+  },
+  snippetChipText: {
+    fontSize: 11.5,
+    fontWeight: '700',
+    color: '#0F766E',
+  },
+  previousContextBox: {
+    backgroundColor: '#FFFBEB',
+    borderWidth: 1,
+    borderColor: '#FDE68A',
+    borderRadius: 10,
+    padding: 10,
+    marginVertical: 8,
+  },
+  previousContextLabel: {
+    fontSize: 9.5,
+    fontWeight: '800',
+    color: '#B45309',
+    letterSpacing: 0.3,
+    marginBottom: 2,
+  },
+  previousContextText: {
+    fontSize: 12,
+    color: '#78350F',
+    fontWeight: '600',
+    fontStyle: 'italic',
+  },
+  notesTextInput: {
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1.2,
+    borderColor: '#CBD5E1',
+    borderRadius: 12,
+    padding: 12,
+    fontSize: 13,
+    color: '#0F172A',
+    fontWeight: '600',
+    minHeight: 100,
+    lineHeight: 18,
     textAlignVertical: 'top',
+    marginTop: 4,
   },
   notesSubHint: {
     fontSize: 11,
     color: '#94A3B8',
-    fontStyle: 'italic',
-    marginTop: 6,
+    fontWeight: '500',
+    flex: 1,
   },
-
-  /* ── Footer Row ── */
+  notesCountBadge: {
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  notesCountBadgeText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#334155',
+  },
+  noNotesBox: {
+    padding: 14,
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderStyle: 'dashed',
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  noNotesText: {
+    fontSize: 12,
+    color: '#64748B',
+    textAlign: 'center',
+    fontWeight: '500',
+  },
+  noteHistoryCard: {
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 10,
+    padding: 10,
+    marginBottom: 6,
+  },
+  noteCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 4,
+    flexWrap: 'wrap',
+    gap: 6,
+  },
+  noteDateBadge: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 5,
+  },
+  noteDateBadgeText: {
+    fontSize: 10.5,
+    fontWeight: '800',
+    color: '#334155',
+  },
+  noteOutcomeBadge: {
+    backgroundColor: '#F0FDFA',
+    borderWidth: 1,
+    borderColor: '#CCFBF1',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 5,
+    maxWidth: '60%',
+  },
+  noteOutcomeBadgeText: {
+    fontSize: 10.5,
+    fontWeight: '700',
+    color: '#0F766E',
+  },
+  noteBodyText: {
+    fontSize: 12,
+    color: '#1E293B',
+    lineHeight: 16,
+    fontWeight: '500',
+  },
+  addNoteActionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 8,
+    gap: 8,
+  },
+  addNoteBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+  },
+  addNoteBtnText: {
+    fontSize: 11.5,
+    fontWeight: '700',
+    color: '#0F172A',
+  },
+  // Customer info tab styles
+  infoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+  },
+  infoLabel: {
+    fontSize: 12,
+    color: '#64748B',
+    fontWeight: '600',
+  },
+  infoValue: {
+    fontSize: 12.5,
+    color: '#0F172A',
+    fontWeight: '700',
+  },
+  infoBadge: {
+    backgroundColor: '#FEF3C7',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#FDE68A',
+  },
+  infoBadgeText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#B45309',
+  },
+  switchBackToLogBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: '#F0FDFA',
+    borderWidth: 1,
+    borderColor: '#99F6E4',
+    paddingVertical: 12,
+    borderRadius: 12,
+    marginTop: 4,
+  },
+  switchBackToLogText: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#0F766E',
+  },
   footerRow: {
     flexDirection: 'row',
     gap: 10,
-    padding: 16,
+    paddingHorizontal: 18,
+    paddingVertical: 12,
     backgroundColor: '#FFFFFF',
     borderTopWidth: 1,
     borderTopColor: '#E2E8F0',
   },
   cancelBtn: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1.2,
-    borderColor: '#E2E8F0',
-    borderRadius: 14,
-    height: 48,
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+    borderRadius: 12,
+    height: 46,
     alignItems: 'center',
     justifyContent: 'center',
   },
   cancelBtnText: {
     fontSize: 13.5,
-    fontWeight: '700',
+    fontWeight: '800',
     color: '#64748B',
   },
   saveBtn: {
     flex: 2,
-    borderRadius: 14,
+    borderRadius: 12,
     overflow: 'hidden',
-    shadowColor: '#0F766E',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.25,
-    shadowRadius: 6,
-    elevation: 3,
   },
   saveBtnGradient: {
-    height: 48,
+    height: 46,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 16,
   },
-  saveBtnIcon: {
-    fontSize: 16,
-    fontWeight: '900',
-    color: '#FFFFFF',
-  },
   saveBtnText: {
-    fontSize: 14.5,
-    fontWeight: '800',
+    fontSize: 13.5,
+    fontWeight: '900',
     color: '#FFFFFF',
     letterSpacing: -0.2,
   },

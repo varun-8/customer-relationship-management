@@ -16,6 +16,9 @@ import {
   FileX,
   Award,
   Sparkles,
+  Layers,
+  Compass,
+  Tag,
 } from 'lucide-react';
 import { api } from '../../services/api';
 import { useBranding } from '../../context/BrandingContext';
@@ -64,6 +67,20 @@ const extractSalesperson = (item) => {
   return val && val !== 'null' && val !== 'undefined' ? String(val) : 'Unassigned';
 };
 
+const extractCustomerType = (item) => {
+  if (!item) return '-';
+  const d = extractDataObj(item);
+  const val = d.customerType || item.customerType;
+  return val && val !== 'null' && val !== 'undefined' ? String(val) : '-';
+};
+
+const extractLeadSource = (item) => {
+  if (!item) return '-';
+  const d = extractDataObj(item);
+  const val = d.leadSource || item.leadSource;
+  return val && val !== 'null' && val !== 'undefined' ? String(val) : '-';
+};
+
 const extractPhone = (item) => {
   if (!item) return '-';
   const d = extractDataObj(item);
@@ -74,7 +91,7 @@ const extractPhone = (item) => {
 const extractQuoteValue = (item) => {
   if (!item) return 0;
   const d = extractDataObj(item);
-  return Number(d.quoteValue || d.quotationValue || item.quoteValue || item.lostAmount || 0);
+  return Number(d.orderValue || d.quoteValue || d.quotationValue || item.orderValue || item.quoteValue || item.lostAmount || 0);
 };
 
 const extractCity = (item) => {
@@ -87,14 +104,15 @@ const extractCity = (item) => {
 const extractRequirement = (item) => {
   if (!item) return '-';
   const d = extractDataObj(item);
-  const val = d.requirementType || d.requirements || d.productRequirement || item.requirement;
+  const val = d.requirement || d.requirementType || d.requirements || d.productRequirement || item.requirement;
+  if (Array.isArray(val)) return val.join(', ');
   return val && val !== 'null' && val !== 'undefined' ? String(val) : '-';
 };
 
 const extractStatus = (item) => {
-  if (!item) return 'New';
+  if (!item) return 'New Lead';
   const d = extractDataObj(item);
-  const val = d.status || item.status || 'New';
+  const val = d.status || item.status || 'New Lead';
   return String(val);
 };
 
@@ -165,6 +183,9 @@ export const ReportsView = () => {
   const [endDate, setEndDate] = useState('');
   const [selectedStaff, setSelectedStaff] = useState('all');
   const [selectedStatus, setSelectedStatus] = useState('all');
+  const [selectedCustomerType, setSelectedCustomerType] = useState('all');
+  const [selectedLeadSource, setSelectedLeadSource] = useState('all');
+  const [selectedRequirement, setSelectedRequirement] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
 
   // Raw API Data Storage
@@ -211,35 +232,19 @@ export const ReportsView = () => {
     return { start: '', end: '' };
   }, [datePreset, startDate, endDate]);
 
-  // Fetch Report Data based on Active Tab & Filters
+  // Fetch Report Data based on Active Tab
   const fetchReportData = useCallback(async () => {
     setLoading(true);
     try {
-      if (activeReportId === 'executive') {
-        const res = await api.getCustomers({ limit: 500 });
+      if (activeReportId === 'executive' || activeReportId === 'customers') {
+        const res = await api.getCustomers({ limit: 1000 });
         const customers = res?.data?.customers || res?.data || [];
         setReportData(customers);
-      } else if (activeReportId === 'customers') {
-        const res = await api.getCustomers({
-          status: selectedStatus !== 'all' ? selectedStatus : undefined,
-          assignedTo: selectedStaff !== 'all' ? selectedStaff : undefined,
-          search: searchQuery || undefined,
-          limit: 500,
-        });
-        setReportData(res?.data?.customers || res?.data || []);
       } else if (activeReportId === 'followups') {
-        const res = await api.getFollowupsList({
-          assignedTo: selectedStaff !== 'all' ? selectedStaff : undefined,
-          priority: selectedStatus !== 'all' ? selectedStatus : undefined,
-          limit: 500,
-        });
+        const res = await api.getFollowupsList({ limit: 1000 });
         setReportData(res?.data?.followups || res?.data || []);
       } else if (activeReportId === 'lost') {
-        const res = await api.getLostSales({
-          reason: selectedStatus !== 'all' ? selectedStatus : undefined,
-          salesExecutive: selectedStaff !== 'all' ? selectedStaff : undefined,
-          limit: 500,
-        });
+        const res = await api.getLostSales({ limit: 1000 });
         setReportData(res?.data?.lostSales || res?.data || []);
       } else if (activeReportId === 'staff') {
         const [usersRes, custRes] = await Promise.all([
@@ -259,9 +264,10 @@ export const ReportsView = () => {
               sp.toLowerCase() === String(u.name).toLowerCase()
             );
           });
-          const wonCusts = userCusts.filter(
-            (c) => extractStatus(c).toLowerCase() === 'won'
-          );
+          const wonCusts = userCusts.filter((c) => {
+            const st = extractStatus(c).toLowerCase();
+            return ['won', 'closed won', 'order confirmed', 'confirmed'].includes(st);
+          });
           const wonRevenue = wonCusts.reduce(
             (acc, curr) => acc + extractQuoteValue(curr),
             0
@@ -291,7 +297,7 @@ export const ReportsView = () => {
     } finally {
       setLoading(false);
     }
-  }, [activeReportId, selectedStatus, selectedStaff, searchQuery, computedDateRange, toast]);
+  }, [activeReportId, toast]);
 
   useEffect(() => {
     fetchReportData();
@@ -310,30 +316,78 @@ export const ReportsView = () => {
       });
     }
 
-    // 2. Text Search Filter
+    // 2. Customer Type Filter
+    if (selectedCustomerType !== 'all') {
+      items = items.filter((item) => {
+        const ct = extractCustomerType(item);
+        return ct.toLowerCase() === selectedCustomerType.toLowerCase();
+      });
+    }
+
+    // 3. Status Filter
+    if (selectedStatus !== 'all') {
+      items = items.filter((item) => {
+        const st = extractStatus(item);
+        const sel = selectedStatus.toLowerCase();
+        // Handle priority/category mapping for followups & lost sales
+        if (activeReportId === 'followups') {
+          return String(item.priority || item.status || '').toLowerCase() === sel;
+        }
+        if (activeReportId === 'lost') {
+          return String(item.reason || item.lostReason || '').toLowerCase() === sel;
+        }
+        return st.toLowerCase() === sel;
+      });
+    }
+
+    // 4. Lead Source Filter
+    if (selectedLeadSource !== 'all') {
+      items = items.filter((item) => {
+        const ls = extractLeadSource(item);
+        return ls.toLowerCase() === selectedLeadSource.toLowerCase();
+      });
+    }
+
+    // 5. Product Requirement Filter
+    if (selectedRequirement !== 'all') {
+      items = items.filter((item) => {
+        const d = extractDataObj(item);
+        const req = d.requirement || d.requirements || item.requirement;
+        if (Array.isArray(req)) {
+          return req.some((r) => String(r).toLowerCase().includes(selectedRequirement.toLowerCase()));
+        }
+        return String(req || '').toLowerCase().includes(selectedRequirement.toLowerCase());
+      });
+    }
+
+    // 6. Text Search Filter
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       items = items.filter((item) => {
         const name = extractCustomerName(item);
         const phone = extractPhone(item);
         const salesperson = extractSalesperson(item);
+        const ct = extractCustomerType(item);
+        const ls = extractLeadSource(item);
         const id = item.customerId || item._id || '';
         return (
           name.toLowerCase().includes(q) ||
           phone.toLowerCase().includes(q) ||
           salesperson.toLowerCase().includes(q) ||
+          ct.toLowerCase().includes(q) ||
+          ls.toLowerCase().includes(q) ||
           String(id).toLowerCase().includes(q)
         );
       });
     }
 
-    // 3. Date Filter
+    // 7. Date Filter
     if (computedDateRange.start && computedDateRange.end) {
       const startMs = new Date(computedDateRange.start).getTime();
       const endMs = new Date(computedDateRange.end).setHours(23, 59, 59, 999);
 
       items = items.filter((item) => {
-        const dateVal = item.createdAt || item.date || item.lastActivityDate;
+        const dateVal = item.createdAt || item.date || item.lastActivityDate || item.entryDate;
         if (!dateVal) return true;
         const t = new Date(dateVal).getTime();
         return t >= startMs && t <= endMs;
@@ -341,12 +395,24 @@ export const ReportsView = () => {
     }
 
     return items;
-  }, [reportData, searchQuery, computedDateRange, selectedStaff, activeReportId]);
+  }, [
+    reportData,
+    searchQuery,
+    computedDateRange,
+    selectedStaff,
+    selectedCustomerType,
+    selectedStatus,
+    selectedLeadSource,
+    selectedRequirement,
+    activeReportId,
+  ]);
 
   // Report Specific Configuration (Columns & KPI Summaries)
+  // Per business rule: The amount/value column is displayed ONLY for "Order Confirmed" status.
+  // For other reports or statuses, the amount column is omitted for a clean, executive design.
   const reportConfig = useMemo(() => {
     const formatINR = (val) =>
-      '₹' +
+      'Rs. ' +
       Number(val || 0).toLocaleString('en-IN', {
         maximumFractionDigits: 0,
       });
@@ -375,6 +441,7 @@ export const ReportsView = () => {
         `${confirmedRecords.length} Confirmed Orders`,
         '-',
         '-',
+        '-',
         `${distinctStaffCount} Executive(s)`,
         'ORDER CONFIRMED',
         formatINR(totalConfirmedRevenue),
@@ -388,17 +455,19 @@ export const ReportsView = () => {
           { label: 'Contributing Executives', value: distinctStaffCount, color: '#D97706' },
         ],
         columns: [
-          { header: 'Order ID', dataKey: 'customerId', width: 22, align: 'center' },
-          { header: 'Customer Name', dataKey: 'name', width: 36, align: 'left' },
+          { header: 'Order ID', dataKey: 'customerId', width: 20, align: 'center' },
+          { header: 'Customer Name', dataKey: 'name', width: 32, align: 'left' },
+          { header: 'Customer Type', dataKey: 'customerType', width: 24, align: 'left' },
           { header: 'Phone Number', dataKey: 'phone', width: 26, align: 'center' },
-          { header: 'Requirement', dataKey: 'requirement', width: 28, align: 'left' },
-          { header: 'Sales Person', dataKey: 'assignedTo', width: 28, align: 'left' },
-          { header: 'Status', dataKey: 'statusBadge', width: 22, align: 'center' },
-          { header: 'Confirmed Value', dataKey: 'quoteFormatted', width: 24, align: 'right' },
+          { header: 'Requirement', dataKey: 'requirement', width: 26, align: 'left' },
+          { header: 'Sales Person', dataKey: 'assignedTo', width: 26, align: 'left' },
+          { header: 'Status', dataKey: 'statusBadge', width: 24, align: 'center' },
+          { header: 'Confirmed Value', dataKey: 'quoteFormatted', width: 26, align: 'right' },
         ],
         rows: confirmedRecords.map((item) => ({
           customerId: item.customerId || '-',
           name: extractCustomerName(item),
+          customerType: extractCustomerType(item),
           phone: extractPhone(item),
           requirement: extractRequirement(item),
           assignedTo: extractSalesperson(item),
@@ -410,51 +479,80 @@ export const ReportsView = () => {
     }
 
     if (activeReportId === 'customers') {
+      const isOnlyConfirmed =
+        selectedStatus.toLowerCase() === 'order confirmed' ||
+        selectedStatus.toLowerCase() === 'won' ||
+        selectedStatus.toLowerCase() === 'closed won';
+
+      const wonRecords = filteredRecords.filter((r) =>
+        ['won', 'closed won', 'order confirmed', 'confirmed'].includes(
+          extractStatus(r).toLowerCase()
+        )
+      );
+      const activeLeadsCount = filteredRecords.filter((r) =>
+        ['new lead', 'newly contacted', 'new', 'quoted', 'quotation', 'follow-up', 'negotiation', 'negotiating'].includes(
+          extractStatus(r).toLowerCase()
+        )
+      ).length;
+      const lostCount = filteredRecords.filter((r) =>
+        ['lost', 'closed lost'].includes(extractStatus(r).toLowerCase())
+      ).length;
+
+      const baseColumns = [
+        { header: 'Lead ID', dataKey: 'customerId', width: 20, align: 'center' },
+        { header: 'Customer Name', dataKey: 'name', width: 34, align: 'left' },
+        { header: 'Customer Type', dataKey: 'customerType', width: 26, align: 'left' },
+        { header: 'Phone Number', dataKey: 'phone', width: 26, align: 'center' },
+        { header: 'Requirement', dataKey: 'requirement', width: 28, align: 'left' },
+        { header: 'Sales Person', dataKey: 'assignedTo', width: 28, align: 'left' },
+        { header: 'Pipeline Stage', dataKey: 'status', width: 26, align: 'center' },
+      ];
+
+      // Only include amount column if this customer report is exclusively for Order Confirmed status
+      const columns = isOnlyConfirmed
+        ? [
+            ...baseColumns,
+            { header: 'Confirmed Value', dataKey: 'quoteFormatted', width: 26, align: 'right' },
+          ]
+        : baseColumns;
+
+      const summaryCards = isOnlyConfirmed
+        ? [
+            { label: 'Confirmed Orders', value: wonRecords.length, color: '#10B981' },
+            {
+              label: 'Confirmed Revenue',
+              value: formatINR(
+                wonRecords.reduce((acc, curr) => acc + extractQuoteValue(curr), 0)
+              ),
+              color: '#2563EB',
+            },
+            { label: 'Customer Type', value: selectedCustomerType === 'all' ? 'All Types' : selectedCustomerType, color: '#7C3AED' },
+            { label: 'Sales Staff', value: selectedStaff === 'all' ? 'All Team' : selectedStaff, color: '#D97706' },
+          ]
+        : [
+            { label: 'Total Customer Leads', value: filteredRecords.length, color: '#059669' },
+            { label: 'New & Active Leads', value: activeLeadsCount, color: '#2563EB' },
+            { label: 'Confirmed Orders', value: wonRecords.length, color: '#10B981' },
+            { label: 'Lost Opportunities', value: lostCount, color: '#E11D48' },
+          ];
+
       return {
-        summaryCards: [
-          { label: 'Total Customers', value: filteredRecords.length, color: '#059669' },
-          {
-            label: 'New & Quoted Leads',
-            value: filteredRecords.filter((r) =>
-              ['new', 'quoted', 'negotiating'].includes(
-                extractStatus(r).toLowerCase()
-              )
-            ).length,
-            color: '#2563EB',
-          },
-          {
-            label: 'Won Customers',
-            value: filteredRecords.filter(
-              (r) => extractStatus(r).toLowerCase() === 'won'
-            ).length,
-            color: '#10B981',
-          },
-          {
-            label: 'Lost Opportunities',
-            value: filteredRecords.filter(
-              (r) => extractStatus(r).toLowerCase() === 'lost'
-            ).length,
-            color: '#E11D48',
-          },
-        ],
-        columns: [
-          { header: 'ID', dataKey: 'customerId', width: 22, align: 'center' },
-          { header: 'Customer Name', dataKey: 'name', width: 36, align: 'left' },
-          { header: 'Phone Number', dataKey: 'phone', width: 26, align: 'center' },
-          { header: 'Project Area', dataKey: 'city', width: 28, align: 'left' },
-          { header: 'Assigned Executive', dataKey: 'assignedTo', width: 28, align: 'left' },
-          { header: 'Stage', dataKey: 'status', width: 22, align: 'center' },
-          { header: 'Quote Value', dataKey: 'quoteValue', width: 24, align: 'right' },
-        ],
-        rows: filteredRecords.map((item) => ({
-          customerId: item.customerId || '-',
-          name: extractCustomerName(item),
-          phone: extractPhone(item),
-          city: extractCity(item),
-          assignedTo: extractSalesperson(item),
-          status: extractStatus(item).toUpperCase(),
-          quoteValue: formatINR(extractQuoteValue(item)),
-        })),
+        summaryCards: summaryCards,
+        columns: columns,
+        rows: filteredRecords.map((item) => {
+          const st = extractStatus(item).toLowerCase();
+          const isConfirmed = ['won', 'closed won', 'order confirmed', 'confirmed'].includes(st);
+          return {
+            customerId: item.customerId || '-',
+            name: extractCustomerName(item),
+            customerType: extractCustomerType(item),
+            phone: extractPhone(item),
+            requirement: extractRequirement(item),
+            assignedTo: extractSalesperson(item),
+            status: extractStatus(item).toUpperCase(),
+            quoteFormatted: isConfirmed ? formatINR(extractQuoteValue(item)) : '-',
+          };
+        }),
       };
     }
 
@@ -471,10 +569,10 @@ export const ReportsView = () => {
           { label: 'Completed Follow-ups', value: completedCount, color: '#059669' },
         ],
         columns: [
-          { header: 'Customer', dataKey: 'name', width: 40, align: 'left' },
-          { header: 'Phone Number', dataKey: 'phone', width: 28, align: 'center' },
+          { header: 'Customer Name', dataKey: 'name', width: 36, align: 'left' },
+          { header: 'Phone Number', dataKey: 'phone', width: 26, align: 'center' },
           { header: 'Priority', dataKey: 'priority', width: 22, align: 'center' },
-          { header: 'Scheduled Date', dataKey: 'scheduleDate', width: 28, align: 'center' },
+          { header: 'Scheduled Date', dataKey: 'scheduleDate', width: 26, align: 'center' },
           { header: 'Status', dataKey: 'status', width: 24, align: 'center' },
           { header: 'Assigned Executive', dataKey: 'assignedTo', width: 44, align: 'left' },
         ],
@@ -492,58 +590,70 @@ export const ReportsView = () => {
     }
 
     if (activeReportId === 'lost') {
-      const totalLostRevenue = filteredRecords.reduce(
-        (acc, r) => acc + extractQuoteValue(r),
-        0
-      );
+      // Group lost reasons to find primary reason
+      const reasonCounts = {};
+      const compCounts = {};
+      filteredRecords.forEach((r) => {
+        const re = r.reason || r.lostReason || 'Price High';
+        const cp = r.competitor || 'Local Competitor';
+        reasonCounts[re] = (reasonCounts[re] || 0) + 1;
+        compCounts[cp] = (compCounts[cp] || 0) + 1;
+      });
+
+      const topReason = Object.keys(reasonCounts).sort((a, b) => reasonCounts[b] - reasonCounts[a])[0] || 'Price High';
+      const topComp = Object.keys(compCounts).sort((a, b) => compCounts[b] - compCounts[a])[0] || 'Competitor';
 
       return {
         summaryCards: [
           { label: 'Total Lost Opportunities', value: filteredRecords.length, color: '#E11D48' },
-          { label: 'Total Lost Revenue Value', value: formatINR(totalLostRevenue), color: '#991B1B' },
+          { label: 'Top Competitor Loss', value: topComp, color: '#EA580C' },
+          { label: 'Primary Lost Reason', value: topReason, color: '#DC2626' },
         ],
         columns: [
-          { header: 'Customer Name', dataKey: 'name', width: 38, align: 'left' },
-          { header: 'Phone Number', dataKey: 'phone', width: 28, align: 'center' },
-          { header: 'Lost Reason', dataKey: 'reason', width: 34, align: 'left' },
-          { header: 'Competitor', dataKey: 'competitor', width: 30, align: 'left' },
-          { header: 'Lost Amount', dataKey: 'lostAmount', width: 26, align: 'right' },
-          { header: 'Sales Executive', dataKey: 'salesExecutive', width: 30, align: 'left' },
+          { header: 'Customer Name', dataKey: 'name', width: 36, align: 'left' },
+          { header: 'Customer Type', dataKey: 'customerType', width: 24, align: 'left' },
+          { header: 'Phone Number', dataKey: 'phone', width: 26, align: 'center' },
+          { header: 'Requirement', dataKey: 'requirement', width: 26, align: 'left' },
+          { header: 'Lost Reason', dataKey: 'reason', width: 36, align: 'left' },
+          { header: 'Winning Competitor', dataKey: 'competitor', width: 34, align: 'left' },
+          { header: 'Sales Person', dataKey: 'salesExecutive', width: 28, align: 'left' },
         ],
         rows: filteredRecords.map((item) => ({
           name: extractCustomerName(item),
+          customerType: extractCustomerType(item),
           phone: extractPhone(item),
+          requirement: extractRequirement(item),
           reason: item.reason || item.lostReason || 'Price High',
           competitor: item.competitor || 'Local Competitor',
-          lostAmount: formatINR(extractQuoteValue(item)),
           salesExecutive: extractSalesperson(item),
         })),
       };
     }
 
-    // Staff Performance Matrix
-    const totalTeamRevenue = filteredRecords.reduce(
-      (acc, r) => acc + (Number(r.wonRevenue) || 0),
-      0
-    );
+    // Staff Performance Matrix (No unconfirmed amount columns)
     const totalTeamDeals = filteredRecords.reduce(
       (acc, r) => acc + (Number(r.wonDeals) || 0),
       0
     );
+    const totalTeamLeads = filteredRecords.reduce(
+      (acc, r) => acc + (Number(r.totalLeads) || 0),
+      0
+    );
+    const avgConversion =
+      totalTeamLeads > 0 ? ((totalTeamDeals / totalTeamLeads) * 100).toFixed(1) + '%' : '0%';
 
     return {
       summaryCards: [
         { label: 'Total Active Staff', value: filteredRecords.length, color: '#0EA5E9' },
         { label: 'Total Team Deals Won', value: totalTeamDeals, color: '#059669' },
-        { label: 'Total Team Revenue Won', value: formatINR(totalTeamRevenue), color: '#2563EB' },
+        { label: 'Avg Team Conversion', value: avgConversion, color: '#2563EB' },
       ],
       columns: [
-        { header: 'Staff Name', dataKey: 'name', width: 40, align: 'left' },
-        { header: 'Role', dataKey: 'role', width: 34, align: 'left' },
-        { header: 'Assigned Leads', dataKey: 'totalLeads', width: 26, align: 'center' },
-        { header: 'Deals Won', dataKey: 'wonDeals', width: 24, align: 'center' },
-        { header: 'Conversion Rate', dataKey: 'conversionRate', width: 28, align: 'center' },
-        { header: 'Won Revenue', dataKey: 'wonRevenue', width: 34, align: 'right' },
+        { header: 'Staff Name', dataKey: 'name', width: 44, align: 'left' },
+        { header: 'Role', dataKey: 'role', width: 36, align: 'left' },
+        { header: 'Assigned Leads', dataKey: 'totalLeads', width: 34, align: 'center' },
+        { header: 'Deals Won', dataKey: 'wonDeals', width: 34, align: 'center' },
+        { header: 'Conversion Rate', dataKey: 'conversionRate', width: 38, align: 'center' },
       ],
       rows: filteredRecords.map((item) => ({
         name: item.name,
@@ -551,10 +661,15 @@ export const ReportsView = () => {
         totalLeads: item.totalLeads,
         wonDeals: item.wonDeals,
         conversionRate: item.conversionRate,
-        wonRevenue: formatINR(item.wonRevenue),
       })),
     };
-  }, [activeReportId, filteredRecords]);
+  }, [
+    activeReportId,
+    filteredRecords,
+    selectedStatus,
+    selectedCustomerType,
+    selectedStaff,
+  ]);
 
   // Handle PDF Export / Print / Download
   const handleGeneratePdf = (actionType = 'download') => {
@@ -569,7 +684,10 @@ export const ReportsView = () => {
     const filtersText = [
       datePreset !== 'all' ? `Date: ${datePreset.replace('_', ' ')}` : 'Date: All Time',
       selectedStaff !== 'all' ? `Staff: ${selectedStaff}` : null,
+      selectedCustomerType !== 'all' ? `Type: ${selectedCustomerType}` : null,
       selectedStatus !== 'all' ? `Status: ${selectedStatus}` : null,
+      selectedRequirement !== 'all' ? `Req: ${selectedRequirement}` : null,
+      selectedLeadSource !== 'all' ? `Source: ${selectedLeadSource}` : null,
     ]
       .filter(Boolean)
       .join(' | ');
@@ -706,26 +824,51 @@ export const ReportsView = () => {
             </select>
           </div>
 
+          {/* Customer Type Filter */}
+          {(activeReportId === 'executive' || activeReportId === 'customers') && (
+            <div className="filter-item">
+              <label className="filter-label">
+                <Users size={13} />
+                <span>Customer Type</span>
+              </label>
+              <select
+                value={selectedCustomerType}
+                onChange={(e) => setSelectedCustomerType(e.target.value)}
+                className="filter-select"
+              >
+                <option value="all">All Customer Types</option>
+                <option value="Building Owner">Building Owner</option>
+                <option value="Mason">Mason</option>
+                <option value="Architect">Architect</option>
+                <option value="Engineer">Engineer</option>
+                <option value="Contractor">Contractor</option>
+                <option value="Builder">Builder</option>
+              </select>
+            </div>
+          )}
+
           {/* Status Filter */}
-          {(activeReportId === 'customers' || activeReportId === 'followups' || activeReportId === 'lost') && (
+          {(activeReportId === 'customers' || activeReportId === 'executive' || activeReportId === 'followups' || activeReportId === 'lost') && (
             <div className="filter-item">
               <label className="filter-label">
                 <Filter size={13} />
-                <span>Filter Category</span>
+                <span>{activeReportId === 'followups' ? 'Priority' : activeReportId === 'lost' ? 'Lost Reason' : 'Pipeline Status'}</span>
               </label>
               <select
                 value={selectedStatus}
                 onChange={(e) => setSelectedStatus(e.target.value)}
                 className="filter-select"
               >
-                <option value="all">All Categories</option>
-                {activeReportId === 'customers' && (
+                <option value="all">All {activeReportId === 'followups' ? 'Priorities' : activeReportId === 'lost' ? 'Reasons' : 'Statuses'}</option>
+                {(activeReportId === 'customers' || activeReportId === 'executive') && (
                   <>
-                    <option value="new">New Lead</option>
-                    <option value="quoted">Quoted</option>
-                    <option value="negotiating">Negotiating</option>
-                    <option value="won">Closed Won</option>
-                    <option value="lost">Closed Lost</option>
+                    <option value="New Lead">New Lead</option>
+                    <option value="Quotation">Quotation</option>
+                    <option value="Follow-up">Follow-up</option>
+                    <option value="Negotiation">Negotiation</option>
+                    <option value="Order Confirmed">Order Confirmed</option>
+                    <option value="Lost">Lost</option>
+                    <option value="Future Requirement">Future Requirement</option>
                   </>
                 )}
                 {activeReportId === 'followups' && (
@@ -744,6 +887,51 @@ export const ReportsView = () => {
                     <option value="Delivery Delay">Delivery Delay</option>
                   </>
                 )}
+              </select>
+            </div>
+          )}
+
+          {/* Requirement Filter */}
+          {(activeReportId === 'executive' || activeReportId === 'customers') && (
+            <div className="filter-item">
+              <label className="filter-label">
+                <Layers size={13} />
+                <span>Requirement</span>
+              </label>
+              <select
+                value={selectedRequirement}
+                onChange={(e) => setSelectedRequirement(e.target.value)}
+                className="filter-select"
+              >
+                <option value="all">All Requirements</option>
+                <option value="Tiles">Tiles</option>
+                <option value="Sanitary">Sanitary</option>
+                <option value="Adhesive / Epoxy">Adhesive / Epoxy</option>
+                <option value="CP Fittings">CP Fittings</option>
+              </select>
+            </div>
+          )}
+
+          {/* Lead Source Filter */}
+          {(activeReportId === 'executive' || activeReportId === 'customers') && (
+            <div className="filter-item">
+              <label className="filter-label">
+                <Compass size={13} />
+                <span>Lead Source</span>
+              </label>
+              <select
+                value={selectedLeadSource}
+                onChange={(e) => setSelectedLeadSource(e.target.value)}
+                className="filter-select"
+              >
+                <option value="all">All Lead Sources</option>
+                <option value="Walk-in">Walk-in</option>
+                <option value="Existing Customer">Existing Customer</option>
+                <option value="Engineer">Engineer</option>
+                <option value="Contractor">Contractor</option>
+                <option value="Builder">Builder</option>
+                <option value="Referral">Referral</option>
+                <option value="Other">Other</option>
               </select>
             </div>
           )}
@@ -773,6 +961,9 @@ export const ReportsView = () => {
               setEndDate('');
               setSelectedStaff('all');
               setSelectedStatus('all');
+              setSelectedCustomerType('all');
+              setSelectedLeadSource('all');
+              setSelectedRequirement('all');
               setSearchQuery('');
               fetchReportData();
             }}
@@ -806,10 +997,28 @@ export const ReportsView = () => {
                 <UserCheck size={12} />
                 <span>Staff: {selectedStaff}</span>
               </div>
+              {selectedCustomerType !== 'all' && (
+                <div className="hub-param-tag">
+                  <Users size={12} />
+                  <span>Type: {selectedCustomerType}</span>
+                </div>
+              )}
               {selectedStatus !== 'all' && (
                 <div className="hub-param-tag">
                   <Filter size={12} />
-                  <span>Category: {selectedStatus}</span>
+                  <span>Status: {selectedStatus}</span>
+                </div>
+              )}
+              {selectedRequirement !== 'all' && (
+                <div className="hub-param-tag">
+                  <Layers size={12} />
+                  <span>Req: {selectedRequirement}</span>
+                </div>
+              )}
+              {selectedLeadSource !== 'all' && (
+                <div className="hub-param-tag">
+                  <Compass size={12} />
+                  <span>Source: {selectedLeadSource}</span>
                 </div>
               )}
               <div className="hub-param-tag count-tag">

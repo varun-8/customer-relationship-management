@@ -320,12 +320,12 @@ export const LostSaleModal = ({ initialData, customer, onClose, onSaved }) => {
                 width: '44px',
                 height: '44px',
                 borderRadius: '14px',
-                background: 'linear-gradient(135deg, #DC2626 0%, #991B1B 100%)',
+                background: 'rgba(255, 255, 255, 0.1)',
                 color: '#FFFFFF',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                boxShadow: '0 6px 16px rgba(220, 38, 38, 0.35)',
+                border: '1px solid rgba(255, 255, 255, 0.15)',
               }}
             >
               <FileX size={20} />
@@ -347,7 +347,7 @@ export const LostSaleModal = ({ initialData, customer, onClose, onSaved }) => {
                       fontFamily: 'monospace',
                       fontSize: '11.5px',
                       fontWeight: '800',
-                      color: '#F87171',
+                      color: '#E2E8F0',
                     }}
                   >
                     <Hash size={11} />
@@ -471,7 +471,7 @@ export const LostSaleModal = ({ initialData, customer, onClose, onSaved }) => {
                 <div className="form-group">
                   <label className="form-label" style={{ fontSize: '12px', fontWeight: '800', color: '#0F172A' }}>Quotation Value (₹) *</label>
                   <div className="input-icon-wrapper" style={{ position: 'relative' }}>
-                    <span style={{ position: 'absolute', left: '12px', top: '10px', fontWeight: '900', color: '#DC2626', fontSize: '15px' }}>₹</span>
+                    <span style={{ position: 'absolute', left: '12px', top: '10px', fontWeight: '900', color: '#0F172A', fontSize: '15px' }}>₹</span>
                     <input
                       type="number"
                       className="form-input"
@@ -480,7 +480,7 @@ export const LostSaleModal = ({ initialData, customer, onClose, onSaved }) => {
                       onChange={(e) => setQuoteValue(e.target.value)}
                       required
                       min="0"
-                      style={{ paddingLeft: '28px', paddingRight: '12px', paddingTop: '9px', paddingBottom: '9px', borderRadius: '10px', border: '1.5px solid #CBD5E1', fontWeight: '900', color: '#DC2626', fontSize: '15px' }}
+                      style={{ paddingLeft: '28px', paddingRight: '12px', paddingTop: '9px', paddingBottom: '9px', borderRadius: '10px', border: '1.5px solid #CBD5E1', fontWeight: '900', color: '#0F172A', fontSize: '15px' }}
                     />
                   </div>
                 </div>
@@ -502,7 +502,7 @@ export const LostSaleModal = ({ initialData, customer, onClose, onSaved }) => {
             {/* SECTION 2: PRODUCTS & SALESPERSON */}
             <div className="lost-section-box" style={{ backgroundColor: '#FFFFFF', borderRadius: '18px', border: '1px solid #E2E8F0', padding: '18px' }}>
               <div className="lost-section-title" style={{ fontSize: '12px', fontWeight: '800', color: '#0F172A', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <Layers size={14} color="#2563EB" />
+                <Layers size={14} color="#0F172A" />
                 <span>2. PRODUCT CATEGORIES & SALES STAFF</span>
               </div>
 
@@ -519,9 +519,9 @@ export const LostSaleModal = ({ initialData, customer, onClose, onSaved }) => {
                         style={{
                           padding: '6px 14px',
                           borderRadius: '10px',
-                          border: isSel ? '1.5px solid #2563EB' : '1px solid #E2E8F0',
-                          backgroundColor: isSel ? '#EFF6FF' : '#FFFFFF',
-                          color: isSel ? '#2563EB' : '#475569',
+                          border: isSel ? '1.5px solid #0F172A' : '1px solid #E2E8F0',
+                          backgroundColor: isSel ? '#0F172A' : '#FFFFFF',
+                          color: isSel ? '#FFFFFF' : '#475569',
                           fontWeight: isSel ? '800' : '600',
                           fontSize: '12px',
                           cursor: 'pointer',
@@ -551,9 +551,9 @@ export const LostSaleModal = ({ initialData, customer, onClose, onSaved }) => {
                         style={{
                           padding: '6px 14px',
                           borderRadius: '10px',
-                          border: isSel ? '1.5px solid #059669' : '1px solid #E2E8F0',
-                          backgroundColor: isSel ? '#ECFDF5' : '#FFFFFF',
-                          color: isSel ? '#059669' : '#475569',
+                          border: isSel ? '1.5px solid #0F172A' : '1px solid #E2E8F0',
+                          backgroundColor: isSel ? '#0F172A' : '#FFFFFF',
+                          color: isSel ? '#FFFFFF' : '#475569',
                           fontWeight: isSel ? '800' : '600',
                           fontSize: '12px',
                           cursor: 'pointer',
@@ -570,7 +570,7 @@ export const LostSaleModal = ({ initialData, customer, onClose, onSaved }) => {
             {/* SECTION 3: COMPETITOR SHOWROOM CRUD & PRICING GAP */}
             <div className="lost-section-box" style={{ backgroundColor: '#FFFFFF', borderRadius: '18px', border: '1px solid #E2E8F0', padding: '18px' }}>
               <div className="lost-section-title" style={{ fontSize: '12px', fontWeight: '800', color: '#0F172A', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <Building2 size={14} color="#EA580C" />
+                <Building2 size={14} color="#0F172A" />
                 <span>3. COMPETITOR SHOWROOM & PRICING GAP</span>
               </div>
 
@@ -583,7 +583,7 @@ export const LostSaleModal = ({ initialData, customer, onClose, onSaved }) => {
                   <button
                     type="button"
                     onClick={() => setShowAddCompetitorInput(!showAddCompetitorInput)}
-                    style={{ fontSize: '11.5px', fontWeight: '800', color: '#2563EB', background: '#EFF6FF', border: '1px solid #DBEAFE', padding: '3px 10px', borderRadius: '8px', cursor: 'pointer' }}
+                    style={{ fontSize: '11.5px', fontWeight: '800', color: '#0F172A', background: '#F1F5F9', border: '1px solid #E2E8F0', padding: '3px 10px', borderRadius: '8px', cursor: 'pointer' }}
                   >
                     + Save New Competitor
                   </button>
@@ -603,7 +603,7 @@ export const LostSaleModal = ({ initialData, customer, onClose, onSaved }) => {
                     <button
                       type="button"
                       onClick={handleAddCompetitor}
-                      style={{ backgroundColor: '#2563EB', color: '#FFFFFF', border: 'none', borderRadius: '8px', padding: '7px 14px', fontSize: '12px', fontWeight: '800', cursor: 'pointer' }}
+                      style={{ backgroundColor: '#0F172A', color: '#FFFFFF', border: 'none', borderRadius: '8px', padding: '7px 14px', fontSize: '12px', fontWeight: '800', cursor: 'pointer' }}
                     >
                       Save
                     </button>
@@ -628,9 +628,9 @@ export const LostSaleModal = ({ initialData, customer, onClose, onSaved }) => {
                         style={{
                           padding: '6px 12px',
                           borderRadius: '10px',
-                          border: isSel ? '1.5px solid #EA580C' : '1px solid #E2E8F0',
-                          backgroundColor: isSel ? '#FFF7ED' : '#FFFFFF',
-                          color: isSel ? '#C2410C' : '#475569',
+                          border: isSel ? '1.5px solid #0F172A' : '1px solid #E2E8F0',
+                          backgroundColor: isSel ? '#0F172A' : '#FFFFFF',
+                          color: isSel ? '#FFFFFF' : '#475569',
                           fontWeight: isSel ? '800' : '600',
                           fontSize: '12px',
                           cursor: 'pointer',
@@ -648,7 +648,7 @@ export const LostSaleModal = ({ initialData, customer, onClose, onSaved }) => {
                           style={{
                             border: 'none',
                             background: 'transparent',
-                            color: isSel ? '#C2410C' : '#94A3B8',
+                            color: isSel ? '#FFFFFF' : '#94A3B8',
                             fontSize: '13px',
                             fontWeight: '800',
                             cursor: 'pointer',
@@ -671,14 +671,14 @@ export const LostSaleModal = ({ initialData, customer, onClose, onSaved }) => {
                     Price Difference / Competitor Discount (₹)
                   </label>
                   <div style={{ position: 'relative' }}>
-                    <span style={{ position: 'absolute', left: '12px', top: '10px', fontWeight: '900', color: '#DC2626', fontSize: '14px' }}>₹</span>
+                    <span style={{ position: 'absolute', left: '12px', top: '10px', fontWeight: '900', color: '#0F172A', fontSize: '14px' }}>₹</span>
                     <input
                       type="number"
                       placeholder="e.g. 15000"
                       value={priceDifference}
                       onChange={(e) => setPriceDifference(e.target.value)}
                       min="0"
-                      style={{ width: '100%', paddingLeft: '28px', paddingRight: '12px', paddingTop: '8px', paddingBottom: '8px', borderRadius: '10px', border: '1.5px solid #CBD5E1', fontSize: '14px', fontWeight: '800', color: '#DC2626' }}
+                      style={{ width: '100%', paddingLeft: '28px', paddingRight: '12px', paddingTop: '8px', paddingBottom: '8px', borderRadius: '10px', border: '1.5px solid #CBD5E1', fontSize: '14px', fontWeight: '800', color: '#0F172A' }}
                     />
                   </div>
                   <span style={{ fontSize: '11px', color: '#64748B', marginTop: '4px', display: 'block' }}>
@@ -688,13 +688,13 @@ export const LostSaleModal = ({ initialData, customer, onClose, onSaved }) => {
 
                 <div className="form-group">
                   <label className="form-label" style={{ fontSize: '12px', fontWeight: '800', color: '#0F172A' }}>Pricing Gap Analysis</label>
-                  <div style={{ backgroundColor: '#FEF2F2', border: '1px solid #FECDD3', borderRadius: '12px', padding: '10px 14px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <TrendingDown size={22} color="#DC2626" />
+                  <div style={{ backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '12px', padding: '10px 14px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <TrendingDown size={22} color="#0F172A" />
                     <div>
-                      <div style={{ fontWeight: '900', fontSize: '15px', color: '#991B1B' }}>
+                      <div style={{ fontWeight: '900', fontSize: '15px', color: '#0F172A' }}>
                         {diffPercent > 0 ? `${diffPercent}% lower quote` : '0% price gap'}
                       </div>
-                      <div style={{ fontSize: '11px', color: '#7F1D1D', fontWeight: '600' }}>
+                      <div style={{ fontSize: '11px', color: '#64748B', fontWeight: '600' }}>
                         {numDiff > 0 ? `₹${numDiff.toLocaleString('en-IN')} competitor price discount` : 'Enter price difference above'}
                       </div>
                     </div>
@@ -706,7 +706,7 @@ export const LostSaleModal = ({ initialData, customer, onClose, onSaved }) => {
             {/* SECTION 4: ROOT CAUSE & NOTES */}
             <div className="lost-section-box" style={{ backgroundColor: '#FFFFFF', borderRadius: '18px', border: '1px solid #E2E8F0', padding: '18px' }}>
               <div className="lost-section-title" style={{ fontSize: '12px', fontWeight: '800', color: '#0F172A', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <Tag size={14} color="#991B1B" />
+                <Tag size={14} color="#0F172A" />
                 <span>4. ROOT CAUSE & COMPETITOR INTEL REMARKS</span>
               </div>
 
@@ -746,7 +746,7 @@ export const LostSaleModal = ({ initialData, customer, onClose, onSaved }) => {
                   <input
                     type="text"
                     className="form-input"
-                    placeholder="Specify the exact reason..."
+                    placeholder="Describe specific lost reason..."
                     value={customReason}
                     onChange={(e) => setCustomReason(e.target.value)}
                     style={{ marginTop: '8px', padding: '10px 14px', borderRadius: '10px', border: '1.5px solid #CBD5E1' }}
@@ -787,7 +787,7 @@ export const LostSaleModal = ({ initialData, customer, onClose, onSaved }) => {
               type="submit"
               disabled={saving}
               style={{
-                background: 'linear-gradient(135deg, #DC2626 0%, #991B1B 100%)',
+                background: '#0F172A',
                 color: '#FFFFFF',
                 border: 'none',
                 borderRadius: '10px',
@@ -795,7 +795,7 @@ export const LostSaleModal = ({ initialData, customer, onClose, onSaved }) => {
                 padding: '9px 22px',
                 fontSize: '13px',
                 cursor: 'pointer',
-                boxShadow: '0 4px 14px rgba(220, 38, 38, 0.35)',
+                boxShadow: '0 4px 14px rgba(15, 23, 42, 0.25)',
               }}
             >
               {saving ? 'Recording...' : initialData ? 'Update Lost Sale' : '✓ Save Lost Sale Analysis'}

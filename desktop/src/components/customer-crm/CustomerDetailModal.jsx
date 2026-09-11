@@ -10,7 +10,7 @@ import {
   Sparkles,
   MapPin,
   Calendar,
-  Building,
+  Building2,
   User,
   Tag,
   DollarSign,
@@ -19,6 +19,17 @@ import {
   FileText,
   CheckCircle2,
   AlertCircle,
+  IndianRupee,
+  Layers,
+  Compass,
+  Lock,
+  Package,
+  CalendarDays,
+  Target,
+  History,
+  Info,
+  ShieldCheck,
+  ExternalLink,
 } from 'lucide-react';
 import { useCustomer } from '../../context/CustomerContext';
 import { useBranding } from '../../context/BrandingContext';
@@ -28,6 +39,7 @@ export const CustomerDetailModal = ({ customer: initialCustomer, onClose, onEdit
   const { activeForm, updateCustomer } = useCustomer();
   const { appName } = useBranding();
   const [customer, setCustomer] = useState(initialCustomer);
+  const [activeTab, setActiveTab] = useState('details'); // 'details' | 'timeline' | 'quick_log'
   const [copiedId, setCopiedId] = useState(false);
   const [copiedPhone, setCopiedPhone] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -40,7 +52,9 @@ export const CustomerDetailModal = ({ customer: initialCustomer, onClose, onEdit
   const [followUpStatus, setFollowUpStatus] = useState(data.status || 'Follow-up');
   const [followUpReason, setFollowUpReason] = useState(data.lastReason || '');
   const [followUpNextDate, setFollowUpNextDate] = useState(data.nextFollowUp || '');
-  const [followUpOrderValue, setFollowUpOrderValue] = useState(data.orderValue ? String(data.orderValue) : (data.quotationValue ? String(data.quotationValue) : ''));
+  const [followUpOrderValue, setFollowUpOrderValue] = useState(
+    data.orderValue ? String(data.orderValue) : (data.quotationValue ? String(data.quotationValue) : '')
+  );
   const [submittingFollowUp, setSubmittingFollowUp] = useState(false);
   const [savedSuccess, setSavedSuccess] = useState(false);
 
@@ -90,12 +104,11 @@ export const CustomerDetailModal = ({ customer: initialCustomer, onClose, onEdit
     }
   };
 
-  // Helper for formatting requirement categories into pill tags
   const renderRequirementTags = (req) => {
     if (!req) {
       return (
-        <span style={{ backgroundColor: '#EFF6FF', border: '1px solid #BFDBFE', color: '#1D4ED8', fontSize: '12px', fontWeight: '700', padding: '4px 12px', borderRadius: '10px' }}>
-          🧱 Floor & Wall Tiles
+        <span style={{ backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0', color: '#334155', fontSize: '12px', fontWeight: '700', padding: '4px 10px', borderRadius: '8px' }}>
+          Tiles
         </span>
       );
     }
@@ -103,32 +116,23 @@ export const CustomerDetailModal = ({ customer: initialCustomer, onClose, onEdit
       ? req
       : String(req).split(',').map((s) => s.trim()).filter(Boolean);
 
-    const getIcon = (val) => {
-      const v = val.toLowerCase();
-      if (v.includes('tile')) return '🧱';
-      if (v.includes('sanitary') || v.includes('bath')) return '🚿';
-      if (v.includes('cp') || v.includes('tap') || v.includes('faucet')) return '🚰';
-      if (v.includes('adhesive') || v.includes('grout')) return '🧪';
-      return '✨';
-    };
-
     return arr.map((item, idx) => (
       <span
         key={idx}
         style={{
-          backgroundColor: '#ECFDF5',
-          border: '1px solid #A7F3D0',
-          color: '#059669',
-          fontSize: '12.5px',
+          backgroundColor: '#F8FAFC',
+          border: '1px solid #E2E8F0',
+          color: '#334155',
+          fontSize: '12px',
           fontWeight: '700',
-          padding: '5px 14px',
-          borderRadius: '10px',
+          padding: '4px 10px',
+          borderRadius: '8px',
           display: 'inline-flex',
           alignItems: 'center',
-          gap: '6px',
+          gap: '5px',
         }}
       >
-        <span>{getIcon(item)}</span>
+        <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: '#64748B' }} />
         <span>{item}</span>
       </span>
     ));
@@ -138,31 +142,65 @@ export const CustomerDetailModal = ({ customer: initialCustomer, onClose, onEdit
     switch (status) {
       case 'Order Confirmed':
       case 'Confirmed':
-        return { bg: '#DCFCE7', text: '#15803D', border: '#86EFAC', label: 'Order Confirmed', dot: '#16A34A' };
-      case 'Negotiation':
-        return { bg: '#FEF3C7', text: '#B45309', border: '#FDE68A', label: 'Negotiation', dot: '#F59E0B' };
-      case 'Quotation':
-        return { bg: '#E0F2FE', text: '#0369A1', border: '#BAE6FD', label: 'Quotation Shared', dot: '#0284C7' };
+        return { bg: '#ECFDF5', text: '#059669', border: '#A7F3D0', label: 'Order Confirmed', dot: '#10B981' };
       case 'Lost':
-        return { bg: '#FEF2F2', text: '#DC2626', border: '#FECACA', label: 'Lost Opportunity', dot: '#EF4444' };
-      case 'Follow-up':
-      case 'In Progress':
+      case 'LOST':
+        return { bg: '#F1F5F9', text: '#64748B', border: '#CBD5E1', label: 'Lost Opportunity', dot: '#94A3B8' };
       default:
-        return { bg: '#EFF6FF', text: '#1D4ED8', border: '#BFDBFE', label: 'Active Follow-up', dot: '#2563EB' };
+        return { bg: '#F8FAFC', text: '#1E293B', border: '#E2E8F0', label: status || 'Active Follow-up', dot: '#475569' };
     }
   };
 
   const statusStyle = getStatusStyle(data.status);
   const waUrl = getWhatsAppUrl(data.phone, data, appName);
 
-  const registeredDateStr = customer.createdAt || customer.entryDate
-    ? new Date(customer.createdAt || customer.entryDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
+  const rawDate = customer.entryDate || data.entryDate || data.date || customer.createdAt;
+  const registeredDateStr = rawDate
+    ? new Date(rawDate).toLocaleDateString('en-IN', {
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric',
+      })
     : 'Recent';
 
-  const rawQuotationVal = data.quotationValue || data.orderValue || data.tileBudget;
-  const quotationValFormatted = rawQuotationVal
-    ? `₹${Number(rawQuotationVal).toLocaleString('en-IN')}`
-    : '₹2,50,000';
+  const formatCurrency = (val) => {
+    if (val === undefined || val === null || val === '') return '—';
+    const num = Number(val);
+    if (isNaN(num) || num === 0) return '₹ 0';
+    return `₹ ${num.toLocaleString('en-IN')}`;
+  };
+
+  const isConfirmed = data.status === 'Order Confirmed' || data.status === 'Confirmed';
+
+  // Parse notes into activity timeline
+  const notesStr = customer.notes || data.notes || '';
+  const timelineEntries = [];
+  if (notesStr) {
+    notesStr.split('\n').forEach((line) => {
+      const trimmed = line.trim();
+      if (!trimmed) return;
+      const match = trimmed.match(/^\[([\d-]+)\]\s*(.*?):\s*(.*)$/);
+      if (match) {
+        timelineEntries.push({ date: match[1], outcome: match[2], text: match[3] });
+      } else {
+        timelineEntries.push({ date: '', outcome: 'Discussion Remark', text: trimmed });
+      }
+    });
+    timelineEntries.reverse();
+  }
+
+  // Extract dynamic custom fields defined outside standard keys
+  const standardFieldKeys = [
+    'customerId', 'entryDate', 'date', 'customerName', 'name', 'phone', 'mobileNumber', 'mobilePhone',
+    'location', 'city', 'leadSource', 'salesperson', 'customerType',
+    'houseStage', 'requirement', 'approxQuantity', 'tileBudget', 'adhesiveRequirement',
+    'quotationValue', 'quotationDate', 'status', 'orderValue', 'crossSell',
+    'nextFollowUp', 'lastFollowUp', 'followUpCount', 'lastReason', 'notes',
+  ];
+
+  const customFields = (activeForm?.fields || []).filter(
+    (f) => f.active && !standardFieldKeys.includes(f.name)
+  );
 
   return (
     <div
@@ -170,20 +208,17 @@ export const CustomerDetailModal = ({ customer: initialCustomer, onClose, onEdit
       onClick={onClose}
       style={{
         position: 'fixed',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
+        inset: 0,
         width: '100vw',
         height: '100vh',
-        backgroundColor: 'rgba(15, 23, 42, 0.65)',
-        backdropFilter: 'blur(8px)',
-        WebkitBackdropFilter: 'blur(8px)',
+        backgroundColor: 'rgba(15, 23, 42, 0.72)',
+        backdropFilter: 'blur(10px)',
+        WebkitBackdropFilter: 'blur(10px)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
         zIndex: 9999,
-        padding: '20px',
+        padding: '16px',
         margin: 0,
         fontFamily: "'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
       }}
@@ -191,17 +226,17 @@ export const CustomerDetailModal = ({ customer: initialCustomer, onClose, onEdit
       <div
         className="modal-card"
         style={{
-          maxWidth: '960px',
-          width: '100%',
-          maxHeight: '92vh',
+          maxWidth: '1040px',
+          width: '98%',
+          maxHeight: '94vh',
           display: 'flex',
           flexDirection: 'column',
-          borderRadius: '24px',
+          borderRadius: '22px',
           overflow: 'hidden',
           backgroundColor: '#FFFFFF',
-          boxShadow: '0 25px 70px -15px rgba(0, 0, 0, 0.25)',
+          boxShadow: '0 25px 70px -15px rgba(0, 0, 0, 0.35)',
           margin: 'auto',
-          fontFamily: "'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+          border: '1px solid #E2E8F0',
         }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -209,30 +244,30 @@ export const CustomerDetailModal = ({ customer: initialCustomer, onClose, onEdit
         <div
           style={{
             backgroundColor: '#FFFFFF',
-            padding: '22px 28px 18px 28px',
+            padding: '20px 28px 16px 28px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
             gap: '16px',
             flexWrap: 'wrap',
-            borderBottom: '1px solid #F1F5F9',
+            borderBottom: '1px solid #E2E8F0',
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px', minWidth: 0, flex: 1 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '14px', minWidth: 0, flex: 1 }}>
             {/* Circular Avatar */}
             <div
               style={{
-                width: '56px',
-                height: '56px',
-                borderRadius: '50%',
-                background: 'linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)',
+                width: '52px',
+                height: '52px',
+                borderRadius: '14px',
+                background: 'linear-gradient(135deg, #1E293B 0%, #0F172A 100%)',
                 color: '#FFFFFF',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                fontSize: '24px',
+                fontSize: '22px',
                 fontWeight: '800',
-                boxShadow: '0 4px 14px rgba(37, 99, 235, 0.3)',
+                boxShadow: '0 4px 12px rgba(15, 23, 42, 0.15)',
                 flexShrink: 0,
               }}
             >
@@ -241,9 +276,9 @@ export const CustomerDetailModal = ({ customer: initialCustomer, onClose, onEdit
 
             <div style={{ minWidth: 0, flex: 1 }}>
               {/* Title & Badges */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-                <h1 style={{ fontSize: '23px', fontWeight: '800', color: '#0F172A', margin: 0, letterSpacing: '-0.02em' }}>
-                  {data.customerName || 'Unnamed Customer'}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                <h1 style={{ fontSize: '20px', fontWeight: '800', color: '#0F172A', margin: 0, letterSpacing: '-0.02em' }}>
+                  {data.customerName || customer.customerName || 'Unnamed Customer'}
                 </h1>
 
                 {/* ID Badge */}
@@ -252,20 +287,20 @@ export const CustomerDetailModal = ({ customer: initialCustomer, onClose, onEdit
                     display: 'inline-flex',
                     alignItems: 'center',
                     gap: '5px',
-                    backgroundColor: '#F1F5F9',
+                    backgroundColor: '#F8FAFC',
                     border: '1px solid #E2E8F0',
-                    padding: '3px 9px',
-                    borderRadius: '8px',
+                    padding: '3px 8px',
+                    borderRadius: '6px',
                     fontFamily: 'monospace',
                     fontSize: '12px',
-                    fontWeight: '700',
-                    color: '#475569',
+                    fontWeight: '800',
+                    color: '#334155',
                   }}
                 >
-                  <span>{customer.customerId || 'CUS-000005'}</span>
+                  <span>{customer.customerId || data.customerId || 'CUS-000000'}</span>
                   <button
                     type="button"
-                    onClick={() => copyToClipboard(customer.customerId || 'CUS-000005', 'id')}
+                    onClick={() => copyToClipboard(customer.customerId || data.customerId, 'id')}
                     style={{ background: 'none', border: 'none', color: '#64748B', cursor: 'pointer', padding: 0, display: 'flex' }}
                     title="Copy Customer ID"
                   >
@@ -276,13 +311,13 @@ export const CustomerDetailModal = ({ customer: initialCustomer, onClose, onEdit
                 {/* Customer Classification Tag */}
                 <span
                   style={{
-                    fontSize: '12px',
+                    fontSize: '11.5px',
                     fontWeight: '800',
-                    padding: '3px 12px',
-                    borderRadius: '20px',
-                    backgroundColor: '#FFEDD5',
-                    color: '#C2410C',
-                    border: '1px solid #FED7AA',
+                    padding: '3px 10px',
+                    borderRadius: '16px',
+                    backgroundColor: '#F8FAFC',
+                    color: '#334155',
+                    border: '1px solid #E2E8F0',
                   }}
                 >
                   {data.customerType || 'Building Owner'}
@@ -291,16 +326,16 @@ export const CustomerDetailModal = ({ customer: initialCustomer, onClose, onEdit
                 {/* Status Pill */}
                 <span
                   style={{
-                    fontSize: '12px',
+                    fontSize: '11.5px',
                     fontWeight: '800',
-                    padding: '3px 12px',
-                    borderRadius: '20px',
+                    padding: '3px 10px',
+                    borderRadius: '16px',
                     backgroundColor: statusStyle.bg,
                     color: statusStyle.text,
                     border: `1px solid ${statusStyle.border}`,
                     display: 'inline-flex',
                     alignItems: 'center',
-                    gap: '6px',
+                    gap: '5px',
                   }}
                 >
                   <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: statusStyle.dot }} />
@@ -309,14 +344,14 @@ export const CustomerDetailModal = ({ customer: initialCustomer, onClose, onEdit
               </div>
 
               {/* Subtitle Details Line */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '6px', fontSize: '13px', color: '#64748B', flexWrap: 'wrap', fontWeight: '500' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '5px', fontSize: '12.5px', color: '#64748B', flexWrap: 'wrap', fontWeight: '500' }}>
                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                  <MapPin size={13} color="#64748B" /> {data.location || 'Site Location'}
+                  <MapPin size={13} color="#64748B" /> {data.location || 'Site Location Not Specified'}
                 </span>
                 <span>•</span>
-                <span>Registered: <strong style={{ color: '#0F172A', fontWeight: '700' }}>{registeredDateStr}</strong></span>
+                <span>Reg: <strong style={{ color: '#0F172A', fontWeight: '700' }}>{registeredDateStr}</strong></span>
                 <span>•</span>
-                <span>Salesperson: <strong style={{ color: '#2563EB', fontWeight: '700' }}>{data.salesperson || 'Unassigned'}</strong></span>
+                <span>Salesperson: <strong style={{ color: '#0F172A', fontWeight: '700' }}>{data.salesperson || 'Unassigned'}</strong></span>
               </div>
             </div>
           </div>
@@ -330,9 +365,9 @@ export const CustomerDetailModal = ({ customer: initialCustomer, onClose, onEdit
                   backgroundColor: '#FFFFFF',
                   border: '1px solid #CBD5E1',
                   color: '#0F172A',
-                  borderRadius: '12px',
-                  padding: '9px 16px',
-                  fontSize: '13px',
+                  borderRadius: '10px',
+                  padding: '8px 14px',
+                  fontSize: '12.5px',
                   fontWeight: '700',
                   textDecoration: 'none',
                   display: 'flex',
@@ -341,7 +376,7 @@ export const CustomerDetailModal = ({ customer: initialCustomer, onClose, onEdit
                   boxShadow: '0 1px 2px rgba(15, 23, 42, 0.04)',
                 }}
               >
-                <Phone size={14} color="#2563EB" />
+                <Phone size={13} color="#0F172A" />
                 <span>Call</span>
               </a>
             )}
@@ -352,12 +387,12 @@ export const CustomerDetailModal = ({ customer: initialCustomer, onClose, onEdit
                 target="_blank"
                 rel="noopener noreferrer"
                 style={{
-                  backgroundColor: '#DCFCE7',
-                  border: '1px solid #86EFAC',
+                  backgroundColor: '#F0FDF4',
+                  border: '1px solid #BBF7D0',
                   color: '#15803D',
-                  borderRadius: '12px',
-                  padding: '9px 16px',
-                  fontSize: '13px',
+                  borderRadius: '10px',
+                  padding: '8px 14px',
+                  fontSize: '12.5px',
                   fontWeight: '800',
                   textDecoration: 'none',
                   display: 'flex',
@@ -365,7 +400,7 @@ export const CustomerDetailModal = ({ customer: initialCustomer, onClose, onEdit
                   gap: '6px',
                 }}
               >
-                <MessageSquare size={14} color="#15803D" />
+                <MessageSquare size={13} color="#15803D" />
                 <span>WhatsApp</span>
               </a>
             )}
@@ -380,9 +415,9 @@ export const CustomerDetailModal = ({ customer: initialCustomer, onClose, onEdit
                 backgroundColor: '#FFFFFF',
                 border: '1px solid #CBD5E1',
                 color: '#334155',
-                borderRadius: '12px',
-                padding: '9px 16px',
-                fontSize: '13px',
+                borderRadius: '10px',
+                padding: '8px 14px',
+                fontSize: '12.5px',
                 fontWeight: '700',
                 cursor: 'pointer',
                 display: 'flex',
@@ -390,7 +425,7 @@ export const CustomerDetailModal = ({ customer: initialCustomer, onClose, onEdit
                 gap: '6px',
               }}
             >
-              <Edit3 size={14} color="#64748B" />
+              <Edit3 size={13} color="#64748B" />
               <span>Edit</span>
             </button>
 
@@ -402,8 +437,8 @@ export const CustomerDetailModal = ({ customer: initialCustomer, onClose, onEdit
                 border: 'none',
                 color: '#64748B',
                 borderRadius: '10px',
-                width: '36px',
-                height: '36px',
+                width: '34px',
+                height: '34px',
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
@@ -411,309 +446,696 @@ export const CustomerDetailModal = ({ customer: initialCustomer, onClose, onEdit
               }}
               title="Close Modal"
             >
-              <X size={18} />
+              <X size={17} />
             </button>
           </div>
         </div>
 
-        {/* 2. Main Modal Body (Two-Column Layout) */}
-        <div style={{ padding: '24px 28px', overflowY: 'auto', flex: 1, backgroundColor: '#F8FAFC' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', alignItems: 'start' }}>
-            
-            {/* LEFT COLUMN */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-              {/* LEAD PROFILE CARD */}
-              <div
-                style={{
-                  backgroundColor: '#FFFFFF',
-                  borderRadius: '20px',
-                  border: '1px solid #E2E8F0',
-                  padding: '22px',
-                  boxShadow: '0 1px 3px rgba(15, 23, 42, 0.02)',
-                }}
-              >
-                <div style={{ fontSize: '13px', fontWeight: '800', color: '#0F172A', letterSpacing: '0.04em', textTransform: 'uppercase', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <User size={16} color="#2563EB" />
-                  <span>LEAD PROFILE & CONTACT</span>
-                </div>
-
-                {/* Section 1: Contact Info */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: '12px', borderBottom: '1px solid #F1F5F9' }}>
-                  <span style={{ fontSize: '13px', color: '#64748B', fontWeight: '600' }}>Mobile Phone</span>
-                  <div
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '6px',
-                      backgroundColor: '#F8FAFC',
-                      border: '1px solid #E2E8F0',
-                      padding: '4px 10px',
-                      borderRadius: '8px',
-                    }}
-                  >
-                    <span style={{ fontSize: '13px', fontWeight: '800', color: '#0F172A', fontFamily: 'monospace' }}>
-                      {data.phone || '—'}
-                    </span>
-                    {data.phone && (
-                      <button
-                        type="button"
-                        onClick={() => copyToClipboard(data.phone, 'phone')}
-                        style={{ background: 'none', border: 'none', color: '#64748B', cursor: 'pointer', padding: 0, display: 'flex' }}
-                        title="Copy Phone Number"
-                      >
-                        {copiedPhone ? <Check size={12} color="#059669" /> : <Copy size={12} />}
-                      </button>
-                    )}
-                  </div>
-                </div>
-
-                {/* Section 2: Classification Grid */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '12px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: '10px', borderBottom: '1px solid #F1F5F9' }}>
-                    <span style={{ fontSize: '13px', color: '#64748B', fontWeight: '600' }}>Site / City Location</span>
-                    <span style={{ fontSize: '13px', fontWeight: '700', color: '#0F172A' }}>{data.location || '—'}</span>
-                  </div>
-
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: '10px', borderBottom: '1px solid #F1F5F9' }}>
-                    <span style={{ fontSize: '13px', color: '#64748B', fontWeight: '600' }}>Customer Type</span>
-                    <span style={{ fontSize: '13px', fontWeight: '700', color: '#C2410C' }}>{data.customerType || 'Building Owner'}</span>
-                  </div>
-
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: '10px', borderBottom: '1px solid #F1F5F9' }}>
-                    <span style={{ fontSize: '13px', color: '#64748B', fontWeight: '600' }}>Lead Source Channel</span>
-                    <span style={{ fontSize: '13px', fontWeight: '700', color: '#0F172A' }}>{data.leadSource || 'Walk-in'}</span>
-                  </div>
-
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontSize: '13px', color: '#64748B', fontWeight: '600' }}>Assigned Sales Rep</span>
-                    <span style={{ fontSize: '13px', fontWeight: '800', color: '#2563EB', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#2563EB' }} />
-                      {data.salesperson || 'Unassigned'}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {/* REQUIREMENTS CARD */}
-              <div
-                style={{
-                  backgroundColor: '#FFFFFF',
-                  borderRadius: '20px',
-                  border: '1px solid #E2E8F0',
-                  padding: '22px',
-                  boxShadow: '0 1px 3px rgba(15, 23, 42, 0.02)',
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
-                  <div style={{ fontSize: '13px', fontWeight: '800', color: '#0F172A', letterSpacing: '0.04em', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <Tag size={16} color="#059669" />
-                    <span>PRODUCT REQUIREMENTS</span>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      onClose();
-                      if (onEdit) onEdit(customer);
-                    }}
-                    style={{ background: 'none', border: 'none', color: '#2563EB', fontSize: '12.5px', fontWeight: '700', cursor: 'pointer', padding: 0 }}
-                  >
-                    Edit Categories
-                  </button>
-                </div>
-
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                  {renderRequirementTags(data.requirement || data.requirementType)}
-                </div>
-              </div>
+        {/* 2. Top Metric Highlights Strip (4 KPI Tiles) */}
+        <div
+          style={{
+            backgroundColor: '#F8FAFC',
+            borderBottom: '1px solid #E2E8F0',
+            padding: '12px 28px',
+            display: 'grid',
+            gridTemplateColumns: 'repeat(4, 1fr)',
+            gap: '12px',
+          }}
+        >
+          <div style={{ backgroundColor: '#FFFFFF', padding: '10px 14px', borderRadius: '12px', border: '1px solid #E2E8F0' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '5px', color: '#64748B', fontSize: '10.5px', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+              <DollarSign size={13} color="#0F172A" />
+              <span>QUOTATION VALUE</span>
             </div>
+            <div style={{ fontSize: '16px', fontWeight: '900', color: '#0F172A', marginTop: '2px' }}>
+              {formatCurrency(data.quotationValue)}
+            </div>
+            <div style={{ fontSize: '11px', color: '#94A3B8', marginTop: '1px' }}>
+              Date: {data.quotationDate || 'Not specified'}
+            </div>
+          </div>
 
-            {/* RIGHT COLUMN */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-              {/* DEAL SUMMARY CARD */}
-              <div
-                style={{
-                  backgroundColor: '#FFFFFF',
-                  borderRadius: '20px',
-                  border: '1px solid #E2E8F0',
-                  padding: '22px',
-                  boxShadow: '0 1px 3px rgba(15, 23, 42, 0.02)',
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-                  <div style={{ fontSize: '13px', fontWeight: '800', color: '#0F172A', letterSpacing: '0.04em', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <DollarSign size={16} color="#EA580C" />
-                    <span>DEAL & PIPELINE SUMMARY</span>
-                  </div>
-                  {data.houseStage && (
-                    <span style={{ backgroundColor: '#FFEDD5', color: '#C2410C', fontSize: '11.5px', fontWeight: '800', padding: '3px 10px', borderRadius: '12px' }}>
-                      🏠 {data.houseStage}
-                    </span>
-                  )}
-                </div>
+          <div style={{ backgroundColor: isConfirmed ? '#ECFDF5' : '#FFFFFF', padding: '10px 14px', borderRadius: '12px', border: isConfirmed ? '1.5px solid #A7F3D0' : '1px solid #E2E8F0' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '5px', color: isConfirmed ? '#059669' : '#64748B', fontSize: '10.5px', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+              <Package size={13} color={isConfirmed ? '#059669' : '#64748B'} />
+              <span>ORDER VALUE</span>
+            </div>
+            <div style={{ fontSize: '16px', fontWeight: '900', color: isConfirmed ? '#059669' : '#64748B', marginTop: '2px' }}>
+              {isConfirmed ? formatCurrency(data.orderValue) : 'Pending Confirmation'}
+            </div>
+            <div style={{ fontSize: '11px', color: isConfirmed ? '#059669' : '#94A3B8', marginTop: '1px', fontWeight: isConfirmed ? '700' : '400' }}>
+              {isConfirmed ? '✓ Confirmed Deal' : 'Shown when confirmed'}
+            </div>
+          </div>
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: '10px', borderBottom: '1px solid #F1F5F9' }}>
-                    <span style={{ fontSize: '13px', color: '#64748B', fontWeight: '600' }}>Pipeline Stage</span>
-                    <span style={{ fontSize: '13px', fontWeight: '800', color: statusStyle.text }}>{data.status || 'Follow-up'}</span>
-                  </div>
+          <div style={{ backgroundColor: '#FFFFFF', padding: '10px 14px', borderRadius: '12px', border: '1px solid #E2E8F0' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '5px', color: '#64748B', fontSize: '10.5px', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+              <Layers size={13} color="#0F172A" />
+              <span>TILE BUDGET</span>
+            </div>
+            <div style={{ fontSize: '16px', fontWeight: '900', color: '#0F172A', marginTop: '2px' }}>
+              {formatCurrency(data.tileBudget)}
+            </div>
+            <div style={{ fontSize: '11px', color: '#94A3B8', marginTop: '1px' }}>
+              Area: {data.approxQuantity ? `${data.approxQuantity} sq.ft` : '—'}
+            </div>
+          </div>
 
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: '10px', borderBottom: '1px solid #F1F5F9' }}>
-                    <span style={{ fontSize: '13px', color: '#64748B', fontWeight: '600' }}>Quotation / Deal Value</span>
-                    <span style={{ fontSize: '18px', fontWeight: '900', color: '#0F172A' }}>{quotationValFormatted}</span>
-                  </div>
-
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: '10px', borderBottom: '1px solid #F1F5F9' }}>
-                    <span style={{ fontSize: '13px', color: '#64748B', fontWeight: '600' }}>Last Follow-Up Date</span>
-                    <span style={{ fontSize: '13px', fontWeight: '700', color: '#0F172A' }}>{data.lastFollowUp || 'Registered Today'}</span>
-                  </div>
-
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontSize: '13px', color: '#64748B', fontWeight: '600' }}>Total Interactions</span>
-                    <span style={{ fontSize: '13px', fontWeight: '700', color: '#0F172A' }}>{data.followUpCount || 1} logged logs</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* QUICK LOG & ACTION CARD */}
-              <div
-                style={{
-                  backgroundColor: '#FFFFFF',
-                  borderRadius: '20px',
-                  border: '1px solid #E2E8F0',
-                  padding: '22px',
-                  boxShadow: '0 1px 3px rgba(15, 23, 42, 0.02)',
-                }}
-              >
-                <div style={{ fontSize: '13px', fontWeight: '800', color: '#0F172A', letterSpacing: '0.04em', textTransform: 'uppercase', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <Clock size={16} color="#2563EB" />
-                  <span>LOG FOLLOW-UP & UPDATE STAGE</span>
-                </div>
-
-                {savedSuccess && (
-                  <div style={{ padding: '10px 14px', borderRadius: '12px', backgroundColor: '#DCFCE7', border: '1px solid #86EFAC', color: '#15803D', fontSize: '12.5px', fontWeight: '800', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <CheckCircle2 size={16} color="#15803D" />
-                    <span>Follow-up activity recorded & customer stage updated!</span>
-                  </div>
-                )}
-
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                  {/* Pipeline Stage Select Pills */}
-                  <div>
-                    <label style={{ fontSize: '11px', fontWeight: '800', color: '#64748B', letterSpacing: '0.04em', textTransform: 'uppercase', display: 'block', marginBottom: '8px' }}>
-                      UPDATE PIPELINE STAGE
-                    </label>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '6px' }}>
-                      {[
-                        { id: 'Follow-up', label: 'Follow-up' },
-                        { id: 'Quotation', label: 'Quotation' },
-                        { id: 'Negotiation', label: 'Negotiation' },
-                        { id: 'Order Confirmed', label: '🥳 Confirmed' },
-                      ].map((st) => (
-                        <button
-                          key={st.id}
-                          type="button"
-                          onClick={() => setFollowUpStatus(st.id)}
-                          style={{
-                            padding: '8px 10px',
-                            borderRadius: '10px',
-                            border: followUpStatus === st.id ? '1.5px solid #2563EB' : '1px solid #E2E8F0',
-                            backgroundColor: followUpStatus === st.id ? '#EFF6FF' : '#FFFFFF',
-                            color: followUpStatus === st.id ? '#1D4ED8' : '#475569',
-                            fontSize: '12px',
-                            fontWeight: followUpStatus === st.id ? '800' : '600',
-                            cursor: 'pointer',
-                            textAlign: 'center',
-                            transition: 'all 0.15s ease',
-                          }}
-                        >
-                          {st.label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                    <div>
-                      <label style={{ fontSize: '11px', fontWeight: '800', color: '#64748B', letterSpacing: '0.04em', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>
-                        NEXT FOLLOW-UP DATE
-                      </label>
-                      <input
-                        type="date"
-                        value={followUpNextDate}
-                        onChange={(e) => setFollowUpNextDate(e.target.value)}
-                        style={{
-                          width: '100%',
-                          padding: '9px 12px',
-                          borderRadius: '12px',
-                          border: '1px solid #CBD5E1',
-                          backgroundColor: '#FFFFFF',
-                          fontSize: '13px',
-                          color: '#0F172A',
-                          fontWeight: '600',
-                          outline: 'none',
-                        }}
-                      />
-                    </div>
-
-                    <div>
-                      <label style={{ fontSize: '11px', fontWeight: '800', color: '#64748B', letterSpacing: '0.04em', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>
-                        ORDER VALUE (IF BOOKED)
-                      </label>
-                      <input
-                        type="text"
-                        placeholder="₹ Order Amount"
-                        value={followUpOrderValue}
-                        onChange={(e) => setFollowUpOrderValue(e.target.value)}
-                        style={{
-                          width: '100%',
-                          padding: '9px 12px',
-                          borderRadius: '12px',
-                          border: '1px solid #CBD5E1',
-                          backgroundColor: '#FFFFFF',
-                          fontSize: '13px',
-                          color: '#0F172A',
-                          fontWeight: '600',
-                          outline: 'none',
-                        }}
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label style={{ fontSize: '11px', fontWeight: '800', color: '#64748B', letterSpacing: '0.04em', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>
-                      FOLLOW-UP SUMMARY NOTES
-                    </label>
-                    <textarea
-                      placeholder="Add summary notes of discussion, customer preferences, or site visits..."
-                      value={followUpReason}
-                      onChange={(e) => setFollowUpReason(e.target.value)}
-                      rows={2}
-                      style={{
-                        width: '100%',
-                        padding: '9px 12px',
-                        borderRadius: '12px',
-                        border: '1px solid #CBD5E1',
-                        backgroundColor: '#FFFFFF',
-                        fontSize: '13px',
-                        color: '#0F172A',
-                        fontWeight: '500',
-                        outline: 'none',
-                        resize: 'none',
-                      }}
-                    />
-                  </div>
-                </div>
-              </div>
+          <div style={{ backgroundColor: '#FFFFFF', padding: '10px 14px', borderRadius: '12px', border: '1px solid #E2E8F0' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '5px', color: '#64748B', fontSize: '10.5px', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+              <CalendarDays size={13} color="#0F172A" />
+              <span>NEXT FOLLOW-UP</span>
+            </div>
+            <div style={{ fontSize: '15px', fontWeight: '800', color: '#0F172A', marginTop: '2px' }}>
+              {data.nextFollowUp || 'None Scheduled'}
+            </div>
+            <div style={{ fontSize: '11px', color: '#94A3B8', marginTop: '1px' }}>
+              Total Logs: {data.followUpCount || 0} interaction(s)
             </div>
           </div>
         </div>
 
-        {/* 3. Modal Footer Actions Bar */}
+        {/* 3. Segmented Navigation Tabs */}
         <div
           style={{
             backgroundColor: '#FFFFFF',
-            padding: '16px 28px',
-            borderTop: '1px solid #F1F5F9',
+            borderBottom: '1px solid #E2E8F0',
+            padding: '8px 28px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+          }}
+        >
+          <button
+            type="button"
+            onClick={() => setActiveTab('details')}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '8px 16px',
+              borderRadius: '10px',
+              fontSize: '12.5px',
+              fontWeight: '700',
+              cursor: 'pointer',
+              border: activeTab === 'details' ? '1px solid #0F172A' : '1px solid transparent',
+              backgroundColor: activeTab === 'details' ? '#F1F5F9' : 'transparent',
+              color: activeTab === 'details' ? '#0F172A' : '#64748B',
+              transition: 'all 0.15s ease',
+            }}
+          >
+            <FileText size={14} color={activeTab === 'details' ? '#0F172A' : '#64748B'} />
+            <span>All Details & Specifications</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('timeline')}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '8px 16px',
+              borderRadius: '10px',
+              fontSize: '12.5px',
+              fontWeight: '700',
+              cursor: 'pointer',
+              border: activeTab === 'timeline' ? '1px solid #0F172A' : '1px solid transparent',
+              backgroundColor: activeTab === 'timeline' ? '#F1F5F9' : 'transparent',
+              color: activeTab === 'timeline' ? '#0F172A' : '#64748B',
+              transition: 'all 0.15s ease',
+            }}
+          >
+            <History size={14} color={activeTab === 'timeline' ? '#0F172A' : '#64748B'} />
+            <span>Discussion History & Timeline</span>
+            {timelineEntries.length > 0 && (
+              <span style={{ backgroundColor: activeTab === 'timeline' ? '#0F172A' : '#E2E8F0', color: activeTab === 'timeline' ? '#FFFFFF' : '#475569', fontSize: '10px', fontWeight: '800', padding: '1px 6px', borderRadius: '10px' }}>
+                {timelineEntries.length}
+              </span>
+            )}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('quick_log')}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '8px 16px',
+              borderRadius: '10px',
+              fontSize: '12.5px',
+              fontWeight: '700',
+              cursor: 'pointer',
+              border: activeTab === 'quick_log' ? '1px solid #0F172A' : '1px solid transparent',
+              backgroundColor: activeTab === 'quick_log' ? '#F1F5F9' : 'transparent',
+              color: activeTab === 'quick_log' ? '#0F172A' : '#64748B',
+              transition: 'all 0.15s ease',
+            }}
+          >
+            <Target size={14} color={activeTab === 'quick_log' ? '#0F172A' : '#64748B'} />
+            <span>Quick Activity Logger</span>
+          </button>
+        </div>
+
+        {/* 4. Modal Body Content */}
+        <div style={{ padding: '22px 28px', overflowY: 'auto', flex: 1, backgroundColor: '#F8FAFC' }}>
+          {/* TAB 1: ALL DETAILS & SPECIFICATIONS */}
+          {activeTab === 'details' && (
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', alignItems: 'start' }}>
+              {/* LEFT COLUMN: Section 1 & Section 2 */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                {/* SECTION 1: CONTACT & LEAD PROFILE */}
+                <div
+                  style={{
+                    backgroundColor: '#FFFFFF',
+                    borderRadius: '16px',
+                    border: '1px solid #E2E8F0',
+                    padding: '20px',
+                    boxShadow: '0 1px 3px rgba(15, 23, 42, 0.02)',
+                  }}
+                >
+                  <div style={{ fontSize: '11.5px', fontWeight: '800', color: '#0F172A', letterSpacing: '0.05em', textTransform: 'uppercase', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div style={{ width: '26px', height: '26px', borderRadius: '8px', backgroundColor: '#F1F5F9', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <User size={15} color="#0F172A" />
+                    </div>
+                    <span>1. Contact & Profile Details</span>
+                  </div>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '11px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: '9px', borderBottom: '1px solid #F1F5F9' }}>
+                      <span style={{ fontSize: '11.5px', color: '#64748B', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Customer ID</span>
+                      <span style={{ fontSize: '13px', fontWeight: '800', color: '#1E293B', fontFamily: 'monospace' }}>
+                        {customer.customerId || data.customerId || '—'}
+                      </span>
+                    </div>
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: '9px', borderBottom: '1px solid #F1F5F9' }}>
+                      <span style={{ fontSize: '11.5px', color: '#64748B', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Registration Date</span>
+                      <span style={{ fontSize: '13px', fontWeight: '700', color: '#1E293B' }}>
+                        {data.entryDate || registeredDateStr}
+                      </span>
+                    </div>
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: '9px', borderBottom: '1px solid #F1F5F9' }}>
+                      <span style={{ fontSize: '11.5px', color: '#64748B', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Full Client Name</span>
+                      <span style={{ fontSize: '13.5px', fontWeight: '800', color: '#0F172A' }}>
+                        {data.customerName || customer.customerName || '—'}
+                      </span>
+                    </div>
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: '9px', borderBottom: '1px solid #F1F5F9' }}>
+                      <span style={{ fontSize: '11.5px', color: '#64748B', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Mobile Phone</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <span style={{ fontSize: '13px', fontWeight: '800', color: '#0F172A', fontFamily: 'monospace' }}>
+                          {data.phone || '—'}
+                        </span>
+                        {data.phone && (
+                          <button
+                            type="button"
+                            onClick={() => copyToClipboard(data.phone, 'phone')}
+                            style={{ background: 'none', border: 'none', color: '#64748B', cursor: 'pointer', padding: 0, display: 'flex' }}
+                            title="Copy Phone Number"
+                          >
+                            {copiedPhone ? <Check size={12} color="#059669" /> : <Copy size={12} />}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: '9px', borderBottom: '1px solid #F1F5F9' }}>
+                      <span style={{ fontSize: '11.5px', color: '#64748B', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Site / City Location</span>
+                      <span style={{ fontSize: '13px', fontWeight: '700', color: '#0F172A' }}>
+                        {data.location || '—'}
+                      </span>
+                    </div>
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: '9px', borderBottom: '1px solid #F1F5F9' }}>
+                      <span style={{ fontSize: '11.5px', color: '#64748B', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Customer Type</span>
+                      <span style={{ fontSize: '12px', fontWeight: '800', color: '#334155', background: '#F8FAFC', padding: '2px 8px', borderRadius: '6px', border: '1px solid #E2E8F0' }}>
+                        {data.customerType || 'Building Owner'}
+                      </span>
+                    </div>
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: '9px', borderBottom: '1px solid #F1F5F9' }}>
+                      <span style={{ fontSize: '11.5px', color: '#64748B', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Lead Source</span>
+                      <span style={{ fontSize: '13px', fontWeight: '700', color: '#0F172A' }}>
+                        {data.leadSource || 'Showroom Walk-in'}
+                      </span>
+                    </div>
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontSize: '11.5px', color: '#64748B', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Salesperson Assigned</span>
+                      <span style={{ fontSize: '13px', fontWeight: '800', color: '#0F172A' }}>
+                        {data.salesperson || 'Unassigned'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* SECTION 2: PROJECT & MATERIAL SPECIFICATIONS */}
+                <div
+                  style={{
+                    backgroundColor: '#FFFFFF',
+                    borderRadius: '16px',
+                    border: '1px solid #E2E8F0',
+                    padding: '20px',
+                    boxShadow: '0 1px 3px rgba(15, 23, 42, 0.02)',
+                  }}
+                >
+                  <div style={{ fontSize: '11.5px', fontWeight: '800', color: '#0F172A', letterSpacing: '0.05em', textTransform: 'uppercase', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div style={{ width: '26px', height: '26px', borderRadius: '8px', backgroundColor: '#F1F5F9', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <Layers size={15} color="#0F172A" />
+                    </div>
+                    <span>2. Project & Material Specifications</span>
+                  </div>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '11px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: '9px', borderBottom: '1px solid #F1F5F9' }}>
+                      <span style={{ fontSize: '11.5px', color: '#64748B', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.04em' }}>House / Project Stage</span>
+                      <span style={{ fontSize: '12px', fontWeight: '800', color: '#334155', backgroundColor: '#F8FAFC', padding: '2px 8px', borderRadius: '6px', border: '1px solid #E2E8F0' }}>
+                        {data.houseStage || 'Planning'}
+                      </span>
+                    </div>
+
+                    <div style={{ paddingBottom: '9px', borderBottom: '1px solid #F1F5F9' }}>
+                      <div style={{ fontSize: '11.5px', color: '#64748B', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '6px' }}>Requirement Categories</div>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                        {renderRequirementTags(data.requirement)}
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: '9px', borderBottom: '1px solid #F1F5F9' }}>
+                      <span style={{ fontSize: '11.5px', color: '#64748B', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Approx Coverage Area</span>
+                      <span style={{ fontSize: '13px', fontWeight: '800', color: '#0F172A' }}>
+                        {data.approxQuantity ? `${data.approxQuantity} sq.ft / units` : '—'}
+                      </span>
+                    </div>
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: '9px', borderBottom: '1px solid #F1F5F9' }}>
+                      <span style={{ fontSize: '11.5px', color: '#64748B', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Tile Target Budget</span>
+                      <span style={{ fontSize: '13.5px', fontWeight: '800', color: '#0F172A' }}>
+                        {formatCurrency(data.tileBudget)}
+                      </span>
+                    </div>
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontSize: '11.5px', color: '#64748B', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Adhesive / Epoxy Requirement</span>
+                      <span
+                        style={{
+                          fontSize: '11.5px',
+                          fontWeight: '800',
+                          padding: '2px 8px',
+                          borderRadius: '6px',
+                          backgroundColor: String(data.adhesiveRequirement).toLowerCase() === 'yes' ? '#ECFDF5' : '#F8FAFC',
+                          color: String(data.adhesiveRequirement).toLowerCase() === 'yes' ? '#059669' : '#64748B',
+                          border: String(data.adhesiveRequirement).toLowerCase() === 'yes' ? '1px solid #A7F3D0' : '1px solid #E2E8F0',
+                        }}
+                      >
+                        {data.adhesiveRequirement || 'No'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* RIGHT COLUMN: Section 3 & Section 4 */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                {/* SECTION 3: QUOTATION & COMMERCIAL DETAILS */}
+                <div
+                  style={{
+                    backgroundColor: '#FFFFFF',
+                    borderRadius: '16px',
+                    border: '1px solid #E2E8F0',
+                    padding: '20px',
+                    boxShadow: '0 1px 3px rgba(15, 23, 42, 0.02)',
+                  }}
+                >
+                  <div style={{ fontSize: '11.5px', fontWeight: '800', color: '#0F172A', letterSpacing: '0.05em', textTransform: 'uppercase', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div style={{ width: '26px', height: '26px', borderRadius: '8px', backgroundColor: '#F1F5F9', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <DollarSign size={15} color="#0F172A" />
+                    </div>
+                    <span>3. Quotation & Commercial Details</span>
+                  </div>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '11px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: '9px', borderBottom: '1px solid #F1F5F9' }}>
+                      <span style={{ fontSize: '11.5px', color: '#64748B', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Quotation Shared Value</span>
+                      <span style={{ fontSize: '16px', fontWeight: '900', color: '#0F172A' }}>
+                        {formatCurrency(data.quotationValue)}
+                      </span>
+                    </div>
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: '9px', borderBottom: '1px solid #F1F5F9' }}>
+                      <span style={{ fontSize: '11.5px', color: '#64748B', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Quotation Date</span>
+                      <span style={{ fontSize: '13px', fontWeight: '700', color: '#0F172A' }}>
+                        {data.quotationDate || '—'}
+                      </span>
+                    </div>
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: '9px', borderBottom: '1px solid #F1F5F9' }}>
+                      <span style={{ fontSize: '11.5px', color: '#64748B', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Pipeline Status</span>
+                      <span style={{ fontSize: '12px', fontWeight: '800', color: statusStyle.text }}>
+                        {statusStyle.label}
+                      </span>
+                    </div>
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: '9px', borderBottom: '1px solid #F1F5F9' }}>
+                      <span style={{ fontSize: '11.5px', color: '#64748B', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Confirmed Order Value</span>
+                      <span
+                        style={{
+                          fontSize: isConfirmed ? '15.5px' : '13px',
+                          fontWeight: '800',
+                          color: isConfirmed ? '#059669' : '#94A3B8',
+                        }}
+                      >
+                        {isConfirmed ? formatCurrency(data.orderValue) : 'Not Confirmed (Pending)'}
+                      </span>
+                    </div>
+
+                    <div>
+                      <div style={{ fontSize: '11.5px', color: '#64748B', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '6px' }}>Cross-Sell Products</div>
+                      {data.crossSell && (Array.isArray(data.crossSell) ? data.crossSell.length > 0 : String(data.crossSell).trim() !== '') ? (
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                          {(Array.isArray(data.crossSell) ? data.crossSell : String(data.crossSell).split(',')).map((cs, idx) => (
+                            <span
+                              key={idx}
+                              style={{
+                                backgroundColor: '#F8FAFC',
+                                border: '1px solid #E2E8F0',
+                                color: '#334155',
+                                fontSize: '11.5px',
+                                fontWeight: '700',
+                                padding: '3px 9px',
+                                borderRadius: '6px',
+                              }}
+                            >
+                              + {String(cs).trim()}
+                            </span>
+                          ))}
+                        </div>
+                      ) : (
+                        <span style={{ fontSize: '12.5px', color: '#94A3B8', fontStyle: 'italic' }}>None selected</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* SECTION 4: FOLLOW-UP TRACKING & ACTIVITY */}
+                <div
+                  style={{
+                    backgroundColor: '#FFFFFF',
+                    borderRadius: '16px',
+                    border: '1px solid #E2E8F0',
+                    padding: '20px',
+                    boxShadow: '0 1px 3px rgba(15, 23, 42, 0.02)',
+                  }}
+                >
+                  <div style={{ fontSize: '11.5px', fontWeight: '800', color: '#0F172A', letterSpacing: '0.05em', textTransform: 'uppercase', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div style={{ width: '26px', height: '26px', borderRadius: '8px', backgroundColor: '#F1F5F9', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <Clock size={15} color="#0F172A" />
+                    </div>
+                    <span>4. Follow-up Tracking & System Records</span>
+                  </div>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '11px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: '9px', borderBottom: '1px solid #F1F5F9' }}>
+                      <span style={{ fontSize: '11.5px', color: '#64748B', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Next Follow-up Date</span>
+                      <span style={{ fontSize: '13.5px', fontWeight: '800', color: '#0F172A' }}>
+                        {data.nextFollowUp || 'None Scheduled'}
+                      </span>
+                    </div>
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: '9px', borderBottom: '1px solid #F1F5F9' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                        <span style={{ fontSize: '11.5px', color: '#64748B', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Last Follow-up Date</span>
+                        <span style={{ fontSize: '10px', color: '#64748B', backgroundColor: '#F1F5F9', padding: '1px 6px', borderRadius: '4px', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                          <Lock size={9} /> Auto
+                        </span>
+                      </div>
+                      <span style={{ fontSize: '13px', fontWeight: '700', color: '#0F172A' }}>
+                        {data.lastFollowUp || 'Not yet logged'}
+                      </span>
+                    </div>
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: '9px', borderBottom: '1px solid #F1F5F9' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                        <span style={{ fontSize: '11.5px', color: '#64748B', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Follow-up Interactions Count</span>
+                        <span style={{ fontSize: '10px', color: '#64748B', backgroundColor: '#F1F5F9', padding: '1px 6px', borderRadius: '4px', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                          <Lock size={9} /> Auto
+                        </span>
+                      </div>
+                      <span style={{ fontSize: '13px', fontWeight: '800', color: '#0F172A' }}>
+                        {data.followUpCount || 0} interaction(s)
+                      </span>
+                    </div>
+
+                    {data.lastReason && String(data.lastReason).trim() !== '' && (
+                      <div style={{ padding: '12px 14px', backgroundColor: '#F8FAFC', borderRadius: '10px', border: '1px solid #E2E8F0' }}>
+                        <div style={{ fontSize: '11px', fontWeight: '800', color: '#475569', textTransform: 'uppercase', marginBottom: '4px', letterSpacing: '0.03em' }}>
+                          Latest Discussion Remarks / Objective
+                        </div>
+                        <div style={{ fontSize: '13px', color: '#1E293B', fontWeight: '600', lineHeight: '1.45' }}>
+                          {data.lastReason}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* SECTION 5: AUDIT & CREATION METADATA */}
+                <div
+                  style={{
+                    backgroundColor: '#FFFFFF',
+                    borderRadius: '16px',
+                    border: '1px solid #E2E8F0',
+                    padding: '16px 20px',
+                  }}
+                >
+                  <div style={{ fontSize: '11.5px', fontWeight: '800', color: '#64748B', letterSpacing: '0.04em', textTransform: 'uppercase', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <ShieldCheck size={14} color="#64748B" />
+                    <span>System Audit & Record Metadata</span>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '12px', color: '#64748B' }}>
+                    <div>
+                      <span>Created On: </span>
+                      <strong style={{ color: '#0F172A' }}>{registeredDateStr}</strong>
+                    </div>
+                    <div>
+                      <span>Created By: </span>
+                      <strong style={{ color: '#0F172A' }}>{customer.createdBy?.name || data.salesperson || 'Sales Team'}</strong>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 2: ACTIVITY TIMELINE & DISCUSSION HISTORY */}
+          {activeTab === 'timeline' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div style={{ backgroundColor: '#FFFFFF', borderRadius: '16px', border: '1px solid #E2E8F0', padding: '24px' }}>
+                <h3 style={{ fontSize: '14px', fontWeight: '800', color: '#0F172A', textTransform: 'uppercase', letterSpacing: '0.04em', margin: '0 0 16px 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <History size={17} color="#2563EB" />
+                  <span>Chronological Follow-up & Discussion Timeline</span>
+                </h3>
+
+                {timelineEntries.length > 0 ? (
+                  <div style={{ position: 'relative', paddingLeft: '24px', borderLeft: '2px dashed #CBD5E1', marginLeft: '10px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                    {timelineEntries.map((item, idx) => (
+                      <div key={idx} style={{ position: 'relative' }}>
+                        <div
+                          style={{
+                            position: 'absolute',
+                            left: '-31px',
+                            top: '2px',
+                            width: '12px',
+                            height: '12px',
+                            borderRadius: '50%',
+                            backgroundColor: '#0F172A',
+                            border: '3px solid #FFFFFF',
+                            boxShadow: '0 0 0 1px #0F172A',
+                          }}
+                        />
+                        <div style={{ backgroundColor: '#F8FAFC', borderRadius: '12px', border: '1px solid #E2E8F0', padding: '12px 16px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', marginBottom: '6px', flexWrap: 'wrap' }}>
+                            <span style={{ fontSize: '12.5px', fontWeight: '800', color: '#0F172A' }}>
+                              {item.outcome}
+                            </span>
+                            {item.date && (
+                              <span style={{ fontSize: '11px', fontWeight: '700', color: '#64748B', backgroundColor: '#FFFFFF', padding: '2px 8px', borderRadius: '6px', border: '1px solid #E2E8F0' }}>
+                                {item.date}
+                              </span>
+                            )}
+                          </div>
+                          <p style={{ margin: 0, fontSize: '13px', color: '#334155', lineHeight: '1.5', fontWeight: '500' }}>
+                            {item.text}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div style={{ textAlign: 'center', padding: '36px 20px', color: '#94A3B8' }}>
+                    <MessageSquare size={32} color="#CBD5E1" style={{ margin: '0 auto 10px' }} />
+                    <p style={{ fontSize: '13px', fontWeight: '600', margin: 0 }}>No discussion notes logged yet for this client.</p>
+                    <p style={{ fontSize: '12px', margin: '4px 0 0' }}>Log an activity in the "Quick Activity Logger" tab to add records to this timeline.</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* TAB 3: QUICK ACTIVITY LOGGER */}
+          {activeTab === 'quick_log' && (
+            <div style={{ maxWidth: '680px', margin: '0 auto', backgroundColor: '#FFFFFF', borderRadius: '18px', border: '1px solid #E2E8F0', padding: '24px', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.03)' }}>
+              <div style={{ fontSize: '13px', fontWeight: '800', color: '#0F172A', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Target size={16} color="#0F172A" />
+                <span>Record New Follow-up & Discussion Activity</span>
+              </div>
+
+              {savedSuccess && (
+                <div style={{ padding: '12px 16px', borderRadius: '10px', backgroundColor: '#DCFCE7', border: '1px solid #86EFAC', color: '#15803D', fontSize: '13px', fontWeight: '800', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <CheckCircle2 size={18} color="#15803D" />
+                  <span>Activity logged successfully! Customer record updated.</span>
+                </div>
+              )}
+
+              <form onSubmit={handleLogFollowUp} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <div>
+                  <label style={{ fontSize: '11.5px', fontWeight: '800', color: '#475569', display: 'block', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                    PIPELINE STATUS
+                  </label>
+                  <select
+                    value={followUpStatus}
+                    onChange={(e) => setFollowUpStatus(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      borderRadius: '10px',
+                      border: '1.5px solid #CBD5E1',
+                      backgroundColor: '#FFFFFF',
+                      fontSize: '13px',
+                      color: '#0F172A',
+                      fontWeight: '700',
+                      outline: 'none',
+                    }}
+                  >
+                    <option value="New Lead">New Lead</option>
+                    <option value="Quotation">Quotation</option>
+                    <option value="Follow-up">Follow-up</option>
+                    <option value="Negotiation">Negotiation</option>
+                    <option value="Order Confirmed">Order Confirmed</option>
+                    <option value="Lost">Lost</option>
+                    <option value="Future Requirement">Future Requirement</option>
+                  </select>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+                  <div>
+                    <label style={{ fontSize: '11.5px', fontWeight: '800', color: '#475569', display: 'block', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                      NEXT FOLLOW-UP DATE
+                    </label>
+                    <input
+                      type="date"
+                      value={followUpNextDate}
+                      onChange={(e) => setFollowUpNextDate(e.target.value)}
+                      style={{
+                        width: '100%',
+                        padding: '9px 12px',
+                        borderRadius: '10px',
+                        border: '1.5px solid #CBD5E1',
+                        backgroundColor: '#FFFFFF',
+                        fontSize: '13px',
+                        color: '#0F172A',
+                        fontWeight: '600',
+                        outline: 'none',
+                      }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ fontSize: '11.5px', fontWeight: '800', color: '#475569', display: 'block', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                      ORDER VALUE (IF CONFIRMED)
+                    </label>
+                    <input
+                      type="number"
+                      placeholder="₹ Amount"
+                      value={followUpOrderValue}
+                      onChange={(e) => setFollowUpOrderValue(e.target.value)}
+                      style={{
+                        width: '100%',
+                        padding: '9px 12px',
+                        borderRadius: '10px',
+                        border: '1.5px solid #CBD5E1',
+                        backgroundColor: '#FFFFFF',
+                        fontSize: '13px',
+                        color: '#0F172A',
+                        fontWeight: '600',
+                        outline: 'none',
+                      }}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label style={{ fontSize: '11.5px', fontWeight: '800', color: '#475569', display: 'block', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                    DISCUSSION REMARKS & OBJECTIVE
+                  </label>
+                  <textarea
+                    placeholder="Type key points discussed with customer, objections, sample requests or commitments..."
+                    value={followUpReason}
+                    onChange={(e) => setFollowUpReason(e.target.value)}
+                    rows={4}
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      borderRadius: '10px',
+                      border: '1.5px solid #CBD5E1',
+                      backgroundColor: '#FFFFFF',
+                      fontSize: '13px',
+                      color: '#0F172A',
+                      fontWeight: '500',
+                      outline: 'none',
+                      resize: 'vertical',
+                      lineHeight: '1.5',
+                    }}
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={submittingFollowUp}
+                  style={{
+                    padding: '11px 20px',
+                    borderRadius: '10px',
+                    backgroundColor: '#0F172A',
+                    color: '#FFFFFF',
+                    border: 'none',
+                    fontSize: '13px',
+                    fontWeight: '800',
+                    cursor: submittingFollowUp ? 'not-allowed' : 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px',
+                    boxShadow: '0 2px 6px rgba(15, 23, 42, 0.2)',
+                  }}
+                >
+                  <Send size={15} />
+                  <span>{submittingFollowUp ? 'Saving Activity...' : 'Save & Log Activity'}</span>
+                </button>
+              </form>
+            </div>
+          )}
+        </div>
+
+        {/* 5. Modal Footer Actions Bar */}
+        <div
+          style={{
+            backgroundColor: '#FFFFFF',
+            padding: '14px 28px',
+            borderTop: '1px solid #E2E8F0',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
@@ -721,21 +1143,21 @@ export const CustomerDetailModal = ({ customer: initialCustomer, onClose, onEdit
         >
           {showDeleteConfirm ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ fontSize: '13px', fontWeight: '800', color: '#DC2626' }}>Confirm delete record?</span>
+              <span style={{ fontSize: '12.5px', fontWeight: '800', color: '#DC2626' }}>Confirm delete customer record?</span>
               <button
                 type="button"
                 onClick={() => {
                   if (onDelete) onDelete(customer._id || customer.customerId);
                   onClose();
                 }}
-                style={{ backgroundColor: '#DC2626', color: '#FFFFFF', border: 'none', borderRadius: '10px', padding: '8px 14px', fontSize: '12.5px', fontWeight: '800', cursor: 'pointer' }}
+                style={{ backgroundColor: '#DC2626', color: '#FFFFFF', border: 'none', borderRadius: '8px', padding: '7px 14px', fontSize: '12px', fontWeight: '800', cursor: 'pointer' }}
               >
-                Yes, Delete Record
+                Yes, Delete
               </button>
               <button
                 type="button"
                 onClick={() => setShowDeleteConfirm(false)}
-                style={{ backgroundColor: '#F1F5F9', border: 'none', borderRadius: '10px', padding: '8px 14px', fontSize: '12.5px', fontWeight: '700', cursor: 'pointer', color: '#475569' }}
+                style={{ backgroundColor: '#F1F5F9', border: 'none', borderRadius: '8px', padding: '7px 14px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', color: '#475569' }}
               >
                 Cancel
               </button>
@@ -748,12 +1170,12 @@ export const CustomerDetailModal = ({ customer: initialCustomer, onClose, onEdit
                 backgroundColor: 'transparent',
                 border: 'none',
                 color: '#DC2626',
-                fontSize: '13px',
-                fontWeight: '800',
+                fontSize: '12.5px',
+                fontWeight: '700',
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '6px',
+                gap: '5px',
               }}
             >
               <Trash2 size={14} color="#DC2626" />
@@ -761,45 +1183,45 @@ export const CustomerDetailModal = ({ customer: initialCustomer, onClose, onEdit
             </button>
           )}
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <button
+              type="button"
+              onClick={() => {
+                onClose();
+                if (onEdit) onEdit(customer);
+              }}
+              style={{
+                padding: '9px 18px',
+                borderRadius: '9px',
+                backgroundColor: '#EFF6FF',
+                color: '#1D4ED8',
+                border: '1px solid #BFDBFE',
+                fontSize: '12.5px',
+                fontWeight: '800',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+              }}
+            >
+              <Edit3 size={14} />
+              <span>Edit Full Customer Profile</span>
+            </button>
             <button
               type="button"
               onClick={onClose}
               style={{
-                backgroundColor: '#F1F5F9',
+                padding: '9px 18px',
+                borderRadius: '9px',
+                backgroundColor: '#0F172A',
+                color: '#FFFFFF',
                 border: 'none',
-                color: '#475569',
-                borderRadius: '12px',
-                padding: '11px 22px',
-                fontSize: '13px',
-                fontWeight: '700',
+                fontSize: '12.5px',
+                fontWeight: '800',
                 cursor: 'pointer',
               }}
             >
               Close
-            </button>
-
-            <button
-              type="button"
-              onClick={handleLogFollowUp}
-              disabled={submittingFollowUp}
-              style={{
-                background: 'linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)',
-                color: '#FFFFFF',
-                border: 'none',
-                borderRadius: '12px',
-                padding: '11px 24px',
-                fontSize: '13px',
-                fontWeight: '800',
-                cursor: submittingFollowUp ? 'not-allowed' : 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                boxShadow: '0 4px 14px rgba(37, 99, 235, 0.3)',
-              }}
-            >
-              <Edit3 size={15} />
-              <span>{submittingFollowUp ? 'Saving Changes...' : 'Save & Update Stage'}</span>
             </button>
           </div>
         </div>

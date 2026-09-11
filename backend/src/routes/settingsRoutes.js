@@ -17,4 +17,10 @@ router.get('/connected-devices', settingsController.getConnectedDevices);
 // DELETE /api/settings/connected-devices/:deviceId
 router.delete('/connected-devices/:deviceId', settingsController.disconnectDevice);
 
+// AI Intelligence Configuration (Developer Mode)
+router.get('/ai-config', settingsController.getAiConfig);
+router.post('/ai-config', settingsController.updateAiConfig);
+router.post('/ai-config/test', settingsController.testAiConfig);
+
 module.exports = router;
+

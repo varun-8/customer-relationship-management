@@ -10,6 +10,7 @@ export const LoginPage = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const passwordInputRef = React.useRef(null);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -190,6 +191,12 @@ export const LoginPage = () => {
                   setIdentifier(e.target.value);
                   setError('');
                 }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    passwordInputRef.current?.focus();
+                  }
+                }}
                 placeholder="Enter username or email"
                 autoFocus
                 style={{
@@ -240,6 +247,7 @@ export const LoginPage = () => {
                 }}
               />
               <input
+                ref={passwordInputRef}
                 type={showPassword ? 'text' : 'password'}
                 value={password}
                 onChange={(e) => {

@@ -463,4 +463,58 @@ export const api = {
       body: JSON.stringify({ force }),
     });
   },
+
+  async restoreBackup(backupData) {
+    return request('/backup/restore', {
+      method: 'POST',
+      body: JSON.stringify({ backupData }),
+    });
+  },
+
+  async openBackupFolder() {
+    return request('/backup/open-folder', {
+      method: 'POST',
+    });
+  },
+
+  // AI Strategic Lost Sales Intelligence Reports APIs
+  async getAiReportStatus() {
+    return request('/ai-reports/status');
+  },
+
+  async generateAiReport(reportType = 'monthly', period) {
+    return request('/ai-reports/generate', {
+      method: 'POST',
+      body: JSON.stringify({ reportType, period }),
+      timeout: 70000,
+    });
+  },
+
+  async getAiReportsHistory() {
+    return request('/ai-reports/history');
+  },
+
+  async getAiReportById(id) {
+    return request(`/ai-reports/${id}`);
+  },
+
+  // AI Developer Configuration APIs
+  async getAiConfig() {
+    return request('/settings/ai-config');
+  },
+
+  async updateAiConfig(data) {
+    return request('/settings/ai-config', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  async testAiConfig(data) {
+    return request('/settings/ai-config/test', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
 };
+

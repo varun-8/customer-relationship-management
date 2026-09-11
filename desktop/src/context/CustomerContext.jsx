@@ -20,6 +20,7 @@ export const CustomerProvider = ({ children }) => {
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [sequenceConfig, setSequenceConfig] = useState(null);
   const [fetchError, setFetchError] = useState(null);
+  const [followupCounts, setFollowupCounts] = useState({ today: 0, upcoming: 0, overdue: 0, hot: 0, total: 0 });
 
   // Load Active Form Schema
   const fetchActiveForm = useCallback(async () => {
@@ -45,11 +46,26 @@ export const CustomerProvider = ({ children }) => {
     }
   }, []);
 
+  // Fetch Follow-up Counts automatically for real-time badges
+  const fetchFollowupCounts = useCallback(async () => {
+    try {
+      const res = await api.getFollowupsList({ tab: 'today' });
+      if (res && res.success && res.counts) {
+        setFollowupCounts(res.counts);
+      }
+    } catch (err) {
+      console.warn('Error fetching follow-up counts:', err.message);
+    }
+  }, []);
+
   const retryTimeoutRef = React.useRef(null);
 
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [lastSyncTime, setLastSyncTime] = useState(() => new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+
   // Load Customers
-  const fetchCustomers = useCallback(async (isAutoRetry = false) => {
-    setLoading(true);
+  const fetchCustomers = useCallback(async (isAutoRetry = false, isSilent = false) => {
+    if (!isSilent) setLoading(true);
     setFetchError(null);
     try {
       const res = await api.getCustomers({
@@ -69,6 +85,7 @@ export const CustomerProvider = ({ children }) => {
         if (res.pagination) {
           setPagination(res.pagination);
         }
+        setLastSyncTime(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
       }
     } catch (err) {
       console.warn('Error fetching customer list:', err.message);
@@ -82,19 +99,46 @@ export const CustomerProvider = ({ children }) => {
         }, 2500);
       }
     } finally {
-      setLoading(false);
+      if (!isSilent) setLoading(false);
     }
   }, [pagination.page, pagination.limit, search, customerType, status, startDate, endDate, sortBy, sortOrder]);
+
+  const refreshAll = useCallback(async (isSilent = false) => {
+    setIsRefreshing(true);
+    try {
+      await Promise.allSettled([
+        fetchCustomers(false, isSilent),
+        fetchActiveForm(),
+        fetchSequenceConfig(),
+        fetchFollowupCounts(),
+      ]);
+      setLastSyncTime(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, [fetchCustomers, fetchActiveForm, fetchSequenceConfig, fetchFollowupCounts]);
 
   useEffect(() => {
     fetchActiveForm();
     fetchSequenceConfig();
-  }, [fetchActiveForm, fetchSequenceConfig]);
+    fetchFollowupCounts();
+  }, [fetchActiveForm, fetchSequenceConfig, fetchFollowupCounts]);
 
   useEffect(() => {
     fetchCustomers();
     return () => clearTimeout(retryTimeoutRef.current);
   }, [fetchCustomers]);
+
+  // Real-time automatic synchronization: poll every 5 seconds so mobile phone additions/updates and follow-up counts appear instantly on desktop
+  useEffect(() => {
+    const syncTimer = setInterval(() => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
+        fetchCustomers(true, true);
+        fetchFollowupCounts();
+      }
+    }, 5000);
+    return () => clearInterval(syncTimer);
+  }, [fetchCustomers, fetchFollowupCounts]);
 
   const createCustomer = async (data, notes = '') => {
     try {
@@ -205,8 +249,13 @@ export const CustomerProvider = ({ children }) => {
         selectedCustomer,
         setSelectedCustomer,
         sequenceConfig,
+        followupCounts,
+        fetchFollowupCounts,
         fetchCustomers,
         fetchActiveForm,
+        refreshAll,
+        isRefreshing,
+        lastSyncTime,
         createCustomer,
         updateCustomer,
         deleteCustomer,

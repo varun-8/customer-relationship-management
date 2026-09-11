@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Modal,
   View,
@@ -41,29 +41,43 @@ export function MobileLostSaleModal({
   onClose,
   onSaved,
 }) {
-  if (!customer) return null;
-
   const todayStr = new Date().toISOString().split('T')[0];
 
-  const [customerName, setCustomerName] = useState(customer.customerName || '');
-  const [phone, setPhone] = useState(customer.phone || '');
+  const [customerName, setCustomerName] = useState(customer?.customerName || '');
+  const [phone, setPhone] = useState(customer?.phone || '');
   const [quoteValue, setQuoteValue] = useState(
-    customer.quotationValue ? String(customer.quotationValue) : ''
+    customer?.quotationValue ? String(customer.quotationValue) : ''
   );
   const [selectedProducts, setSelectedProducts] = useState(
-    customer.requirement
+    customer?.requirement
       ? Array.isArray(customer.requirement)
         ? customer.requirement
         : [customer.requirement]
       : ['Tile']
   );
-  const [salesperson, setSalesperson] = useState(customer.salesperson || '');
+  const [salesperson, setSalesperson] = useState(customer?.salesperson || '');
   const [lostReason, setLostReason] = useState('Price Too High / Cheaper Competitor Quote');
   const [competitor, setCompetitor] = useState('Supreme Tiles');
   const [customCompetitor, setCustomCompetitor] = useState('');
   const [priceDifference, setPriceDifference] = useState('');
   const [notes, setNotes] = useState('');
   const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (visible && customer) {
+      setCustomerName(customer.customerName || '');
+      setPhone(customer.phone || '');
+      setQuoteValue(customer.quotationValue ? String(customer.quotationValue) : '');
+      const req = customer.requirement;
+      setSelectedProducts(req ? (Array.isArray(req) ? req : [req]) : ['Tile']);
+      setSalesperson(customer.salesperson || '');
+      setLostReason('Price Too High / Cheaper Competitor Quote');
+      setCompetitor('Supreme Tiles');
+      setCustomCompetitor('');
+      setPriceDifference('');
+      setNotes('');
+    }
+  }, [visible, customer]);
 
   const toggleProduct = (prod) => {
     if (selectedProducts.includes(prod)) {
@@ -156,6 +170,8 @@ export function MobileLostSaleModal({
     }
   };
 
+  if (!visible || !customer) return null;
+
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <View style={styles.modalOverlay}>
@@ -168,7 +184,7 @@ export function MobileLostSaleModal({
             <View style={{ flex: 1 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                 <Text style={styles.headerTitleDark}>Record Lost Sale & Intel</Text>
-                {customer.customerId && (
+                {customer?.customerId && (
                   <View style={styles.headerIdBadge}>
                     <Text style={styles.headerIdBadgeText}>#{customer.customerId}</Text>
                   </View>

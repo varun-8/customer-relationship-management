@@ -3,6 +3,8 @@ const DailyKPI = require('../models/DailyKPI');
 const LostSale = require('../models/LostSale');
 const Sequence = require('../models/Sequence');
 const ConnectedDevice = require('../models/ConnectedDevice');
+const SystemSetting = require('../models/SystemSetting');
+const aiService = require('../services/aiService');
 
 /**
  * Wipe all customer data, follow-ups, KPIs, lost sales, and reset sequences.
@@ -306,3 +308,96 @@ exports.disconnectDevice = async (req, res) => {
     });
   }
 };
+
+/**
+ * GET /api/settings/ai-config
+ */
+exports.getAiConfig = async (req, res) => {
+  try {
+    const [keySetting, modelSetting] = await Promise.all([
+      SystemSetting.findOne({ key: 'geminiApiKey' }),
+      SystemSetting.findOne({ key: 'geminiModel' }),
+    ]);
+
+    const rawKey = keySetting?.value || process.env.GEMINI_API_KEY || '';
+    const maskedKey = rawKey
+      ? rawKey.length > 8
+        ? `${rawKey.slice(0, 4)}••••••••${rawKey.slice(-4)}`
+        : '••••••••'
+      : '';
+
+    return res.json({
+      success: true,
+      hasApiKey: Boolean(rawKey),
+      maskedKey,
+      model: modelSetting?.value || 'gemini-1.5-flash',
+    });
+  } catch (err) {
+    console.error('Error fetching AI config:', err);
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+/**
+ * POST /api/settings/ai-config
+ */
+exports.updateAiConfig = async (req, res) => {
+  try {
+    const { apiKey, model = 'gemini-1.5-flash' } = req.body;
+
+    if (apiKey !== undefined) {
+      await SystemSetting.findOneAndUpdate(
+        { key: 'geminiApiKey' },
+        { value: String(apiKey).trim() },
+        { upsert: true, new: true }
+      );
+    }
+
+    if (model) {
+      await SystemSetting.findOneAndUpdate(
+        { key: 'geminiModel' },
+        { value: String(model).trim() },
+        { upsert: true, new: true }
+      );
+    }
+
+    return res.json({
+      success: true,
+      message: 'AI Configuration saved successfully!',
+    });
+  } catch (err) {
+    console.error('Error updating AI config:', err);
+    return res.status(500).json({ success: false, message: err.message });
+  }
+};
+
+/**
+ * POST /api/settings/ai-config/test
+ */
+exports.testAiConfig = async (req, res) => {
+  try {
+    let { apiKey, model = 'gemini-1.5-flash' } = req.body;
+
+    if (!apiKey) {
+      apiKey = await aiService.getGeminiApiKey();
+    }
+
+    if (!apiKey) {
+      return res.status(400).json({
+        success: false,
+        code: 'NO_API_KEY',
+        message: 'No Google Gemini API Key found. Please paste your API key from Google AI Studio (https://aistudio.google.com) into the field above and save settings.',
+      });
+    }
+
+    const testRes = await aiService.testApiKey(apiKey, model);
+    return res.json(testRes);
+  } catch (err) {
+    console.error('AI Config Test Failed:', err);
+    return res.status(400).json({
+      success: false,
+      message: err.message || 'Verification failed. Please check your Gemini API Key.',
+    });
+  }
+};
+

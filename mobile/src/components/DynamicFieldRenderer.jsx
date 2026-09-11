@@ -9,6 +9,7 @@ import {
   Modal,
   ScrollView,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 
 // Helper: Indian currency words preview (e.g. 150000 -> "₹ 1.50 Lakhs")
 const formatIndianCurrencyWords = (num) => {
@@ -419,6 +420,14 @@ export const DynamicFieldRenderer = ({ field, value, onChange, error }) => {
   const [searchText, setSearchText] = useState('');
   const [isFocused, setIsFocused] = useState(false);
 
+  // Clean, professional field label: Strip corrupted currency symbols like (₹), (,), (?,), and any emojis
+  const displayLabel = useMemo(() => {
+    return String(field?.label || '')
+      .replace(/\s*\([₹\u20B9\ufffd?,/]+\)/gi, '')
+      .replace(/[\u{1F300}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1FA00}-\u{1FAFF}\u{FE00}-\u{FE0F}]/gu, '')
+      .trim();
+  }, [field?.label]);
+
   if (!field || !field.active) {
     return null;
   }
@@ -510,6 +519,30 @@ export const DynamicFieldRenderer = ({ field, value, onChange, error }) => {
   const fieldIcon = getFieldIcon(name, type);
 
   const renderInput = () => {
+    // Read-only system fields (such as lastFollowUp, followUpCount, or any field flagged readOnly)
+    if (field.readOnly || name === 'lastFollowUp' || name === 'followUpCount') {
+      const displayVal =
+        value !== undefined && value !== null && String(value).trim() !== ''
+          ? name === 'lastFollowUp'
+            ? formatReadableDate(value)
+            : String(value)
+          : name === 'followUpCount'
+          ? '0'
+          : 'Not yet logged';
+
+      return (
+        <View style={styles.readOnlyContainer}>
+          <View style={styles.readOnlyContent}>
+            <Text style={styles.readOnlyValueText}>{displayVal}</Text>
+            <View style={styles.readOnlyBadge}>
+              <Ionicons name="lock-closed-outline" size={11} color="#64748B" style={{ marginRight: 3 }} />
+              <Text style={styles.readOnlyBadgeText}>System auto-updated</Text>
+            </View>
+          </View>
+        </View>
+      );
+    }
+
     switch (type) {
       case 'text':
         return (
@@ -522,7 +555,7 @@ export const DynamicFieldRenderer = ({ field, value, onChange, error }) => {
           >
             <TextInput
               style={styles.textInput}
-              placeholder={placeholder || `Enter ${label.toLowerCase()}`}
+              placeholder={placeholder || `Enter ${displayLabel.toLowerCase()}`}
               placeholderTextColor="#94A3B8"
               value={value !== undefined && value !== null ? String(value) : ''}
               onChangeText={handleChange}
@@ -550,7 +583,7 @@ export const DynamicFieldRenderer = ({ field, value, onChange, error }) => {
             >
               <TextInput
                 style={[styles.textInput, styles.textareaInput]}
-                placeholder={placeholder || `Enter ${label.toLowerCase()} details...`}
+                placeholder={placeholder || `Enter ${displayLabel.toLowerCase()} details...`}
                 placeholderTextColor="#94A3B8"
                 value={value !== undefined && value !== null ? String(value) : ''}
                 onChangeText={handleChange}
@@ -918,7 +951,7 @@ export const DynamicFieldRenderer = ({ field, value, onChange, error }) => {
                 ]}
                 numberOfLines={1}
               >
-                {selectedOptionObj ? selectedOptionObj.label : placeholder || `Select ${label.toLowerCase()}...`}
+                {selectedOptionObj ? selectedOptionObj.label : placeholder || `Select ${displayLabel.toLowerCase()}...`}
               </Text>
               <Text style={styles.dropdownChevronText}>▾</Text>
             </TouchableOpacity>
@@ -940,7 +973,7 @@ export const DynamicFieldRenderer = ({ field, value, onChange, error }) => {
                   {/* Header */}
                   <View style={styles.modalSheetHeader}>
                     <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                      <Text style={styles.modalSheetTitle}>Select {label}</Text>
+                      <Text style={styles.modalSheetTitle}>Select {displayLabel}</Text>
                     </View>
                     <TouchableOpacity
                       onPress={() => setModalVisible(false)}
@@ -956,7 +989,7 @@ export const DynamicFieldRenderer = ({ field, value, onChange, error }) => {
                     <View style={styles.modalSearchBox}>
                       <TextInput
                         style={styles.modalSearchInput}
-                        placeholder={`Search ${label.toLowerCase()}...`}
+                        placeholder={`Search ${displayLabel.toLowerCase()}...`}
                         placeholderTextColor="#94A3B8"
                         value={searchText}
                         onChangeText={setSearchText}
@@ -1069,7 +1102,7 @@ export const DynamicFieldRenderer = ({ field, value, onChange, error }) => {
               >
                 {multiSelectedValues.length > 0
                   ? `${multiSelectedValues.length} items selected`
-                  : placeholder || `Select ${label.toLowerCase()}...`}
+                  : placeholder || `Select ${displayLabel.toLowerCase()}...`}
               </Text>
               <Text style={styles.dropdownChevronText}>▾</Text>
             </TouchableOpacity>
@@ -1111,7 +1144,7 @@ export const DynamicFieldRenderer = ({ field, value, onChange, error }) => {
                   {/* Header */}
                   <View style={styles.modalSheetHeader}>
                     <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                      <Text style={styles.modalSheetTitle}>Select {label}</Text>
+                      <Text style={styles.modalSheetTitle}>Select {displayLabel}</Text>
                     </View>
                     <TouchableOpacity
                       onPress={() => setModalVisible(false)}
@@ -1127,7 +1160,7 @@ export const DynamicFieldRenderer = ({ field, value, onChange, error }) => {
                     <View style={styles.modalSearchBox}>
                       <TextInput
                         style={styles.modalSearchInput}
-                        placeholder={`Search ${label.toLowerCase()}...`}
+                        placeholder={`Search ${displayLabel.toLowerCase()}...`}
                         placeholderTextColor="#94A3B8"
                         value={searchText}
                         onChangeText={setSearchText}
@@ -1186,7 +1219,7 @@ export const DynamicFieldRenderer = ({ field, value, onChange, error }) => {
           >
             <TextInput
               style={styles.textInput}
-              placeholder={placeholder || `Enter ${label.toLowerCase()}`}
+              placeholder={placeholder || `Enter ${displayLabel.toLowerCase()}`}
               placeholderTextColor="#94A3B8"
               value={value !== undefined && value !== null ? String(value) : ''}
               onChangeText={handleChange}
@@ -1204,7 +1237,7 @@ export const DynamicFieldRenderer = ({ field, value, onChange, error }) => {
       <View style={styles.labelHeaderRow}>
         <View style={styles.labelTitleGroup}>
           <Text style={styles.fieldLabel}>
-            {label}
+            {displayLabel}
             {required ? <Text style={styles.requiredAsterisk}> *</Text> : null}
           </Text>
         </View>
@@ -1226,6 +1259,7 @@ export const DynamicFieldRenderer = ({ field, value, onChange, error }) => {
       {/* Error Alert */}
       {error ? (
         <View style={styles.errorAlertBox}>
+          <Ionicons name="alert-circle-outline" size={13} color="#DC2626" style={{ marginTop: 0.5 }} />
           <Text style={styles.errorAlertText}>{error}</Text>
         </View>
       ) : null}
@@ -1995,5 +2029,50 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#0F172A',
     fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+  },
+  errorAlertBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    marginTop: 5,
+    paddingHorizontal: 2,
+  },
+  errorAlertText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#DC2626',
+    letterSpacing: -0.1,
+    flex: 1,
+  },
+  readOnlyContainer: {
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  readOnlyContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  readOnlyValueText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1E293B',
+  },
+  readOnlyBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#EEF2F6',
+    borderRadius: 6,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+  },
+  readOnlyBadgeText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#64748B',
   },
 });

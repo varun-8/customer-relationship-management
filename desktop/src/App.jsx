@@ -52,7 +52,18 @@ const MainAppContent = () => {
   // Server health monitoring
   const [isOnline, setIsOnline] = useState(true);
   const [isCheckingServer, setIsCheckingServer] = useState(false);
-  const { deleteCustomer } = useCustomer();
+  const { deleteCustomer, refreshAll, isRefreshing, lastSyncTime } = useCustomer();
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  const handleManualRefresh = async () => {
+    try {
+      await refreshAll(false);
+      setRefreshKey((prev) => prev + 1);
+      toast.info('Showroom database synchronized successfully.', 'Refreshed');
+    } catch (e) {
+      toast.error('Could not refresh data: ' + e.message, 'Sync Error');
+    }
+  };
 
   // Manage smooth initial app loading transition
   useEffect(() => {
@@ -124,10 +135,8 @@ const MainAppContent = () => {
     triggerStartupAutoBackup();
   }, [toast]);
 
-  // Developer Mode 5-Click Activation State
-  const [devModeUnlocked, setDevModeUnlocked] = useState(
-    () => localStorage.getItem('vasantham_dev_mode_active') === 'true'
-  );
+  // Developer Mode is strictly hidden by default
+  const [devModeUnlocked, setDevModeUnlocked] = useState(false);
   const [headerClickCount, setHeaderClickCount] = useState(0);
 
   const handleHeaderTitleClick = () => {
@@ -137,9 +146,8 @@ const MainAppContent = () => {
 
       if (nextCount >= 5) {
         setDevModeUnlocked(true);
-        localStorage.setItem('vasantham_dev_mode_active', 'true');
         toast.success(
-          '🔓 Developer Mode Activated! Developer & Database Reset tools are now unlocked.',
+          '🔓 Developer Mode Activated for this session! Developer & Database Reset tools are now unlocked.',
           'Developer Mode'
         );
         setHeaderClickCount(0);
@@ -219,10 +227,13 @@ const MainAppContent = () => {
           onRetryConnection={() => verifyServerConnection(true)}
           onOpenPairingModal={() => setActiveTab('mobile-pairing')}
           onTitleClick={handleHeaderTitleClick}
+          onRefresh={handleManualRefresh}
+          isRefreshing={isRefreshing}
+          lastSyncTime={lastSyncTime}
         />
 
         <div className="app-content">
-          <div key={activeTab} className="tab-view-transition workspace-section">
+          <div key={`${activeTab}-${refreshKey}`} className="tab-view-transition workspace-section">
             {activeTab === 'dashboard' && <ExecutiveDashboardView />}
 
             {activeTab === 'customers' && (
@@ -246,9 +257,10 @@ const MainAppContent = () => {
                 initialTab="builder"
                 onOpenPairingModal={() => setActiveTab('mobile-pairing')}
                 devModeUnlocked={devModeUnlocked}
-                onUnlockDevMode={() => {
-                  setDevModeUnlocked(true);
-                  localStorage.setItem('vasantham_dev_mode_active', 'true');
+                onUnlockDevMode={() => setDevModeUnlocked(true)}
+                onLockDevMode={() => {
+                  setDevModeUnlocked(false);
+                  toast.info('Developer Mode locked & hidden');
                 }}
               />
             )}
@@ -257,9 +269,10 @@ const MainAppContent = () => {
                 initialTab="branding"
                 onOpenPairingModal={() => setActiveTab('mobile-pairing')}
                 devModeUnlocked={devModeUnlocked}
-                onUnlockDevMode={() => {
-                  setDevModeUnlocked(true);
-                  localStorage.setItem('vasantham_dev_mode_active', 'true');
+                onUnlockDevMode={() => setDevModeUnlocked(true)}
+                onLockDevMode={() => {
+                  setDevModeUnlocked(false);
+                  toast.info('Developer Mode locked & hidden');
                 }}
               />
             )}

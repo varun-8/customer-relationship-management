@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -12,8 +12,12 @@ import {
   Linking,
   Platform,
   Modal,
+  Animated,
+  Easing,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
+import { typography } from '../../theme/typography';
 
 const formatRelativeUrgency = (nextFollowUp) => {
   if (!nextFollowUp) {
@@ -79,20 +83,22 @@ const formatRelativeUrgency = (nextFollowUp) => {
 
 const getCustomerTypeColors = (type) => {
   switch (type) {
-    case 'Building Owner': return { bg: '#FFEDD5', text: '#C2410C', border: '#FED7AA' };
-    case 'Architect': return { bg: '#EFF6FF', text: '#1D4ED8', border: '#BFDBFE' };
-    case 'Mason': return { bg: '#FAF5FF', text: '#7E22CE', border: '#DDD6FE' };
-    default: return { bg: '#FFFBEB', text: '#B45309', border: '#FDE68A' };
+    case 'Building Owner': return { bg: '#FFF7ED', text: '#C2410C', border: '#FED7AA', icon: 'home-outline' };
+    case 'Architect': return { bg: '#EFF6FF', text: '#1D4ED8', border: '#BFDBFE', icon: 'business-outline' };
+    case 'Mason': return { bg: '#FAF5FF', text: '#7E22CE', border: '#DDD6FE', icon: 'hammer-outline' };
+    case 'Contractor': return { bg: '#F0FDF4', text: '#15803D', border: '#BBF7D0', icon: 'construct-outline' };
+    case 'Engineer': return { bg: '#ECFEF8', text: '#0F766E', border: '#99F6E4', icon: 'compass-outline' };
+    default: return { bg: '#FFFBEB', text: '#B45309', border: '#FDE68A', icon: 'person-outline' };
   }
 };
 
 const getRequirementChipStyle = (val) => {
   const v = (val || '').toLowerCase();
-  if (v.includes('tile')) return { icon: '🧱', bg: '#EFF6FF', border: '#BFDBFE', text: '#1D4ED8' };
-  if (v.includes('sanitary') || v.includes('bath') || v.includes('toilet') || v.includes('basin')) return { icon: '🚿', bg: '#ECFDF5', border: '#A7F3D0', text: '#059669' };
-  if (v.includes('cp') || v.includes('tap') || v.includes('faucet') || v.includes('shower')) return { icon: '🚰', bg: '#F0FDFA', border: '#99F6E4', text: '#0F766E' };
-  if (v.includes('adhesive') || v.includes('grout')) return { icon: '🧪', bg: '#FAF5FF', border: '#DDD6FE', text: '#7E22CE' };
-  return { icon: '✨', bg: '#FFF7ED', border: '#FED7AA', text: '#C2410C' };
+  if (v.includes('tile')) return { bg: '#EFF6FF', border: '#BFDBFE', text: '#1D4ED8' };
+  if (v.includes('sanitary') || v.includes('bath') || v.includes('toilet') || v.includes('basin')) return { bg: '#ECFDF5', border: '#A7F3D0', text: '#059669' };
+  if (v.includes('cp') || v.includes('tap') || v.includes('faucet') || v.includes('shower')) return { bg: '#F0FDFA', border: '#99F6E4', text: '#0F766E' };
+  if (v.includes('adhesive') || v.includes('grout')) return { bg: '#FAF5FF', border: '#DDD6FE', text: '#7E22CE' };
+  return { bg: '#F8FAFC', border: '#E2E8F0', text: '#334155' };
 };
 
 export function MobileFollowupSheet({
@@ -114,6 +120,53 @@ export function MobileFollowupSheet({
   const [selectedDetailItem, setSelectedDetailItem] = useState(null);
   const [detailTab, setDetailTab] = useState('overview'); // 'overview' | 'specs' | 'timeline'
 
+  // Smooth detail modal animations
+  const detailFadeAnim = useRef(new Animated.Value(0)).current;
+  const detailSlideAnim = useRef(new Animated.Value(40)).current;
+
+  useEffect(() => {
+    if (selectedDetailItem) {
+      Animated.parallel([
+        Animated.timing(detailFadeAnim, {
+          toValue: 1,
+          duration: 220,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: true,
+        }),
+        Animated.timing(detailSlideAnim, {
+          toValue: 0,
+          duration: 250,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: true,
+        }),
+      ]).start();
+    } else {
+      detailFadeAnim.setValue(0);
+      detailSlideAnim.setValue(40);
+    }
+  }, [selectedDetailItem]);
+
+  const handleCloseDetail = () => {
+    Animated.parallel([
+      Animated.timing(detailFadeAnim, {
+        toValue: 0,
+        duration: 180,
+        useNativeDriver: true,
+      }),
+      Animated.timing(detailSlideAnim, {
+        toValue: 40,
+        duration: 180,
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      setSelectedDetailItem(null);
+    });
+  };
+
+  const handleTabSwitch = (tab) => {
+    setDetailTab(tab);
+  };
+
   // Check if active profile is an employee / sales person
   const isEmployee = Boolean(
     currentProfile && currentProfile.role !== 'owner' && currentProfile.name
@@ -132,10 +185,10 @@ export function MobileFollowupSheet({
 
   // Compute dynamic counts strictly for the active user's scope
   const activeCounts = useMemo(() => {
-    if (!isEmployee) {
-      return counts || { today: 0, upcoming: 0, overdue: 0, total: 0 };
+    if (counts && (counts.today !== undefined || counts.overdue !== undefined || counts.upcoming !== undefined)) {
+      return counts;
     }
-    // Calculate employee-specific counts from staffScopedFollowups
+    // Fallback: calculate from staffScopedFollowups
     let today = 0;
     let upcoming = 0;
     let overdue = 0;
@@ -150,7 +203,7 @@ export function MobileFollowupSheet({
       overdue,
       total: staffScopedFollowups.length,
     };
-  }, [isEmployee, staffScopedFollowups, counts]);
+  }, [counts, staffScopedFollowups]);
 
   // Filter followups based on search text
   const displayedFollowups = useMemo(() => {
@@ -199,9 +252,9 @@ export function MobileFollowupSheet({
 
   const tempPill = useMemo(() => {
     const t = String(fullDetailItem?.leadTemperature || 'Hot').toLowerCase();
-    if (t === 'hot') return { bg: '#FEF2F2', border: '#FECACA', text: '#DC2626', icon: '🔥' };
-    if (t === 'warm') return { bg: '#FFFBEB', border: '#FDE68A', text: '#D97706', icon: '⚡' };
-    return { bg: '#F0FDFA', border: '#CCFBF1', text: '#0F766E', icon: '✦' };
+    if (t === 'hot') return { bg: '#FFFFFF', border: '#DC2626', text: '#DC2626', icon: 'flame' };
+    if (t === 'warm') return { bg: '#FFFFFF', border: '#D97706', text: '#D97706', icon: 'flash' };
+    return { bg: '#FFFFFF', border: '#0F766E', text: '#0F766E', icon: 'calendar' };
   }, [fullDetailItem?.leadTemperature]);
 
   // Parse discussion history to construct a vertical activity timeline
@@ -273,25 +326,20 @@ export function MobileFollowupSheet({
       <View style={styles.sheetHeaderWrapper}>
         <View style={styles.sheetTopTitleRow}>
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-              <View style={styles.headerIconBadge}>
-                <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#0F766E' }} />
-              </View>
-              <View>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                  <Text style={styles.sheetTopTitle}>
-                    {isEmployee ? 'Follow-ups' : 'Showroom Follow-ups'}
-                  </Text>
-                  <View style={styles.sheetTopCountBadge}>
-                    <Text style={styles.sheetTopCountBadgeText}>{activeCounts?.total || 0}</Text>
-                  </View>
-                </View>
-                <Text style={styles.sheetTopSubtitle}>
-                  {isEmployee
-                    ? `Active callback queue & scheduled reminders`
-                    : 'Showroom active customer follow-ups & callbacks'}
+            <View>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7 }}>
+                <Text style={styles.sheetTopTitle}>
+                  {isEmployee ? 'Follow-ups' : 'Showroom Follow-ups'}
                 </Text>
+                <View style={styles.sheetTopCountBadge}>
+                  <Text style={styles.sheetTopCountBadgeText}>{activeCounts?.total || 0}</Text>
+                </View>
               </View>
+              <Text style={styles.sheetTopSubtitle}>
+                {isEmployee
+                  ? 'Active callback queue & scheduled reminders'
+                  : 'Showroom active customer follow-ups & callbacks'}
+              </Text>
             </View>
 
             {isEmployee && (
@@ -302,97 +350,151 @@ export function MobileFollowupSheet({
           </View>
         </View>
 
-        {/* 3 Executive Modern Stat Tiles matching Leads page */}
-        <View style={styles.headerStatRow}>
-          {/* 1. Due Today */}
-          <View style={styles.headerStatCard}>
-            <View style={styles.headerStatTopRow}>
-              <View style={[styles.headerStatIconBadge, { backgroundColor: '#EFF6FF', borderColor: '#DBEAFE' }]}>
-                <Text style={[styles.headerStatIconGlyph, { color: '#2563EB' }]}>📅</Text>
-              </View>
-              <Text style={styles.headerStatLabel}>DUE TODAY</Text>
-            </View>
-            <Text style={[styles.headerStatVal, { color: '#1D4ED8' }]} numberOfLines={1}>
-              {activeCounts?.today || 0}
-            </Text>
-            <View style={[styles.headerStatSubBadge, { backgroundColor: '#EFF6FF' }]}>
-              <Text style={[styles.headerStatSubText, { color: '#2563EB' }]}>
-                {(activeCounts?.today || 0) > 0 ? 'Pending calls' : 'All clear'}
-              </Text>
-            </View>
-          </View>
+        {/* Modern Compact Interactive Stat Filter Cards */}
+        <View style={styles.headerStatGrid}>
+          {(() => {
+            const statItems = [
+              {
+                id: 'today',
+                label: 'Due Today',
+                icon: 'time',
+                count: activeCounts?.today || 0,
+                accentColor: '#2563EB',
+                activeBorder: '#3B82F6',
+                activeBg: '#EFF6FF',
+                iconBg: '#DBEAFE',
+                valBg: '#F1F5F9',
+                subText: (activeCounts?.today || 0) > 0 ? `${activeCounts.today} Pending` : 'All Clear',
+              },
+              {
+                id: 'overdue',
+                label: 'Overdue',
+                icon: 'alert-circle',
+                count: activeCounts?.overdue || 0,
+                accentColor: (activeCounts?.overdue || 0) > 0 ? '#DC2626' : '#64748B',
+                activeBorder: '#EF4444',
+                activeBg: '#FEF2F2',
+                iconBg: (activeCounts?.overdue || 0) > 0 ? '#FEE2E2' : '#F1F5F9',
+                valBg: (activeCounts?.overdue || 0) > 0 ? '#FEE2E2' : '#F1F5F9',
+                subText: (activeCounts?.overdue || 0) > 0 ? `${activeCounts.overdue} Action Req.` : 'Zero Backlog',
+              },
+              {
+                id: 'upcoming',
+                label: 'Next 7 Days',
+                icon: 'calendar',
+                count: activeCounts?.upcoming || 0,
+                accentColor: '#16A34A',
+                activeBorder: '#22C55E',
+                activeBg: '#F0FDF4',
+                iconBg: '#DCFCE7',
+                valBg: '#F1F5F9',
+                subText: (activeCounts?.upcoming || 0) > 0 ? `${activeCounts.upcoming} Scheduled` : 'None Due',
+              },
+              {
+                id: 'all',
+                label: 'All Leads',
+                icon: 'layers',
+                count: activeCounts?.total || 0,
+                accentColor: '#334155',
+                activeBorder: '#475569',
+                activeBg: '#F8FAFC',
+                iconBg: '#E2E8F0',
+                valBg: '#F1F5F9',
+                subText: `${activeCounts?.total || 0} Total Active`,
+              },
+            ];
 
-          {/* 2. Overdue */}
-          <View style={styles.headerStatCard}>
-            <View style={styles.headerStatTopRow}>
-              <View
-                style={[
-                  styles.headerStatIconBadge,
-                  (activeCounts?.overdue || 0) > 0
-                    ? { backgroundColor: '#FEF2F2', borderColor: '#FECACA' }
-                    : { backgroundColor: '#F8FAFC', borderColor: '#E2E8F0' },
-                ]}
-              >
-                <Text
+            const renderCard = (tab) => {
+              const isSelected = activeTab === tab.id;
+              return (
+                <TouchableOpacity
+                  key={tab.id}
+                  onPress={() => onTabChange(tab.id)}
+                  activeOpacity={0.72}
                   style={[
-                    styles.headerStatIconGlyph,
-                    { color: (activeCounts?.overdue || 0) > 0 ? '#DC2626' : '#64748B' },
+                    styles.headerStatCard,
+                    isSelected && [
+                      styles.headerStatCardActive,
+                      { borderColor: tab.activeBorder, backgroundColor: tab.activeBg },
+                    ],
                   ]}
                 >
-                  {(activeCounts?.overdue || 0) > 0 ? '⏱' : '•'}
-                </Text>
-              </View>
-              <Text style={styles.headerStatLabel}>OVERDUE</Text>
-            </View>
-            <Text
-              style={[
-                styles.headerStatVal,
-                (activeCounts?.overdue || 0) > 0 ? { color: '#DC2626' } : { color: '#0F172A' },
-              ]}
-              numberOfLines={1}
-            >
-              {activeCounts?.overdue || 0}
-            </Text>
-            <View
-              style={[
-                styles.headerStatSubBadge,
-                (activeCounts?.overdue || 0) > 0
-                  ? { backgroundColor: '#FEF2F2' }
-                  : { backgroundColor: '#F1F5F9' },
-              ]}
-            >
-              <Text
-                style={[
-                  styles.headerStatSubText,
-                  (activeCounts?.overdue || 0) > 0 ? { color: '#DC2626' } : { color: '#64748B' },
-                ]}
-              >
-                {(activeCounts?.overdue || 0) > 0 ? 'Action needed' : 'Zero backlog'}
-              </Text>
-            </View>
-          </View>
+                  {/* Left Group: Modern Icon Badge + Title & Subtitle */}
+                  <View style={styles.headerStatLeftCol}>
+                    <View style={[styles.headerStatIconBadge, { backgroundColor: isSelected ? '#FFFFFF' : tab.iconBg }]}>
+                      <Ionicons
+                        name={tab.icon}
+                        size={14}
+                        color={tab.accentColor}
+                      />
+                    </View>
+                    <View style={styles.headerStatTextCol}>
+                      <Text
+                        style={[
+                          styles.headerStatLabel,
+                          isSelected && { color: tab.accentColor, fontWeight: '800' },
+                        ]}
+                        numberOfLines={1}
+                      >
+                        {tab.label}
+                      </Text>
+                      <Text
+                        style={[
+                          styles.headerStatSubText,
+                          isSelected && { color: tab.accentColor },
+                        ]}
+                        numberOfLines={1}
+                      >
+                        {tab.subText}
+                      </Text>
+                    </View>
+                  </View>
 
-          {/* 3. Next 7 Days */}
-          <View style={styles.headerStatCard}>
-            <View style={styles.headerStatTopRow}>
-              <View style={[styles.headerStatIconBadge, { backgroundColor: '#F0FDF4', borderColor: '#DCFCE7' }]}>
-                <Text style={[styles.headerStatIconGlyph, { color: '#16A34A' }]}>🗓️</Text>
-              </View>
-              <Text style={styles.headerStatLabel}>NEXT 7 DAYS</Text>
-            </View>
-            <Text style={[styles.headerStatVal, { color: '#15803D' }]} numberOfLines={1}>
-              {activeCounts?.upcoming || 0}
-            </Text>
-            <View style={[styles.headerStatSubBadge, { backgroundColor: '#F0FDF4' }]}>
-              <Text style={[styles.headerStatSubText, { color: '#16A34A' }]}>
-                {(activeCounts?.upcoming || 0) > 0 ? 'Scheduled' : 'None upcoming'}
-              </Text>
-            </View>
-          </View>
+                  {/* Right Metric Count Pill */}
+                  <View
+                    style={[
+                      styles.headerStatValWrapper,
+                      isSelected
+                        ? { backgroundColor: '#FFFFFF', borderColor: tab.activeBorder, borderWidth: 1 }
+                        : { backgroundColor: tab.valBg, borderColor: 'transparent', borderWidth: 1 },
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.headerStatVal,
+                        { color: isSelected ? tab.accentColor : '#0F172A' },
+                      ]}
+                      numberOfLines={1}
+                    >
+                      {tab.count}
+                    </Text>
+                  </View>
+
+                  {/* Sleek Active Left Accent Strip */}
+                  {isSelected && (
+                    <View style={[styles.activeStatIndicator, { backgroundColor: tab.activeBorder }]} />
+                  )}
+                </TouchableOpacity>
+              );
+            };
+
+            return (
+              <>
+                <View style={styles.headerStatRow}>
+                  {renderCard(statItems[0])}
+                  {renderCard(statItems[1])}
+                </View>
+                <View style={styles.headerStatRow}>
+                  {renderCard(statItems[2])}
+                  {renderCard(statItems[3])}
+                </View>
+              </>
+            );
+          })()}
         </View>
       </View>
 
-      {/* 1. In-List Search Toolbar */}
+      {/* In-List Search Toolbar */}
       <View style={styles.filterToolbar}>
         <View style={styles.searchBar}>
           <TextInput
@@ -408,41 +510,6 @@ export function MobileFollowupSheet({
             </TouchableOpacity>
           ) : null}
         </View>
-      </View>
-
-      {/* 2. Horizontal scrolling Filter Tab pills */}
-      <View style={styles.filterTabBar}>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.filterTabBarContent}
-        >
-          {[
-            { id: 'today', label: 'Today', count: activeCounts?.today || 0 },
-            { id: 'upcoming', label: '7 Days', count: activeCounts?.upcoming || 0 },
-            { id: 'overdue', label: 'Overdue', count: activeCounts?.overdue || 0 },
-            { id: 'all', label: 'All', count: activeCounts?.total || 0 },
-          ].map((tab) => {
-            const isSelected = activeTab === tab.id;
-            return (
-              <TouchableOpacity
-                key={tab.id}
-                onPress={() => onTabChange(tab.id)}
-                style={[styles.filterTab, isSelected && styles.filterTabActive]}
-                activeOpacity={0.75}
-              >
-                <Text style={[styles.filterTabText, isSelected && styles.filterTabTextActive]}>
-                  {tab.label}
-                </Text>
-                <View style={[styles.filterTabBadge, isSelected && styles.filterTabBadgeActive]}>
-                  <Text style={[styles.filterTabBadgeText, isSelected && styles.filterTabBadgeTextActive]}>
-                    {tab.count}
-                  </Text>
-                </View>
-              </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
       </View>
 
       {/* 3. Follow-up Cards List */}
@@ -521,7 +588,7 @@ export function MobileFollowupSheet({
                     </View>
 
                     {item.phone || item.location ? (
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 2 }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 3 }}>
                         {item.phone ? (
                           <Text style={styles.metaPhone} numberOfLines={1}>
                             {item.phone}
@@ -529,9 +596,12 @@ export function MobileFollowupSheet({
                         ) : null}
                         {item.phone && item.location ? <Text style={styles.metaDot}>•</Text> : null}
                         {item.location ? (
-                          <Text style={styles.metaLocation} numberOfLines={1}>
-                            {item.location}
-                          </Text>
+                          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                            <Ionicons name="location" size={10.5} color="#0F766E" style={{ marginRight: 2 }} />
+                            <Text style={styles.metaLocation} numberOfLines={1}>
+                              {item.location}
+                            </Text>
+                          </View>
                         ) : null}
                       </View>
                     ) : null}
@@ -549,6 +619,7 @@ export function MobileFollowupSheet({
                 <View style={styles.cardMiddleRow}>
                   {item.customerType ? (
                     <View style={[styles.cardTypePill, { backgroundColor: typeColors.bg, borderColor: typeColors.border }]}>
+                      <Ionicons name={typeColors.icon || 'person-outline'} size={11} color={typeColors.text} style={{ marginRight: 3.5 }} />
                       <Text style={[styles.cardTypePillText, { color: typeColors.text }]}>
                         {item.customerType}
                       </Text>
@@ -590,14 +661,22 @@ export function MobileFollowupSheet({
       )}
 
       {/* 4. Professional Lead Detail Sheet */}
+      {/* 4. Professional Lead Detail Sheet */}
       <Modal
         visible={Boolean(selectedDetailItem)}
         transparent
-        animationType="slide"
-        onRequestClose={() => setSelectedDetailItem(null)}
+        animationType="none"
+        onRequestClose={handleCloseDetail}
       >
-        <View style={styles.modalOverlay}>
-          <View style={styles.detailSheet}>
+        <Animated.View style={[styles.modalOverlay, { opacity: detailFadeAnim }]}>
+          <Animated.View
+            style={[
+              styles.detailSheet,
+              {
+                transform: [{ translateY: detailSlideAnim }],
+              },
+            ]}
+          >
             {/* Drag Handle */}
             <View style={styles.sheetHandleWrapper}>
               <View style={styles.sheetHandle} />
@@ -605,17 +684,22 @@ export function MobileFollowupSheet({
 
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 24 }}>
 
-              {/* ── Hero Header ── */}
+              {/* ── Hero Header: Name, Type, Location, ID ── */}
               <View style={styles.dHeroSection}>
                 <View style={styles.dHeroTop}>
-                  <View style={styles.dHeroAvatarBox}>
+                  <LinearGradient
+                    colors={['#0F766E', '#14B8A6']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={styles.dHeroAvatarBox}
+                  >
                     <Text style={styles.dHeroAvatarLetter}>
                       {(fullDetailItem?.customerName || 'C').charAt(0).toUpperCase()}
                     </Text>
-                  </View>
+                  </LinearGradient>
 
                   <View style={{ flex: 1 }}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                    <View style={styles.dHeroNameRow}>
                       <Text style={styles.dHeroName} numberOfLines={1}>
                         {fullDetailItem?.customerName || 'Customer'}
                       </Text>
@@ -626,29 +710,41 @@ export function MobileFollowupSheet({
                       )}
                     </View>
 
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 3, flexWrap: 'wrap' }}>
+                    <View style={styles.dHeroMetaRow}>
                       {fullDetailItem?.customerType && (
-                        <View style={[styles.dHeroTypePill, { backgroundColor: detailTypeColors?.bg, borderColor: detailTypeColors?.border }]}>
-                          <Text style={[styles.dHeroTypePillText, { color: detailTypeColors?.text }]}>
+                        <View style={[styles.dHeroTypePill, { backgroundColor: detailTypeColors?.bg || '#FFFBEB', borderColor: detailTypeColors?.border || '#FDE68A' }]}>
+                          <Ionicons name={detailTypeColors?.icon || 'person-outline'} size={12} color={detailTypeColors?.text || '#B45309'} style={{ marginRight: 4 }} />
+                          <Text style={[styles.dHeroTypePillText, { color: detailTypeColors?.text || '#B45309' }]}>
                             {fullDetailItem.customerType}
                           </Text>
                         </View>
                       )}
+
+                      {fullDetailItem?.phone && (
+                        <View style={styles.dHeroPhoneBadge}>
+                          <Ionicons name="call-outline" size={11} color="#2563EB" style={{ marginRight: 3 }} />
+                          <Text style={styles.dHeroPhoneText}>{fullDetailItem.phone}</Text>
+                        </View>
+                      )}
+
                       {fullDetailItem?.location && (
                         <View style={styles.dHeroLocationBadge}>
-                          <Text style={styles.dHeroLocation} numberOfLines={1}>📍 {fullDetailItem.location}</Text>
+                          <Ionicons name="location" size={12} color="#0F766E" style={{ marginRight: 3 }} />
+                          <Text style={styles.dHeroLocation} numberOfLines={1}>
+                            {fullDetailItem.location}
+                          </Text>
                         </View>
                       )}
                     </View>
                   </View>
 
                   <TouchableOpacity
-                    onPress={() => setSelectedDetailItem(null)}
+                    onPress={handleCloseDetail}
                     style={styles.dCloseBtn}
                     activeOpacity={0.7}
                     hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                   >
-                    <Text style={styles.dCloseBtnText}>✕</Text>
+                    <Ionicons name="close" size={18} color="#64748B" />
                   </TouchableOpacity>
                 </View>
 
@@ -656,24 +752,24 @@ export function MobileFollowupSheet({
                 {detailUrgency && (
                   <View style={[styles.dStatusRibbon, { backgroundColor: detailUrgency.bg, borderColor: detailUrgency.border }]}>
                     <View style={[styles.dStatusDot, { backgroundColor: detailUrgency.dot || detailUrgency.accent }]} />
-                    <Text style={[styles.dStatusText, { color: detailUrgency.color }]}>
+                    <Text style={[styles.dStatusText, { color: detailUrgency.color, fontWeight: '800' }]}>
                       {detailUrgency.label}
                     </Text>
                     {fullDetailItem?.nextFollowUp && (
-                      <Text style={[styles.dStatusDateText, { color: detailUrgency.color }]}>
-                        — {fullDetailItem.nextFollowUp}
+                      <Text style={styles.dStatusDateText}>
+                        • Next Due: {fullDetailItem.nextFollowUp}
                       </Text>
                     )}
                   </View>
                 )}
               </View>
 
-              {/* ── Modern Lightweight Segmented Tabs ── */}
+              {/* ── Segmented Tabs ── */}
               <View style={styles.dSegmentTrack}>
                 <TouchableOpacity
                   style={[styles.dSegmentBtn, detailTab === 'overview' && styles.dSegmentBtnActive]}
-                  onPress={() => setDetailTab('overview')}
-                  activeOpacity={0.75}
+                  onPress={() => handleTabSwitch('overview')}
+                  activeOpacity={0.8}
                 >
                   <Text style={[styles.dSegmentBtnText, detailTab === 'overview' && styles.dSegmentBtnTextActive]}>
                     Overview
@@ -682,8 +778,8 @@ export function MobileFollowupSheet({
 
                 <TouchableOpacity
                   style={[styles.dSegmentBtn, detailTab === 'specs' && styles.dSegmentBtnActive]}
-                  onPress={() => setDetailTab('specs')}
-                  activeOpacity={0.75}
+                  onPress={() => handleTabSwitch('specs')}
+                  activeOpacity={0.8}
                 >
                   <Text style={[styles.dSegmentBtnText, detailTab === 'specs' && styles.dSegmentBtnTextActive]}>
                     Specs & Site
@@ -692,8 +788,8 @@ export function MobileFollowupSheet({
 
                 <TouchableOpacity
                   style={[styles.dSegmentBtn, detailTab === 'timeline' && styles.dSegmentBtnActive]}
-                  onPress={() => setDetailTab('timeline')}
-                  activeOpacity={0.75}
+                  onPress={() => handleTabSwitch('timeline')}
+                  activeOpacity={0.8}
                 >
                   <Text style={[styles.dSegmentBtnText, detailTab === 'timeline' && styles.dSegmentBtnTextActive]}>
                     Timeline{activityTimeline.length > 0 ? ` (${activityTimeline.length})` : ''}
@@ -701,392 +797,384 @@ export function MobileFollowupSheet({
                 </TouchableOpacity>
               </View>
 
-              {/* ── TAB 1: OVERVIEW ── */}
-              {detailTab === 'overview' && (
-                <View>
-                  {/* 1-Tap Action Call & WhatsApp Buttons (Clean, matching Leads page) */}
-                  {fullDetailItem?.phone ? (
-                    <View style={styles.detailHeroActionsRow}>
-                      <TouchableOpacity
-                        style={styles.detailActionBtnCall}
-                        onPress={() => Linking.openURL(`tel:${fullDetailItem.phone}`)}
-                        activeOpacity={0.85}
-                      >
-                        <Text style={styles.detailActionBtnCallIcon}>📞</Text>
-                        <Text style={styles.detailActionBtnCallText}>Call</Text>
-                      </TouchableOpacity>
-
-                      <TouchableOpacity
-                        style={styles.detailActionBtnWhatsApp}
-                        onPress={() => openWhatsApp(fullDetailItem)}
-                        activeOpacity={0.85}
-                      >
-                        <Text style={styles.detailActionBtnWhatsAppIcon}>💬</Text>
-                        <Text style={styles.detailActionBtnWhatsAppText}>WhatsApp</Text>
-                      </TouchableOpacity>
-                    </View>
-                  ) : null}
-
-                  {/* Modern Deal Valuation & Pipeline Banner */}
-                  <View style={styles.dValuationBanner}>
-                    <View style={styles.dValuationTopRow}>
-                      <View>
-                        <Text style={styles.dValuationLabel}>Quotation Value</Text>
-                        <Text style={styles.dValuationAmount}>
-                          ₹ {Number(fullDetailItem?.quotationValue || 0).toLocaleString('en-IN')}
-                        </Text>
-                      </View>
-
-                      <View style={styles.dValuationBadgesCol}>
-                        <View style={[styles.dPriorityPill, { backgroundColor: tempPill.bg, borderColor: tempPill.border }]}>
-                          <Text style={{ fontSize: 11 }}>{tempPill.icon}</Text>
-                          <Text style={[styles.dPriorityPillText, { color: tempPill.text }]}>
-                            {fullDetailItem?.leadTemperature || 'Hot'}
-                          </Text>
-                        </View>
-                        {fullDetailItem?.status ? (
-                          <View style={styles.dStagePill}>
-                            <Text style={styles.dStagePillText}>{fullDetailItem.status}</Text>
+              <View style={styles.dTabContentWrapper}>
+                {/* ── TAB 1: OVERVIEW ── */}
+                {detailTab === 'overview' && (
+                  <View>
+                    {/* 1-Tap Action Call & WhatsApp Buttons */}
+                    {fullDetailItem?.phone ? (
+                      <View style={styles.detailHeroActionsRow}>
+                        <TouchableOpacity
+                          style={styles.detailActionBtnCall}
+                          onPress={() => Linking.openURL(`tel:${fullDetailItem.phone}`)}
+                          activeOpacity={0.8}
+                        >
+                          <View style={styles.detailActionIconCircleCall}>
+                            <Ionicons name="call" size={14} color="#2563EB" />
                           </View>
-                        ) : null}
-                      </View>
-                    </View>
+                          <Text style={styles.detailActionBtnCallText}>Call</Text>
+                        </TouchableOpacity>
 
-                    {fullDetailItem?.tileBudget ? (
-                      <View style={styles.dBudgetChip}>
-                        <Text style={{ fontSize: 12, color: '#0F766E' }}>📊</Text>
-                        <Text style={styles.dBudgetChipText}>
-                          Tile Budget: ₹ {Number(fullDetailItem.tileBudget).toLocaleString('en-IN')}
-                        </Text>
+                        <TouchableOpacity
+                          style={styles.detailActionBtnWhatsApp}
+                          onPress={() => openWhatsApp(fullDetailItem)}
+                          activeOpacity={0.8}
+                        >
+                          <View style={styles.detailActionIconCircleWA}>
+                            <Ionicons name="logo-whatsapp" size={15} color="#059669" />
+                          </View>
+                          <Text style={styles.detailActionBtnWhatsAppText}>WhatsApp</Text>
+                        </TouchableOpacity>
                       </View>
                     ) : null}
-                  </View>
 
-                  {/* Next Reminder & Target Objective Card */}
-                  {detailUrgency && (
-                    <View style={[styles.dReminderCard, { backgroundColor: detailUrgency.bg, borderColor: detailUrgency.border }]}>
-                      <View style={styles.dReminderHead}>
-                        <View style={styles.dReminderLeft}>
-                          <View style={[styles.dStatusDot, { backgroundColor: detailUrgency.dot || detailUrgency.accent }]} />
-                          <Text style={[styles.dReminderTitle, { color: detailUrgency.color }]}>
-                            {detailUrgency.label}
+                    {/* Deal Valuation & Pipeline Banner (Clean Pure White Card) */}
+                    <View style={styles.dValuationBanner}>
+                      <View style={styles.dValuationTopRow}>
+                        <View>
+                          <Text style={styles.dValuationLabel}>Quotation Value</Text>
+                          <Text style={styles.dValuationAmount}>
+                            ₹ {Number(fullDetailItem?.quotationValue || 0).toLocaleString('en-IN')}
                           </Text>
                         </View>
-                        {fullDetailItem?.nextFollowUp && (
-                          <Text style={[styles.dReminderDate, { color: detailUrgency.color }]}>
-                            {fullDetailItem.nextFollowUp}
-                          </Text>
-                        )}
+
+                        <View style={styles.dValuationBadgesCol}>
+                          <View style={[styles.dPriorityPill, { backgroundColor: '#FFFFFF', borderColor: tempPill.border }]}>
+                            <Ionicons name={tempPill.icon} size={13} color={tempPill.text} style={{ marginRight: 4 }} />
+                            <Text style={[styles.dPriorityPillText, { color: tempPill.text }]}>
+                              {fullDetailItem?.leadTemperature || 'Hot'}
+                            </Text>
+                          </View>
+                          {fullDetailItem?.status ? (
+                            <View style={styles.dStagePill}>
+                              <Text style={styles.dStagePillText}>{fullDetailItem.status}</Text>
+                            </View>
+                          ) : null}
+                        </View>
                       </View>
 
-                      {fullDetailItem?.lastReason && fullDetailItem.lastReason.trim() !== '' ? (
-                        <View style={styles.dObjectiveBox}>
-                          <Text style={[styles.dObjectiveLabel, { color: detailUrgency.color }]}>
-                            🎯 Target Objective
-                          </Text>
-                          <Text style={[styles.dObjectiveText, { color: detailUrgency.color }]}>
-                            {fullDetailItem.lastReason.split(': ').slice(1).join(': ') || fullDetailItem.lastReason}
+                      {fullDetailItem?.tileBudget ? (
+                        <View style={styles.dBudgetChip}>
+                          <Ionicons name="wallet-outline" size={14} color="#0F766E" />
+                          <Text style={styles.dBudgetChipText}>
+                            Tile Budget: ₹ {Number(fullDetailItem.tileBudget).toLocaleString('en-IN')}
                           </Text>
                         </View>
                       ) : null}
                     </View>
-                  )}
 
-                  {/* Quick Specs Snapshot Card */}
-                  <View style={styles.dSection}>
-                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                        <View style={styles.dSectionIconBox}>
-                          <Text style={styles.dSectionIcon}>🧱</Text>
+                    {/* Next Reminder & Target Objective Card */}
+                    {detailUrgency && (
+                      <View style={[styles.dReminderCard, { backgroundColor: '#FFFFFF', borderColor: '#E2E8F0' }]}>
+                        <View style={styles.dReminderHead}>
+                          <View style={styles.dReminderLeft}>
+                            <View style={[styles.dStatusDot, { backgroundColor: detailUrgency.dot || detailUrgency.accent }]} />
+                            <Text style={[styles.dReminderTitle, { color: detailUrgency.color }]}>
+                              {detailUrgency.label}
+                            </Text>
+                          </View>
+                          {fullDetailItem?.nextFollowUp && (
+                            <Text style={[styles.dReminderDate, { color: '#0F172A' }]}>
+                              {fullDetailItem.nextFollowUp}
+                            </Text>
+                          )}
                         </View>
-                        <Text style={styles.dSectionTitle}>Requirement Snapshot</Text>
-                      </View>
-                      <TouchableOpacity onPress={() => setDetailTab('specs')} activeOpacity={0.7} style={styles.dSectionLinkBtn}>
-                        <Text style={styles.dSectionLinkText}>All Specs ›</Text>
-                      </TouchableOpacity>
-                    </View>
 
-                    {reqItems.length > 0 ? (
-                      <View style={styles.dTagRow}>
-                        {reqItems.map((req, idx) => {
-                          const chipStyle = getRequirementChipStyle(req);
-                          return (
-                            <View
-                              key={idx}
-                              style={[
-                                styles.dTagChip,
-                                { backgroundColor: chipStyle.bg, borderColor: chipStyle.border },
-                              ]}
-                            >
-                              <Text style={{ fontSize: 12 }}>{chipStyle.icon}</Text>
-                              <Text style={[styles.dTagChipText, { color: chipStyle.text }]}>{req}</Text>
-                            </View>
-                          );
-                        })}
+                        {fullDetailItem?.lastReason && fullDetailItem.lastReason.trim() !== '' ? (
+                          <View style={styles.dObjectiveBox}>
+                            <Text style={styles.dObjectiveLabel}>
+                              TARGET OBJECTIVE
+                            </Text>
+                            <Text style={styles.dObjectiveText}>
+                              {fullDetailItem.lastReason.split(': ').slice(1).join(': ') || fullDetailItem.lastReason}
+                            </Text>
+                          </View>
+                        ) : null}
                       </View>
-                    ) : (
-                      <Text style={styles.dNotesEmpty}>No specific tile requirement tagged yet.</Text>
                     )}
 
-                    {fullDetailItem?.approxQuantity ? (
-                      <View style={styles.dMetricHighlightChip}>
-                        <Text style={{ fontSize: 13 }}>📐</Text>
-                        <Text style={styles.dMetricHighlightText}>
-                          {fullDetailItem.approxQuantity} sq.ft flooring coverage
-                        </Text>
-                      </View>
-                    ) : null}
-                  </View>
-
-                  {/* Recent Activity Snapshot Card */}
-                  <View style={styles.dSection}>
-                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                        <View style={styles.dSectionIconBox}>
-                          <Text style={styles.dSectionIcon}>💬</Text>
+                    {/* Requirement Snapshot Card */}
+                    <View style={styles.dSection}>
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                          <Ionicons name="cube-outline" size={16} color="#0F766E" />
+                          <Text style={styles.dSectionTitle}>Requirement Snapshot</Text>
                         </View>
-                        <Text style={styles.dSectionTitle}>Recent Interaction</Text>
-                      </View>
-                      {activityTimeline.length > 0 && (
-                        <TouchableOpacity onPress={() => setDetailTab('timeline')} activeOpacity={0.7} style={styles.dSectionLinkBtn}>
-                          <Text style={styles.dSectionLinkText}>Timeline ({activityTimeline.length}) ›</Text>
+                        <TouchableOpacity onPress={() => handleTabSwitch('specs')} activeOpacity={0.7} style={styles.dSectionLinkBtn}>
+                          <Text style={styles.dSectionLinkText}>All Specs ›</Text>
                         </TouchableOpacity>
+                      </View>
+
+                      {reqItems.length > 0 ? (
+                        <View style={styles.dTagRow}>
+                          {reqItems.map((req, idx) => {
+                            return (
+                              <View
+                                key={idx}
+                                style={[
+                                  styles.dTagChip,
+                                  { backgroundColor: '#FFFFFF', borderColor: '#CBD5E1' },
+                                ]}
+                              >
+                                <Text style={[styles.dTagChipText, { color: '#0F172A' }]}>{req}</Text>
+                              </View>
+                            );
+                          })}
+                        </View>
+                      ) : (
+                        <Text style={styles.dNotesEmpty}>No specific tile requirement tagged yet.</Text>
                       )}
+
+                      {fullDetailItem?.approxQuantity ? (
+                        <View style={styles.dMetricHighlightChip}>
+                          <Text style={styles.dMetricHighlightText}>
+                            {fullDetailItem.approxQuantity} sq.ft flooring coverage
+                          </Text>
+                        </View>
+                      ) : null}
+                    </View>
+
+                    {/* Recent Activity Card */}
+                    <View style={styles.dSection}>
+                      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                          <Ionicons name="chatbubbles-outline" size={16} color="#0F766E" />
+                          <Text style={styles.dSectionTitle}>Recent Interaction</Text>
+                        </View>
+                        {activityTimeline.length > 0 && (
+                          <TouchableOpacity onPress={() => handleTabSwitch('timeline')} activeOpacity={0.7} style={styles.dSectionLinkBtn}>
+                            <Text style={styles.dSectionLinkText}>Timeline ({activityTimeline.length}) ›</Text>
+                          </TouchableOpacity>
+                        )}
+                      </View>
+
+                      {activityTimeline.length > 0 ? (
+                        <View style={styles.dRecentActivityBox}>
+                          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <View style={styles.dRecentOutcomeBadge}>
+                              <Text style={styles.dRecentOutcomeText}>{activityTimeline[0].outcome}</Text>
+                            </View>
+                            {activityTimeline[0].date ? (
+                              <Text style={styles.timelineDate}>{formatTimelineDate(activityTimeline[0].date)}</Text>
+                            ) : null}
+                          </View>
+                          <Text style={styles.timelineNotes}>"{activityTimeline[0].notes.trim()}"</Text>
+                        </View>
+                      ) : (
+                        <Text style={styles.dNotesEmpty}>
+                          No activity logged yet. Tap "Log Activity" below after speaking with the customer.
+                        </Text>
+                      )}
+                    </View>
+                  </View>
+                )}
+
+                {/* ── TAB 2: SPECS & SITE ── */}
+                {detailTab === 'specs' && (
+                  <View>
+                    {/* Material Specifications Card */}
+                    <View style={styles.dSection}>
+                      <View style={styles.dSectionHead}>
+                        <Ionicons name="layers-outline" size={16} color="#0F766E" />
+                        <Text style={styles.dSectionTitle}>Tile & Flooring Requirements</Text>
+                      </View>
+
+                      {reqItems.length > 0 ? (
+                        <View style={styles.dTagRow}>
+                          {reqItems.map((req, idx) => {
+                            return (
+                              <View
+                                key={idx}
+                                style={[
+                                  styles.dTagChip,
+                                  { backgroundColor: '#FFFFFF', borderColor: '#CBD5E1' },
+                                ]}
+                              >
+                                <Text style={[styles.dTagChipText, { color: '#0F172A' }]}>{req}</Text>
+                              </View>
+                            );
+                          })}
+                        </View>
+                      ) : (
+                        <Text style={styles.dNotesEmpty}>General tile requirement.</Text>
+                      )}
+
+                      {fullDetailItem?.approxQuantity ? (
+                        <View style={styles.dMetricHighlightChip}>
+                          <Text style={styles.dMetricHighlightText}>
+                            {fullDetailItem.approxQuantity} sq.ft Approx Flooring Quantity
+                          </Text>
+                        </View>
+                      ) : null}
+
+                      {fullDetailItem?.sanitaryRequirement ? (
+                        <View style={styles.dSectionMetaRow}>
+                          <Text style={styles.dSectionMetaLabel}>Sanitary Ware Spec</Text>
+                          <Text style={styles.dSectionMetaVal}>{fullDetailItem.sanitaryRequirement}</Text>
+                        </View>
+                      ) : null}
+
+                      {fullDetailItem?.adhesiveRequirement ? (
+                        <View style={styles.dSectionMetaRow}>
+                          <Text style={styles.dSectionMetaLabel}>Adhesives & Grouts</Text>
+                          <Text style={styles.dSectionMetaVal}>{fullDetailItem.adhesiveRequirement}</Text>
+                        </View>
+                      ) : null}
+
+                      {fullDetailItem?.crossSell ? (
+                        <View style={styles.dSectionMetaRow}>
+                          <Text style={styles.dSectionMetaLabel}>Cross-Sell Interest</Text>
+                          <Text style={styles.dSectionMetaVal}>{fullDetailItem.crossSell}</Text>
+                        </View>
+                      ) : null}
+                    </View>
+
+                    {/* Site Progress Card */}
+                    <View style={styles.dSection}>
+                      <View style={styles.dSectionHead}>
+                        <Ionicons name="construct-outline" size={16} color="#0F766E" />
+                        <Text style={styles.dSectionTitle}>Site Progress & Construction</Text>
+                      </View>
+
+                      {fullDetailItem?.houseStage ? (
+                        <View style={styles.dSectionMetaRow}>
+                          <Text style={styles.dSectionMetaLabel}>Construction Phase</Text>
+                          <Text style={styles.dSectionMetaVal}>{fullDetailItem.houseStage}</Text>
+                        </View>
+                      ) : null}
+
+                      {fullDetailItem?.location ? (
+                        <View style={styles.dSectionMetaRow}>
+                          <Text style={styles.dSectionMetaLabel}>Site Location</Text>
+                          <Text style={styles.dSectionMetaVal}>{fullDetailItem.location}</Text>
+                        </View>
+                      ) : null}
+                    </View>
+
+                    {/* Customer & Staff Details */}
+                    <View style={styles.dSection}>
+                      <View style={styles.dSectionHead}>
+                        <Ionicons name="people-outline" size={16} color="#0F766E" />
+                        <Text style={styles.dSectionTitle}>Sales & Contact Details</Text>
+                      </View>
+
+                      {fullDetailItem?.salesperson ? (
+                        <View style={styles.dSectionMetaRow}>
+                          <Text style={styles.dSectionMetaLabel}>Assigned Staff</Text>
+                          <Text style={styles.dSectionMetaVal}>{fullDetailItem.salesperson}</Text>
+                        </View>
+                      ) : null}
+
+                      {fullDetailItem?.leadSource ? (
+                        <View style={styles.dSectionMetaRow}>
+                          <Text style={styles.dSectionMetaLabel}>Inquiry Source</Text>
+                          <Text style={styles.dSectionMetaVal}>{fullDetailItem.leadSource}</Text>
+                        </View>
+                      ) : null}
+
+                      {fullDetailItem?.phone ? (
+                        <View style={styles.dSectionMetaRow}>
+                          <Text style={styles.dSectionMetaLabel}>Contact Phone</Text>
+                          <Text style={styles.dSectionMetaVal}>{fullDetailItem.phone}</Text>
+                        </View>
+                      ) : null}
+                    </View>
+                  </View>
+                )}
+
+                {/* ── TAB 3: TIMELINE ── */}
+                {detailTab === 'timeline' && (
+                  <View style={styles.dSection}>
+                    <View style={styles.dSectionHead}>
+                      <Ionicons name="time-outline" size={16} color="#0F766E" />
+                      <Text style={styles.dSectionTitle}>Customer Activity Timeline</Text>
                     </View>
 
                     {activityTimeline.length > 0 ? (
-                      <View style={styles.dRecentActivityBox}>
-                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <View style={styles.dRecentOutcomeBadge}>
-                            <Text style={styles.dRecentOutcomeText}>{activityTimeline[0].outcome}</Text>
-                          </View>
-                          {activityTimeline[0].date ? (
-                            <Text style={styles.timelineDate}>{formatTimelineDate(activityTimeline[0].date)}</Text>
-                          ) : null}
-                        </View>
-                        <Text style={styles.timelineNotes}>"{activityTimeline[0].notes.trim()}"</Text>
-                      </View>
-                    ) : (
-                      <Text style={styles.dNotesEmpty}>
-                        No activity logged yet. Tap "Log Activity" below after speaking with the customer.
-                      </Text>
-                    )}
-                  </View>
-                </View>
-              )}
+                      <View style={styles.timelineContainer}>
+                        <View style={styles.timelineVerticalLine} />
 
-              {/* ── TAB 2: SPECS & SITE ── */}
-              {detailTab === 'specs' && (
-                <View>
-                  {/* Material & Tile Specifications Card */}
-                  <View style={styles.dSection}>
-                    <View style={styles.dSectionHead}>
-                      <View style={styles.dSectionIconBox}>
-                        <Text style={styles.dSectionIcon}>📐</Text>
-                      </View>
-                      <Text style={styles.dSectionTitle}>Tile & Flooring Requirements</Text>
-                    </View>
+                        {activityTimeline.map((act, index) => {
+                          const outcomeLower = act.outcome.toLowerCase();
+                          const isPositive = outcomeLower.includes('won') || outcomeLower.includes('confirmed') || outcomeLower.includes('order');
+                          const isNegative = outcomeLower.includes('lost') || outcomeLower.includes('postponed');
+                          const dotColor = isPositive ? '#10B981' : isNegative ? '#EF4444' : '#0F766E';
 
-                    {reqItems.length > 0 ? (
-                      <View style={styles.dTagRow}>
-                        {reqItems.map((req, idx) => {
-                          const chipStyle = getRequirementChipStyle(req);
                           return (
-                            <View
-                              key={idx}
-                              style={[
-                                styles.dTagChip,
-                                { backgroundColor: chipStyle.bg, borderColor: chipStyle.border },
-                              ]}
-                            >
-                              <Text style={{ fontSize: 12 }}>{chipStyle.icon}</Text>
-                              <Text style={[styles.dTagChipText, { color: chipStyle.text }]}>{req}</Text>
+                            <View key={index} style={styles.timelineItem}>
+                              <View style={[styles.timelineBullet, { backgroundColor: '#FFFFFF', borderColor: dotColor }]}>
+                                <View style={[styles.timelineBulletInner, { backgroundColor: dotColor }]} />
+                              </View>
+
+                              <View style={styles.timelineContent}>
+                                <View style={styles.timelineHeaderRow}>
+                                  <Text style={[styles.timelineTitle, { color: dotColor, fontWeight: '900' }]}>
+                                    {act.outcome}
+                                  </Text>
+                                  {act.date ? (
+                                    <Text style={styles.timelineDate}>
+                                      {formatTimelineDate(act.date)}
+                                    </Text>
+                                  ) : null}
+                                </View>
+                                <Text style={styles.timelineNotes}>"{act.notes.trim()}"</Text>
+                              </View>
                             </View>
                           );
                         })}
                       </View>
                     ) : (
-                      <Text style={styles.dNotesEmpty}>General tile requirement.</Text>
-                    )}
-
-                    {fullDetailItem?.approxQuantity ? (
-                      <View style={styles.dMetricHighlightChip}>
-                        <Text style={{ fontSize: 13 }}>📐</Text>
-                        <Text style={styles.dMetricHighlightText}>
-                          {fullDetailItem.approxQuantity} sq.ft Approx Flooring Quantity
+                      <View style={{ paddingVertical: 18, alignItems: 'center' }}>
+                        <Text style={styles.dNotesEmpty}>
+                          No history notes logged yet. Log callbacks or visits to begin your customer activity timeline.
                         </Text>
                       </View>
-                    ) : null}
-
-                    {fullDetailItem?.sanitaryRequirement ? (
-                      <View style={styles.dSectionMetaRow}>
-                        <Text style={styles.dSectionMetaLabel}>Sanitary Ware Spec</Text>
-                        <Text style={styles.dSectionMetaVal}>{fullDetailItem.sanitaryRequirement}</Text>
-                      </View>
-                    ) : null}
-
-                    {fullDetailItem?.adhesiveRequirement ? (
-                      <View style={styles.dSectionMetaRow}>
-                        <Text style={styles.dSectionMetaLabel}>Adhesives & Grouts</Text>
-                        <Text style={styles.dSectionMetaVal}>{fullDetailItem.adhesiveRequirement}</Text>
-                      </View>
-                    ) : null}
-
-                    {fullDetailItem?.crossSell ? (
-                      <View style={styles.dSectionMetaRow}>
-                        <Text style={styles.dSectionMetaLabel}>Cross-Sell Interest</Text>
-                        <Text style={styles.dSectionMetaVal}>{fullDetailItem.crossSell}</Text>
-                      </View>
-                    ) : null}
+                    )}
                   </View>
-
-                  {/* Site Progress & Identity Card */}
-                  <View style={styles.dSection}>
-                    <View style={styles.dSectionHead}>
-                      <View style={styles.dSectionIconBox}>
-                        <Text style={styles.dSectionIcon}>🏗️</Text>
-                      </View>
-                      <Text style={styles.dSectionTitle}>Site Progress & Construction</Text>
-                    </View>
-
-                    {fullDetailItem?.houseStage ? (
-                      <View style={styles.dSectionMetaRow}>
-                        <Text style={styles.dSectionMetaLabel}>Construction Phase</Text>
-                        <Text style={styles.dSectionMetaVal}>{fullDetailItem.houseStage}</Text>
-                      </View>
-                    ) : null}
-
-                    {fullDetailItem?.location ? (
-                      <View style={styles.dSectionMetaRow}>
-                        <Text style={styles.dSectionMetaLabel}>Site Location</Text>
-                        <Text style={styles.dSectionMetaVal}>{fullDetailItem.location}</Text>
-                      </View>
-                    ) : null}
-                  </View>
-
-                  {/* Customer & Staff Details */}
-                  <View style={styles.dSection}>
-                    <View style={styles.dSectionHead}>
-                      <View style={styles.dSectionIconBox}>
-                        <Text style={styles.dSectionIcon}>👤</Text>
-                      </View>
-                      <Text style={styles.dSectionTitle}>Sales & Contact Details</Text>
-                    </View>
-
-                    {fullDetailItem?.salesperson ? (
-                      <View style={styles.dSectionMetaRow}>
-                        <Text style={styles.dSectionMetaLabel}>Assigned Staff</Text>
-                        <Text style={styles.dSectionMetaVal}>{fullDetailItem.salesperson}</Text>
-                      </View>
-                    ) : null}
-
-                    {fullDetailItem?.leadSource ? (
-                      <View style={styles.dSectionMetaRow}>
-                        <Text style={styles.dSectionMetaLabel}>Inquiry Source</Text>
-                        <Text style={styles.dSectionMetaVal}>{fullDetailItem.leadSource}</Text>
-                      </View>
-                    ) : null}
-
-                    {fullDetailItem?.phone ? (
-                      <View style={styles.dSectionMetaRow}>
-                        <Text style={styles.dSectionMetaLabel}>Contact Phone</Text>
-                        <Text style={styles.dSectionMetaVal}>{fullDetailItem.phone}</Text>
-                      </View>
-                    ) : null}
-                  </View>
-                </View>
-              )}
-
-              {/* ── TAB 3: TIMELINE ── */}
-              {detailTab === 'timeline' && (
-                <View style={styles.dSection}>
-                  <View style={styles.dSectionHead}>
-                    <View style={styles.dSectionIconBox}>
-                      <Text style={styles.dSectionIcon}>⏱️</Text>
-                    </View>
-                    <Text style={styles.dSectionTitle}>Customer Activity Timeline</Text>
-                  </View>
-
-                  {activityTimeline.length > 0 ? (
-                    <View style={styles.timelineContainer}>
-                      <View style={styles.timelineVerticalLine} />
-
-                      {activityTimeline.map((act, index) => {
-                        const outcomeLower = act.outcome.toLowerCase();
-                        const isPositive = outcomeLower.includes('won') || outcomeLower.includes('confirmed') || outcomeLower.includes('order');
-                        const isNegative = outcomeLower.includes('lost') || outcomeLower.includes('postponed');
-                        const dotColor = isPositive ? '#10B981' : isNegative ? '#EF4444' : '#0F766E';
-                        const dotBg = isPositive ? '#ECFDF5' : isNegative ? '#FEF2F2' : '#F0FDFA';
-
-                        return (
-                          <View key={index} style={styles.timelineItem}>
-                            <View style={[styles.timelineBullet, { backgroundColor: dotBg, borderColor: dotColor }]}>
-                              <View style={[styles.timelineBulletInner, { backgroundColor: dotColor }]} />
-                            </View>
-
-                            <View style={styles.timelineContent}>
-                              <View style={styles.timelineHeaderRow}>
-                                <Text style={[styles.timelineTitle, { color: dotColor }]}>
-                                  {act.outcome}
-                                </Text>
-                                {act.date ? (
-                                  <Text style={styles.timelineDate}>
-                                    {formatTimelineDate(act.date)}
-                                  </Text>
-                                ) : null}
-                              </View>
-                              <Text style={styles.timelineNotes}>"{act.notes.trim()}"</Text>
-                            </View>
-                          </View>
-                        );
-                      })}
-                    </View>
-                  ) : (
-                    <View style={{ paddingVertical: 18, alignItems: 'center' }}>
-                      <Text style={styles.dNotesEmpty}>
-                        No history notes logged yet. Log callbacks or visits to begin your customer activity timeline.
-                      </Text>
-                    </View>
-                  )}
-                </View>
-              )}
+                )}
+              </View>
 
             </ScrollView>
 
-            {/* ── Sticky Action Footer ── */}
+            {/* ── Action Footer ── */}
             <View style={styles.dActionFooter}>
               <TouchableOpacity
                 style={styles.dLogActivityBtn}
                 onPress={() => {
                   const item = selectedDetailItem;
-                  setSelectedDetailItem(null);
+                  handleCloseDetail();
                   onLogActivity(item);
                 }}
                 activeOpacity={0.85}
               >
-                <View style={styles.dLogActivityGradient}>
-                  <Text style={styles.dLogActivityIcon}>📋</Text>
+                <LinearGradient
+                  colors={['#0F766E', '#0D9488']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={styles.dLogActivityGradient}
+                >
+                  <Ionicons name="create-outline" size={18} color="#FFFFFF" style={{ marginRight: 6 }} />
                   <Text style={styles.dLogActivityText}>Log Activity</Text>
-                </View>
+                </LinearGradient>
               </TouchableOpacity>
 
               <TouchableOpacity
                 style={styles.dMarkLostBtn}
                 onPress={() => {
                   const item = selectedDetailItem;
-                  setSelectedDetailItem(null);
+                  handleCloseDetail();
                   onRecordLost(item);
                 }}
                 activeOpacity={0.85}
               >
                 <View style={styles.dMarkLostGradient}>
-                  <Text style={styles.dMarkLostIcon}>✕</Text>
+                  <Ionicons name="close-circle-outline" size={16} color="#DC2626" style={{ marginRight: 4 }} />
                   <Text style={styles.dMarkLostText}>Lost</Text>
                 </View>
               </TouchableOpacity>
             </View>
-          </View>
-        </View>
+          </Animated.View>
+        </Animated.View>
       </Modal>
     </View>
   );
@@ -1103,7 +1191,8 @@ const styles = StyleSheet.create({
     paddingBottom: 4,
   },
   sheetTopTitle: {
-    fontSize: 18,
+    fontFamily: typography.fontHeading,
+    fontSize: 20,
     fontWeight: '900',
     color: '#0F172A',
     letterSpacing: -0.4,
@@ -1112,19 +1201,22 @@ const styles = StyleSheet.create({
     backgroundColor: '#EFF6FF',
     borderWidth: 1,
     borderColor: '#BFDBFE',
-    paddingHorizontal: 7,
-    paddingVertical: 1.5,
-    borderRadius: 7,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 8,
   },
   sheetTopCountBadgeText: {
-    fontSize: 11,
+    fontFamily: typography.fontHeading,
+    fontSize: 11.5,
     fontWeight: '900',
     color: '#2563EB',
+    fontVariant: ['tabular-nums'],
   },
   sheetTopSubtitle: {
-    fontSize: 11.5,
+    fontFamily: typography.fontFamily,
+    fontSize: 12,
     color: '#64748B',
-    marginTop: 2,
+    marginTop: 2.5,
     fontWeight: '500',
   },
   employeeIdentityChip: {
@@ -1390,81 +1482,108 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
     borderBottomColor: '#E2E8F0',
-    paddingBottom: 10,
-    marginBottom: 6,
+    paddingBottom: 8,
+    marginBottom: 4,
   },
   headerIconBadge: {
-    width: 34,
-    height: 34,
-    borderRadius: 10,
+    width: 32,
+    height: 32,
+    borderRadius: 8,
     backgroundColor: '#FEF3C7',
     borderWidth: 1,
     borderColor: '#FDE68A',
     alignItems: 'center',
     justifyContent: 'center',
   },
+  headerStatGrid: {
+    paddingHorizontal: 12,
+    marginTop: 8,
+    marginBottom: 6,
+    gap: 7,
+  },
   headerStatRow: {
     flexDirection: 'row',
-    gap: 8,
-    paddingHorizontal: 14,
-    marginTop: 8,
+    gap: 7,
+    alignItems: 'center',
   },
   headerStatCard: {
     flex: 1,
     backgroundColor: '#FFFFFF',
-    borderRadius: 14,
-    paddingVertical: 11,
+    borderRadius: 12,
+    paddingVertical: 8,
     paddingHorizontal: 10,
     borderWidth: 1,
     borderColor: '#E2E8F0',
-    justifyContent: 'space-between',
-    minHeight: 90,
-    shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.03,
-    shadowRadius: 4,
-    elevation: 1,
-  },
-  headerStatTopRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 4,
+    minHeight: 52,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 3,
+    elevation: 1.5,
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  headerStatCardActive: {
+    shadowOpacity: 0.12,
+    shadowRadius: 6,
+    elevation: 2.5,
+  },
+  headerStatLeftCol: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flex: 1,
+    marginRight: 4,
   },
   headerStatIconBadge: {
-    width: 24,
-    height: 24,
-    borderRadius: 7,
-    borderWidth: 1,
+    width: 28,
+    height: 28,
+    borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  headerStatIconGlyph: {
-    fontSize: 12,
-    fontWeight: '800',
+  headerStatTextCol: {
+    flex: 1,
+    justifyContent: 'center',
   },
   headerStatLabel: {
-    fontSize: 9,
-    fontWeight: '800',
-    color: '#64748B',
-    letterSpacing: 0.5,
-  },
-  headerStatVal: {
-    fontSize: 18,
-    fontWeight: '900',
-    letterSpacing: -0.4,
-    marginVertical: 2,
-  },
-  headerStatSubBadge: {
-    paddingHorizontal: 6.5,
-    paddingVertical: 2.5,
-    borderRadius: 5,
-    alignSelf: 'flex-start',
-    marginTop: 2,
+    fontFamily: typography.fontHeading,
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#1E293B',
+    letterSpacing: -0.2,
   },
   headerStatSubText: {
+    fontFamily: typography.fontFamily,
     fontSize: 9.5,
-    fontWeight: '700',
+    fontWeight: '500',
+    color: '#64748B',
+    marginTop: 1,
+    letterSpacing: -0.1,
+  },
+  headerStatValWrapper: {
+    minWidth: 28,
+    height: 24,
+    paddingHorizontal: 6,
+    borderRadius: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerStatVal: {
+    fontFamily: typography.fontHeading,
+    fontSize: 13.5,
+    fontWeight: '800',
+    fontVariant: ['tabular-nums'],
+  },
+  activeStatIndicator: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: 3.5,
   },
   cardMiddleRow: {
     flexDirection: 'row',
@@ -1571,15 +1690,15 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     marginHorizontal: 14,
     marginTop: 8,
-    borderRadius: 14,
-    padding: 14,
-    borderWidth: 1,
+    borderRadius: 18,
+    padding: 16,
+    borderWidth: 1.5,
     borderColor: '#E2E8F0',
     shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 3,
-    elevation: 1,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    elevation: 2,
   },
   dHeroTop: {
     flexDirection: 'row',
@@ -1587,13 +1706,12 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   dHeroAvatarBox: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: '#2563EB',
+    width: 48,
+    height: 48,
+    borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#2563EB',
+    shadowColor: '#0F766E',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 4,
@@ -1604,6 +1722,12 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: '#FFFFFF',
   },
+  dHeroNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    flexWrap: 'wrap',
+  },
   dHeroName: {
     fontSize: 18,
     fontWeight: '800',
@@ -1613,7 +1737,7 @@ const styles = StyleSheet.create({
   },
   dHeroIdPill: {
     backgroundColor: '#F1F5F9',
-    paddingHorizontal: 8,
+    paddingHorizontal: 7,
     paddingVertical: 2.5,
     borderRadius: 6,
     borderWidth: 1,
@@ -1625,29 +1749,62 @@ const styles = StyleSheet.create({
     color: '#475569',
     fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
   },
+  dHeroMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 5,
+    flexWrap: 'wrap',
+  },
   dHeroTypePill: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 3,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderRadius: 8,
     borderWidth: 1,
   },
   dHeroTypePillText: {
-    fontSize: 11,
-    fontWeight: '700',
+    fontSize: 11.5,
+    fontWeight: '800',
+  },
+  dHeroLocationBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F0FDFA',
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#99F6E4',
+    maxWidth: 220,
   },
   dHeroLocation: {
     fontSize: 11.5,
-    color: '#64748B',
-    fontWeight: '600',
+    color: '#0F766E',
+    fontWeight: '700',
+  },
+  dHeroPhoneBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#EFF6FF',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#BFDBFE',
+  },
+  dHeroPhoneText: {
+    fontSize: 11.5,
+    color: '#1D4ED8',
+    fontWeight: '700',
+    fontVariant: ['tabular-nums'],
   },
   dCloseBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#F1F5F9',
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: '#F8FAFC',
     borderWidth: 1,
     borderColor: '#E2E8F0',
     alignItems: 'center',
@@ -1663,10 +1820,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 6,
     paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
+    paddingVertical: 7,
+    borderRadius: 10,
     borderWidth: 1,
-    marginTop: 10,
+    marginTop: 12,
   },
   dStatusDot: {
     width: 7,
@@ -1680,106 +1837,129 @@ const styles = StyleSheet.create({
   dStatusDateText: {
     fontSize: 11.5,
     fontWeight: '600',
+    color: '#475569',
   },
 
-  /* ── 1-Tap Action Call & WhatsApp Buttons (Matching Leads Page) ── */
+  /* ── 1-Tap Action Call & WhatsApp Buttons ── */
   detailHeroActionsRow: {
     flexDirection: 'row',
     marginHorizontal: 14,
-    marginTop: 10,
+    marginTop: 12,
     gap: 10,
   },
   detailActionBtnCall: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    borderRadius: 12,
+    backgroundColor: '#EFF6FF',
+    paddingVertical: 11,
+    paddingHorizontal: 14,
+    borderRadius: 14,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 7,
+    gap: 8,
     borderWidth: 1,
-    borderColor: '#CBD5E1',
-    shadowColor: '#0F172A',
+    borderColor: '#BFDBFE',
+    shadowColor: '#2563EB',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 5,
+    elevation: 2,
+  },
+  detailActionIconCircleCall: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#2563EB',
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
+    shadowOpacity: 0.08,
     shadowRadius: 2,
     elevation: 1,
   },
-  detailActionBtnCallIcon: {
-    fontSize: 14,
-  },
   detailActionBtnCallText: {
-    color: '#0F172A',
+    fontFamily: typography.fontHeading,
+    color: '#1D4ED8',
     fontWeight: '700',
-    fontSize: 13,
+    fontSize: 14,
+    letterSpacing: -0.2,
   },
   detailActionBtnWhatsApp: {
     flex: 1,
-    backgroundColor: '#DCFCE7',
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    borderRadius: 12,
+    backgroundColor: '#ECFDF5',
+    paddingVertical: 11,
+    paddingHorizontal: 14,
+    borderRadius: 14,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 7,
+    gap: 8,
     borderWidth: 1,
-    borderColor: '#86EFAC',
+    borderColor: '#A7F3D0',
+    shadowColor: '#059669',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 5,
+    elevation: 2,
   },
-  detailActionBtnWhatsAppIcon: {
-    fontSize: 14,
+  detailActionIconCircleWA: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#059669',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 2,
+    elevation: 1,
   },
   detailActionBtnWhatsAppText: {
-    color: '#15803D',
-    fontWeight: '800',
-    fontSize: 13,
-  },
-
-  dHeroLocationBadge: {
-    backgroundColor: '#F1F5F9',
-    paddingHorizontal: 6,
-    paddingVertical: 1.5,
-    borderRadius: 5,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    maxWidth: 160,
+    fontFamily: typography.fontHeading,
+    color: '#065F46',
+    fontWeight: '700',
+    fontSize: 14,
+    letterSpacing: -0.2,
   },
 
   /* ── Modern Lightweight Segmented Tabs ── */
   dSegmentTrack: {
     flexDirection: 'row',
     backgroundColor: '#F1F5F9',
-    borderRadius: 12,
+    borderRadius: 14,
     padding: 4,
     marginHorizontal: 14,
-    marginTop: 10,
+    marginTop: 12,
     gap: 4,
   },
   dSegmentBtn: {
     flex: 1,
-    paddingVertical: 8,
+    paddingVertical: 9,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 8,
+    borderRadius: 10,
   },
   dSegmentBtnActive: {
     backgroundColor: '#FFFFFF',
     shadowColor: '#0F172A',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.08,
-    shadowRadius: 2,
+    shadowRadius: 3,
     elevation: 2,
   },
   dSegmentBtnText: {
     fontSize: 12.5,
-    fontWeight: '600',
+    fontWeight: '700',
     color: '#64748B',
   },
   dSegmentBtnTextActive: {
     fontWeight: '800',
-    color: '#0F172A',
+    color: '#0F766E',
+  },
+  dTabContentWrapper: {
+    flex: 1,
   },
 
   /* ── Deal Valuation & Pipeline Banner ── */
@@ -2056,6 +2236,12 @@ const styles = StyleSheet.create({
   dSectionIcon: {
     fontSize: 13,
   },
+  dSectionIconLetter: {
+    fontSize: 8.5,
+    fontWeight: '900',
+    color: '#0F766E',
+    letterSpacing: 0.2,
+  },
   dSectionTitle: {
     fontSize: 13.5,
     fontWeight: '800',
@@ -2133,27 +2319,31 @@ const styles = StyleSheet.create({
   /* ── Action Footer ── */
   dActionFooter: {
     flexDirection: 'row',
-    gap: 10,
+    gap: 12,
     paddingHorizontal: 16,
     paddingTop: 12,
     paddingBottom: Platform.OS === 'ios' ? 28 : 16,
     borderTopWidth: 1,
     borderTopColor: '#E2E8F0',
     backgroundColor: '#FFFFFF',
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    elevation: 3,
   },
   dLogActivityBtn: {
     flex: 2,
     borderRadius: 14,
     overflow: 'hidden',
-    shadowColor: '#0F172A',
+    shadowColor: '#0F766E',
     shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.15,
+    shadowOpacity: 0.25,
     shadowRadius: 6,
     elevation: 3,
   },
   dLogActivityGradient: {
-    height: 48,
-    backgroundColor: '#0F172A',
+    height: 50,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -2166,7 +2356,7 @@ const styles = StyleSheet.create({
     fontWeight: '900',
   },
   dLogActivityText: {
-    fontSize: 14,
+    fontSize: 14.5,
     fontWeight: '800',
     color: '#FFFFFF',
     letterSpacing: -0.2,
@@ -2175,11 +2365,17 @@ const styles = StyleSheet.create({
     flex: 1,
     borderRadius: 14,
     overflow: 'hidden',
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: '#FECDD3',
+    backgroundColor: '#FFF1F2',
+    shadowColor: '#FDA4AF',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.12,
+    shadowRadius: 4,
+    elevation: 1,
   },
   dMarkLostGradient: {
-    height: 48,
+    height: 50,
     backgroundColor: '#FFF1F2',
     flexDirection: 'row',
     alignItems: 'center',
@@ -2188,14 +2384,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
   },
   dMarkLostIcon: {
-    fontSize: 13,
-    color: '#E11D48',
+    fontSize: 14,
+    color: '#DC2626',
     fontWeight: '900',
   },
   dMarkLostText: {
     fontSize: 13.5,
     fontWeight: '800',
-    color: '#E11D48',
+    color: '#DC2626',
     letterSpacing: -0.1,
   },
 
