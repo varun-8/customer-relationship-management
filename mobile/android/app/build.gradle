@@ -11,7 +11,13 @@ def projectRoot = rootDir.getAbsoluteFile().getParentFile().getAbsolutePath()
 react {
     entryFile = file(["node", "-e", "require('expo/scripts/resolveAppEntry')", projectRoot, "android", "absolute"].execute(null, rootDir).text.trim())
     reactNativeDir = new File(["node", "--print", "require.resolve('react-native/package.json')"].execute(null, rootDir).text.trim()).getParentFile().getAbsoluteFile()
-    hermesCommand = new File(["node", "--print", "require.resolve('react-native/package.json')"].execute(null, rootDir).text.trim()).getParentFile().getAbsolutePath() + "/sdks/hermesc/%OS-BIN%/hermesc"
+    def hermesPkgPath = ["node", "--print", "try { require.resolve('hermes-compiler/package.json') } catch(e) { require.resolve('react-native/package.json') }"].execute(null, rootDir).text.trim()
+    def hermesPkgFile = new File(hermesPkgPath)
+    if (hermesPkgPath.contains("hermes-compiler")) {
+        hermesCommand = hermesPkgFile.getParentFile().getAbsolutePath() + "/hermesc/%OS-BIN%/hermesc"
+    } else {
+        hermesCommand = hermesPkgFile.getParentFile().getAbsolutePath() + "/sdks/hermesc/%OS-BIN%/hermesc"
+    }
     codegenDir = new File(["node", "--print", "require.resolve('@react-native/codegen/package.json', { paths: [require.resolve('react-native/package.json')] })"].execute(null, rootDir).text.trim()).getParentFile().getAbsoluteFile()
 
     enableBundleCompression = (findProperty('android.enableBundleCompression') ?: false).toBoolean()
@@ -180,3 +186,23 @@ dependencies {
         implementation jscFlavor
     }
 }
+
+tasks.register("makeHermesExecutable") {
+    doLast {
+        def bins = [
+            new File(rootDir, "../node_modules/hermes-compiler/hermesc/linux64-bin/hermesc"),
+            new File(rootDir, "../node_modules/hermes-compiler/hermesc/osx-bin/hermesc"),
+            new File(rootDir, "../node_modules/react-native/sdks/hermesc/linux64-bin/hermesc"),
+            new File(rootDir, "../node_modules/react-native/sdks/hermesc/osx-bin/hermesc")
+        ]
+        bins.each { bin ->
+            if (bin.exists()) {
+                bin.setExecutable(true, false)
+            }
+        }
+    }
+}
+tasks.matching { it.name.contains("Bundle") || it.name.contains("bundle") }.configureEach {
+    dependsOn "makeHermesExecutable"
+}
+
