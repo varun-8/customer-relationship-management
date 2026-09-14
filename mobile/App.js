@@ -1569,21 +1569,31 @@ export default function App() {
       if (res && res.success && res.data) {
         if (editingCustomerId) {
           setEditingCustomerId(null);
-          setUpdatedLeadModal({
-            visible: true,
-            leadName: payload.customerName || 'Lead',
-            customerId: res.data.customerId || '',
-            customer: res.data,
-          });
+          if (payload.status === 'Lost') {
+            setMarkingLostItem(res.data);
+          } else {
+            setUpdatedLeadModal({
+              visible: true,
+              leadName: payload.customerName || 'Lead',
+              customerId: res.data.customerId || '',
+              customer: res.data,
+            });
+          }
         } else {
-          setCelebrationData({
-            customer: res.data,
-            orderValue: payload.orderValue || payload.quotationValue || payload.tileBudget,
-            isOrder: payload.status === 'Order Confirmed',
-          });
-          setShowOrderCelebration(true);
-          setActiveScreen('list');
+          if (payload.status === 'Lost') {
+            setMarkingLostItem(res.data);
+            setActiveScreen('list');
+          } else {
+            setCelebrationData({
+              customer: res.data,
+              orderValue: payload.orderValue || payload.quotationValue || payload.tileBudget,
+              isOrder: payload.status === 'Order Confirmed',
+            });
+            setShowOrderCelebration(true);
+            setActiveScreen('list');
+          }
         }
+
         setFormData({});
         setErrors({});
         setExistingCustomerAlert(null);
@@ -1955,15 +1965,20 @@ export default function App() {
             return (
               <View style={styles.statTileRow}>
                 {/* 1. Pipeline */}
-                <View style={styles.statTile}>
-                  <Text style={styles.statTileLabel} numberOfLines={1}>
-                    {isOwner ? 'PIPELINE' : 'MY PIPELINE'}
-                  </Text>
+                <View style={[styles.statTile, { borderLeftColor: '#0F766E', borderLeftWidth: 3 }]}>
+                  <View style={styles.statTileTopRow}>
+                    <View style={[styles.statTileIconBadge, { backgroundColor: '#F0FDFA', borderColor: '#CCFBF1' }]}>
+                      <Text style={[styles.statTileIconGlyph, { color: '#0F766E' }]}>₹</Text>
+                    </View>
+                    <Text style={styles.statTileLabel} numberOfLines={1}>
+                      {isOwner ? 'PIPELINE' : 'MY PIPELINE'}
+                    </Text>
+                  </View>
                   <Text
                     style={styles.statTileValue}
                     numberOfLines={1}
                     adjustsFontSizeToFit={true}
-                    minimumFontScale={0.75}
+                    minimumFontScale={0.7}
                   >
                     {pipelineStr}
                   </Text>
@@ -1975,30 +1990,48 @@ export default function App() {
                 </View>
 
                 {/* 2. Active Leads */}
-                <View style={styles.statTile}>
-                  <Text style={styles.statTileLabel} numberOfLines={1}>
-                    {isOwner ? 'TOTAL LEADS' : 'MY LEADS'}
-                  </Text>
+                <View style={[styles.statTile, { borderLeftColor: '#2563EB', borderLeftWidth: 3 }]}>
+                  <View style={styles.statTileTopRow}>
+                    <View style={[styles.statTileIconBadge, { backgroundColor: '#EFF6FF', borderColor: '#BFDBFE' }]}>
+                      <Text style={[styles.statTileIconGlyph, { color: '#2563EB' }]}>👥</Text>
+                    </View>
+                    <Text style={styles.statTileLabel} numberOfLines={1}>
+                      {isOwner ? 'TOTAL' : 'MY LEADS'}
+                    </Text>
+                  </View>
                   <Text
                     style={styles.statTileValue}
                     numberOfLines={1}
                     adjustsFontSizeToFit={true}
-                    minimumFontScale={0.75}
+                    minimumFontScale={0.7}
                   >
                     {roleCustomers.length}
                   </Text>
-                  <View style={[styles.statTileSubBadge, { backgroundColor: '#F1F5F9' }]}>
-                    <Text style={[styles.statTileSubText, { color: '#334155' }]} numberOfLines={1}>
+                  <View style={[styles.statTileSubBadge, { backgroundColor: '#EFF6FF' }]}>
+                    <Text style={[styles.statTileSubText, { color: '#2563EB' }]} numberOfLines={1}>
                       {inProgressCount} Active
                     </Text>
                   </View>
                 </View>
 
                 {/* 3. Urgent Due Actions / Calls */}
-                <View style={styles.statTile}>
-                  <Text style={styles.statTileLabel} numberOfLines={1}>
-                    DUE CALLS
-                  </Text>
+                <View style={[
+                  styles.statTile,
+                  { borderLeftColor: urgentCount > 0 ? '#DC2626' : '#10B981', borderLeftWidth: 3 },
+                ]}>
+                  <View style={styles.statTileTopRow}>
+                    <View style={[styles.statTileIconBadge,
+                      urgentCount > 0
+                        ? { backgroundColor: '#FEF2F2', borderColor: '#FECDD3' }
+                        : { backgroundColor: '#F0FDF4', borderColor: '#BBF7D0' },
+                    ]}>
+                      <Text style={[styles.statTileIconGlyph,
+                        { color: urgentCount > 0 ? '#DC2626' : '#10B981' }]}>
+                        {urgentCount > 0 ? '⚠' : '✓'}
+                      </Text>
+                    </View>
+                    <Text style={styles.statTileLabel} numberOfLines={1}>DUE</Text>
+                  </View>
                   <Text
                     style={[
                       styles.statTileValue,
@@ -2006,25 +2039,20 @@ export default function App() {
                     ]}
                     numberOfLines={1}
                     adjustsFontSizeToFit={true}
-                    minimumFontScale={0.75}
+                    minimumFontScale={0.7}
                   >
                     {urgentCount}
                   </Text>
-                  <View
-                    style={[
-                      styles.statTileSubBadge,
-                      urgentCount > 0 ? { backgroundColor: '#FEF2F2' } : { backgroundColor: '#F0FDF4' },
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        styles.statTileSubText,
-                        urgentCount > 0 ? { color: '#DC2626' } : { color: '#16A34A' },
-                      ]}
-                      numberOfLines={1}
-                    >
+                  <View style={[
+                    styles.statTileSubBadge,
+                    urgentCount > 0 ? { backgroundColor: '#FEF2F2' } : { backgroundColor: '#F0FDF4' },
+                  ]}>
+                    <Text style={[
+                      styles.statTileSubText,
+                      urgentCount > 0 ? { color: '#DC2626' } : { color: '#16A34A' },
+                    ]} numberOfLines={1}>
                       {urgentCount > 0
-                        ? (followupCounts.overdue > 0 ? `${followupCounts.overdue} Overdue` : 'Due Today')
+                        ? (followupCounts.overdue > 0 ? `${followupCounts.overdue} Overdue` : 'Today')
                         : 'All Clear'}
                     </Text>
                   </View>
@@ -2156,20 +2184,25 @@ export default function App() {
                   ? (quotationVal >= 100000 ? `₹${(quotationVal / 100000).toFixed(1)}L` : `₹${quotationVal.toLocaleString('en-IN')}`)
                   : null;
                 const location = data.location || data.city || '';
+                const salesperson = data.salesperson || '';
 
                 return (
                   <TouchableOpacity
                     style={styles.leadCard}
-                    activeOpacity={0.72}
+                    activeOpacity={0.75}
                     onPress={() => handleSelectCustomer(item)}
                   >
+                    {/* Left accent bar */}
+                    <View style={[styles.leadAccentBar, { backgroundColor: statusStyle.dot }]} />
+
                     {/* Avatar */}
-                    <View style={[styles.leadAvatar, { backgroundColor: statusStyle.bg }]}>
+                    <View style={[styles.leadAvatar, { backgroundColor: statusStyle.bg, borderColor: statusStyle.border }]}>
                       <Text style={[styles.leadAvatarText, { color: statusStyle.dot }]}>{initial}</Text>
                     </View>
 
                     {/* Info block */}
                     <View style={styles.leadInfoCol}>
+                      {/* Row 1: Name + Status */}
                       <View style={styles.leadHeaderRow}>
                         <Text style={styles.leadName} numberOfLines={1}>
                           {data.customerName || 'Unnamed Customer'}
@@ -2182,6 +2215,7 @@ export default function App() {
                         </View>
                       </View>
 
+                      {/* Row 2: Type badge + value badge + location */}
                       <View style={styles.leadMetaRow}>
                         {customerType ? (
                           <View style={styles.leadTypeBadge}>
@@ -2198,15 +2232,24 @@ export default function App() {
                         ) : null}
                       </View>
 
+                      {/* Row 3: ID + phone or salesperson */}
                       <View style={styles.leadFooterRow}>
                         <Text style={styles.leadIdText}>#{item.customerId || 'CUS-000000'}</Text>
                         {phone ? (
-                          <Text style={styles.leadPhone} numberOfLines={1}>{phone}</Text>
+                          <View style={styles.leadPhoneChip}>
+                            <Ionicons name="call-outline" size={9} color="#64748B" />
+                            <Text style={styles.leadPhone} numberOfLines={1}>{phone}</Text>
+                          </View>
+                        ) : salesperson ? (
+                          <Text style={styles.leadPhone} numberOfLines={1}>{salesperson}</Text>
                         ) : null}
                       </View>
                     </View>
 
-                    <Text style={styles.leadChevron}>›</Text>
+                    {/* Chevron */}
+                    <View style={styles.leadChevronWrap}>
+                      <Ionicons name="chevron-forward" size={14} color="#94A3B8" />
+                    </View>
                   </TouchableOpacity>
                 );
               }}
@@ -2552,7 +2595,7 @@ export default function App() {
                       onPress={() => handleEditCustomer(selectedCustomer)}
                       activeOpacity={0.8}
                     >
-                      <Ionicons name="create-outline" size={15} color="#0F172A" style={{ marginRight: 4 }} />
+                      <Ionicons name="create-outline" size={15} color="#0F766E" />
                       <Text style={styles.detailNavEditText}>Edit</Text>
                     </TouchableOpacity>
                   </View>
@@ -2635,7 +2678,7 @@ export default function App() {
                       onPress={() => setLoggingFollowupItem(selectedCustomer)}
                       activeOpacity={0.82}
                     >
-                      <Ionicons name="chatbubble-ellipses" size={15} color="#2563EB" style={{ marginRight: 6 }} />
+                      <Ionicons name="chatbubble-ellipses" size={15} color="#2563EB" />
                       <Text style={styles.detailActionBtnLogText}>Log Activity</Text>
                     </TouchableOpacity>
                   </View>
@@ -2896,7 +2939,7 @@ export default function App() {
                     onPress={() => handleEditCustomer(selectedCustomer)}
                     activeOpacity={0.8}
                   >
-                    <Ionicons name="create-outline" size={16} color="#1D4ED8" style={{ marginRight: 6 }} />
+                    <Ionicons name="create-outline" size={16} color="#FFFFFF" />
                     <Text style={styles.detailBottomEditText}>Edit Profile</Text>
                   </TouchableOpacity>
 
@@ -2905,7 +2948,7 @@ export default function App() {
                     onPress={() => setActiveScreen('list')}
                     activeOpacity={0.8}
                   >
-                    <Ionicons name="arrow-back" size={16} color="#334155" style={{ marginRight: 6 }} />
+                    <Ionicons name="chevron-back" size={16} color="#334155" />
                     <Text style={styles.detailBottomBackBtnText}>Back to Leads</Text>
                   </TouchableOpacity>
                 </View>
@@ -3349,26 +3392,28 @@ const styles = StyleSheet.create({
   statTile: {
     flex: 1,
     backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    paddingVertical: 11,
-    paddingHorizontal: 6,
+    borderRadius: 14,
+    paddingVertical: 10,
+    paddingHorizontal: 8,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: '#E9EFF6',
     alignItems: 'center',
     justifyContent: 'space-between',
-    minHeight: 110,
-    shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 6,
-    elevation: 2,
+    minHeight: 108,
+    overflow: 'hidden',
+    shadowColor: '#1E3A5F',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.07,
+    shadowRadius: 8,
+    elevation: 3,
   },
   statTileTopRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 4,
+    gap: 5,
     width: '100%',
+    marginBottom: 2,
   },
   statTileIconBadge: {
     width: 20,
@@ -3379,39 +3424,40 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   statTileIconGlyph: {
-    fontSize: 10.5,
+    fontSize: 10,
     fontWeight: '800',
   },
   statTileLabel: {
     fontFamily: typography.fontHeading,
-    fontSize: 9,
+    fontSize: 8.5,
     fontWeight: '800',
-    color: '#64748B',
-    letterSpacing: 0.5,
+    color: '#94A3B8',
+    letterSpacing: 0.6,
     textTransform: 'uppercase',
     textAlign: 'center',
+    flex: 1,
   },
   statTileValue: {
     fontFamily: typography.fontHeading,
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: '900',
     color: '#0F172A',
-    letterSpacing: -0.5,
-    marginVertical: 4,
+    letterSpacing: -0.6,
+    marginVertical: 3,
     textAlign: 'center',
     fontVariant: ['tabular-nums'],
   },
   statTileSubBadge: {
-    paddingHorizontal: 4,
-    paddingVertical: 3.5,
-    borderRadius: 12,
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
     alignSelf: 'stretch',
   },
   statTileSubText: {
     fontFamily: typography.fontFamily,
-    fontSize: 9.5,
+    fontSize: 9,
     fontWeight: '700',
     textAlign: 'center',
   },
@@ -3530,25 +3576,40 @@ const styles = StyleSheet.create({
     fontSize: 12.5,
     fontWeight: '800',
   },
-  // Lead Card — Clean executive layout
+  // ── Premium Lead Card ──
   leadCard: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#FFFFFF',
-    borderRadius: 12,
+    borderRadius: 14,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
-    paddingVertical: 11,
-    paddingHorizontal: 12,
-    marginBottom: 8,
+    borderColor: '#E9EFF6',
+    paddingVertical: 12,
+    paddingRight: 12,
+    paddingLeft: 0,
+    marginBottom: 9,
+    overflow: 'hidden',
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    elevation: 1.5,
+  },
+  leadAccentBar: {
+    width: 4,
+    alignSelf: 'stretch',
+    borderTopLeftRadius: 14,
+    borderBottomLeftRadius: 14,
+    marginRight: 10,
   },
   leadAvatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 10,
+    width: 42,
+    height: 42,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 10,
+    borderWidth: 1.5,
   },
   leadAvatarText: {
     fontSize: 17,
@@ -3562,45 +3623,47 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: 6,
+    marginBottom: 5,
   },
   leadName: {
     fontSize: 14.5,
     fontWeight: '700',
     color: '#0F172A',
-    letterSpacing: -0.1,
+    letterSpacing: -0.2,
     flex: 1,
   },
   leadMetaRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    marginTop: 4,
+    gap: 5,
     flexWrap: 'wrap',
+    marginBottom: 5,
   },
   leadTypeBadge: {
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#F1F5F9',
     borderWidth: 1,
-    borderColor: '#E2E8F0',
-    paddingHorizontal: 6,
+    borderColor: '#CBD5E1',
+    paddingHorizontal: 7,
     paddingVertical: 2,
-    borderRadius: 5,
+    borderRadius: 6,
   },
   leadTypeBadgeText: {
     fontSize: 10,
-    fontWeight: '600',
-    color: '#475569',
+    fontWeight: '700',
+    color: '#334155',
+    letterSpacing: 0.1,
   },
   leadValueBadge: {
     backgroundColor: '#F0FDF4',
     borderWidth: 1,
-    borderColor: '#BBF7D0',
-    paddingHorizontal: 6,
+    borderColor: '#86EFAC',
+    paddingHorizontal: 7,
     paddingVertical: 2,
-    borderRadius: 5,
+    borderRadius: 6,
   },
   leadValueBadgeText: {
     fontSize: 10.5,
-    fontWeight: '700',
+    fontWeight: '800',
     color: '#15803D',
   },
   leadLocationText: {
@@ -3612,15 +3675,20 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginTop: 4,
   },
   leadIdText: {
-    fontSize: 10.5,
+    fontSize: 10,
     color: '#94A3B8',
-    fontWeight: '500',
+    fontWeight: '600',
+    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+  },
+  leadPhoneChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
   },
   leadPhone: {
-    fontSize: 11,
+    fontSize: 10.5,
     color: '#64748B',
     fontWeight: '600',
   },
@@ -3628,8 +3696,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 7,
-    paddingVertical: 2.5,
-    borderRadius: 6,
+    paddingVertical: 3,
+    borderRadius: 8,
     borderWidth: 1,
     gap: 4,
   },
@@ -3642,10 +3710,16 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '700',
   },
-  leadChevron: {
-    fontSize: 18,
-    color: '#CBD5E1',
-    marginLeft: 6,
+  leadChevronWrap: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#F8FAFC',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 4,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
   },
   activeTabUnderline: {
     width: 16,
@@ -3743,94 +3817,110 @@ const styles = StyleSheet.create({
     color: '#15803D',
   },
   // Form Screen Styles
+  // ── Form Styles ──
   formTopHeaderBar: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     backgroundColor: '#FFFFFF',
     paddingHorizontal: 16,
-    paddingTop: Platform.OS === 'ios' ? 14 : 12,
-    paddingBottom: 12,
+    paddingTop: Platform.OS === 'ios' ? 16 : 14,
+    paddingBottom: 14,
     borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
+    borderBottomColor: '#F0F4F8',
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 3,
+    elevation: 1,
   },
   formHeaderIconCircle: {
-    width: 30,
-    height: 30,
-    borderRadius: 8,
+    width: 34,
+    height: 34,
+    borderRadius: 10,
     backgroundColor: '#F0FDFA',
-    borderWidth: 1,
-    borderColor: '#CCFBF1',
+    borderWidth: 1.5,
+    borderColor: '#99F6E4',
     alignItems: 'center',
     justifyContent: 'center',
   },
   formHeaderTitle: {
     fontFamily: typography.fontHeading,
-    fontSize: 16.5,
+    fontSize: 17,
     fontWeight: '900',
     color: '#0F172A',
-    letterSpacing: -0.2,
+    letterSpacing: -0.3,
   },
   formHeaderSub: {
     fontFamily: typography.fontFamily,
     fontSize: 11,
     color: '#64748B',
     fontWeight: '500',
-    marginTop: 1.5,
+    marginTop: 2,
   },
   formCloseBtn: {
     backgroundColor: '#F8FAFC',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 10,
     borderWidth: 1,
     borderColor: '#E2E8F0',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
   },
   formCloseBtnText: {
-    fontSize: 11.5,
-    fontWeight: '600',
-    color: '#64748B',
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#475569',
   },
   progressBarWrapper: {
-    height: 3,
+    height: 4,
     backgroundColor: '#F1F5F9',
     overflow: 'hidden',
   },
   progressBarFill: {
     height: '100%',
     backgroundColor: '#0F766E',
-    borderRadius: 1.5,
+    borderRadius: 2,
   },
   sectionTabBar: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#FAFBFD',
     paddingVertical: 10,
     borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
+    borderBottomColor: '#EDF0F5',
   },
   sectionTabChip: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-    backgroundColor: '#F8FAFC',
+    paddingHorizontal: 13,
+    paddingVertical: 7,
+    borderRadius: 10,
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: '#DDE4EF',
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 2,
+    elevation: 1,
   },
   sectionTabChipActive: {
-    backgroundColor: '#0F766E',
+    backgroundColor: '#ECFDF5',
     borderColor: '#0F766E',
+    shadowColor: '#0F766E',
+    shadowOpacity: 0.1,
   },
   sectionTabChipCompleted: {
     backgroundColor: '#F0FDFA',
-    borderColor: '#CCFBF1',
+    borderColor: '#99F6E4',
   },
   sectionTabChipText: {
     fontSize: 12,
-    fontWeight: '500',
-    color: '#64748B',
+    fontWeight: '600',
+    color: '#475569',
   },
   sectionTabChipTextActive: {
-    color: '#FFFFFF',
-    fontWeight: '600',
+    color: '#0F766E',
+    fontWeight: '800',
   },
   sectionTabChipTextCompleted: {
     color: '#0F766E',
@@ -3873,14 +3963,20 @@ const styles = StyleSheet.create({
   formScrollView: {
     flex: 1,
     padding: 14,
+    backgroundColor: '#F4F7FA',
   },
   sectionBannerBox: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 12,
+    borderRadius: 14,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: '#DDE4EF',
     padding: 14,
     marginBottom: 12,
+    shadowColor: '#1E3A5F',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    elevation: 1.5,
   },
   sectionBannerIconCircle: {
     width: 32,
@@ -3894,86 +3990,108 @@ const styles = StyleSheet.create({
   },
   sectionBannerTitle: {
     fontSize: 15,
-    fontWeight: '700',
+    fontWeight: '800',
     color: '#0F172A',
-    letterSpacing: -0.1,
+    letterSpacing: -0.2,
   },
   sectionStepCounterBadge: {
     backgroundColor: '#F0FDFA',
     borderWidth: 1,
-    borderColor: '#CCFBF1',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
+    borderColor: '#99F6E4',
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderRadius: 8,
   },
   sectionStepCounterText: {
     fontSize: 10.5,
-    fontWeight: '600',
+    fontWeight: '700',
     color: '#0F766E',
   },
   sectionBannerSubtitle: {
     fontSize: 11.5,
     color: '#64748B',
-    marginTop: 2,
+    marginTop: 3,
     fontWeight: '500',
   },
   inputsCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 14,
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: '#DDE4EF',
     padding: 16,
+    shadowColor: '#1E3A5F',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    elevation: 1.5,
   },
   formNavButtonsRow: {
     flexDirection: 'row',
     gap: 10,
-    marginTop: 16,
+    marginTop: 18,
   },
   prevSectionBtn: {
     flex: 1,
     backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    paddingVertical: 12,
-    borderRadius: 10,
+    borderWidth: 1.5,
+    borderColor: '#CBD5E1',
+    paddingVertical: 14,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 3,
+    elevation: 1,
   },
   prevSectionBtnText: {
-    color: '#475569',
-    fontSize: 13.5,
-    fontWeight: '600',
+    color: '#334155',
+    fontSize: 14,
+    fontWeight: '700',
   },
   nextSectionBtn: {
     flex: 1,
     backgroundColor: '#0F766E',
-    paddingVertical: 12,
-    borderRadius: 10,
+    paddingVertical: 14,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: '#0F766E',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    elevation: 3,
   },
   nextSectionBtnText: {
     color: '#FFFFFF',
-    fontSize: 13.5,
-    fontWeight: '600',
+    fontSize: 14,
+    fontWeight: '800',
   },
   submitFinalBtn: {
     flex: 1,
     backgroundColor: '#0F766E',
-    paddingVertical: 12,
-    borderRadius: 10,
+    paddingVertical: 14,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: '#0F766E',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    elevation: 3,
   },
   submitFinalBtnText: {
     color: '#FFFFFF',
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: '800',
+    letterSpacing: 0.1,
   },
   // Customer Detail Screen Styles — Ultra-Modern Mobile Overhaul
+  // ── Detail Screen ──
   detailScrollView: {
     flex: 1,
-    backgroundColor: '#F1F5F9',
+    backgroundColor: '#F0F4F8',
     paddingHorizontal: 14,
     paddingTop: 8,
   },
@@ -3981,22 +4099,23 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 12,
+    marginBottom: 14,
+    paddingTop: 4,
   },
   detailNavBackBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#FFFFFF',
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: 20,
+    paddingHorizontal: 13,
+    paddingVertical: 8,
+    borderRadius: 22,
     borderWidth: 1,
     borderColor: '#E2E8F0',
     shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 3,
-    elevation: 1,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    elevation: 1.5,
     gap: 4,
   },
   detailNavBackIcon: {
@@ -4007,8 +4126,8 @@ const styles = StyleSheet.create({
   },
   detailNavBackText: {
     fontSize: 12.5,
-    fontWeight: '800',
-    color: '#0F172A',
+    fontWeight: '700',
+    color: '#334155',
   },
   detailNavRightGroup: {
     flexDirection: 'row',
@@ -4019,27 +4138,27 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
-    backgroundColor: '#EFF6FF',
-    borderWidth: 1.2,
-    borderColor: '#93C5FD',
-    paddingHorizontal: 13,
-    paddingVertical: 6.5,
-    borderRadius: 18,
-    shadowColor: '#2563EB',
-    shadowOffset: { width: 0, height: 1.5 },
-    shadowOpacity: 0.08,
-    shadowRadius: 3,
-    elevation: 1,
+    backgroundColor: '#ECFDF5',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 22,
+    borderWidth: 1.5,
+    borderColor: '#6EE7B7',
+    shadowColor: '#0F766E',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.12,
+    shadowRadius: 4,
+    elevation: 2,
   },
   detailNavEditIcon: {
     fontSize: 13,
-    color: '#2563EB',
+    color: '#0F766E',
     fontWeight: '800',
   },
   detailNavEditText: {
     fontSize: 12.5,
     fontWeight: '800',
-    color: '#1D4ED8',
+    color: '#0F766E',
     letterSpacing: 0.1,
   },
   detailNavIconBtn: {
@@ -4054,16 +4173,16 @@ const styles = StyleSheet.create({
   },
   detailHeroCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 22,
-    borderWidth: 1.5,
-    borderColor: '#CBD5E1',
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#DDE4EF',
     padding: 18,
-    marginBottom: 14,
-    shadowColor: '#0F172A',
+    marginBottom: 12,
+    shadowColor: '#1E3A5F',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 2,
+    shadowOpacity: 0.07,
+    shadowRadius: 12,
+    elevation: 3,
   },
   detailHeroHeaderRow: {
     flexDirection: 'row',
@@ -4071,19 +4190,19 @@ const styles = StyleSheet.create({
     gap: 14,
   },
   detailAvatar: {
-    width: 52,
-    height: 52,
+    width: 56,
+    height: 56,
     borderRadius: 18,
-    backgroundColor: '#1E40AF',
-    borderWidth: 2,
-    borderColor: '#3B82F6',
+    backgroundColor: '#0F172A',
+    borderWidth: 2.5,
+    borderColor: '#334155',
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#1E40AF',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.25,
-    shadowRadius: 6,
-    elevation: 3,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
   detailAvatarText: {
     fontSize: 22,
@@ -4094,31 +4213,31 @@ const styles = StyleSheet.create({
     fontSize: 19,
     fontWeight: '800',
     color: '#0F172A',
-    letterSpacing: -0.3,
+    letterSpacing: -0.4,
   },
   detailIdLocationRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    marginTop: 4,
+    marginTop: 5,
     flexWrap: 'wrap',
   },
   detailIdPill: {
     backgroundColor: '#F1F5F9',
     paddingHorizontal: 8,
     paddingVertical: 3,
-    borderRadius: 6,
+    borderRadius: 7,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: '#CBD5E1',
   },
   detailIdPillText: {
-    fontSize: 11.5,
+    fontSize: 11,
     fontWeight: '700',
-    color: '#475569',
+    color: '#64748B',
     fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
   },
   detailLocationText: {
-    fontSize: 12.5,
+    fontSize: 12,
     color: '#64748B',
     fontWeight: '600',
   },
@@ -4126,14 +4245,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    marginTop: 12,
+    marginTop: 14,
     flexWrap: 'wrap',
   },
   detailSubtitleRow: {
-    marginTop: 10,
-    paddingTop: 10,
+    marginTop: 12,
+    paddingTop: 12,
     borderTopWidth: 1,
-    borderTopColor: '#F8FAFC',
+    borderTopColor: '#F0F4F8',
   },
   detailSubtitleText: {
     fontSize: 12.5,
@@ -4145,9 +4264,9 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   typePill: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 16,
+    paddingHorizontal: 11,
+    paddingVertical: 5,
+    borderRadius: 20,
     borderWidth: 1,
   },
   typePillText: {
@@ -4158,9 +4277,9 @@ const styles = StyleSheet.create({
   statusPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 16,
+    paddingHorizontal: 11,
+    paddingVertical: 5,
+    borderRadius: 20,
     borderWidth: 1,
     gap: 6,
   },
@@ -4176,114 +4295,100 @@ const styles = StyleSheet.create({
   detailHeroActionsRow: {
     flexDirection: 'row',
     gap: 8,
-    marginTop: 14,
-    paddingTop: 14,
+    marginTop: 16,
+    paddingTop: 16,
     borderTopWidth: 1,
-    borderTopColor: '#F1F5F9',
+    borderTopColor: '#F0F4F8',
   },
   detailActionBtnCall: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#F8FAFC',
     paddingVertical: 11,
-    paddingHorizontal: 10,
-    borderRadius: 13,
+    paddingHorizontal: 8,
+    borderRadius: 12,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
+    gap: 5,
     borderWidth: 1.5,
     borderColor: '#CBD5E1',
-    shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: 1.5 },
-    shadowOpacity: 0.05,
-    shadowRadius: 3,
-    elevation: 1.5,
   },
   detailActionBtnCallText: {
     color: '#0F172A',
     fontWeight: '700',
-    fontSize: 13,
+    fontSize: 12.5,
   },
   detailActionBtnWhatsApp: {
-    flex: 1.15,
+    flex: 1.2,
     backgroundColor: '#F0FDF4',
     paddingVertical: 11,
-    paddingHorizontal: 10,
-    borderRadius: 13,
+    paddingHorizontal: 8,
+    borderRadius: 12,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
+    gap: 5,
     borderWidth: 1.5,
-    borderColor: '#BBF7D0',
-    shadowColor: '#16A34A',
-    shadowOffset: { width: 0, height: 1.5 },
-    shadowOpacity: 0.06,
-    shadowRadius: 3,
-    elevation: 1.5,
+    borderColor: '#86EFAC',
   },
   detailActionBtnWhatsAppText: {
     color: '#15803D',
     fontWeight: '700',
-    fontSize: 13,
+    fontSize: 12.5,
   },
   detailActionBtnLog: {
-    flex: 1.25,
+    flex: 1.3,
     backgroundColor: '#EFF6FF',
     paddingVertical: 11,
-    paddingHorizontal: 10,
-    borderRadius: 13,
+    paddingHorizontal: 8,
+    borderRadius: 12,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
+    gap: 5,
     borderWidth: 1.5,
-    borderColor: '#BFDBFE',
-    shadowColor: '#2563EB',
-    shadowOffset: { width: 0, height: 1.5 },
-    shadowOpacity: 0.06,
-    shadowRadius: 3,
-    elevation: 1.5,
+    borderColor: '#93C5FD',
   },
   detailActionBtnLogText: {
     color: '#1D4ED8',
     fontWeight: '700',
-    fontSize: 13,
+    fontSize: 12.5,
   },
+  // ── Detail Metric Tiles Grid ──
   statTilesGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
-    marginBottom: 14,
+    marginBottom: 12,
     rowGap: 10,
   },
   statTileItem: {
     width: '48.5%',
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
-    borderWidth: 1.5,
-    borderColor: '#CBD5E1',
-    padding: 13,
-    shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.03,
-    shadowRadius: 3,
-    elevation: 1,
+    borderWidth: 1,
+    borderColor: '#DDE4EF',
+    padding: 14,
+    shadowColor: '#1E3A5F',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 5,
+    elevation: 1.5,
   },
   statTileHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
-    marginBottom: 6,
+    marginBottom: 7,
   },
   statTileEmoji: {
     fontSize: 13,
   },
   statTileLabel: {
-    fontSize: 10,
+    fontSize: 9.5,
     fontWeight: '800',
-    letterSpacing: 0.5,
-    color: '#64748B',
+    letterSpacing: 0.6,
+    color: '#94A3B8',
     textTransform: 'uppercase',
   },
   statTileValue: {
@@ -4296,35 +4401,36 @@ const styles = StyleSheet.create({
     fontSize: 10.5,
     color: '#94A3B8',
     fontWeight: '600',
-    marginTop: 3,
+    marginTop: 4,
   },
+  // ── Detail Section Cards ──
   cleanDetailSectionCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    borderWidth: 1.5,
-    borderColor: '#CBD5E1',
-    marginBottom: 14,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: '#DDE4EF',
+    marginBottom: 12,
     padding: 16,
-    shadowColor: '#0F172A',
+    shadowColor: '#1E3A5F',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.03,
-    shadowRadius: 6,
-    elevation: 1,
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    elevation: 1.5,
   },
   cleanSectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 9,
     marginBottom: 12,
     paddingBottom: 10,
     borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
+    borderBottomColor: '#F0F4F8',
   },
   cleanSectionIconBadge: {
-    width: 26,
-    height: 26,
-    borderRadius: 8,
-    backgroundColor: '#EFF6FF',
+    width: 28,
+    height: 28,
+    borderRadius: 9,
+    backgroundColor: '#F1F5F9',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -4332,11 +4438,12 @@ const styles = StyleSheet.create({
     fontSize: 15,
   },
   cleanSectionTitle: {
-    fontSize: 12.5,
+    fontSize: 11.5,
     fontWeight: '800',
-    color: '#0F172A',
-    letterSpacing: 0.3,
+    color: '#475569',
+    letterSpacing: 0.6,
     textTransform: 'uppercase',
+    flex: 1,
   },
   cleanSectionBody: {
     paddingHorizontal: 0,
@@ -4346,24 +4453,24 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 8,
+    paddingVertical: 9,
     borderBottomWidth: 1,
     borderBottomColor: '#F8FAFC',
   },
   cleanRowLabel: {
-    fontSize: 12.5,
+    fontSize: 12,
     color: '#64748B',
     fontWeight: '600',
   },
   cleanRowValue: {
-    fontSize: 13.5,
+    fontSize: 13,
     color: '#0F172A',
     fontWeight: '700',
     flex: 1.3,
     textAlign: 'right',
   },
   cleanRowValueBold: {
-    fontSize: 13.5,
+    fontSize: 13,
     color: '#0F172A',
     fontWeight: '800',
     flex: 1.3,
@@ -4400,45 +4507,45 @@ const styles = StyleSheet.create({
   detailBottomActionsRow: {
     flexDirection: 'row',
     gap: 10,
-    marginTop: 6,
+    marginTop: 8,
     marginBottom: 24,
   },
   detailBottomEditBtn: {
     flex: 1,
-    backgroundColor: '#EFF6FF',
+    backgroundColor: '#0F766E',
     borderRadius: 14,
-    paddingVertical: 13,
+    paddingVertical: 14,
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
-    borderWidth: 1.5,
-    borderColor: '#BFDBFE',
-    shadowColor: '#2563EB',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
-    elevation: 1,
+    gap: 6,
+    shadowColor: '#0F766E',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 3,
   },
   detailBottomEditText: {
-    color: '#1D4ED8',
+    color: '#FFFFFF',
     fontSize: 13.5,
     fontWeight: '800',
   },
   detailBottomBackBtn: {
-    flex: 1.15,
+    flex: 1,
     backgroundColor: '#FFFFFF',
     borderRadius: 14,
-    paddingVertical: 13,
+    paddingVertical: 14,
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
+    gap: 6,
     borderWidth: 1.5,
     borderColor: '#CBD5E1',
     shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: 1.5 },
-    shadowOpacity: 0.05,
-    shadowRadius: 3,
-    elevation: 1.5,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
+    elevation: 1,
   },
   detailBottomBackBtnText: {
     color: '#334155',

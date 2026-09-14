@@ -12,7 +12,7 @@ import {
   KeyboardAvoidingView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { colors } from '../../theme/colors';
+import { Ionicons } from '@expo/vector-icons';
 import { apiClient } from '../../api/client';
 
 export const MobileConnectScreen = ({ onConnected, onOpenQrScanner }) => {
@@ -100,16 +100,16 @@ export const MobileConnectScreen = ({ onConnected, onOpenQrScanner }) => {
           <View style={styles.heroCard}>
             <View style={styles.heroHeaderRow}>
               <View style={styles.iconCircle}>
-                <View style={{ width: 14, height: 14, borderRadius: 7, backgroundColor: '#0F766E' }} />
+                <Ionicons name="desktop-outline" size={24} color="#0F766E" />
               </View>
               <View style={styles.heroTextGroup}>
                 <View style={styles.appBadgeChip}>
                   <View style={styles.statusDot} />
-                  <Text style={styles.appBadgeText}>MOBILE CRM PAIRING</Text>
+                  <Text style={styles.appBadgeText}>SHOWROOM WORKSTATION PAIRING</Text>
                 </View>
                 <Text style={styles.heroTitle}>Connect to Desktop CRM</Text>
                 <Text style={styles.heroSubtitle}>
-                  Pair over showroom Wi-Fi to sync live leads, quotations, and call logs.
+                  Pair over local showroom Wi-Fi to synchronize client records, follow-ups, and orders.
                 </Text>
               </View>
             </View>
@@ -118,14 +118,14 @@ export const MobileConnectScreen = ({ onConnected, onOpenQrScanner }) => {
           {/* Primary Action Card: Option 1 Scan QR Code */}
           <View style={styles.primaryActionCard}>
             <View style={styles.recommendedBadge}>
-              <Text style={styles.recommendedBadgeText}>RECOMMENDED</Text>
+              <Text style={styles.recommendedBadgeText}>RECOMMENDED METHOD</Text>
             </View>
 
             <View style={styles.cardHeaderRow}>
               <View style={{ flex: 1 }}>
                 <Text style={styles.cardTitle}>Option 1: Instant QR Code Scan</Text>
                 <Text style={styles.cardDesc}>
-                  Point your phone camera at the QR code on your Desktop CRM screen.
+                  Point your phone camera at the QR code displayed on the desktop workstation.
                 </Text>
               </View>
             </View>
@@ -135,6 +135,7 @@ export const MobileConnectScreen = ({ onConnected, onOpenQrScanner }) => {
               activeOpacity={0.85}
               onPress={onOpenQrScanner}
             >
+              <Ionicons name="qr-code-outline" size={18} color="#FFFFFF" style={{ marginRight: 8 }} />
               <Text style={styles.scanBtnText}>Scan Desktop QR Code</Text>
             </TouchableOpacity>
           </View>
@@ -145,7 +146,7 @@ export const MobileConnectScreen = ({ onConnected, onOpenQrScanner }) => {
               <View style={{ flex: 1 }}>
                 <Text style={styles.cardTitle}>Option 2: Wi-Fi Auto-Detect</Text>
                 <Text style={styles.cardDesc}>
-                  Automatically search your local Wi-Fi network for running CRM servers.
+                  Automatically search your local Wi-Fi network for active showroom CRM servers.
                 </Text>
               </View>
             </View>
@@ -158,7 +159,9 @@ export const MobileConnectScreen = ({ onConnected, onOpenQrScanner }) => {
             >
               {autoScanning ? (
                 <ActivityIndicator size="small" color="#0F766E" style={{ marginRight: 8 }} />
-              ) : null}
+              ) : (
+                <Ionicons name="wifi-outline" size={17} color="#334155" style={{ marginRight: 8 }} />
+              )}
               <Text style={styles.autoBtnText}>
                 {autoScanning ? 'Scanning Wi-Fi Subnet...' : 'Auto-Detect Desktop CRM'}
               </Text>
@@ -171,7 +174,7 @@ export const MobileConnectScreen = ({ onConnected, onOpenQrScanner }) => {
               <View style={{ flex: 1 }}>
                 <Text style={styles.cardTitle}>Option 3: Manual Server Address</Text>
                 <Text style={styles.cardDesc}>
-                  Enter your PC local IP address (e.g. 192.168.1.100 or 10.0.0.5)
+                  Enter the static showroom IP address assigned to the PC.
                 </Text>
               </View>
             </View>
@@ -229,9 +232,12 @@ export const MobileConnectScreen = ({ onConnected, onOpenQrScanner }) => {
 
           {/* Helpful Tips Banner */}
           <View style={styles.tipsBox}>
-            <Text style={styles.tipsTitle}>Wi-Fi Pairing Tips:</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+              <Ionicons name="information-circle-outline" size={16} color="#475569" />
+              <Text style={styles.tipsTitle}>Pairing Guidelines</Text>
+            </View>
+            <Text style={styles.tipsText}>• Ensure phone and workstation are connected to the same showroom Wi-Fi.</Text>
             <Text style={styles.tipsText}>• Open Desktop CRM on your PC and click "Pair Mobile".</Text>
-            <Text style={styles.tipsText}>• Ensure your Phone & PC are on the exact same Wi-Fi network.</Text>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -245,19 +251,21 @@ const styles = StyleSheet.create({
     backgroundColor: '#F8FAFC',
   },
   scrollContent: {
-    padding: 18,
-    paddingBottom: 40,
+    padding: 16,
+    paddingBottom: 36,
   },
   heroCard: {
-    backgroundColor: '#0F172A',
-    borderRadius: 22,
-    padding: 20,
-    marginBottom: 16,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 18,
+    padding: 18,
+    marginBottom: 14,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
     shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.25,
-    shadowRadius: 18,
-    elevation: 6,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    elevation: 2,
   },
   heroHeaderRow: {
     flexDirection: 'row',
@@ -265,12 +273,12 @@ const styles = StyleSheet.create({
     gap: 14,
   },
   iconCircle: {
-    width: 60,
-    height: 60,
-    borderRadius: 18,
-    backgroundColor: '#1E293B',
-    borderWidth: 1.5,
-    borderColor: '#38BDF8',
+    width: 52,
+    height: 52,
+    borderRadius: 16,
+    backgroundColor: '#F0FDFA',
+    borderWidth: 1,
+    borderColor: '#CCFBF1',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -280,85 +288,77 @@ const styles = StyleSheet.create({
   appBadgeChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(56, 189, 248, 0.15)',
-    paddingHorizontal: 10,
-    paddingVertical: 3.5,
-    borderRadius: 20,
+    backgroundColor: '#F0FDFA',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
     alignSelf: 'flex-start',
-    marginBottom: 6,
-    gap: 6,
+    marginBottom: 5,
+    gap: 5,
+    borderWidth: 1,
+    borderColor: '#CCFBF1',
   },
   statusDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: '#38BDF8',
+    width: 5,
+    height: 5,
+    borderRadius: 2.5,
+    backgroundColor: '#0F766E',
   },
   appBadgeText: {
-    color: '#38BDF8',
-    fontSize: 10,
+    color: '#0F766E',
+    fontSize: 9.5,
     fontWeight: '800',
-    letterSpacing: 0.6,
+    letterSpacing: 0.4,
   },
   heroTitle: {
-    fontSize: 18,
-    fontWeight: '900',
-    color: '#F8FAFC',
-    letterSpacing: -0.3,
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#0F172A',
+    letterSpacing: -0.2,
   },
   heroSubtitle: {
-    fontSize: 12,
-    color: '#94A3B8',
-    marginTop: 3,
+    fontSize: 11.5,
+    color: '#64748B',
+    marginTop: 2,
     lineHeight: 16,
   },
   primaryActionCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    padding: 20,
-    borderWidth: 1.5,
-    borderColor: '#3B82F6',
-    shadowColor: '#2563EB',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.12,
-    shadowRadius: 16,
-    elevation: 4,
-    marginBottom: 16,
-  },
-  recommendedBadge: {
-    backgroundColor: '#EFF6FF',
+    borderRadius: 16,
+    padding: 18,
     borderWidth: 1,
-    borderColor: '#BFDBFE',
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    alignSelf: 'flex-start',
+    borderColor: '#E2E8F0',
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    elevation: 2,
     marginBottom: 14,
   },
+  recommendedBadge: {
+    backgroundColor: '#F0FDFA',
+    borderWidth: 1,
+    borderColor: '#CCFBF1',
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    alignSelf: 'flex-start',
+    marginBottom: 12,
+  },
   recommendedBadgeText: {
-    fontSize: 10.5,
+    fontSize: 10,
     fontWeight: '800',
-    color: '#1D4ED8',
-    letterSpacing: 0.4,
+    color: '#0F766E',
+    letterSpacing: 0.3,
   },
   cardHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    marginBottom: 16,
-  },
-  optionIconBox: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
-    backgroundColor: '#EFF6FF',
-    borderWidth: 1,
-    borderColor: '#93C5FD',
-    alignItems: 'center',
-    justifyContent: 'center',
+    marginBottom: 14,
   },
   cardTitle: {
-    fontSize: 15,
+    fontSize: 14.5,
     fontWeight: '800',
     color: '#0F172A',
   },
@@ -369,53 +369,53 @@ const styles = StyleSheet.create({
     lineHeight: 16,
   },
   scanBtn: {
-    backgroundColor: '#2563EB',
-    borderRadius: 14,
-    paddingVertical: 14,
+    backgroundColor: '#0F766E',
+    borderRadius: 12,
+    paddingVertical: 13,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#2563EB',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.28,
-    shadowRadius: 10,
-    elevation: 4,
+    shadowColor: '#0F766E',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 2,
   },
   scanBtnText: {
     color: '#FFFFFF',
-    fontSize: 15,
-    fontWeight: '800',
+    fontSize: 14,
+    fontWeight: '700',
   },
   secondaryCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    padding: 20,
+    borderRadius: 16,
+    padding: 18,
     borderWidth: 1,
     borderColor: '#E2E8F0',
-    marginBottom: 16,
+    marginBottom: 14,
   },
   autoBtn: {
     backgroundColor: '#F8FAFC',
-    borderWidth: 1.5,
+    borderWidth: 1,
     borderColor: '#CBD5E1',
-    borderRadius: 14,
-    paddingVertical: 13,
+    borderRadius: 12,
+    paddingVertical: 12,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
   },
   autoBtnText: {
-    color: '#1E293B',
-    fontSize: 14,
-    fontWeight: '800',
+    color: '#334155',
+    fontSize: 13.5,
+    fontWeight: '700',
   },
   manualCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    padding: 20,
+    borderRadius: 16,
+    padding: 18,
     borderWidth: 1,
     borderColor: '#E2E8F0',
-    marginBottom: 16,
+    marginBottom: 14,
   },
   inputRow: {
     flexDirection: 'row',
@@ -424,72 +424,71 @@ const styles = StyleSheet.create({
   inputLabel: {
     fontSize: 10,
     fontWeight: '800',
-    color: '#475569',
+    color: '#64748B',
     marginBottom: 4,
     letterSpacing: 0.5,
   },
   input: {
     backgroundColor: '#F8FAFC',
-    borderWidth: 1.5,
-    borderColor: '#E2E8F0',
-    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+    borderRadius: 10,
     paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 14,
+    paddingVertical: 9,
+    fontSize: 13.5,
     fontWeight: '600',
     color: '#0F172A',
   },
   connectBtn: {
-    backgroundColor: '#0F172A',
-    borderRadius: 14,
-    paddingVertical: 13,
+    backgroundColor: '#0F766E',
+    borderRadius: 12,
+    paddingVertical: 12,
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
-    shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 6,
-    elevation: 3,
+    shadowColor: '#0F766E',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.18,
+    shadowRadius: 5,
+    elevation: 2,
   },
   connectBtnText: {
     color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '800',
+    fontSize: 13.5,
+    fontWeight: '700',
   },
   statusBox: {
-    backgroundColor: '#EFF6FF',
-    borderRadius: 14,
-    padding: 14,
+    backgroundColor: '#F0FDFA',
+    borderRadius: 12,
+    padding: 12,
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 14,
     borderWidth: 1,
-    borderColor: '#BFDBFE',
+    borderColor: '#CCFBF1',
   },
   statusText: {
-    color: '#1D4ED8',
-    fontSize: 13,
+    color: '#0F766E',
+    fontSize: 12.5,
     fontWeight: '700',
     flex: 1,
   },
   tipsBox: {
-    backgroundColor: '#FEF3C7',
-    borderRadius: 16,
-    padding: 16,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 14,
+    padding: 14,
     borderWidth: 1,
-    borderColor: '#FDE68A',
+    borderColor: '#E2E8F0',
   },
   tipsTitle: {
-    fontSize: 12.5,
+    fontSize: 12,
     fontWeight: '800',
-    color: '#92400E',
-    marginBottom: 4,
+    color: '#334155',
   },
   tipsText: {
-    fontSize: 12,
-    color: '#78350F',
-    lineHeight: 17,
+    fontSize: 11.5,
+    color: '#64748B',
+    lineHeight: 16,
     marginTop: 2,
   },
 });

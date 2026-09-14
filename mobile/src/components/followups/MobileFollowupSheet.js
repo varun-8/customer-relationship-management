@@ -1147,16 +1147,12 @@ export function MobileFollowupSheet({
                 }}
                 activeOpacity={0.85}
               >
-                <LinearGradient
-                  colors={['#0F766E', '#0D9488']}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
-                  style={styles.dLogActivityGradient}
-                >
-                  <Ionicons name="create-outline" size={18} color="#FFFFFF" style={{ marginRight: 6 }} />
+                <View style={styles.dLogActivityGradient}>
+                  <Ionicons name="create-outline" size={18} color="#1D4ED8" style={{ marginRight: 6 }} />
                   <Text style={styles.dLogActivityText}>Log Activity</Text>
-                </LinearGradient>
+                </View>
               </TouchableOpacity>
+
 
               <TouchableOpacity
                 style={styles.dMarkLostBtn}
@@ -1481,9 +1477,14 @@ const styles = StyleSheet.create({
   sheetHeaderWrapper: {
     backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
-    paddingBottom: 8,
+    borderBottomColor: '#EDF0F5',
+    paddingBottom: 10,
     marginBottom: 4,
+    shadowColor: '#1E3A5F',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    elevation: 2,
   },
   headerIconBadge: {
     width: 32,
@@ -1497,51 +1498,51 @@ const styles = StyleSheet.create({
   },
   headerStatGrid: {
     paddingHorizontal: 12,
-    marginTop: 8,
-    marginBottom: 6,
-    gap: 7,
+    marginTop: 10,
+    marginBottom: 8,
+    gap: 8,
   },
   headerStatRow: {
     flexDirection: 'row',
-    gap: 7,
-    alignItems: 'center',
+    gap: 8,
+    alignItems: 'stretch',
   },
   headerStatCard: {
     flex: 1,
     backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    paddingVertical: 8,
-    paddingHorizontal: 10,
+    borderRadius: 14,
+    paddingVertical: 10,
+    paddingHorizontal: 11,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: '#E9EFF6',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    minHeight: 52,
-    shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 3,
-    elevation: 1.5,
+    minHeight: 58,
+    shadowColor: '#1E3A5F',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    elevation: 2,
     position: 'relative',
     overflow: 'hidden',
   },
   headerStatCardActive: {
-    shadowOpacity: 0.12,
-    shadowRadius: 6,
-    elevation: 2.5,
+    shadowOpacity: 0.14,
+    shadowRadius: 8,
+    elevation: 3,
   },
   headerStatLeftCol: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 9,
     flex: 1,
-    marginRight: 4,
+    marginRight: 6,
   },
   headerStatIconBadge: {
-    width: 28,
-    height: 28,
-    borderRadius: 8,
+    width: 32,
+    height: 32,
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1551,31 +1552,31 @@ const styles = StyleSheet.create({
   },
   headerStatLabel: {
     fontFamily: typography.fontHeading,
-    fontSize: 12,
+    fontSize: 12.5,
     fontWeight: '700',
     color: '#1E293B',
     letterSpacing: -0.2,
   },
   headerStatSubText: {
     fontFamily: typography.fontFamily,
-    fontSize: 9.5,
+    fontSize: 10,
     fontWeight: '500',
     color: '#64748B',
-    marginTop: 1,
+    marginTop: 2,
     letterSpacing: -0.1,
   },
   headerStatValWrapper: {
-    minWidth: 28,
-    height: 24,
-    paddingHorizontal: 6,
-    borderRadius: 6,
+    minWidth: 36,
+    height: 32,
+    paddingHorizontal: 8,
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
   },
   headerStatVal: {
     fontFamily: typography.fontHeading,
-    fontSize: 13.5,
-    fontWeight: '800',
+    fontSize: 16,
+    fontWeight: '900',
     fontVariant: ['tabular-nums'],
   },
   activeStatIndicator: {
@@ -1583,7 +1584,9 @@ const styles = StyleSheet.create({
     left: 0,
     top: 0,
     bottom: 0,
-    width: 3.5,
+    width: 4,
+    borderTopLeftRadius: 14,
+    borderBottomLeftRadius: 14,
   },
   cardMiddleRow: {
     flexDirection: 'row',
@@ -2336,11 +2339,14 @@ const styles = StyleSheet.create({
     flex: 2,
     borderRadius: 14,
     overflow: 'hidden',
-    shadowColor: '#0F766E',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.25,
-    shadowRadius: 6,
-    elevation: 3,
+    backgroundColor: '#EFF6FF',
+    borderWidth: 1.5,
+    borderColor: '#BFDBFE',
+    shadowColor: '#2563EB',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
   },
   dLogActivityGradient: {
     height: 50,
@@ -2349,18 +2355,20 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 8,
     paddingHorizontal: 16,
+    backgroundColor: '#EFF6FF',
   },
   dLogActivityIcon: {
     fontSize: 16,
-    color: '#FFFFFF',
+    color: '#1D4ED8',
     fontWeight: '900',
   },
   dLogActivityText: {
     fontSize: 14.5,
     fontWeight: '800',
-    color: '#FFFFFF',
+    color: '#1D4ED8',
     letterSpacing: -0.2,
   },
+
   dMarkLostBtn: {
     flex: 1,
     borderRadius: 14,

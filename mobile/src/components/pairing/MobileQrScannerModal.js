@@ -20,7 +20,6 @@ import { CameraView, Camera } from 'expo-camera';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { apiClient } from '../../api/client';
-import { colors } from '../../theme/colors';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const SCAN_FRAME_SIZE = Math.min(SCREEN_WIDTH * 0.70, 260);
@@ -52,8 +51,8 @@ export const MobileQrScannerModal = ({
 
   // Manual IP & Auto-detect state
   const [showManualInput, setShowManualInput] = useState(false);
-  const [manualHost, setManualHost] = useState('http://10.118.85.79:5000/api');
-  const [quickHost, setQuickHost] = useState('http://10.118.85.79:5000/api');
+  const [manualHost, setManualHost] = useState('http://10.118.85.115:5000/api');
+  const [quickHost, setQuickHost] = useState('http://10.118.85.115:5000/api');
   const [autoDetecting, setAutoDetecting] = useState(false);
 
   // Concurrency guard to prevent rapid duplicate scans
@@ -165,8 +164,8 @@ export const MobileQrScannerModal = ({
           setManualHost(base);
           setQuickHost(base);
         } else {
-          setManualHost('http://10.118.85.79:5000/api');
-          setQuickHost('http://10.118.85.79:5000/api');
+          setManualHost('http://10.118.85.115:5000/api');
+          setQuickHost('http://10.118.85.115:5000/api');
         }
       });
     }
@@ -236,7 +235,7 @@ export const MobileQrScannerModal = ({
     try {
       const testRes = await apiClient.testConnection(parsedApiUrl);
       if (testRes.success) {
-        setStatusMessage('Desktop CRM Paired & Verified');
+        setStatusMessage('Desktop Workstation Paired');
         setTimeout(() => {
           if (onConnected) onConnected(parsedApiUrl);
           if (onClose) onClose();
@@ -282,7 +281,7 @@ export const MobileQrScannerModal = ({
   const handleManualConnect = async (targetHost = null) => {
     const hostToUse = (typeof targetHost === 'string' && targetHost.trim())
       ? targetHost.trim()
-      : (manualHost.trim() || quickHost || 'http://10.118.85.79:5000/api');
+      : (manualHost.trim() || quickHost || 'http://10.118.85.115:5000/api');
 
     if (!hostToUse) {
       Alert.alert('Required', 'Please enter your Desktop CRM IP address or URL.');
@@ -336,88 +335,94 @@ export const MobileQrScannerModal = ({
 
   if (!visible) return null;
 
+  const isCameraActive = hasPermission && !cameraError;
+
   const content = (
     <View style={styles.container}>
       <StatusBar
-        barStyle="dark-content"
+        barStyle={isCameraActive ? "light-content" : "dark-content"}
         backgroundColor="transparent"
         translucent={true}
       />
 
       {/* Main Camera Viewport */}
       {hasPermission === false && !cameraReady ? (
-        <View style={styles.lightFallbackBox}>
-          <View style={styles.permissionBadge}>
-            <Ionicons name="camera-outline" size={34} color="#0F766E" />
-          </View>
-          <Text style={styles.lightFallbackTitle}>Camera Access Required</Text>
-          <Text style={styles.lightFallbackDesc}>
-            Vasantham CRM uses your phone camera to scan the Desktop pairing QR code for instant 1-second sync.
-          </Text>
-
-          <TouchableOpacity
-            style={styles.primaryActionBtn}
-            onPress={handleRequestPermission}
-            activeOpacity={0.85}
-          >
-            <Ionicons name="shield-checkmark-outline" size={18} color="#FFFFFF" style={{ marginRight: 8 }} />
-            <Text style={styles.primaryActionBtnText}>Grant Camera Access</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.secondaryActionBtn, { marginBottom: 10 }]}
-            onPress={() => {
-              setCameraError(null);
-              setHasPermission(true);
-            }}
-            activeOpacity={0.85}
-          >
-            <Ionicons name="camera" size={16} color="#0F766E" style={{ marginRight: 6 }} />
-            <Text style={styles.secondaryActionBtnText}>Start Camera</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.secondaryActionBtn}
-            onPress={() => handleManualConnect(quickHost)}
-            activeOpacity={0.85}
-          >
-            <Ionicons name="flash-outline" size={16} color="#0F766E" style={{ marginRight: 6 }} />
-            <Text style={styles.secondaryActionBtnText}>
-              Direct Connect ({quickHost.replace(/^https?:\/\//, '').replace(/\/api$/, '')})
+        <View style={styles.fallbackBox}>
+          <View style={styles.fallbackCard}>
+            <View style={styles.permissionBadge}>
+              <Ionicons name="camera-outline" size={32} color="#0F766E" />
+            </View>
+            <Text style={styles.fallbackTitle}>Camera Access Required</Text>
+            <Text style={styles.fallbackDesc}>
+              Camera permission is required to pair this phone with your Desktop CRM showroom workstation.
             </Text>
-          </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.primaryActionBtn}
+              onPress={handleRequestPermission}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="shield-checkmark-outline" size={17} color="#FFFFFF" style={{ marginRight: 8 }} />
+              <Text style={styles.primaryActionBtnText}>Grant Camera Access</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.secondaryActionBtn}
+              onPress={() => {
+                setCameraError(null);
+                setHasPermission(true);
+              }}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="camera-outline" size={16} color="#334155" style={{ marginRight: 6 }} />
+              <Text style={styles.secondaryActionBtnText}>Start Camera</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.secondaryActionBtn, { marginTop: 8 }]}
+              onPress={() => handleManualConnect(quickHost)}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="flash-outline" size={16} color="#0F766E" style={{ marginRight: 6 }} />
+              <Text style={[styles.secondaryActionBtnText, { color: '#0F766E' }]}>
+                Direct Connect ({quickHost.replace(/^https?:\/\//, '').replace(/\/api$/, '')})
+              </Text>
+            </TouchableOpacity>
+          </View>
         </View>
       ) : cameraError ? (
-        <View style={styles.lightFallbackBox}>
-          <View style={[styles.permissionBadge, { backgroundColor: '#FEF2F2', borderColor: '#FECACA' }]}>
-            <Ionicons name="alert-circle-outline" size={34} color="#EF4444" />
+        <View style={styles.fallbackBox}>
+          <View style={styles.fallbackCard}>
+            <View style={styles.permissionBadge}>
+              <Ionicons name="alert-circle-outline" size={32} color="#0F766E" />
+            </View>
+            <Text style={styles.fallbackTitle}>Camera Preview Unavailable</Text>
+            <Text style={styles.fallbackDesc}>{cameraError}</Text>
+
+            <TouchableOpacity
+              style={styles.primaryActionBtn}
+              onPress={() => {
+                setCameraError(null);
+                setHasPermission(true);
+                checkAndRequestCamera();
+              }}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="refresh-outline" size={17} color="#FFFFFF" style={{ marginRight: 8 }} />
+              <Text style={styles.primaryActionBtnText}>Retry Camera</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.secondaryActionBtn}
+              onPress={() => handleManualConnect(quickHost)}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="flash-outline" size={16} color="#0F766E" style={{ marginRight: 6 }} />
+              <Text style={[styles.secondaryActionBtnText, { color: '#0F766E' }]}>
+                Direct Connect ({quickHost.replace(/^https?:\/\//, '').replace(/\/api$/, '')})
+              </Text>
+            </TouchableOpacity>
           </View>
-          <Text style={styles.lightFallbackTitle}>Camera Initialization Error</Text>
-          <Text style={styles.lightFallbackDesc}>{cameraError}</Text>
-
-          <TouchableOpacity
-            style={styles.primaryActionBtn}
-            onPress={() => {
-              setCameraError(null);
-              setHasPermission(true);
-              checkAndRequestCamera();
-            }}
-            activeOpacity={0.85}
-          >
-            <Ionicons name="refresh-outline" size={18} color="#FFFFFF" style={{ marginRight: 8 }} />
-            <Text style={styles.primaryActionBtnText}>Retry Camera</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.secondaryActionBtn}
-            onPress={() => handleManualConnect(quickHost)}
-            activeOpacity={0.85}
-          >
-            <Ionicons name="flash-outline" size={16} color="#0F766E" style={{ marginRight: 6 }} />
-            <Text style={styles.secondaryActionBtnText}>
-              Direct Connect ({quickHost.replace(/^https?:\/\//, '').replace(/\/api$/, '')})
-            </Text>
-          </TouchableOpacity>
         </View>
       ) : (
         <View style={styles.cameraContainer}>
@@ -431,9 +436,9 @@ export const MobileQrScannerModal = ({
             onCameraReady={() => setCameraReady(true)}
           />
 
-          {/* Precision Alignment Optical Scrim Mask */}
+          {/* Optical Scrim Mask (Disciplined Charcoal Tint) */}
           <View style={styles.overlayContainer} pointerEvents="box-none">
-            {/* Dark Mask Top: Calibrated to clear floating top bar */}
+            {/* Top Scrim */}
             <View style={styles.maskTop} />
 
             {/* Middle Row with Viewfinder */}
@@ -446,17 +451,17 @@ export const MobileQrScannerModal = ({
                   styles.viewfinderFrame,
                   {
                     transform: [{ scale: cornerPulseAnim }],
-                    borderColor: scanned ? '#10B981' : 'rgba(255, 255, 255, 0.45)',
+                    borderColor: scanned ? '#059669' : 'rgba(255, 255, 255, 0.25)',
                   },
                 ]}
               >
-                {/* 4 Precision Corner Brackets in Brand Teal */}
+                {/* 4 Precision Corner Brackets */}
                 <View style={[styles.bracket, styles.bTopLeft, scanned && styles.bracketSuccess]} />
                 <View style={[styles.bracket, styles.bTopRight, scanned && styles.bracketSuccess]} />
                 <View style={[styles.bracket, styles.bBottomLeft, scanned && styles.bracketSuccess]} />
                 <View style={[styles.bracket, styles.bBottomRight, scanned && styles.bracketSuccess]} />
 
-                {/* Subtle Optical Crosshair Reticle Center Marks */}
+                {/* Subtle Crosshair Reticle Center Marks */}
                 <View style={styles.crosshairH} />
                 <View style={styles.crosshairV} />
 
@@ -478,7 +483,7 @@ export const MobileQrScannerModal = ({
                     ]}
                   >
                     <LinearGradient
-                      colors={['transparent', 'rgba(20, 184, 166, 0.95)', '#0F766E', 'rgba(20, 184, 166, 0.95)', 'transparent']}
+                      colors={['transparent', 'rgba(15, 118, 110, 0.85)', '#0F766E', 'rgba(15, 118, 110, 0.85)', 'transparent']}
                       start={{ x: 0, y: 0 }}
                       end={{ x: 1, y: 0 }}
                       style={styles.laserGradient}
@@ -497,7 +502,7 @@ export const MobileQrScannerModal = ({
                       },
                     ]}
                   >
-                    <Ionicons name="checkmark-sharp" size={42} color="#10B981" />
+                    <Ionicons name="checkmark-sharp" size={38} color="#059669" />
                   </Animated.View>
                 )}
               </Animated.View>
@@ -505,7 +510,7 @@ export const MobileQrScannerModal = ({
               <View style={styles.maskSide} />
             </View>
 
-            {/* Dark Mask Bottom with Guidance Pill */}
+            {/* Bottom Scrim with Guidance Pill */}
             <View style={styles.maskBottom}>
               <View style={[styles.guidancePill, scanned && styles.guidancePillSuccess]}>
                 <Ionicons
@@ -515,9 +520,7 @@ export const MobileQrScannerModal = ({
                   style={{ marginRight: 7 }}
                 />
                 <Text style={[styles.guidanceText, scanned && styles.guidanceTextSuccess]}>
-                  {scanned
-                    ? 'QR Code Verified!'
-                    : 'Align Desktop QR Code inside frame'}
+                  {scanned ? 'Workstation Verified' : 'Align desktop QR code inside frame'}
                 </Text>
               </View>
             </View>
@@ -525,7 +528,7 @@ export const MobileQrScannerModal = ({
         </View>
       )}
 
-      {/* Floating Light Frosted Top Bar */}
+      {/* Floating Top Bar (Clean Frosted Card) */}
       <View style={styles.floatingTopBar}>
         <View style={styles.topBarCard}>
           {/* Back / Dismiss Button */}
@@ -536,7 +539,7 @@ export const MobileQrScannerModal = ({
               activeOpacity={0.7}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             >
-              <Ionicons name="close" size={20} color="#334155" />
+              <Ionicons name="close" size={19} color="#334155" />
             </TouchableOpacity>
           ) : (
             <View style={styles.brandBadgeIcon}>
@@ -546,8 +549,8 @@ export const MobileQrScannerModal = ({
 
           {/* Central Live HUD Indicator */}
           <View style={styles.centerHudBadge}>
-            <View style={[styles.hudDot, scanned && { backgroundColor: '#10B981' }]} />
-            <Text style={styles.hudBadgeText}>CRM QR SCANNER</Text>
+            <View style={[styles.hudDot, scanned && { backgroundColor: '#059669' }]} />
+            <Text style={styles.hudBadgeText}>SCAN WORKSTATION QR</Text>
           </View>
 
           {/* Flashlight / Torch Toggle */}
@@ -559,8 +562,8 @@ export const MobileQrScannerModal = ({
           >
             <Ionicons
               name={torchOn ? 'flash' : 'flash-outline'}
-              size={18}
-              color={torchOn ? '#D97706' : '#475569'}
+              size={17}
+              color={torchOn ? '#FFFFFF' : '#475569'}
             />
           </TouchableOpacity>
         </View>
@@ -571,12 +574,12 @@ export const MobileQrScannerModal = ({
         <View style={styles.connectingToast}>
           <ActivityIndicator size="small" color="#0F766E" style={{ marginRight: 10 }} />
           <Text style={styles.connectingToastText}>
-            {statusMessage || 'Establishing secure pairing...'}
+            {statusMessage || 'Connecting to workstation...'}
           </Text>
         </View>
       )}
 
-      {/* Bottom Light-Themed Control Deck */}
+      {/* Bottom Deck (Executive White Card) */}
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={styles.bottomDeckWrapper}
@@ -586,8 +589,8 @@ export const MobileQrScannerModal = ({
             <View style={styles.manualInputDeck}>
               <View style={styles.manualHeaderRow}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                  <Ionicons name="link-outline" size={15} color="#0F766E" />
-                  <Text style={styles.manualTitle}>DESKTOP SERVER API ADDRESS</Text>
+                  <Ionicons name="desktop-outline" size={15} color="#0F766E" />
+                  <Text style={styles.manualTitle}>WORKSTATION API ADDRESS</Text>
                 </View>
                 <TouchableOpacity
                   onPress={() => setShowManualInput(false)}
@@ -617,7 +620,7 @@ export const MobileQrScannerModal = ({
                 {connecting ? (
                   <ActivityIndicator size="small" color="#FFFFFF" />
                 ) : (
-                  <Text style={styles.manualConnectBtnText}>Connect to Desktop</Text>
+                  <Text style={styles.manualConnectBtnText}>Connect to Workstation</Text>
                 )}
               </TouchableOpacity>
             </View>
@@ -630,17 +633,12 @@ export const MobileQrScannerModal = ({
                 disabled={connecting}
                 activeOpacity={0.85}
               >
-                <LinearGradient
-                  colors={['#0F766E', '#0D9488']}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
-                  style={styles.quickPairHeroGradient}
-                >
-                  <Ionicons name="flash" size={17} color="#FFFFFF" style={{ marginRight: 7 }} />
+                <View style={styles.quickPairHeroSolid}>
+                  <Ionicons name="flash-outline" size={17} color="#FFFFFF" style={{ marginRight: 8 }} />
                   <Text style={styles.quickPairHeroText}>
                     1-Tap Connect ({quickHost.replace(/^https?:\/\//, '').replace(/\/api$/, '')})
                   </Text>
-                </LinearGradient>
+                </View>
               </TouchableOpacity>
 
               {/* Secondary Actions: Auto-Detect & Manual IP */}
@@ -654,7 +652,7 @@ export const MobileQrScannerModal = ({
                   <Ionicons
                     name={autoDetecting ? 'sync-outline' : 'wifi-outline'}
                     size={15}
-                    color="#0F766E"
+                    color="#334155"
                     style={{ marginRight: 6 }}
                   />
                   <Text style={styles.secondaryPillText}>
@@ -667,7 +665,7 @@ export const MobileQrScannerModal = ({
                   onPress={() => setShowManualInput(true)}
                   activeOpacity={0.8}
                 >
-                  <Ionicons name="keypad-outline" size={15} color="#0F766E" style={{ marginRight: 6 }} />
+                  <Ionicons name="keypad-outline" size={15} color="#334155" style={{ marginRight: 6 }} />
                   <Text style={styles.secondaryPillText}>Manual IP</Text>
                 </TouchableOpacity>
               </View>
@@ -702,99 +700,102 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F8FAFC',
   },
-  lightFallbackBox: {
+  fallbackBox: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 28,
+    paddingHorizontal: 20,
     backgroundColor: '#F8FAFC',
   },
-  lightStatusText: {
-    marginTop: 14,
-    fontSize: 14,
-    color: '#475569',
-    fontWeight: '700',
-    letterSpacing: -0.2,
+  fallbackCard: {
+    width: '100%',
+    maxWidth: 360,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    padding: 24,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    elevation: 3,
   },
   permissionBadge: {
-    width: 68,
-    height: 68,
-    borderRadius: 24,
-    backgroundColor: '#ECFDF5',
-    borderWidth: 1.5,
-    borderColor: '#A7F3D0',
+    width: 64,
+    height: 64,
+    borderRadius: 20,
+    backgroundColor: '#F0FDFA',
+    borderWidth: 1,
+    borderColor: '#CCFBF1',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 18,
-    shadowColor: '#0F766E',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 10,
-    elevation: 2,
+    marginBottom: 16,
   },
-  lightFallbackTitle: {
-    fontSize: 19,
+  fallbackTitle: {
+    fontSize: 18,
     fontWeight: '800',
     color: '#0F172A',
     marginBottom: 8,
     textAlign: 'center',
+    letterSpacing: -0.3,
   },
-  lightFallbackDesc: {
-    fontSize: 13.5,
+  fallbackDesc: {
+    fontSize: 13,
     color: '#64748B',
     textAlign: 'center',
-    lineHeight: 20,
-    marginBottom: 26,
-    maxWidth: 320,
+    lineHeight: 19,
+    marginBottom: 22,
   },
   primaryActionBtn: {
     backgroundColor: '#0F766E',
-    paddingVertical: 14,
-    paddingHorizontal: 24,
-    borderRadius: 14,
+    paddingVertical: 13,
+    paddingHorizontal: 20,
+    borderRadius: 12,
     width: '100%',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 12,
+    marginBottom: 10,
     shadowColor: '#0F766E',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    elevation: 4,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 2,
   },
   primaryActionBtnText: {
-    fontSize: 14,
-    fontWeight: '800',
+    fontSize: 13.5,
+    fontWeight: '700',
     color: '#FFFFFF',
   },
   secondaryActionBtn: {
-    backgroundColor: '#FFFFFF',
-    paddingVertical: 13,
-    paddingHorizontal: 20,
-    borderRadius: 14,
+    backgroundColor: '#F8FAFC',
+    paddingVertical: 12,
+    paddingHorizontal: 18,
+    borderRadius: 12,
     width: '100%',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1.5,
+    borderWidth: 1,
     borderColor: '#E2E8F0',
   },
   secondaryActionBtnText: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#0F766E',
+    color: '#334155',
   },
   cameraContainer: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: '#000000',
+    backgroundColor: '#0F172A',
   },
   overlayContainer: {
     ...StyleSheet.absoluteFillObject,
   },
   maskTop: {
     height: TOP_MASK_HEIGHT,
-    backgroundColor: 'rgba(15, 23, 42, 0.44)',
+    backgroundColor: 'rgba(15, 23, 42, 0.65)',
   },
   maskMiddle: {
     height: SCAN_FRAME_SIZE,
@@ -802,18 +803,18 @@ const styles = StyleSheet.create({
   },
   maskSide: {
     flex: 1,
-    backgroundColor: 'rgba(15, 23, 42, 0.44)',
+    backgroundColor: 'rgba(15, 23, 42, 0.65)',
   },
   maskBottom: {
     height: BOTTOM_MASK_HEIGHT,
-    backgroundColor: 'rgba(15, 23, 42, 0.44)',
+    backgroundColor: 'rgba(15, 23, 42, 0.65)',
     alignItems: 'center',
-    paddingTop: 18,
+    paddingTop: 20,
   },
   viewfinderFrame: {
     width: SCAN_FRAME_SIZE,
     height: SCAN_FRAME_SIZE,
-    borderRadius: 24,
+    borderRadius: 22,
     borderWidth: 1.5,
     position: 'relative',
     overflow: 'hidden',
@@ -822,100 +823,100 @@ const styles = StyleSheet.create({
   },
   bracket: {
     position: 'absolute',
-    width: 32,
-    height: 32,
+    width: 28,
+    height: 28,
     borderColor: '#0F766E',
   },
   bracketSuccess: {
-    borderColor: '#10B981',
+    borderColor: '#059669',
   },
   bTopLeft: {
     top: -1.5,
     left: -1.5,
-    borderTopWidth: 4,
-    borderLeftWidth: 4,
-    borderTopLeftRadius: 22,
+    borderTopWidth: 3.5,
+    borderLeftWidth: 3.5,
+    borderTopLeftRadius: 20,
   },
   bTopRight: {
     top: -1.5,
     right: -1.5,
-    borderTopWidth: 4,
-    borderRightWidth: 4,
-    borderTopRightRadius: 22,
+    borderTopWidth: 3.5,
+    borderRightWidth: 3.5,
+    borderTopRightRadius: 20,
   },
   bBottomLeft: {
     bottom: -1.5,
     left: -1.5,
-    borderBottomWidth: 4,
-    borderLeftWidth: 4,
-    borderBottomLeftRadius: 22,
+    borderBottomWidth: 3.5,
+    borderLeftWidth: 3.5,
+    borderBottomLeftRadius: 20,
   },
   bBottomRight: {
     bottom: -1.5,
     right: -1.5,
-    borderBottomWidth: 4,
-    borderRightWidth: 4,
-    borderBottomLeftRadius: 22,
+    borderBottomWidth: 3.5,
+    borderRightWidth: 3.5,
+    borderBottomLeftRadius: 20,
   },
   crosshairH: {
     position: 'absolute',
-    width: 22,
+    width: 20,
     height: 1.5,
-    backgroundColor: 'rgba(255, 255, 255, 0.35)',
+    backgroundColor: 'rgba(255, 255, 255, 0.30)',
     borderRadius: 1,
   },
   crosshairV: {
     position: 'absolute',
     width: 1.5,
-    height: 22,
-    backgroundColor: 'rgba(255, 255, 255, 0.35)',
+    height: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.30)',
     borderRadius: 1,
   },
   laserContainer: {
     position: 'absolute',
     left: 0,
     right: 0,
-    height: 3,
+    height: 2.5,
     alignItems: 'center',
-    shadowColor: '#14B8A6',
+    shadowColor: '#0F766E',
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.8,
+    shadowOpacity: 0.7,
     shadowRadius: 6,
     elevation: 3,
   },
   laserGradient: {
-    width: '92%',
-    height: 3,
+    width: '90%',
+    height: 2.5,
     borderRadius: 1.5,
   },
   successLockRing: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: 'rgba(255, 255, 255, 0.95)',
-    borderWidth: 2.5,
-    borderColor: '#10B981',
+    width: 68,
+    height: 68,
+    borderRadius: 34,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 2,
+    borderColor: '#059669',
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#10B981',
+    shadowColor: '#059669',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.35,
-    shadowRadius: 12,
-    elevation: 6,
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    elevation: 5,
   },
   guidancePill: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    backgroundColor: '#FFFFFF',
     paddingHorizontal: 16,
-    paddingVertical: 9,
-    borderRadius: 22,
+    paddingVertical: 8,
+    borderRadius: 20,
     borderWidth: 1,
     borderColor: '#E2E8F0',
     shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.12,
-    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
     elevation: 3,
   },
   guidancePillSuccess: {
@@ -926,7 +927,7 @@ const styles = StyleSheet.create({
     fontSize: 12.5,
     fontWeight: '700',
     color: '#0F172A',
-    letterSpacing: -0.2,
+    letterSpacing: -0.1,
   },
   guidanceTextSuccess: {
     color: '#059669',
@@ -943,36 +944,34 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: 'rgba(255, 255, 255, 0.96)',
+    backgroundColor: 'rgba(255, 255, 255, 0.98)',
     paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 22,
+    paddingVertical: 9,
+    borderRadius: 18,
     borderWidth: 1,
     borderColor: '#E2E8F0',
     shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: 4 },
+    shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.08,
-    shadowRadius: 10,
-    elevation: 4,
+    shadowRadius: 8,
+    elevation: 3,
   },
   circleActionBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     backgroundColor: '#F1F5F9',
     alignItems: 'center',
     justifyContent: 'center',
   },
   circleActionBtnActive: {
-    backgroundColor: '#FEF3C7',
-    borderWidth: 1,
-    borderColor: '#F59E0B',
+    backgroundColor: '#0F766E',
   },
   brandBadgeIcon: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: '#ECFDF5',
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#F0FDFA',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -983,13 +982,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
   },
   hudDot: {
-    width: 7,
-    height: 7,
-    borderRadius: 3.5,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
     backgroundColor: '#0F766E',
   },
   hudBadgeText: {
-    fontSize: 12,
+    fontSize: 11.5,
     fontWeight: '800',
     color: '#0F172A',
     letterSpacing: 0.6,
@@ -1001,22 +1000,22 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 18,
-    paddingVertical: 10,
-    borderRadius: 22,
-    borderWidth: 1.5,
-    borderColor: '#0F766E',
+    paddingHorizontal: 16,
+    paddingVertical: 9,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
     zIndex: 30,
-    shadowColor: '#0F766E',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.18,
-    shadowRadius: 10,
-    elevation: 6,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+    elevation: 4,
   },
   connectingToastText: {
     color: '#0F172A',
-    fontSize: 13,
-    fontWeight: '800',
+    fontSize: 12.5,
+    fontWeight: '700',
   },
   bottomDeckWrapper: {
     position: 'absolute',
@@ -1027,41 +1026,42 @@ const styles = StyleSheet.create({
   },
   bottomDeckCard: {
     backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
     borderTopWidth: 1,
     borderColor: '#E2E8F0',
-    paddingHorizontal: 20,
-    paddingTop: 18,
-    paddingBottom: Platform.OS === 'ios' ? 34 : 22,
+    paddingHorizontal: 18,
+    paddingTop: 16,
+    paddingBottom: Platform.OS === 'ios' ? 32 : 18,
     shadowColor: '#0F172A',
     shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 14,
-    elevation: 8,
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    elevation: 6,
   },
   defaultDeck: {
-    gap: 12,
+    gap: 10,
   },
   quickPairHeroBtn: {
-    borderRadius: 16,
+    borderRadius: 14,
     overflow: 'hidden',
+    backgroundColor: '#0F766E',
     shadowColor: '#0F766E',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.22,
-    shadowRadius: 8,
-    elevation: 4,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 3,
   },
-  quickPairHeroGradient: {
+  quickPairHeroSolid: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 14,
+    paddingVertical: 13,
   },
   quickPairHeroText: {
     color: '#FFFFFF',
     fontSize: 13.5,
-    fontWeight: '800',
+    fontWeight: '700',
     letterSpacing: -0.2,
   },
   secondaryActionRow: {
@@ -1074,9 +1074,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#F8FAFC',
-    paddingVertical: 12,
-    borderRadius: 14,
-    borderWidth: 1.5,
+    paddingVertical: 11,
+    borderRadius: 12,
+    borderWidth: 1,
     borderColor: '#E2E8F0',
   },
   secondaryPillText: {
@@ -1101,34 +1101,34 @@ const styles = StyleSheet.create({
   manualCancelText: {
     fontSize: 12.5,
     fontWeight: '700',
-    color: '#0F766E',
+    color: '#64748B',
   },
   manualInputField: {
     backgroundColor: '#F8FAFC',
-    borderRadius: 14,
-    borderWidth: 1.5,
+    borderRadius: 12,
+    borderWidth: 1,
     borderColor: '#CBD5E1',
     paddingHorizontal: 14,
-    paddingVertical: 11,
+    paddingVertical: 10,
     fontSize: 13.5,
     fontWeight: '600',
     color: '#0F172A',
   },
   manualConnectBtn: {
     backgroundColor: '#0F766E',
-    borderRadius: 14,
-    paddingVertical: 13,
+    borderRadius: 12,
+    paddingVertical: 12,
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#0F766E',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.2,
-    shadowRadius: 6,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.18,
+    shadowRadius: 5,
+    elevation: 2,
   },
   manualConnectBtnText: {
     color: '#FFFFFF',
     fontSize: 13.5,
-    fontWeight: '800',
+    fontWeight: '700',
   },
 });

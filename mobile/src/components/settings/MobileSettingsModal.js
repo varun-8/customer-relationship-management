@@ -11,240 +11,7 @@ import {
   Alert,
   Platform,
 } from 'react-native';
-
-export function LogoutVectorIcon({ size = 18, color = '#DC2626' }) {
-  return (
-    <View style={{ width: size, height: size, justifyContent: 'center', alignItems: 'center' }}>
-      <View
-        style={{
-          position: 'absolute',
-          left: 1,
-          top: 1,
-          bottom: 1,
-          width: size * 0.45,
-          borderWidth: 1.8,
-          borderColor: color,
-          borderRightWidth: 0,
-          borderRadius: 2.5,
-        }}
-      />
-      <View
-        style={{
-          position: 'absolute',
-          left: size * 0.28,
-          width: size * 0.52,
-          height: 1.8,
-          backgroundColor: color,
-          borderRadius: 1,
-        }}
-      />
-      <View
-        style={{
-          position: 'absolute',
-          right: 1.5,
-          top: size * 0.5 - 4.5,
-          width: 5.5,
-          height: 1.8,
-          backgroundColor: color,
-          borderRadius: 1,
-          transform: [{ rotate: '45deg' }],
-        }}
-      />
-      <View
-        style={{
-          position: 'absolute',
-          right: 1.5,
-          bottom: size * 0.5 - 4.5,
-          width: 5.5,
-          height: 1.8,
-          backgroundColor: color,
-          borderRadius: 1,
-          transform: [{ rotate: '-45deg' }],
-        }}
-      />
-    </View>
-  );
-}
-
-function StorefrontVectorIcon({ size = 18, color = '#0F766E' }) {
-  return (
-    <View style={{ width: size, height: size, justifyContent: 'center', alignItems: 'center' }}>
-      <View
-        style={{
-          position: 'absolute',
-          top: 2,
-          width: size * 0.88,
-          height: size * 0.32,
-          borderWidth: 1.6,
-          borderColor: color,
-          borderRadius: 2,
-        }}
-      />
-      <View
-        style={{
-          position: 'absolute',
-          bottom: 2,
-          width: size * 0.76,
-          height: size * 0.44,
-          borderWidth: 1.6,
-          borderColor: color,
-          borderTopWidth: 0,
-        }}
-      />
-      <View
-        style={{
-          position: 'absolute',
-          bottom: 2,
-          width: size * 0.3,
-          height: size * 0.28,
-          borderWidth: 1.4,
-          borderColor: color,
-          borderBottomWidth: 0,
-        }}
-      />
-    </View>
-  );
-}
-
-function SyncVectorIcon({ size = 18, color = '#2563EB' }) {
-  return (
-    <View style={{ width: size, height: size, justifyContent: 'center', alignItems: 'center' }}>
-      <View
-        style={{
-          width: size * 0.78,
-          height: size * 0.78,
-          borderRadius: (size * 0.78) / 2,
-          borderWidth: 1.8,
-          borderColor: color,
-          borderTopColor: 'transparent',
-        }}
-      />
-    </View>
-  );
-}
-
-function QrVectorIcon({ size = 18, color = '#4F46E5' }) {
-  return (
-    <View style={{ width: size, height: size, justifyContent: 'center', alignItems: 'center' }}>
-      <View
-        style={{
-          position: 'absolute',
-          top: 2,
-          left: 2,
-          width: 5.5,
-          height: 5.5,
-          borderWidth: 1.5,
-          borderColor: color,
-          borderBottomWidth: 0,
-          borderRightWidth: 0,
-        }}
-      />
-      <View
-        style={{
-          position: 'absolute',
-          top: 2,
-          right: 2,
-          width: 5.5,
-          height: 5.5,
-          borderWidth: 1.5,
-          borderColor: color,
-          borderBottomWidth: 0,
-          borderLeftWidth: 0,
-        }}
-      />
-      <View
-        style={{
-          position: 'absolute',
-          bottom: 2,
-          left: 2,
-          width: 5.5,
-          height: 5.5,
-          borderWidth: 1.5,
-          borderColor: color,
-          borderTopWidth: 0,
-          borderRightWidth: 0,
-        }}
-      />
-      <View
-        style={{
-          position: 'absolute',
-          bottom: 2,
-          right: 2,
-          width: 5.5,
-          height: 5.5,
-          borderWidth: 1.5,
-          borderColor: color,
-          borderTopWidth: 0,
-          borderLeftWidth: 0,
-        }}
-      />
-    </View>
-  );
-}
-
-function WifiVectorIcon({ size = 18, color = '#059669' }) {
-  return (
-    <View style={{ width: size, height: size, justifyContent: 'center', alignItems: 'center' }}>
-      <View
-        style={{
-          position: 'absolute',
-          width: size * 0.85,
-          height: size * 0.85,
-          borderRadius: (size * 0.85) / 2,
-          borderWidth: 1.6,
-          borderColor: color,
-          borderBottomColor: 'transparent',
-          borderLeftColor: 'transparent',
-          borderRightColor: 'transparent',
-          top: 1,
-        }}
-      />
-      <View
-        style={{
-          position: 'absolute',
-          width: size * 0.52,
-          height: size * 0.52,
-          borderRadius: (size * 0.52) / 2,
-          borderWidth: 1.6,
-          borderColor: color,
-          borderBottomColor: 'transparent',
-          borderLeftColor: 'transparent',
-          borderRightColor: 'transparent',
-          top: 5,
-        }}
-      />
-      <View
-        style={{
-          position: 'absolute',
-          width: 3.5,
-          height: 3.5,
-          borderRadius: 2,
-          backgroundColor: color,
-          bottom: 3,
-        }}
-      />
-    </View>
-  );
-}
-
-function ShieldVectorIcon({ size = 18, color = '#64748B' }) {
-  return (
-    <View style={{ width: size, height: size, justifyContent: 'center', alignItems: 'center' }}>
-      <View
-        style={{
-          width: size * 0.72,
-          height: size * 0.85,
-          borderWidth: 1.6,
-          borderColor: color,
-          borderTopLeftRadius: 3,
-          borderTopRightRadius: 3,
-          borderBottomLeftRadius: size * 0.36,
-          borderBottomRightRadius: size * 0.36,
-        }}
-      />
-    </View>
-  );
-}
+import { Ionicons } from '@expo/vector-icons';
 
 export function MobileSettingsModal({
   visible,
@@ -349,11 +116,11 @@ export function MobileSettingsModal({
           {/* Minimalist Executive Header */}
           <View style={styles.header}>
             <View style={styles.headerLeft}>
-              <Text style={styles.headerTitle}>Settings</Text>
+              <Text style={styles.headerTitle}>Workspace Settings</Text>
               <View style={[styles.statusBadge, isOnline ? styles.statusBadgeOnline : styles.statusBadgeOffline]}>
                 <View style={[styles.statusDot, isOnline ? styles.statusDotOnline : styles.statusDotOffline]} />
                 <Text style={[styles.statusBadgeText, isOnline ? styles.statusBadgeTextOnline : styles.statusBadgeTextOffline]}>
-                  {isOnline ? 'Workspace Live' : 'Offline'}
+                  {isOnline ? 'Connected' : 'Offline'}
                 </Text>
               </View>
             </View>
@@ -364,7 +131,7 @@ export function MobileSettingsModal({
               activeOpacity={0.7}
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             >
-              <Text style={styles.closeBtnText}>✕</Text>
+              <Ionicons name="close" size={17} color="#475569" />
             </TouchableOpacity>
           </View>
 
@@ -372,13 +139,8 @@ export function MobileSettingsModal({
             {/* Section 1: Executive Profile Banner Card */}
             <View style={styles.profileHeroCard}>
               <View style={styles.profileHeroRow}>
-                <View
-                  style={[
-                    styles.profileAvatar,
-                    { backgroundColor: isOwner ? '#FEF3C7' : '#ECFEF8', borderColor: isOwner ? '#FDE68A' : '#CCFBF1' },
-                  ]}
-                >
-                  <Text style={[styles.profileAvatarText, { color: isOwner ? '#B45309' : '#0F766E' }]}>
+                <View style={styles.profileAvatar}>
+                  <Text style={styles.profileAvatarText}>
                     {currentProfile?.name ? currentProfile.name.charAt(0).toUpperCase() : 'S'}
                   </Text>
                 </View>
@@ -388,14 +150,9 @@ export function MobileSettingsModal({
                     <Text style={styles.profileName} numberOfLines={1}>
                       {currentProfile?.name || 'Showroom Executive'}
                     </Text>
-                    <View
-                      style={[
-                        styles.roleChip,
-                        { backgroundColor: isOwner ? '#FFFBEB' : '#F0FDFA', borderColor: isOwner ? '#FDE68A' : '#99F6E4' },
-                      ]}
-                    >
-                      <Text style={[styles.roleChipText, { color: isOwner ? '#B45309' : '#0F766E' }]}>
-                        {isOwner ? '👑 Owner' : '💼 Sales'}
+                    <View style={styles.roleChip}>
+                      <Text style={styles.roleChipText}>
+                        {isOwner ? 'Owner' : 'Sales Team'}
                       </Text>
                     </View>
                   </View>
@@ -406,7 +163,7 @@ export function MobileSettingsModal({
 
                   <View style={styles.sessionStatusRow}>
                     <View style={styles.sessionDot} />
-                    <Text style={styles.sessionStatusText}>Showroom Active Session</Text>
+                    <Text style={styles.sessionStatusText}>Active Showroom Session</Text>
                   </View>
                 </View>
               </View>
@@ -420,15 +177,15 @@ export function MobileSettingsModal({
             <View style={styles.groupedCard}>
               {/* Showroom Identity */}
               <View style={styles.groupedRow}>
-                <View style={[styles.iconSquircle, { backgroundColor: '#F0FDFA' }]}>
-                  <StorefrontVectorIcon size={17} color="#0F766E" />
+                <View style={styles.iconSquircle}>
+                  <Ionicons name="business-outline" size={18} color="#0F766E" />
                 </View>
                 <View style={styles.rowMain}>
                   <Text style={styles.rowTitle}>
                     {branding?.appName || branding?.brandName || 'Vasantham CRM'}
                   </Text>
                   <Text style={styles.rowSubtitle}>
-                    {branding?.tagline || 'Tiles & Sanitary Showroom'}
+                    {branding?.tagline || 'Showroom & Client Operations'}
                   </Text>
                 </View>
               </View>
@@ -437,11 +194,8 @@ export function MobileSettingsModal({
 
               {/* Connected Workstation */}
               <View style={styles.groupedRow}>
-                <View style={[styles.iconSquircle, { backgroundColor: '#EFF6FF' }]}>
-                  <View style={styles.terminalIcon}>
-                    <View style={styles.terminalScreen} />
-                    <View style={styles.terminalBase} />
-                  </View>
+                <View style={styles.iconSquircle}>
+                  <Ionicons name="desktop-outline" size={18} color="#0F766E" />
                 </View>
                 <View style={styles.rowMain}>
                   <Text style={styles.rowTitle}>Connected Workstation</Text>
@@ -465,11 +219,11 @@ export function MobileSettingsModal({
                 disabled={syncing}
                 activeOpacity={0.7}
               >
-                <View style={[styles.iconSquircle, { backgroundColor: '#EFF6FF' }]}>
+                <View style={styles.iconSquircle}>
                   {syncing ? (
-                    <ActivityIndicator size="small" color="#2563EB" />
+                    <ActivityIndicator size="small" color="#0F766E" />
                   ) : (
-                    <SyncVectorIcon size={17} color="#2563EB" />
+                    <Ionicons name="sync-outline" size={18} color="#0F766E" />
                   )}
                 </View>
                 <View style={styles.rowMain}>
@@ -497,14 +251,14 @@ export function MobileSettingsModal({
                 }}
                 activeOpacity={0.7}
               >
-                <View style={[styles.iconSquircle, { backgroundColor: '#EEF2FF' }]}>
-                  <QrVectorIcon size={17} color="#4F46E5" />
+                <View style={styles.iconSquircle}>
+                  <Ionicons name="qr-code-outline" size={18} color="#0F766E" />
                 </View>
                 <View style={styles.rowMain}>
                   <Text style={styles.rowTitle}>Scan Desktop QR Code</Text>
                   <Text style={styles.rowSubtitle}>Instant 1-second camera pairing</Text>
                 </View>
-                <Text style={styles.chevron}>›</Text>
+                <Ionicons name="chevron-forward" size={16} color="#CBD5E1" />
               </TouchableOpacity>
 
               <View style={styles.groupedDivider} />
@@ -516,11 +270,11 @@ export function MobileSettingsModal({
                 disabled={autoDetecting}
                 activeOpacity={0.7}
               >
-                <View style={[styles.iconSquircle, { backgroundColor: '#ECFDF5' }]}>
+                <View style={styles.iconSquircle}>
                   {autoDetecting ? (
-                    <ActivityIndicator size="small" color="#059669" />
+                    <ActivityIndicator size="small" color="#0F766E" />
                   ) : (
-                    <WifiVectorIcon size={17} color="#059669" />
+                    <Ionicons name="wifi-outline" size={18} color="#0F766E" />
                   )}
                 </View>
                 <View style={styles.rowMain}>
@@ -531,12 +285,12 @@ export function MobileSettingsModal({
                     {autoDetecting ? 'Scanning showroom Wi-Fi network' : 'Locate CRM terminal automatically'}
                   </Text>
                 </View>
-                <Text style={styles.chevron}>›</Text>
+                <Ionicons name="chevron-forward" size={16} color="#CBD5E1" />
               </TouchableOpacity>
 
               <View style={styles.groupedDivider} />
 
-              {/* Option C: Advanced IP (Minimalist Disclosure) */}
+              {/* Option C: Advanced IP */}
               <TouchableOpacity
                 style={styles.groupedRow}
                 onPress={() => {
@@ -545,83 +299,85 @@ export function MobileSettingsModal({
                 }}
                 activeOpacity={0.7}
               >
-                <View style={[styles.iconSquircle, { backgroundColor: '#F1F5F9' }]}>
-                  <Text style={{ fontSize: 13 }}>⚙️</Text>
+                <View style={styles.iconSquircle}>
+                  <Ionicons name="options-outline" size={18} color="#0F766E" />
                 </View>
                 <View style={styles.rowMain}>
                   <Text style={styles.rowTitle}>Workstation Network Settings</Text>
-                  <Text style={styles.rowSubtitle}>Custom terminal address or manual Wi-Fi IP</Text>
+                  <Text style={styles.rowSubtitle}>Custom terminal address or manual IP</Text>
                 </View>
-                <Text style={styles.chevron}>›</Text>
+                <Ionicons name="chevron-forward" size={16} color="#CBD5E1" />
               </TouchableOpacity>
             </View>
 
             {/* Section 4: Security & Compliance */}
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionLabel}>SECURITY & COMPLIANCE</Text>
+              <Text style={styles.sectionLabel}>SECURITY & SYSTEM</Text>
             </View>
 
             <View style={styles.groupedCard}>
               <View style={styles.groupedRow}>
-                <View style={[styles.iconSquircle, { backgroundColor: '#F8FAFC' }]}>
-                  <ShieldVectorIcon size={17} color="#475569" />
+                <View style={styles.iconSquircle}>
+                  <Ionicons name="shield-checkmark-outline" size={18} color="#0F766E" />
                 </View>
                 <View style={styles.rowMain}>
                   <Text style={styles.rowTitle}>Direct Showroom Encryption</Text>
                   <Text style={styles.rowSubtitle}>Local isolated network transmission</Text>
                 </View>
-                <Text style={styles.badgeProtectedText}>Protected</Text>
+                <View style={styles.badgeProtectedPill}>
+                  <Text style={styles.badgeProtectedText}>Protected</Text>
+                </View>
               </View>
 
               <View style={styles.groupedDivider} />
 
               <View style={styles.groupedRow}>
-                <View style={[styles.iconSquircle, { backgroundColor: '#F8FAFC' }]}>
-                  <Text style={{ fontSize: 13 }}>📱</Text>
+                <View style={styles.iconSquircle}>
+                  <Ionicons name="phone-portrait-outline" size={18} color="#0F766E" />
                 </View>
                 <View style={styles.rowMain}>
                   <Text style={styles.rowTitle}>Enterprise Mobile CRM</Text>
-                  <Text style={styles.rowSubtitle}>Build 2.4.0 • Showroom Architecture</Text>
+                  <Text style={styles.rowSubtitle}>Build 2.4.0 • Production Architecture</Text>
                 </View>
               </View>
             </View>
 
             {/* Section 5: Account & Terminal Actions */}
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionLabel}>ACCOUNT ACTIONS</Text>
+              <Text style={styles.sectionLabel}>TERMINAL & SESSION</Text>
             </View>
 
             <View style={styles.groupedCard}>
               <TouchableOpacity
                 style={styles.groupedRow}
-                onPress={handleConfirmLogout}
+                onPress={handleConfirmDisconnect}
                 activeOpacity={0.7}
               >
-                <View style={[styles.iconSquircle, { backgroundColor: '#FEF2F2' }]}>
-                  <LogoutVectorIcon size={17} color="#DC2626" />
+                <View style={styles.iconSquircle}>
+                  <Ionicons name="swap-horizontal-outline" size={18} color="#475569" />
                 </View>
                 <View style={styles.rowMain}>
-                  <Text style={[styles.rowTitle, { color: '#DC2626' }]}>Sign Out of Workspace</Text>
-                  <Text style={styles.rowSubtitle}>Exit active session on this device</Text>
+                  <Text style={styles.rowTitle}>Change Workstation Terminal</Text>
+                  <Text style={styles.rowSubtitle}>Unpair from current showroom PC</Text>
                 </View>
-                <Text style={[styles.chevron, { color: '#F87171' }]}>›</Text>
+                <Ionicons name="chevron-forward" size={16} color="#CBD5E1" />
               </TouchableOpacity>
 
               <View style={styles.groupedDivider} />
 
               <TouchableOpacity
                 style={styles.groupedRow}
-                onPress={handleConfirmDisconnect}
+                onPress={handleConfirmLogout}
                 activeOpacity={0.7}
               >
-                <View style={[styles.iconSquircle, { backgroundColor: '#FEF2F2' }]}>
-                  <Text style={{ fontSize: 13 }}>🔌</Text>
+                <View style={[styles.iconSquircle, styles.iconSquircleDanger]}>
+                  <Ionicons name="log-out-outline" size={18} color="#DC2626" />
                 </View>
                 <View style={styles.rowMain}>
-                  <Text style={[styles.rowTitle, { color: '#64748B' }]}>Change Workstation Terminal</Text>
-                  <Text style={styles.rowSubtitle}>Unpair from current showroom PC</Text>
+                  <Text style={[styles.rowTitle, { color: '#DC2626' }]}>Sign Out of Workspace</Text>
+                  <Text style={styles.rowSubtitle}>Exit active session on this device</Text>
                 </View>
-                <Text style={styles.chevron}>›</Text>
+                <Ionicons name="chevron-forward" size={16} color="#FCA5A5" />
               </TouchableOpacity>
             </View>
 
@@ -631,7 +387,7 @@ export function MobileSettingsModal({
                 {branding?.appName || branding?.brandName || 'Vasantham CRM'} Enterprise
               </Text>
               <Text style={styles.footerSub}>
-                Crafted for premium showroom operations & client relationship management.
+                Crafted for showroom operations & client relationship management.
               </Text>
             </View>
           </ScrollView>
@@ -645,7 +401,7 @@ export function MobileSettingsModal({
         </View>
       </View>
 
-      {/* Clean Modal for Advanced Workstation IP (isolated, out of client sight) */}
+      {/* Clean Modal for Advanced Workstation IP */}
       <Modal
         visible={showAdvancedIpModal}
         transparent
@@ -656,8 +412,11 @@ export function MobileSettingsModal({
           <View style={styles.dialogCard}>
             <View style={styles.dialogHeader}>
               <Text style={styles.dialogTitle}>Workstation Address</Text>
-              <TouchableOpacity onPress={() => setShowAdvancedIpModal(false)}>
-                <Text style={styles.dialogCloseText}>✕</Text>
+              <TouchableOpacity
+                onPress={() => setShowAdvancedIpModal(false)}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <Ionicons name="close" size={18} color="#64748B" />
               </TouchableOpacity>
             </View>
 
@@ -670,7 +429,7 @@ export function MobileSettingsModal({
                 style={styles.dialogInput}
                 value={customHost}
                 onChangeText={setCustomHost}
-                placeholder="http://10.118.85.79:5000/api"
+                placeholder="http://10.118.85.115:5000/api"
                 placeholderTextColor="#94A3B8"
                 autoCapitalize="none"
                 autoCorrect={false}
@@ -728,23 +487,23 @@ export function MobileSettingsModal({
 const styles = StyleSheet.create({
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(15, 23, 42, 0.60)',
+    backgroundColor: 'rgba(15, 23, 42, 0.55)',
     justifyContent: 'flex-end',
   },
   modalCard: {
     backgroundColor: '#F8FAFC',
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
     maxHeight: '92%',
     minHeight: '80%',
     display: 'flex',
     flexDirection: 'column',
     overflow: 'hidden',
     shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: -8 },
-    shadowOpacity: 0.15,
-    shadowRadius: 24,
-    elevation: 20,
+    shadowOffset: { width: 0, height: -6 },
+    shadowOpacity: 0.12,
+    shadowRadius: 20,
+    elevation: 16,
   },
   sheetHandleWrapper: {
     alignItems: 'center',
@@ -762,7 +521,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 20,
+    paddingHorizontal: 18,
     paddingTop: 4,
     paddingBottom: 14,
     borderBottomWidth: 1,
@@ -775,10 +534,10 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   headerTitle: {
-    fontSize: 20,
-    fontWeight: '900',
+    fontSize: 18,
+    fontWeight: '800',
     color: '#0F172A',
-    letterSpacing: -0.4,
+    letterSpacing: -0.3,
   },
   statusBadge: {
     flexDirection: 'row',
@@ -810,7 +569,7 @@ const styles = StyleSheet.create({
   },
   statusBadgeText: {
     fontSize: 10,
-    fontWeight: '800',
+    fontWeight: '700',
     letterSpacing: 0.2,
   },
   statusBadgeTextOnline: {
@@ -827,11 +586,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  closeBtnText: {
-    fontSize: 12,
-    color: '#475569',
-    fontWeight: '800',
-  },
   bodyScrollView: {
     flex: 1,
     paddingHorizontal: 16,
@@ -839,7 +593,7 @@ const styles = StyleSheet.create({
   },
   profileHeroCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 20,
+    borderRadius: 18,
     padding: 16,
     borderWidth: 1,
     borderColor: '#E2E8F0',
@@ -847,7 +601,7 @@ const styles = StyleSheet.create({
     shadowColor: '#0F172A',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.04,
-    shadowRadius: 8,
+    shadowRadius: 6,
     elevation: 2,
   },
   profileHeroRow: {
@@ -856,16 +610,17 @@ const styles = StyleSheet.create({
     gap: 14,
   },
   profileAvatar: {
-    width: 50,
-    height: 50,
+    width: 48,
+    height: 48,
     borderRadius: 16,
-    borderWidth: 1.5,
+    backgroundColor: '#0F766E',
     alignItems: 'center',
     justifyContent: 'center',
   },
   profileAvatarText: {
-    fontSize: 22,
-    fontWeight: '900',
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#FFFFFF',
   },
   profileInfoCol: {
     flex: 1,
@@ -877,21 +632,24 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   profileName: {
-    fontSize: 16,
-    fontWeight: '900',
+    fontSize: 15.5,
+    fontWeight: '800',
     color: '#0F172A',
     letterSpacing: -0.2,
     flex: 1,
   },
   roleChip: {
-    paddingHorizontal: 7,
-    paddingVertical: 2,
+    paddingHorizontal: 8,
+    paddingVertical: 2.5,
     borderRadius: 6,
+    backgroundColor: '#F1F5F9',
     borderWidth: 1,
+    borderColor: '#E2E8F0',
   },
   roleChipText: {
-    fontSize: 10,
-    fontWeight: '800',
+    fontSize: 10.5,
+    fontWeight: '700',
+    color: '#475569',
   },
   profileEmail: {
     fontSize: 12,
@@ -908,30 +666,30 @@ const styles = StyleSheet.create({
     width: 5,
     height: 5,
     borderRadius: 2.5,
-    backgroundColor: '#10B981',
+    backgroundColor: '#059669',
   },
   sessionStatusText: {
-    fontSize: 10.5,
-    fontWeight: '700',
+    fontSize: 11,
+    fontWeight: '600',
     color: '#059669',
   },
   sectionHeader: {
-    marginTop: 4,
-    marginBottom: 8,
+    marginTop: 2,
+    marginBottom: 7,
     paddingHorizontal: 4,
   },
   sectionLabel: {
-    fontSize: 10,
-    fontWeight: '900',
+    fontSize: 10.5,
+    fontWeight: '800',
     color: '#64748B',
-    letterSpacing: 0.8,
+    letterSpacing: 0.6,
   },
   groupedCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 18,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: '#E2E8F0',
-    marginBottom: 16,
+    marginBottom: 14,
     overflow: 'hidden',
     shadowColor: '#0F172A',
     shadowOffset: { width: 0, height: 1 },
@@ -943,43 +701,42 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 14,
-    paddingVertical: 13,
+    paddingVertical: 12,
     gap: 12,
   },
   groupedDivider: {
     height: 1,
     backgroundColor: '#F1F5F9',
-    marginLeft: 56,
+    marginLeft: 54,
   },
   iconSquircle: {
-    width: 36,
-    height: 36,
+    width: 34,
+    height: 34,
     borderRadius: 10,
+    backgroundColor: '#F0FDFA',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  iconSquircleDanger: {
+    backgroundColor: '#FEF2F2',
   },
   rowMain: {
     flex: 1,
   },
   rowTitle: {
     fontSize: 13.5,
-    fontWeight: '800',
+    fontWeight: '700',
     color: '#0F172A',
   },
   rowSubtitle: {
     fontSize: 11,
     color: '#64748B',
-    marginTop: 1.5,
-  },
-  chevron: {
-    fontSize: 18,
-    color: '#CBD5E1',
-    fontWeight: '600',
+    marginTop: 1,
   },
   actionChevron: {
     fontSize: 12,
-    fontWeight: '800',
-    color: '#2563EB',
+    fontWeight: '700',
+    color: '#0F766E',
   },
   linkPill: {
     paddingHorizontal: 7,
@@ -1006,29 +763,18 @@ const styles = StyleSheet.create({
   linkPillTextOffline: {
     color: '#DC2626',
   },
-  terminalIcon: {
-    width: 17,
-    height: 14,
-    alignItems: 'center',
-  },
-  terminalScreen: {
-    width: 17,
-    height: 11,
-    borderRadius: 2,
-    borderWidth: 1.5,
-    borderColor: '#2563EB',
-  },
-  terminalBase: {
-    width: 9,
-    height: 2,
-    backgroundColor: '#2563EB',
-    borderRadius: 1,
-    marginTop: 1,
+  badgeProtectedPill: {
+    backgroundColor: '#F0FDFA',
+    paddingHorizontal: 8,
+    paddingVertical: 2.5,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#CCFBF1',
   },
   badgeProtectedText: {
-    fontSize: 11,
-    fontWeight: '800',
-    color: '#059669',
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#0F766E',
   },
   footerNoteWrapper: {
     alignItems: 'center',
@@ -1036,62 +782,64 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   footerBrand: {
-    fontSize: 12,
-    fontWeight: '800',
+    fontSize: 11.5,
+    fontWeight: '700',
     color: '#475569',
   },
   footerSub: {
     fontSize: 10.5,
     color: '#94A3B8',
     textAlign: 'center',
-    marginTop: 3,
+    marginTop: 2,
     paddingHorizontal: 20,
-    lineHeight: 15,
+    lineHeight: 14,
   },
   bottomActionBar: {
-    paddingHorizontal: 18,
+    paddingHorizontal: 16,
     paddingVertical: 12,
     backgroundColor: '#FFFFFF',
     borderTopWidth: 1,
     borderTopColor: '#E2E8F0',
   },
   doneBtn: {
-    paddingVertical: 13,
-    borderRadius: 14,
-    backgroundColor: '#0F172A',
+    paddingVertical: 12,
+    borderRadius: 12,
+    backgroundColor: '#0F766E',
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.15,
-    shadowRadius: 6,
-    elevation: 3,
+    shadowColor: '#0F766E',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 5,
+    elevation: 2,
   },
   doneBtnText: {
-    fontSize: 14,
-    fontWeight: '900',
+    fontSize: 13.5,
+    fontWeight: '700',
     color: '#FFFFFF',
     letterSpacing: -0.1,
   },
   // Dialog / Advanced IP Modal Styles
   dialogOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(15, 23, 42, 0.65)',
+    backgroundColor: 'rgba(15, 23, 42, 0.60)',
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
   },
   dialogCard: {
     width: '100%',
-    maxWidth: 380,
+    maxWidth: 360,
     backgroundColor: '#FFFFFF',
-    borderRadius: 20,
+    borderRadius: 18,
     padding: 20,
     shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.2,
-    shadowRadius: 18,
-    elevation: 12,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.16,
+    shadowRadius: 16,
+    elevation: 10,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
   },
   dialogHeader: {
     flexDirection: 'row',
@@ -1100,15 +848,9 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   dialogTitle: {
-    fontSize: 17,
-    fontWeight: '900',
-    color: '#0F172A',
-  },
-  dialogCloseText: {
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: '800',
-    color: '#64748B',
-    padding: 4,
+    color: '#0F172A',
   },
   dialogDesc: {
     fontSize: 12,
@@ -1149,7 +891,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   dialogStatusTextSuccess: {
-    color: '#047857',
+    color: '#059669',
   },
   dialogStatusTextError: {
     color: '#DC2626',
@@ -1169,7 +911,7 @@ const styles = StyleSheet.create({
   },
   dialogCancelBtnText: {
     fontSize: 13,
-    fontWeight: '800',
+    fontWeight: '700',
     color: '#475569',
   },
   dialogSaveBtn: {
@@ -1182,7 +924,7 @@ const styles = StyleSheet.create({
   },
   dialogSaveBtnText: {
     fontSize: 13,
-    fontWeight: '900',
+    fontWeight: '700',
     color: '#FFFFFF',
   },
 });

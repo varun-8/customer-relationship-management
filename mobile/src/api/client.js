@@ -447,7 +447,7 @@ export const apiClient = {
         const healthUrl = `${baseApi}/health`;
 
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 2500);
+        const timeoutId = setTimeout(() => controller.abort(), 5000);
 
         try {
           const res = await fetch(healthUrl, { signal: controller.signal });
@@ -539,7 +539,7 @@ export const apiClient = {
     for (const host of uniqueCandidates) {
       try {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 3000);
+        const timeoutId = setTimeout(() => controller.abort(), 6000);
 
         const res = await fetch(`${host}/health`, { signal: controller.signal });
         clearTimeout(timeoutId);

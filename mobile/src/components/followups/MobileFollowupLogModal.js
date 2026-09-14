@@ -52,6 +52,8 @@ const QUICK_SNIPPETS = [
   'Shared quote PDF on WhatsApp',
   'Callback requested in evening',
   'Comparing with competitor rates',
+];
+
 // Parse historical discussion notes and conversation remarks
 const parseNotesHistory = (followUp) => {
   if (!followUp) return [];
@@ -154,6 +156,13 @@ export function MobileFollowupLogModal({
     const q = safeFollowUp.quotationValue !== undefined ? safeFollowUp.quotationValue : data.quotationValue;
     return q !== undefined && q !== null ? String(q) : '';
   });
+  const [orderValueAmount, setOrderValueAmount] = useState(() => {
+    const ov = safeFollowUp.orderValue !== undefined ? safeFollowUp.orderValue : data.orderValue;
+    const qv = safeFollowUp.quotationValue !== undefined ? safeFollowUp.quotationValue : data.quotationValue;
+    const val = ov !== undefined && ov !== null ? ov : qv;
+    return val !== undefined && val !== null ? String(val) : '';
+  });
+
 
   // Notes history stream state
   const [notesHistory, setNotesHistory] = useState([]);
@@ -333,8 +342,11 @@ export function MobileFollowupLogModal({
         houseStage,
         requirement: requirements,
         quotationValue: quotationValue ? Number(quotationValue) : undefined,
-        statusUpdate: outcome === 'Order Confirmed / Ready for Billing' ? 'Order Confirmed' : undefined,
+        orderValue: orderValueAmount ? Number(orderValueAmount) : (quotationValue ? Number(quotationValue) : undefined),
+        statusUpdate: outcome === 'Order Confirmed / Ready for Billing' ? 'Order Confirmed' : (outcome === 'Deal Lost / Postponed' ? 'Lost' : undefined),
       });
+
+
 
       if (res && res.success) {
         Alert.alert('Activity Logged', `Follow-up updated for ${customerName || 'Customer'}!`);
@@ -747,7 +759,36 @@ export function MobileFollowupLogModal({
                       placeholderTextColor="#94A3B8"
                     />
                   </View>
+
+                  {/* Confirmed Order Value (Shown when Order Confirmed option is selected) */}
+                  {outcome === 'Order Confirmed / Ready for Billing' && (
+                    <View style={{ marginTop: 14, backgroundColor: '#F0FDF4', borderWidth: 1.5, borderColor: '#86EFAC', borderRadius: 14, padding: 14 }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+                        <Ionicons name="ribbon" size={16} color="#059669" />
+                        <Text style={{ fontSize: 11, fontWeight: '900', color: '#166534', letterSpacing: 0.5 }}>
+                          CONFIRMED ORDER VALUE (₹) *
+                        </Text>
+                      </View>
+                      <View style={styles.quoteValueInputWrapper}>
+                        <View style={[styles.currencyPrefixBadgeEmerald, { backgroundColor: '#10B981' }]}>
+                          <Text style={[styles.currencyPrefixTextEmerald, { color: '#FFFFFF' }]}>₹</Text>
+                        </View>
+                        <TextInput
+                          style={[styles.quoteTextInput, { flex: 1, backgroundColor: '#FFFFFF', borderColor: '#86EFAC', fontWeight: '900', color: '#065F46' }]}
+                          value={orderValueAmount}
+                          onChangeText={setOrderValueAmount}
+                          keyboardType="numeric"
+                          placeholder="e.g. 150000"
+                          placeholderTextColor="#94A3B8"
+                        />
+                      </View>
+                      <Text style={{ fontSize: 11.5, color: '#15803D', fontWeight: '700', marginTop: 6 }}>
+                        ✓ Setting this value marks the deal as Order Confirmed and records total billing revenue.
+                      </Text>
+                    </View>
+                  )}
                 </View>
+
 
                 {/* CARD 3: SCHEDULE REMINDER DATE */}
                 <View style={styles.sectionCard}>
@@ -1107,37 +1148,41 @@ export function MobileFollowupLogModal({
               </TouchableOpacity>
 
               <TouchableOpacity
-                style={styles.saveBtn}
+                style={[
+                  styles.saveBtn,
+                  {
+                    backgroundColor: outcome === 'Deal Lost / Postponed' ? '#FEF2F2' : '#EFF6FF',
+                    borderWidth: 1.5,
+                    borderColor: outcome === 'Deal Lost / Postponed' ? '#FECDD3' : '#BFDBFE',
+                  },
+                ]}
                 onPress={handleSubmit}
                 disabled={submitting}
                 activeOpacity={0.85}
               >
-                <LinearGradient
-                  colors={
-                    outcome === 'Deal Lost / Postponed'
-                      ? ['#DC2626', '#B91C1C']
-                      : ['#0F766E', '#0D9488']
-                  }
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
-                  style={styles.saveBtnGradient}
-                >
+                <View style={styles.saveBtnGradient}>
                   {submitting ? (
-                    <ActivityIndicator size="small" color="#FFFFFF" />
+                    <ActivityIndicator size="small" color={outcome === 'Deal Lost / Postponed' ? '#DC2626' : '#1D4ED8'} />
                   ) : (
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7 }}>
                       <Ionicons
                         name={outcome === 'Deal Lost / Postponed' ? 'close-outline' : 'checkmark-outline'}
                         size={18}
-                        color="#FFFFFF"
+                        color={outcome === 'Deal Lost / Postponed' ? '#DC2626' : '#1D4ED8'}
                       />
-                      <Text style={styles.saveBtnText}>
+                      <Text
+                        style={[
+                          styles.saveBtnText,
+                          { color: outcome === 'Deal Lost / Postponed' ? '#DC2626' : '#1D4ED8' },
+                        ]}
+                      >
                         {outcome === 'Deal Lost / Postponed' ? 'Record Lost Deal' : 'Save Follow-up Activity'}
                       </Text>
                     </View>
                   )}
-                </LinearGradient>
+                </View>
               </TouchableOpacity>
+
             </View>
           ) : (
             <View style={styles.footerRow}>
@@ -1145,22 +1190,21 @@ export function MobileFollowupLogModal({
                 <Text style={styles.cancelBtnText}>Close</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[styles.saveBtn, { flex: 1.5 }]}
+                style={[
+                  styles.saveBtn,
+                  { flex: 1.5, backgroundColor: '#EFF6FF', borderWidth: 1.5, borderColor: '#BFDBFE' },
+                ]}
                 onPress={() => setActiveTab('log')}
                 activeOpacity={0.85}
               >
-                <LinearGradient
-                  colors={['#0F766E', '#0D9488']}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
-                  style={styles.saveBtnGradient}
-                >
+                <View style={styles.saveBtnGradient}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7 }}>
-                    <Ionicons name="clipboard-outline" size={16} color="#FFFFFF" />
-                    <Text style={styles.saveBtnText}>Log Activity Now</Text>
+                    <Ionicons name="clipboard-outline" size={16} color="#1D4ED8" />
+                    <Text style={[styles.saveBtnText, { color: '#1D4ED8' }]}>Log Activity Now</Text>
                   </View>
-                </LinearGradient>
+                </View>
               </TouchableOpacity>
+
             </View>
           )}
         </Animated.View>
