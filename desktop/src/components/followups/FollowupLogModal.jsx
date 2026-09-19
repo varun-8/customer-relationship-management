@@ -154,10 +154,13 @@ export const FollowupLogModal = ({ followUp: initialFollowUp, onClose, onSaved, 
   const [nextFollowUp, setNextFollowUp] = useState(
     initialFollowUp?.nextFollowUp || tomorrow.toISOString().split('T')[0]
   );
-  const [discussionNotes, setDiscussionNotes] = useState('');
   const [quotationValue, setQuotationValue] = useState(
     initialFollowUp?.quotationValue !== undefined ? String(initialFollowUp.quotationValue) : ''
   );
+  const [orderValueAmount, setOrderValueAmount] = useState(
+    initialFollowUp?.orderValue !== undefined ? String(initialFollowUp.orderValue) : (initialFollowUp?.quotationValue !== undefined ? String(initialFollowUp.quotationValue) : '')
+  );
+  const [discussionNotes, setDiscussionNotes] = useState('');
 
   // Discussion & Customer Notes history state
   const [notesHistory, setNotesHistory] = useState(() => parseNotesHistory(initialFollowUp));
@@ -329,10 +332,12 @@ export const FollowupLogModal = ({ followUp: initialFollowUp, onClose, onSaved, 
         nextFollowUp,
         leadTemperature,
         houseStage,
-        requirement: requirements,
         quotationValue: quotationValue ? Number(quotationValue) : undefined,
-        statusUpdate: outcome === 'Order Confirmed / Ready for Billing' ? 'Order Confirmed' : undefined,
+        orderValue: orderValueAmount ? Number(orderValueAmount) : (quotationValue ? Number(quotationValue) : undefined),
+        statusUpdate: outcome === 'Order Confirmed / Ready for Billing' ? 'Order Confirmed' : (outcome === 'Deal Lost / Postponed' ? 'Lost' : undefined),
       });
+
+
 
       if (res.success) {
         toast.success(
@@ -508,7 +513,7 @@ export const FollowupLogModal = ({ followUp: initialFollowUp, onClose, onSaved, 
             }}
           >
             <FileText size={14} color={activeSection === 'log' ? '#0F766E' : '#64748B'} />
-            <span>📝 Log Activity</span>
+            <span>Log Activity</span>
             {activeSection === 'log' && (
               <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#0F766E' }} />
             )}
@@ -533,7 +538,7 @@ export const FollowupLogModal = ({ followUp: initialFollowUp, onClose, onSaved, 
             }}
           >
             <User size={14} color={activeSection === 'info' ? '#0F766E' : '#64748B'} />
-            <span>👤 Customer Information</span>
+            <span>Customer Information</span>
           </button>
         </div>
 
@@ -753,6 +758,44 @@ export const FollowupLogModal = ({ followUp: initialFollowUp, onClose, onSaved, 
                       </div>
                     </div>
                   </div>
+
+                  {/* Confirmed Order Value Input Field (Visible when Order Confirmed option is selected) */}
+                  {outcome === 'Order Confirmed / Ready for Billing' && (
+                    <div style={{ marginTop: '14px', backgroundColor: '#F0FDF4', border: '1.5px solid #86EFAC', borderRadius: '12px', padding: '14px', marginBottom: '14px' }}>
+                      <div style={{ fontSize: '11px', fontWeight: '900', color: '#166534', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <Award size={16} color="#059669" />
+                        <span>CONFIRMED ORDER VALUE (₹) *</span>
+                      </div>
+                      <div style={{ position: 'relative' }}>
+                        <span style={{ position: 'absolute', left: '12px', top: '9px', fontSize: '15px', fontWeight: '900', color: '#059669' }}>₹</span>
+                        <input
+                          type="number"
+                          placeholder="e.g. 150000"
+                          value={orderValueAmount}
+                          onChange={(e) => setOrderValueAmount(e.target.value)}
+                          style={{
+                            width: '100%',
+                            paddingLeft: '30px',
+                            paddingRight: '12px',
+                            paddingTop: '9px',
+                            paddingBottom: '9px',
+                            borderRadius: '10px',
+                            border: '1.5px solid #86EFAC',
+                            fontSize: '14px',
+                            fontWeight: '900',
+                            color: '#065F46',
+                            backgroundColor: '#FFFFFF',
+                            outline: 'none',
+                          }}
+                          min="0"
+                        />
+                      </div>
+                      <div style={{ fontSize: '11.5px', color: '#15803D', fontWeight: '700', marginTop: '6px' }}>
+                        ✓ Setting this order value automatically moves the lead to Order Confirmed and records deal revenue.
+                      </div>
+                    </div>
+                  )}
+
 
                   {/* Requirements Multi-Select Pills */}
                   <div>
@@ -1230,8 +1273,8 @@ export const FollowupLogModal = ({ followUp: initialFollowUp, onClose, onSaved, 
                   {saving
                     ? 'Saving...'
                     : outcome === 'Deal Lost / Postponed'
-                    ? 'Record Lost Deal'
-                    : 'Save & Record Activity'}
+                      ? 'Record Lost Deal'
+                      : 'Save & Record Activity'}
                 </span>
               </button>
             ) : (

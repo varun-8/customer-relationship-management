@@ -19,12 +19,16 @@ import {
   Layers,
   Compass,
   Tag,
+  SlidersHorizontal,
+  X,
 } from 'lucide-react';
 import { api } from '../../services/api';
 import { useBranding } from '../../context/BrandingContext';
 import { useToast } from '../../context/ToastContext';
 import { useToneDown } from '../../context/ToneDownContext';
 import { generatePdfReport, exportToCSV } from '../../utils/reportPdfGenerator';
+import { AiLostSalesReportModal } from '../lost-sales/AiLostSalesReportModal';
+
 
 // Comprehensive Helper Functions to Extract Customer Fields across all MongoDB Schema & Mongoose Map variants
 const extractDataObj = (item) => {
@@ -70,8 +74,13 @@ const extractSalesperson = (item) => {
 const extractCustomerType = (item) => {
   if (!item) return '-';
   const d = extractDataObj(item);
-  const val = d.customerType || item.customerType;
-  return val && val !== 'null' && val !== 'undefined' ? String(val) : '-';
+  const val =
+    d.customerType ||
+    item.customerType ||
+    (item.customerRef && typeof item.customerRef === 'object'
+      ? item.customerRef.customerType || item.customerRef.data?.customerType
+      : null);
+  return val && val !== 'null' && val !== 'undefined' ? String(val) : 'Direct Client';
 };
 
 const extractLeadSource = (item) => {
@@ -104,9 +113,22 @@ const extractCity = (item) => {
 const extractRequirement = (item) => {
   if (!item) return '-';
   const d = extractDataObj(item);
-  const val = d.requirement || d.requirementType || d.requirements || d.productRequirement || item.requirement;
-  if (Array.isArray(val)) return val.join(', ');
-  return val && val !== 'null' && val !== 'undefined' ? String(val) : '-';
+  const val =
+    d.requirement ||
+    d.requirementType ||
+    d.requirements ||
+    d.productRequirement ||
+    item.requirement ||
+    item.requirements ||
+    item.products ||
+    (item.customerRef && typeof item.customerRef === 'object'
+      ? item.customerRef.requirement || item.customerRef.requirements || item.customerRef.data?.requirement
+      : null);
+  if (Array.isArray(val)) {
+    const filtered = val.filter(Boolean);
+    return filtered.length > 0 ? filtered.join(', ') : 'Tile';
+  }
+  return val && val !== 'null' && val !== 'undefined' ? String(val) : 'Tile';
 };
 
 const extractStatus = (item) => {
@@ -176,6 +198,8 @@ export const ReportsView = () => {
   const [activeReportId, setActiveReportId] = useState('executive');
   const [loading, setLoading] = useState(false);
   const [staffList, setStaffList] = useState([]);
+  const [showAiModal, setShowAiModal] = useState(false);
+
 
   // Filters State
   const [datePreset, setDatePreset] = useState('this_month');
@@ -511,30 +535,30 @@ export const ReportsView = () => {
       // Only include amount column if this customer report is exclusively for Order Confirmed status
       const columns = isOnlyConfirmed
         ? [
-            ...baseColumns,
-            { header: 'Confirmed Value', dataKey: 'quoteFormatted', width: 26, align: 'right' },
-          ]
+          ...baseColumns,
+          { header: 'Confirmed Value', dataKey: 'quoteFormatted', width: 26, align: 'right' },
+        ]
         : baseColumns;
 
       const summaryCards = isOnlyConfirmed
         ? [
-            { label: 'Confirmed Orders', value: wonRecords.length, color: '#10B981' },
-            {
-              label: 'Confirmed Revenue',
-              value: formatINR(
-                wonRecords.reduce((acc, curr) => acc + extractQuoteValue(curr), 0)
-              ),
-              color: '#2563EB',
-            },
-            { label: 'Customer Type', value: selectedCustomerType === 'all' ? 'All Types' : selectedCustomerType, color: '#7C3AED' },
-            { label: 'Sales Staff', value: selectedStaff === 'all' ? 'All Team' : selectedStaff, color: '#D97706' },
-          ]
+          { label: 'Confirmed Orders', value: wonRecords.length, color: '#10B981' },
+          {
+            label: 'Confirmed Revenue',
+            value: formatINR(
+              wonRecords.reduce((acc, curr) => acc + extractQuoteValue(curr), 0)
+            ),
+            color: '#2563EB',
+          },
+          { label: 'Customer Type', value: selectedCustomerType === 'all' ? 'All Types' : selectedCustomerType, color: '#7C3AED' },
+          { label: 'Sales Staff', value: selectedStaff === 'all' ? 'All Team' : selectedStaff, color: '#D97706' },
+        ]
         : [
-            { label: 'Total Customer Leads', value: filteredRecords.length, color: '#059669' },
-            { label: 'New & Active Leads', value: activeLeadsCount, color: '#2563EB' },
-            { label: 'Confirmed Orders', value: wonRecords.length, color: '#10B981' },
-            { label: 'Lost Opportunities', value: lostCount, color: '#E11D48' },
-          ];
+          { label: 'Total Customer Leads', value: filteredRecords.length, color: '#059669' },
+          { label: 'New & Active Leads', value: activeLeadsCount, color: '#2563EB' },
+          { label: 'Confirmed Orders', value: wonRecords.length, color: '#10B981' },
+          { label: 'Lost Opportunities', value: lostCount, color: '#E11D48' },
+        ];
 
       return {
         summaryCards: summaryCards,
@@ -728,6 +752,101 @@ export const ReportsView = () => {
 
   return (
     <div className="reports-container">
+      {/* 0. Top Common Page Header with Global AI Report Button */}
+      <div
+        className="reports-top-header"
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          marginBottom: '20px',
+          flexWrap: 'wrap',
+          gap: '14px',
+        }}
+      >
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <h1 style={{ fontSize: '22px', fontWeight: '800', color: '#0F172A', margin: 0, letterSpacing: '-0.02em' }}>
+              Reports & Analytics
+            </h1>
+            <span
+              style={{
+                fontSize: '11.5px',
+                fontWeight: '700',
+                padding: '3px 10px',
+                borderRadius: '12px',
+                backgroundColor: '#F1F5F9',
+                color: '#475569',
+              }}
+            >
+              Showroom Intelligence
+            </span>
+          </div>
+          <p style={{ fontSize: '13px', color: '#64748B', margin: '4px 0 0' }}>
+            Export operational showroom data or generate executive AI strategic insights.
+          </p>
+        </div>
+
+        {/* Global Common AI Report Button */}
+        <button
+          type="button"
+          onClick={() => setShowAiModal(true)}
+          style={{
+            padding: '10px 18px',
+            borderRadius: '12px',
+            border: '1px solid rgba(196, 181, 253, 0.5)',
+            background: 'linear-gradient(135deg, #7C3AED 0%, #6366F1 50%, #4F46E5 100%)',
+            color: '#FFFFFF',
+            fontSize: '13px',
+            fontWeight: '800',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '9px',
+            boxShadow: '0 4px 14px rgba(124, 58, 237, 0.3)',
+            transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.transform = 'translateY(-1px)';
+            e.currentTarget.style.boxShadow = '0 6px 18px rgba(124, 58, 237, 0.42)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.transform = 'translateY(0)';
+            e.currentTarget.style.boxShadow = '0 4px 14px rgba(124, 58, 237, 0.3)';
+          }}
+          title="Open AI Showroom Business Report"
+        >
+          <div
+            style={{
+              width: '24px',
+              height: '24px',
+              borderRadius: '7px',
+              backgroundColor: 'rgba(255, 255, 255, 0.2)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <Sparkles size={14} color="#FFFFFF" />
+          </div>
+          <span>AI Report</span>
+          <span
+            style={{
+              fontSize: '10px',
+              fontWeight: '800',
+              textTransform: 'uppercase',
+              letterSpacing: '0.04em',
+              backgroundColor: 'rgba(255, 255, 255, 0.2)',
+              color: '#FFFFFF',
+              padding: '2px 7px',
+              borderRadius: '6px',
+            }}
+          >
+            Monthly & Annual
+          </span>
+        </button>
+      </div>
+
       {/* 1. Header Navigation Bar */}
       <div className="reports-nav-header">
         <div className="reports-nav-grid">
@@ -765,11 +884,48 @@ export const ReportsView = () => {
 
       {/* 2. Interactive Filter Bar */}
       <div className="reports-filter-bar">
-        <div className="filter-group-left">
+        <div className="filter-bar-header">
+          <div className="filter-bar-title-group">
+            <div className="filter-bar-icon-badge">
+              <SlidersHorizontal size={14} color="#2563EB" />
+            </div>
+            <div>
+              <div className="filter-bar-title">Report Filters & Criteria</div>
+              <div className="filter-bar-subtitle">
+                Targeting <strong>{currentReportObj.label}</strong> ({reportConfig.rows.length} {reportConfig.rows.length === 1 ? 'record' : 'records'})
+              </div>
+            </div>
+          </div>
+
+          <div className="filter-bar-actions">
+            <button
+              type="button"
+              onClick={() => {
+                setDatePreset('this_month');
+                setStartDate('');
+                setEndDate('');
+                setSelectedStaff('all');
+                setSelectedStatus('all');
+                setSelectedCustomerType('all');
+                setSelectedLeadSource('all');
+                setSelectedRequirement('all');
+                setSearchQuery('');
+                fetchReportData();
+              }}
+              className="filter-reset-btn"
+              title="Reset Filters to Default"
+            >
+              <RefreshCw size={13} className={loading ? 'spin-anim' : ''} />
+              <span>Reset Filters</span>
+            </button>
+          </div>
+        </div>
+
+        <div className="filter-controls-body">
           {/* Date Preset Filter */}
           <div className="filter-item">
             <label className="filter-label">
-              <Calendar size={13} />
+              <Calendar size={13} color="#2563EB" />
               <span>Date Range</span>
             </label>
             <select
@@ -785,29 +941,40 @@ export const ReportsView = () => {
             </select>
           </div>
 
-          {/* Custom Date Inputs */}
+          {/* Custom Date Inputs: Separated into two clean, symmetrically arranged grid fields */}
           {datePreset === 'custom' && (
-            <div className="filter-item-custom-dates">
-              <input
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                className="filter-input-date"
-              />
-              <span style={{ color: '#94A3B8', fontSize: '12px' }}>to</span>
-              <input
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                className="filter-input-date"
-              />
-            </div>
+            <>
+              <div className="filter-item">
+                <label className="filter-label">
+                  <Calendar size={13} color="#2563EB" />
+                  <span>Start Date</span>
+                </label>
+                <input
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  className="filter-input-date"
+                />
+              </div>
+              <div className="filter-item">
+                <label className="filter-label">
+                  <Calendar size={13} color="#2563EB" />
+                  <span>End Date</span>
+                </label>
+                <input
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  className="filter-input-date"
+                />
+              </div>
+            </>
           )}
 
           {/* Staff Filter */}
           <div className="filter-item">
             <label className="filter-label">
-              <UserCheck size={13} />
+              <UserCheck size={13} color="#059669" />
               <span>Salesperson</span>
             </label>
             <select
@@ -815,7 +982,7 @@ export const ReportsView = () => {
               onChange={(e) => setSelectedStaff(e.target.value)}
               className="filter-select"
             >
-              <option value="all">All Sales Executive</option>
+              <option value="all">All Sales Executives</option>
               {staffList.map((s) => (
                 <option key={s._id} value={s.name}>
                   {s.name} ({s.role === 'owner' ? 'Owner' : 'Sales'})
@@ -828,7 +995,7 @@ export const ReportsView = () => {
           {(activeReportId === 'executive' || activeReportId === 'customers') && (
             <div className="filter-item">
               <label className="filter-label">
-                <Users size={13} />
+                <Users size={13} color="#7C3AED" />
                 <span>Customer Type</span>
               </label>
               <select
@@ -851,7 +1018,7 @@ export const ReportsView = () => {
           {(activeReportId === 'customers' || activeReportId === 'executive' || activeReportId === 'followups' || activeReportId === 'lost') && (
             <div className="filter-item">
               <label className="filter-label">
-                <Filter size={13} />
+                <Filter size={13} color="#E11D48" />
                 <span>{activeReportId === 'followups' ? 'Priority' : activeReportId === 'lost' ? 'Lost Reason' : 'Pipeline Status'}</span>
               </label>
               <select
@@ -895,7 +1062,7 @@ export const ReportsView = () => {
           {(activeReportId === 'executive' || activeReportId === 'customers') && (
             <div className="filter-item">
               <label className="filter-label">
-                <Layers size={13} />
+                <Layers size={13} color="#6366F1" />
                 <span>Requirement</span>
               </label>
               <select
@@ -916,7 +1083,7 @@ export const ReportsView = () => {
           {(activeReportId === 'executive' || activeReportId === 'customers') && (
             <div className="filter-item">
               <label className="filter-label">
-                <Compass size={13} />
+                <Compass size={13} color="#D97706" />
                 <span>Lead Source</span>
               </label>
               <select
@@ -938,41 +1105,44 @@ export const ReportsView = () => {
 
           {/* Search Query */}
           <div className="filter-item filter-search-item">
+            <label className="filter-label">
+              <Search size={13} color="#475569" />
+              <span>Search Records</span>
+            </label>
             <div className="filter-search-box">
               <Search size={14} className="search-icon" />
               <input
                 type="text"
-                placeholder="Search report records..."
+                placeholder="Search by name, phone, notes..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="filter-search-input"
               />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery('')}
+                  style={{
+                    position: 'absolute',
+                    right: '10px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    background: 'none',
+                    border: 'none',
+                    color: '#94A3B8',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: '2px',
+                  }}
+                  title="Clear search"
+                >
+                  <X size={13} />
+                </button>
+              )}
             </div>
           </div>
-        </div>
-
-        {/* Reset & Refresh */}
-        <div className="filter-group-right">
-          <button
-            type="button"
-            onClick={() => {
-              setDatePreset('this_month');
-              setStartDate('');
-              setEndDate('');
-              setSelectedStaff('all');
-              setSelectedStatus('all');
-              setSelectedCustomerType('all');
-              setSelectedLeadSource('all');
-              setSelectedRequirement('all');
-              setSearchQuery('');
-              fetchReportData();
-            }}
-            className="filter-reset-btn"
-            title="Reset Filters"
-          >
-            <RefreshCw size={14} className={loading ? 'spin-anim' : ''} />
-            <span>Reset</span>
-          </button>
         </div>
       </div>
 
@@ -1027,10 +1197,11 @@ export const ReportsView = () => {
             </div>
 
             <div className="hub-specs-note">
-              <Sparkles size={13} color="#2563EB" />
+              <FileText size={13} color="#64748B" />
               <span>Format: Minimalist A4 Vector PDF • Custom Branding Header • Auto Summary Footers</span>
             </div>
           </div>
+
 
           <div className="hub-card-right">
             <button
@@ -1080,6 +1251,12 @@ export const ReportsView = () => {
           </div>
         </div>
       </div>
+
+      {/* AI Lost Sales Strategic Intelligence Report Modal */}
+      {showAiModal && (
+        <AiLostSalesReportModal onClose={() => setShowAiModal(false)} />
+      )}
     </div>
   );
 };
+

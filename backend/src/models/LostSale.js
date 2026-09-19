@@ -16,6 +16,15 @@ const lostSaleSchema = new mongoose.Schema(
       required: [true, 'Customer name is required'],
       trim: true,
     },
+    customerType: {
+      type: String,
+      trim: true,
+      default: 'Direct Client',
+    },
+    requirements: {
+      type: [String],
+      default: [],
+    },
     phone: {
       type: String,
       trim: true,

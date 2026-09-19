@@ -75,7 +75,10 @@ export const generatePdfReport = ({
   doc.text(`Generated: ${dateFormatted} ${timeFormatted}`, pageWidth - marginX, startY + 4.5, {
     align: 'right',
   });
-  doc.text(`Filters: ${filtersText}`, pageWidth - marginX, startY + 8.5, { align: 'right' });
+  doc.text(`Filters: ${filtersText}`, pageWidth - marginX, startY + 8.5, {
+    align: 'right',
+    maxWidth: 90,
+  });
 
   startY += 13;
 
@@ -92,12 +95,13 @@ const sanitizePdfText = (str) => {
   return String(str).replace(/\u20B9/g, 'Rs. ').replace(/₹/g, 'Rs. ');
 };
 
-  // 4. Key Metric Summary Cards
+  // 4. Key Metric Summary Cards (Auto-Scaling font to strictly fit inside box without overflowing)
   if (summaryCards && summaryCards.length > 0) {
     const cardGap = 3.5;
     const totalGap = cardGap * (summaryCards.length - 1);
     const cardWidth = (printableWidth - totalGap) / summaryCards.length;
     const cardHeight = 14;
+    const maxTextWidth = cardWidth - 6;
 
     summaryCards.forEach((card, index) => {
       const cardX = marginX + index * (cardWidth + cardGap);
@@ -111,17 +115,39 @@ const sanitizePdfText = (str) => {
       doc.setFillColor(card.color || primaryBlue);
       doc.rect(cardX, startY, cardWidth, 0.8, 'F');
 
-      // Card Label
+      // Card Label with width constraint
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(6.5);
       doc.setTextColor(100, 116, 139);
-      doc.text(sanitizePdfText(card.label).toUpperCase(), cardX + 3.5, startY + 5.2);
+      let cleanLabel = sanitizePdfText(card.label).toUpperCase();
+      if (doc.getTextWidth(cleanLabel) > maxTextWidth) {
+        while (doc.getTextWidth(cleanLabel + '...') > maxTextWidth && cleanLabel.length > 5) {
+          cleanLabel = cleanLabel.slice(0, -1);
+        }
+        cleanLabel += '...';
+      }
+      doc.text(cleanLabel, cardX + 3, startY + 5.2);
 
-      // Card Value
+      // Card Value with dynamic font auto-scaling and ellipsis fallback
+      const cleanValue = sanitizePdfText(card.value);
+      let valFontSize = 9.5;
       doc.setFont('helvetica', 'bold');
-      doc.setFontSize(9.5);
+      doc.setFontSize(valFontSize);
       doc.setTextColor(15, 23, 42);
-      doc.text(sanitizePdfText(card.value), cardX + 3.5, startY + 10.8);
+
+      while (doc.getTextWidth(cleanValue) > maxTextWidth && valFontSize > 6) {
+        valFontSize -= 0.5;
+        doc.setFontSize(valFontSize);
+      }
+
+      let displayVal = cleanValue;
+      if (doc.getTextWidth(displayVal) > maxTextWidth) {
+        while (doc.getTextWidth(displayVal + '...') > maxTextWidth && displayVal.length > 3) {
+          displayVal = displayVal.slice(0, -1);
+        }
+        displayVal += '...';
+      }
+      doc.text(displayVal, cardX + 3, startY + 10.8);
     });
 
     startY += cardHeight + 6;
@@ -129,21 +155,32 @@ const sanitizePdfText = (str) => {
 
   // 5. Calculate Dynamic Proportional Column Widths to fill printableWidth (186mm) exactly with zero overflow
   const totalGivenWidth = columns.reduce((acc, col) => acc + (col.width || 25), 0);
-  const columnStylesMap = columns.reduce((acc, col, idx) => {
-    const proportionalWidth = Math.round(((col.width || 25) / totalGivenWidth) * printableWidth * 10) / 10;
-    acc[idx] = {
-      cellWidth: proportionalWidth,
+  const columnStylesMap = {};
+  let allocatedWidth = 0;
+  columns.forEach((col, idx) => {
+    let w;
+    if (idx === columns.length - 1) {
+      w = Math.max(12, Math.round((printableWidth - allocatedWidth) * 10) / 10);
+    } else {
+      w = Math.round(((col.width || 25) / totalGivenWidth) * printableWidth * 10) / 10;
+      allocatedWidth += w;
+    }
+    columnStylesMap[idx] = {
+      cellWidth: w,
       halign: col.align || 'left',
       overflow: 'linebreak',
     };
-    return acc;
-  }, {});
+  });
 
   const formattedHeaders = columns.map((col) => sanitizePdfText(col.header));
   const formattedRows = rows.map((row) =>
     columns.map((col) => {
       const val = row[col.dataKey];
-      return val !== undefined && val !== null && val !== '' ? sanitizePdfText(val) : '-';
+      if (val === undefined || val === null || val === '') return '-';
+      let str = sanitizePdfText(val);
+      // Ensure comma-separated values (like requirements) wrap cleanly on linebreaks
+      str = str.replace(/,([^\s])/g, ', $1');
+      return str;
     })
   );
 

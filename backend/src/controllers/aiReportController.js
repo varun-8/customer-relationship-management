@@ -1,5 +1,8 @@
 const AiReport = require('../models/AiReport');
 const LostSale = require('../models/LostSale');
+const DailyKPI = require('../models/DailyKPI');
+const Customer = require('../models/Customer');
+const SalesTarget = require('../models/SalesTarget');
 const aiService = require('../services/aiService');
 
 /**
@@ -9,31 +12,41 @@ const aiService = require('../services/aiService');
 exports.getReportStatus = async (req, res) => {
   try {
     const today = new Date();
-    const currentMonth = today.toISOString().substring(0, 7); // 'YYYY-MM'
-    const currentYear = today.getFullYear().toString(); // 'YYYY'
+    const currentMonth = req.query.month || today.toISOString().substring(0, 7); // 'YYYY-MM'
+    const currentYear = req.query.year || today.getFullYear().toString(); // 'YYYY'
 
-    const [existingMonthly, existingYearly] = await Promise.all([
+    const [existingMonthly, existingYearly, openAiKey, geminiKey] = await Promise.all([
       AiReport.findOne({ reportType: 'monthly', period: currentMonth }),
       AiReport.findOne({ reportType: 'yearly', period: currentYear }),
+      aiService.getOpenAiApiKey(),
+      aiService.getGeminiApiKey(),
     ]);
+
+    const hasApiKey = Boolean(openAiKey || geminiKey);
 
     res.json({
       success: true,
       currentMonth,
       currentYear,
+      hasApiKey,
+      activeProvider: openAiKey ? 'openai' : (geminiKey ? 'gemini' : null),
       monthly: {
-        locked: Boolean(existingMonthly),
+        locked: false,
+        hasReport: Boolean(existingMonthly),
         reportId: existingMonthly?._id || null,
         generatedAt: existingMonthly?.createdAt || null,
         period: currentMonth,
         title: existingMonthly?.title || null,
+        existingReport: existingMonthly || null,
       },
       yearly: {
-        locked: Boolean(existingYearly),
+        locked: false,
+        hasReport: Boolean(existingYearly),
         reportId: existingYearly?._id || null,
         generatedAt: existingYearly?.createdAt || null,
         period: currentYear,
         title: existingYearly?.title || null,
+        existingReport: existingYearly || null,
       },
     });
   } catch (err) {
@@ -44,7 +57,7 @@ exports.getReportStatus = async (req, res) => {
 
 /**
  * POST /api/ai-reports/generate
- * Generates an AI report (locked if already generated for that period)
+ * Generates an AI comprehensive business report (all showroom data analyzed)
  */
 exports.generateReport = async (req, res) => {
   try {
@@ -56,64 +69,64 @@ exports.generateReport = async (req, res) => {
     const period =
       req.body.period || (reportType === 'monthly' ? currentMonth : currentYear);
 
-    // 1. Strict Quota Check: Only once per month and once per year
-    const existing = await AiReport.findOne({ reportType, period });
-    if (existing) {
-      return res.status(409).json({
-        success: false,
-        locked: true,
-        message:
-          reportType === 'monthly'
-            ? `A monthly report for ${period} has already been generated. Reports are limited to once per calendar month.`
-            : `An annual report for ${period} has already been generated. Reports are limited to once per calendar year.`,
-        reportId: existing._id,
-      });
-    }
+    const dateRegex = new RegExp(`^${period}`);
 
-    // 2. Fetch relevant lost sales records
-    let filter = {};
-    if (reportType === 'monthly') {
-      filter = { dateString: { $regex: `^${period}` } };
-    } else {
-      filter = { dateString: { $regex: `^${period}` } };
-    }
+    // Concurrently fetch all showroom operational records for strictly the selected period
+    const [kpiRecords, lostSaleRecords, customerDocs, salesTargetDoc] = await Promise.all([
+      DailyKPI.find({ dateString: { $regex: dateRegex } }).lean(),
+      LostSale.find({ dateString: { $regex: dateRegex } }).lean(),
+      Customer.find({}).lean(),
+      SalesTarget.findOne({ month: reportType === 'monthly' ? period : { $regex: dateRegex } }).lean(),
+    ]);
 
-    let records = await LostSale.find(filter).lean();
+    // Filter customers strictly matching the selected period (by entryDate or createdAt)
+    const periodCustomers = (customerDocs || []).filter((c) => {
+      const d = c.data || {};
+      const eDate = d.entryDate || (c.createdAt ? new Date(c.createdAt).toISOString().substring(0, 10) : '');
+      return eDate.startsWith(period);
+    });
 
-    // Fallback: If current month has very few deals (e.g. at start of month), incorporate all historical lost sales
-    if (records.length < 3) {
-      records = await LostSale.find().lean();
-    }
+    const hasAnyRecords =
+      (kpiRecords && kpiRecords.length > 0) ||
+      (lostSaleRecords && lostSaleRecords.length > 0) ||
+      (periodCustomers && periodCustomers.length > 0);
 
-    if (!records || records.length === 0) {
+    if (!hasAnyRecords) {
       return res.status(400).json({
         success: false,
-        message:
-          'No lost sales records are available in the system to analyze. Please log lost deals before generating an AI report.',
+        message: `No showroom operational data (daily KPIs, customer visits, or lost deals) found for ${reportType === 'monthly' ? 'month' : 'year'} "${period}". Only data from the selected period is fed into the AI report. Please ensure showroom activities or lost sales are recorded for ${period}.`,
       });
     }
 
-    // 3. Generate through AI Service
-    const reportData = await aiService.generateLostSalesReport({
-      lostSales: records,
+    // 2. Generate through AI Service (OpenAI ChatGPT or Gemini)
+    const reportData = await aiService.generateComprehensiveAiReport({
+      kpis: kpiRecords || [],
+      customers: periodCustomers || [],
+      lostSales: lostSaleRecords || [],
+      target: salesTargetDoc || null,
       reportType,
       period,
     });
 
-    // 4. Store permanently in database
-    const savedReport = await AiReport.create({
-      reportType,
-      period,
-      title: reportData.title,
-      summary: reportData.summary,
-      metrics: reportData.metrics,
-      content: reportData.content,
-      generatedBy: reportData.generatedBy,
-    });
+    // 3. Store in database (Update existing or create new)
+    const savedReport = await AiReport.findOneAndUpdate(
+      { reportType, period },
+      {
+        reportType,
+        period,
+        title: reportData.title,
+        summary: reportData.summary,
+        metrics: reportData.metrics,
+        content: reportData.content,
+        generatedBy: reportData.generatedBy,
+        updatedAt: new Date(),
+      },
+      { upsert: true, new: true, setDefaultsOnInsert: true }
+    );
 
-    res.status(201).json({
+    res.status(200).json({
       success: true,
-      message: `${reportType === 'monthly' ? 'Monthly' : 'Yearly'} AI Strategic Report successfully generated!`,
+      message: `${reportType === 'monthly' ? 'Monthly' : 'Yearly'} AI Showroom Business Report successfully generated!`,
       data: savedReport,
     });
   } catch (err) {
@@ -124,7 +137,7 @@ exports.generateReport = async (req, res) => {
       success: false,
       code: isNoApiKey ? 'NO_API_KEY' : 'AI_ERROR',
       message: isNoApiKey
-        ? 'Google Gemini API Key is missing. Please configure your API key in Settings > Developer Mode to generate AI strategic reports.'
+        ? 'AI API Key is missing. Please configure your OpenAI or Gemini API Key in Settings > AI Configuration.'
         : (err.message || 'Failed to generate AI report.'),
     });
   }
@@ -137,7 +150,7 @@ exports.generateReport = async (req, res) => {
 exports.getReportsHistory = async (req, res) => {
   try {
     const reports = await AiReport.find()
-      .select('reportType period title summary metrics generatedBy createdAt')
+      .select('reportType period title summary metrics content generatedBy createdAt')
       .sort({ createdAt: -1 })
       .lean();
 
@@ -171,3 +184,71 @@ exports.getReportById = async (req, res) => {
     res.status(500).json({ success: false, message: err.message });
   }
 };
+
+/**
+ * GET /api/ai-reports/chatgpt-prompt
+ * Builds complete, formatted ChatGPT prompt with all showroom operational data
+ */
+exports.getChatGptPrompt = async (req, res) => {
+  try {
+    const today = new Date();
+    const currentMonth = today.toISOString().substring(0, 7);
+    const currentYear = today.getFullYear().toString();
+    const reportType = req.query.reportType || 'monthly';
+    const period = req.query.period || (reportType === 'monthly' ? currentMonth : currentYear);
+
+    const dateRegex = new RegExp(`^${period}`);
+
+    const [kpiRecords, lostSaleRecords, customerDocs, salesTargetDoc] = await Promise.all([
+      DailyKPI.find({ dateString: { $regex: dateRegex } }).lean(),
+      LostSale.find({ dateString: { $regex: dateRegex } }).lean(),
+      Customer.find({}).lean(),
+      SalesTarget.findOne({ month: reportType === 'monthly' ? period : { $regex: dateRegex } }).lean(),
+    ]);
+
+    const periodCustomers = (customerDocs || []).filter((c) => {
+      const d = c.data || {};
+      const eDate = d.entryDate || (c.createdAt ? new Date(c.createdAt).toISOString().substring(0, 10) : '');
+      return eDate.startsWith(period);
+    });
+
+    const hasAnyRecords =
+      (kpiRecords && kpiRecords.length > 0) ||
+      (lostSaleRecords && lostSaleRecords.length > 0) ||
+      (periodCustomers && periodCustomers.length > 0);
+
+    if (!hasAnyRecords) {
+      return res.status(400).json({
+        success: false,
+        message: `No showroom operational data found for ${reportType === 'monthly' ? 'month' : 'year'} "${period}". Please ensure showroom activities or lost sales are recorded for this period before generating a prompt.`,
+      });
+    }
+
+    const prompt = aiService.buildChatGPTWebPrompt({
+      kpis: kpiRecords || [],
+      customers: periodCustomers || [],
+      lostSales: lostSaleRecords || [],
+      target: salesTargetDoc || null,
+      reportType,
+      period,
+    });
+
+    const payload = {
+      period,
+      reportType,
+      recordCount: (kpiRecords?.length || 0) + (lostSaleRecords?.length || 0) + (periodCustomers?.length || 0),
+      prompt,
+      chatGptUrl: 'https://chatgpt.com/',
+    };
+
+    res.json({
+      success: true,
+      ...payload,
+      data: payload,
+    });
+  } catch (err) {
+    console.error('Error generating ChatGPT prompt:', err);
+    res.status(500).json({ success: false, message: err.message });
+  }
+};
+

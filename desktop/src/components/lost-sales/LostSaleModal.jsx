@@ -236,6 +236,8 @@ export const LostSaleModal = ({ initialData, customer, onClose, onSaved }) => {
       const payload = {
         customerId: customerId || undefined,
         customerName: customerName.trim(),
+        customerType: customer?.customerType || initialData?.customerType || undefined,
+        requirements: selectedProducts,
         phone: phone.trim() || undefined,
         quoteValue: Number(quoteValue) || 0,
         products: selectedProducts,

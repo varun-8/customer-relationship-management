@@ -314,11 +314,17 @@ exports.disconnectDevice = async (req, res) => {
  */
 exports.getAiConfig = async (req, res) => {
   try {
-    const [keySetting, modelSetting] = await Promise.all([
+    const [providerSetting, keySetting, modelSetting, openAiKeySetting, openAiModelSetting] = await Promise.all([
+      SystemSetting.findOne({ key: 'aiProvider' }),
       SystemSetting.findOne({ key: 'geminiApiKey' }),
       SystemSetting.findOne({ key: 'geminiModel' }),
+      SystemSetting.findOne({ key: 'openaiApiKey' }),
+      SystemSetting.findOne({ key: 'openaiModel' }),
     ]);
 
+    const provider = providerSetting?.value || process.env.AI_PROVIDER || 'openai';
+
+    // Gemini
     const rawKey = keySetting?.value || process.env.GEMINI_API_KEY || '';
     const maskedKey = rawKey
       ? rawKey.length > 8
@@ -326,11 +332,25 @@ exports.getAiConfig = async (req, res) => {
         : '••••••••'
       : '';
 
+    // OpenAI
+    const rawOpenAiKey = openAiKeySetting?.value || process.env.OPENAI_API_KEY || '';
+    const maskedOpenAiKey = rawOpenAiKey
+      ? rawOpenAiKey.length > 8
+        ? `${rawOpenAiKey.slice(0, 4)}••••••••${rawOpenAiKey.slice(-4)}`
+        : '••••••••'
+      : '';
+
     return res.json({
       success: true,
+      provider,
+      // Gemini
       hasApiKey: Boolean(rawKey),
       maskedKey,
       model: modelSetting?.value || 'gemini-1.5-flash',
+      // OpenAI ChatGPT
+      hasOpenAiKey: Boolean(rawOpenAiKey),
+      maskedOpenAiKey,
+      openaiModel: openAiModelSetting?.value || 'gpt-4o-mini',
     });
   } catch (err) {
     console.error('Error fetching AI config:', err);
@@ -343,8 +363,17 @@ exports.getAiConfig = async (req, res) => {
  */
 exports.updateAiConfig = async (req, res) => {
   try {
-    const { apiKey, model = 'gemini-1.5-flash' } = req.body;
+    const { provider, apiKey, model, openaiApiKey, openaiModel } = req.body;
 
+    if (provider) {
+      await SystemSetting.findOneAndUpdate(
+        { key: 'aiProvider' },
+        { value: String(provider).trim().toLowerCase() },
+        { upsert: true, new: true }
+      );
+    }
+
+    // Gemini keys
     if (apiKey !== undefined) {
       await SystemSetting.findOneAndUpdate(
         { key: 'geminiApiKey' },
@@ -352,11 +381,26 @@ exports.updateAiConfig = async (req, res) => {
         { upsert: true, new: true }
       );
     }
-
     if (model) {
       await SystemSetting.findOneAndUpdate(
         { key: 'geminiModel' },
         { value: String(model).trim() },
+        { upsert: true, new: true }
+      );
+    }
+
+    // OpenAI keys
+    if (openaiApiKey !== undefined) {
+      await SystemSetting.findOneAndUpdate(
+        { key: 'openaiApiKey' },
+        { value: String(openaiApiKey).trim() },
+        { upsert: true, new: true }
+      );
+    }
+    if (openaiModel) {
+      await SystemSetting.findOneAndUpdate(
+        { key: 'openaiModel' },
+        { value: String(openaiModel).trim() },
         { upsert: true, new: true }
       );
     }
@@ -376,27 +420,43 @@ exports.updateAiConfig = async (req, res) => {
  */
 exports.testAiConfig = async (req, res) => {
   try {
-    let { apiKey, model = 'gemini-1.5-flash' } = req.body;
+    const { provider = 'openai', apiKey, model, openaiApiKey, openaiModel } = req.body;
 
-    if (!apiKey) {
-      apiKey = await aiService.getGeminiApiKey();
+    if (provider === 'openai') {
+      let key = openaiApiKey;
+      if (!key) {
+        key = await aiService.getOpenAiApiKey();
+      }
+      if (!key) {
+        return res.status(400).json({
+          success: false,
+          code: 'NO_OPENAI_API_KEY',
+          message: 'No OpenAI API Key found. Please enter your API key from OpenAI (https://platform.openai.com/api-keys) and save settings.',
+        });
+      }
+      const testRes = await aiService.testOpenAiApiKey(key, openaiModel || 'gpt-4o-mini');
+      return res.json(testRes);
+    } else {
+      // Gemini
+      let key = apiKey;
+      if (!key) {
+        key = await aiService.getGeminiApiKey();
+      }
+      if (!key) {
+        return res.status(400).json({
+          success: false,
+          code: 'NO_API_KEY',
+          message: 'No Google Gemini API Key found. Please paste your API key from Google AI Studio (https://aistudio.google.com) and save settings.',
+        });
+      }
+      const testRes = await aiService.testApiKey(key, model || 'gemini-1.5-flash');
+      return res.json(testRes);
     }
-
-    if (!apiKey) {
-      return res.status(400).json({
-        success: false,
-        code: 'NO_API_KEY',
-        message: 'No Google Gemini API Key found. Please paste your API key from Google AI Studio (https://aistudio.google.com) into the field above and save settings.',
-      });
-    }
-
-    const testRes = await aiService.testApiKey(apiKey, model);
-    return res.json(testRes);
   } catch (err) {
     console.error('AI Config Test Failed:', err);
     return res.status(400).json({
       success: false,
-      message: err.message || 'Verification failed. Please check your Gemini API Key.',
+      message: err.message || 'Verification failed. Please check your AI API Key.',
     });
   }
 };

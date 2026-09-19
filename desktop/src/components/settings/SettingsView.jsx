@@ -97,14 +97,39 @@ export const SettingsView = ({
   const [showWipeConfirm, setShowWipeConfirm] = useState(false);
 
   // AI Strategic Intelligence Configuration (Developer Mode)
-  const [aiConfig, setAiConfig] = useState({ hasApiKey: false, maskedKey: '', model: 'gemini-1.5-flash' });
+  // AI Strategic Intelligence Configuration (Developer Mode)
+  const [aiConfig, setAiConfig] = useState({ 
+    provider: 'openai',
+    hasApiKey: false, 
+    maskedKey: '', 
+    model: 'gemini-1.5-flash',
+    hasOpenAiKey: false,
+    maskedOpenAiKey: '',
+    openaiModel: 'gpt-4o-mini',
+  });
+  const [activeAiTab, setActiveAiTab] = useState('openai'); // 'openai' | 'gemini'
+  
+  // Gemini inputs
   const [aiApiKeyInput, setAiApiKeyInput] = useState('');
   const [aiModelInput, setAiModelInput] = useState('gemini-1.5-flash');
+  const [isCustomModel, setIsCustomModel] = useState(false);
+  const [customModelInput, setCustomModelInput] = useState('');
   const [showAiKey, setShowAiKey] = useState(false);
+
+  // OpenAI inputs
+  const [openAiApiKeyInput, setOpenAiApiKeyInput] = useState('');
+  const [openAiModelInput, setOpenAiModelInput] = useState('gpt-4o-mini');
+  const [isOpenAiCustomModel, setIsOpenAiCustomModel] = useState(false);
+  const [openAiCustomModelInput, setOpenAiCustomModelInput] = useState('');
+  const [showOpenAiKey, setShowOpenAiKey] = useState(false);
+
   const [testingAi, setTestingAi] = useState(false);
   const [savingAi, setSavingAi] = useState(false);
   const [aiTestResult, setAiTestResult] = useState(null);
   const [aiSaveSuccess, setAiSaveSuccess] = useState(false);
+
+  const PRESET_GEMINI_MODELS = ['gemini-3.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-pro'];
+  const PRESET_OPENAI_MODELS = ['gpt-4o-mini', 'gpt-4o', 'o3-mini', 'o1-mini'];
 
   useEffect(() => {
     if (devModeUnlocked && activeSettingsTab === 'dev') {
@@ -113,7 +138,31 @@ export const SettingsView = ({
           const res = await api.getAiConfig();
           if (res && res.success) {
             setAiConfig(res);
-            if (res.model) setAiModelInput(res.model);
+            if (res.provider) {
+              setActiveAiTab(res.provider);
+            }
+            // Gemini
+            if (res.model) {
+              if (PRESET_GEMINI_MODELS.includes(res.model)) {
+                setAiModelInput(res.model);
+                setIsCustomModel(false);
+              } else {
+                setIsCustomModel(true);
+                setCustomModelInput(res.model);
+                setAiModelInput(res.model);
+              }
+            }
+            // OpenAI
+            if (res.openaiModel) {
+              if (PRESET_OPENAI_MODELS.includes(res.openaiModel)) {
+                setOpenAiModelInput(res.openaiModel);
+                setIsOpenAiCustomModel(false);
+              } else {
+                setIsOpenAiCustomModel(true);
+                setOpenAiCustomModelInput(res.openaiModel);
+                setOpenAiModelInput(res.openaiModel);
+              }
+            }
           }
         } catch (e) {
           console.warn('Could not load AI config:', e);
@@ -124,12 +173,28 @@ export const SettingsView = ({
   }, [devModeUnlocked, activeSettingsTab]);
 
   const handleTestAiConnection = async () => {
+    const isGemini = activeAiTab === 'gemini';
+    const activeGeminiModel = (isCustomModel ? customModelInput.trim() : aiModelInput) || 'gemini-1.5-flash';
+    const activeOpenAiModel = (isOpenAiCustomModel ? openAiCustomModelInput.trim() : openAiModelInput) || 'gpt-4o-mini';
+
+    if (isGemini && isCustomModel && !customModelInput.trim()) {
+      alert('Please specify your custom Gemini model identifier before testing.');
+      return;
+    }
+    if (!isGemini && isOpenAiCustomModel && !openAiCustomModelInput.trim()) {
+      alert('Please specify your custom OpenAI model identifier before testing.');
+      return;
+    }
+
     setTestingAi(true);
     setAiTestResult(null);
     try {
       const res = await api.testAiConfig({
+        provider: activeAiTab,
         apiKey: aiApiKeyInput.trim() || undefined,
-        model: aiModelInput,
+        model: activeGeminiModel,
+        openaiApiKey: openAiApiKeyInput.trim() || undefined,
+        openaiModel: activeOpenAiModel,
       });
       setAiTestResult({ success: true, message: res.message || 'Connection Verified!' });
     } catch (err) {
@@ -140,18 +205,55 @@ export const SettingsView = ({
   };
 
   const handleSaveAiConfig = async () => {
+    const activeGeminiModel = (isCustomModel ? customModelInput.trim() : aiModelInput) || 'gemini-1.5-flash';
+    const activeOpenAiModel = (isOpenAiCustomModel ? openAiCustomModelInput.trim() : openAiModelInput) || 'gpt-4o-mini';
+
+    if (activeAiTab === 'gemini' && isCustomModel && !customModelInput.trim()) {
+      alert('Please specify your custom Gemini model identifier before saving.');
+      return;
+    }
+    if (activeAiTab === 'openai' && isOpenAiCustomModel && !openAiCustomModelInput.trim()) {
+      alert('Please specify your custom OpenAI model identifier before saving.');
+      return;
+    }
+
     setSavingAi(true);
     setAiSaveSuccess(false);
     try {
       const res = await api.updateAiConfig({
+        provider: activeAiTab,
         apiKey: aiApiKeyInput.trim() || undefined,
-        model: aiModelInput,
+        model: activeGeminiModel,
+        openaiApiKey: openAiApiKeyInput.trim() || undefined,
+        openaiModel: activeOpenAiModel,
       });
       if (res && res.success) {
         setAiSaveSuccess(true);
         setAiApiKeyInput('');
+        setOpenAiApiKeyInput('');
         const refreshed = await api.getAiConfig();
-        if (refreshed && refreshed.success) setAiConfig(refreshed);
+        if (refreshed && refreshed.success) {
+          setAiConfig(refreshed);
+          if (refreshed.provider) {
+            setActiveAiTab(refreshed.provider);
+          }
+          if (PRESET_GEMINI_MODELS.includes(refreshed.model)) {
+            setAiModelInput(refreshed.model);
+            setIsCustomModel(false);
+          } else if (refreshed.model) {
+            setIsCustomModel(true);
+            setCustomModelInput(refreshed.model);
+            setAiModelInput(refreshed.model);
+          }
+          if (PRESET_OPENAI_MODELS.includes(refreshed.openaiModel)) {
+            setOpenAiModelInput(refreshed.openaiModel);
+            setIsOpenAiCustomModel(false);
+          } else if (refreshed.openaiModel) {
+            setIsOpenAiCustomModel(true);
+            setOpenAiCustomModelInput(refreshed.openaiModel);
+            setOpenAiModelInput(refreshed.openaiModel);
+          }
+        }
         setTimeout(() => setAiSaveSuccess(false), 3000);
       }
     } catch (err) {
@@ -1235,36 +1337,92 @@ export const SettingsView = ({
           <div style={{ backgroundColor: '#F8FAFC', borderRadius: '20px', border: '1.5px solid #E2E8F0', padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: 'linear-gradient(135deg, #7C3AED 0%, #6366F1 100%)', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 12px rgba(124, 58, 237, 0.25)' }}>
+                <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: 'linear-gradient(135deg, #10A37F 0%, #6366F1 100%)', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 12px rgba(16, 163, 127, 0.25)' }}>
                   <Sparkles size={20} />
                 </div>
                 <div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <h3 style={{ fontSize: '15.5px', fontWeight: '800', color: '#1E293B', margin: 0 }}>
-                      AI Strategic Intelligence Configuration (Google Gemini)
+                      AI Strategic Intelligence & Model Settings
                     </h3>
                     <span style={{
                       fontSize: '11px',
                       fontWeight: '700',
                       padding: '2px 8px',
                       borderRadius: '12px',
-                      backgroundColor: aiConfig.hasApiKey ? '#DCFCE7' : '#FEF3C7',
-                      color: aiConfig.hasApiKey ? '#15803D' : '#B45309',
-                      border: `1px solid ${aiConfig.hasApiKey ? '#86EFAC' : '#FDE68A'}`
+                      backgroundColor: (activeAiTab === 'openai' ? aiConfig.hasOpenAiKey : aiConfig.hasApiKey) ? '#DCFCE7' : '#FEF3C7',
+                      color: (activeAiTab === 'openai' ? aiConfig.hasOpenAiKey : aiConfig.hasApiKey) ? '#15803D' : '#B45309',
+                      border: `1px solid ${(activeAiTab === 'openai' ? aiConfig.hasOpenAiKey : aiConfig.hasApiKey) ? '#86EFAC' : '#FDE68A'}`
                     }}>
-                      {aiConfig.hasApiKey ? `Configured (${aiConfig.maskedKey || 'Saved'})` : 'Key Missing'}
+                      {activeAiTab === 'openai' 
+                        ? (aiConfig.hasOpenAiKey ? `OpenAI Configured (${aiConfig.maskedOpenAiKey || 'Saved'})` : 'OpenAI Key Missing')
+                        : (aiConfig.hasApiKey ? `Gemini Configured (${aiConfig.maskedKey || 'Saved'})` : 'Gemini Key Missing')
+                      }
                     </span>
                   </div>
                   <p style={{ fontSize: '12.5px', color: '#64748B', margin: '3px 0 0' }}>
-                    Powers automated monthly and yearly Lost Sales executive intelligence reports. Keys are securely saved to database settings.
+                    Powers automated Lost Sales intelligence reports and 1-click ChatGPT.com executive exports.
                   </p>
                 </div>
+              </div>
+
+              {/* Provider Tabs */}
+              <div style={{ display: 'flex', gap: '6px', backgroundColor: '#E2E8F0', padding: '4px', borderRadius: '12px' }}>
+                <button
+                  type="button"
+                  onClick={() => setActiveAiTab('openai')}
+                  style={{
+                    padding: '6px 14px',
+                    borderRadius: '8px',
+                    border: 'none',
+                    fontSize: '12px',
+                    fontWeight: '700',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    backgroundColor: activeAiTab === 'openai' ? '#10A37F' : 'transparent',
+                    color: activeAiTab === 'openai' ? '#FFFFFF' : '#475569',
+                    boxShadow: activeAiTab === 'openai' ? '0 2px 6px rgba(16, 163, 127, 0.3)' : 'none',
+                    transition: 'all 0.15s ease',
+                  }}
+                >
+                  <span>ChatGPT (OpenAI)</span>
+                  {aiConfig.provider === 'openai' && (
+                    <span style={{ fontSize: '9px', background: 'rgba(255,255,255,0.25)', padding: '1px 5px', borderRadius: '4px' }}>ACTIVE</span>
+                  )}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setActiveAiTab('gemini')}
+                  style={{
+                    padding: '6px 14px',
+                    borderRadius: '8px',
+                    border: 'none',
+                    fontSize: '12px',
+                    fontWeight: '700',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    backgroundColor: activeAiTab === 'gemini' ? '#7C3AED' : 'transparent',
+                    color: activeAiTab === 'gemini' ? '#FFFFFF' : '#475569',
+                    boxShadow: activeAiTab === 'gemini' ? '0 2px 6px rgba(124, 58, 237, 0.3)' : 'none',
+                    transition: 'all 0.15s ease',
+                  }}
+                >
+                  <span>Google Gemini</span>
+                  {aiConfig.provider === 'gemini' && (
+                    <span style={{ fontSize: '9px', background: 'rgba(255,255,255,0.25)', padding: '1px 5px', borderRadius: '4px' }}>ACTIVE</span>
+                  )}
+                </button>
               </div>
             </div>
 
             {aiSaveSuccess && (
               <div style={{ padding: '10px 14px', borderRadius: '10px', backgroundColor: '#DCFCE7', border: '1px solid #86EFAC', color: '#15803D', fontSize: '12.5px', fontWeight: '700' }}>
-                AI Configuration saved successfully! You can now generate strategic lost sales reports.
+                AI Configuration saved successfully! Active engine set to {activeAiTab === 'openai' ? 'OpenAI ChatGPT' : 'Google Gemini'}.
               </div>
             )}
 
@@ -1282,131 +1440,305 @@ export const SettingsView = ({
               </div>
             )}
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px', marginTop: '4px' }}>
-              <div>
-                <label style={{ display: 'block', fontSize: '12.5px', fontWeight: '700', color: '#334155', marginBottom: '6px' }}>
-                  Gemini API Key
-                </label>
-                <div style={{ position: 'relative' }}>
-                  <input
-                    type={showAiKey ? 'text' : 'password'}
-                    placeholder={aiConfig.hasApiKey ? 'Enter new key to replace current key...' : 'AIzaSy...'}
-                    value={aiApiKeyInput}
-                    onChange={(e) => setAiApiKeyInput(e.target.value)}
+            {/* OPENAI TAB */}
+            {activeAiTab === 'openai' && (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px', marginTop: '4px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12.5px', fontWeight: '700', color: '#334155', marginBottom: '6px' }}>
+                    OpenAI API Key (ChatGPT)
+                  </label>
+                  <div style={{ position: 'relative' }}>
+                    <input
+                      type={showOpenAiKey ? 'text' : 'password'}
+                      placeholder={aiConfig.hasOpenAiKey ? `Current: ${aiConfig.maskedOpenAiKey} (Enter new to replace)` : 'sk-proj-...'}
+                      value={openAiApiKeyInput}
+                      onChange={(e) => setOpenAiApiKeyInput(e.target.value)}
+                      style={{
+                        width: '100%',
+                        padding: '10px 42px 10px 14px',
+                        borderRadius: '10px',
+                        border: '1.5px solid #CBD5E1',
+                        fontSize: '13px',
+                        fontFamily: 'monospace',
+                        outline: 'none',
+                        backgroundColor: '#FFFFFF',
+                        boxSizing: 'border-box'
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowOpenAiKey(!showOpenAiKey)}
+                      style={{
+                        position: 'absolute',
+                        right: '10px',
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                        border: 'none',
+                        backgroundColor: 'transparent',
+                        color: '#64748B',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        padding: '4px'
+                      }}
+                      title={showOpenAiKey ? 'Hide key' : 'Show key'}
+                    >
+                      {showOpenAiKey ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </button>
+                  </div>
+                  <span style={{ fontSize: '11px', color: '#64748B', display: 'block', marginTop: '4px' }}>
+                    Get an API key from <a href="https://platform.openai.com/api-keys" target="_blank" rel="noreferrer" style={{ color: '#0284C7', textDecoration: 'underline' }}>OpenAI Platform</a>. Enables both native in-app reports and 1-click ChatGPT.com export.
+                  </span>
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '12.5px', fontWeight: '700', color: '#334155', marginBottom: '6px' }}>
+                    OpenAI Model
+                  </label>
+                  <select
+                    value={isOpenAiCustomModel ? 'custom' : openAiModelInput}
+                    onChange={(e) => {
+                      if (e.target.value === 'custom') {
+                        setIsOpenAiCustomModel(true);
+                        if (openAiCustomModelInput.trim()) {
+                          setOpenAiModelInput(openAiCustomModelInput.trim());
+                        }
+                      } else {
+                        setIsOpenAiCustomModel(false);
+                        setOpenAiModelInput(e.target.value);
+                      }
+                    }}
                     style={{
                       width: '100%',
-                      padding: '10px 42px 10px 14px',
+                      padding: '10px 14px',
                       borderRadius: '10px',
                       border: '1.5px solid #CBD5E1',
                       fontSize: '13px',
-                      fontFamily: 'monospace',
                       outline: 'none',
                       backgroundColor: '#FFFFFF',
+                      cursor: 'pointer',
                       boxSizing: 'border-box'
                     }}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowAiKey(!showAiKey)}
-                    style={{
-                      position: 'absolute',
-                      right: '10px',
-                      top: '50%',
-                      transform: 'translateY(-50%)',
-                      border: 'none',
-                      backgroundColor: 'transparent',
-                      color: '#64748B',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      padding: '4px'
-                    }}
-                    title={showAiKey ? 'Hide key' : 'Show key'}
                   >
-                    {showAiKey ? <EyeOff size={16} /> : <Eye size={16} />}
-                  </button>
-                </div>
-                <span style={{ fontSize: '11px', color: '#64748B', display: 'block', marginTop: '4px' }}>
-                  Get an API key from Google AI Studio (free tier available).
-                </span>
-              </div>
+                    <option value="gpt-4o-mini">gpt-4o-mini (Fast, highly cost-effective, recommended)</option>
+                    <option value="gpt-4o">gpt-4o (Flagship reasoning & deep intelligence)</option>
+                    <option value="o3-mini">o3-mini (Advanced mathematical & strategic reasoning)</option>
+                    <option value="o1-mini">o1-mini (Specialized reasoning model)</option>
+                    <option value="custom">⚙️ Custom Model (Enter your own OpenAI model)...</option>
+                  </select>
 
-              <div>
-                <label style={{ display: 'block', fontSize: '12.5px', fontWeight: '700', color: '#334155', marginBottom: '6px' }}>
-                  AI Model
-                </label>
-                <select
-                  value={aiModelInput}
-                  onChange={(e) => setAiModelInput(e.target.value)}
+                  {isOpenAiCustomModel && (
+                    <div style={{ marginTop: '8px' }}>
+                      <label style={{ display: 'block', fontSize: '11.5px', fontWeight: '700', color: '#475569', marginBottom: '4px' }}>
+                        Custom OpenAI Model Identifier:
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="e.g. gpt-4-turbo, gpt-3.5-turbo, ft:gpt-4o-mini..."
+                        value={openAiCustomModelInput}
+                        onChange={(e) => {
+                          setOpenAiCustomModelInput(e.target.value);
+                          setOpenAiModelInput(e.target.value);
+                        }}
+                        style={{
+                          width: '100%',
+                          padding: '9px 13px',
+                          borderRadius: '9px',
+                          border: '1.5px solid #CBD5E1',
+                          fontSize: '13px',
+                          outline: 'none',
+                          boxSizing: 'border-box',
+                          backgroundColor: '#F8FAFC',
+                          fontFamily: 'monospace',
+                        }}
+                      />
+                    </div>
+                  )}
+
+                  <span style={{ fontSize: '11px', color: '#64748B', display: 'block', marginTop: '4px' }}>
+                    Select the model used for executive lost sales analysis and action plans.
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {/* GEMINI TAB */}
+            {activeAiTab === 'gemini' && (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px', marginTop: '4px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12.5px', fontWeight: '700', color: '#334155', marginBottom: '6px' }}>
+                    Gemini API Key
+                  </label>
+                  <div style={{ position: 'relative' }}>
+                    <input
+                      type={showAiKey ? 'text' : 'password'}
+                      placeholder={aiConfig.hasApiKey ? `Current: ${aiConfig.maskedKey} (Enter new to replace)` : 'AIzaSy...'}
+                      value={aiApiKeyInput}
+                      onChange={(e) => setAiApiKeyInput(e.target.value)}
+                      style={{
+                        width: '100%',
+                        padding: '10px 42px 10px 14px',
+                        borderRadius: '10px',
+                        border: '1.5px solid #CBD5E1',
+                        fontSize: '13px',
+                        fontFamily: 'monospace',
+                        outline: 'none',
+                        backgroundColor: '#FFFFFF',
+                        boxSizing: 'border-box'
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowAiKey(!showAiKey)}
+                      style={{
+                        position: 'absolute',
+                        right: '10px',
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                        border: 'none',
+                        backgroundColor: 'transparent',
+                        color: '#64748B',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        padding: '4px'
+                      }}
+                      title={showAiKey ? 'Hide key' : 'Show key'}
+                    >
+                      {showAiKey ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </button>
+                  </div>
+                  <span style={{ fontSize: '11px', color: '#64748B', display: 'block', marginTop: '4px' }}>
+                    Get an API key from <a href="https://aistudio.google.com" target="_blank" rel="noreferrer" style={{ color: '#0284C7', textDecoration: 'underline' }}>Google AI Studio</a>.
+                  </span>
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '12.5px', fontWeight: '700', color: '#334155', marginBottom: '6px' }}>
+                    Gemini Model
+                  </label>
+                  <select
+                    value={isCustomModel ? 'custom' : aiModelInput}
+                    onChange={(e) => {
+                      if (e.target.value === 'custom') {
+                        setIsCustomModel(true);
+                        if (customModelInput.trim()) {
+                          setAiModelInput(customModelInput.trim());
+                        }
+                      } else {
+                        setIsCustomModel(false);
+                        setAiModelInput(e.target.value);
+                      }
+                    }}
+                    style={{
+                      width: '100%',
+                      padding: '10px 14px',
+                      borderRadius: '10px',
+                      border: '1.5px solid #CBD5E1',
+                      fontSize: '13px',
+                      outline: 'none',
+                      backgroundColor: '#FFFFFF',
+                      cursor: 'pointer',
+                      boxSizing: 'border-box'
+                    }}
+                  >
+                    <option value="gemini-3.5-flash">gemini-3.5-flash (High speed, latest 3.5 generation)</option>
+                    <option value="gemini-2.0-flash">gemini-2.0-flash (Next-generation fast model)</option>
+                    <option value="gemini-1.5-flash">gemini-1.5-flash (Fast, recommended)</option>
+                    <option value="gemini-1.5-pro">gemini-1.5-pro (High intelligence & reasoning)</option>
+                    <option value="custom">⚙️ Custom Model (Enter your own model identifier)...</option>
+                  </select>
+
+                  {isCustomModel && (
+                    <div style={{ marginTop: '8px' }}>
+                      <label style={{ display: 'block', fontSize: '11.5px', fontWeight: '700', color: '#475569', marginBottom: '4px' }}>
+                        Custom Model Identifier / String:
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="e.g. gemini-2.5-flash, gemini-exp-1206, tunedModels/my-model"
+                        value={customModelInput}
+                        onChange={(e) => {
+                          setCustomModelInput(e.target.value);
+                          setAiModelInput(e.target.value);
+                        }}
+                        style={{
+                          width: '100%',
+                          padding: '9px 13px',
+                          borderRadius: '9px',
+                          border: '1.5px solid #CBD5E1',
+                          fontSize: '13px',
+                          outline: 'none',
+                          boxSizing: 'border-box',
+                          backgroundColor: '#F8FAFC',
+                          fontFamily: 'monospace',
+                        }}
+                      />
+                      <span style={{ fontSize: '10.5px', color: '#64748B', display: 'block', marginTop: '3px' }}>
+                        Enter any valid Google Gemini model identifier supported by your Google AI Studio API key.
+                      </span>
+                    </div>
+                  )}
+
+                  <span style={{ fontSize: '11px', color: '#64748B', display: 'block', marginTop: '4px' }}>
+                    Select or specify the Google Gemini model used to analyze lost leads.
+                  </span>
+                </div>
+              </div>
+            )}
+
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px', marginTop: '6px' }}>
+              <div style={{ fontSize: '12px', color: '#64748B' }}>
+                Active CRM Provider: <strong style={{ color: activeAiTab === 'openai' ? '#10A37F' : '#7C3AED' }}>{activeAiTab === 'openai' ? 'OpenAI ChatGPT' : 'Google Gemini'}</strong>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <button
+                  type="button"
+                  onClick={handleTestAiConnection}
+                  disabled={testingAi}
                   style={{
-                    width: '100%',
-                    padding: '10px 14px',
+                    padding: '9px 16px',
                     borderRadius: '10px',
                     border: '1.5px solid #CBD5E1',
-                    fontSize: '13px',
-                    outline: 'none',
                     backgroundColor: '#FFFFFF',
-                    cursor: 'pointer',
-                    boxSizing: 'border-box'
+                    color: '#334155',
+                    fontSize: '13px',
+                    fontWeight: '700',
+                    cursor: testingAi ? 'not-allowed' : 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    opacity: testingAi ? 0.7 : 1
                   }}
                 >
-                  <option value="gemini-1.5-flash">gemini-1.5-flash (Fast, recommended)</option>
-                  <option value="gemini-1.5-pro">gemini-1.5-pro (High intelligence & reasoning)</option>
-                  <option value="gemini-2.0-flash">gemini-2.0-flash (Next-generation fast model)</option>
-                </select>
-                <span style={{ fontSize: '11px', color: '#64748B', display: 'block', marginTop: '4px' }}>
-                  Select the model used to analyze lost leads and generate recommendations.
-                </span>
+                  <RefreshCw size={14} className={testingAi ? 'spin' : ''} />
+                  <span>{testingAi ? 'Testing...' : `Test ${activeAiTab === 'openai' ? 'OpenAI' : 'Gemini'} Connection`}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleSaveAiConfig}
+                  disabled={savingAi}
+                  style={{
+                    padding: '9px 18px',
+                    borderRadius: '10px',
+                    border: 'none',
+                    background: activeAiTab === 'openai' ? 'linear-gradient(135deg, #10A37F 0%, #059669 100%)' : 'linear-gradient(135deg, #7C3AED 0%, #6366F1 100%)',
+                    color: '#FFFFFF',
+                    fontSize: '13px',
+                    fontWeight: '700',
+                    cursor: savingAi ? 'not-allowed' : 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    boxShadow: activeAiTab === 'openai' ? '0 2px 8px rgba(16, 163, 127, 0.3)' : '0 2px 8px rgba(124, 58, 237, 0.3)',
+                    opacity: savingAi ? 0.7 : 1
+                  }}
+                >
+                  <Save size={14} />
+                  <span>{savingAi ? 'Saving...' : 'Save AI Configuration'}</span>
+                </button>
               </div>
-            </div>
-
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '10px', marginTop: '6px' }}>
-              <button
-                type="button"
-                onClick={handleTestAiConnection}
-                disabled={testingAi}
-                style={{
-                  padding: '9px 16px',
-                  borderRadius: '10px',
-                  border: '1.5px solid #CBD5E1',
-                  backgroundColor: '#FFFFFF',
-                  color: '#334155',
-                  fontSize: '13px',
-                  fontWeight: '700',
-                  cursor: testingAi ? 'not-allowed' : 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  opacity: testingAi ? 0.7 : 1
-                }}
-              >
-                <RefreshCw size={14} className={testingAi ? 'spin' : ''} />
-                <span>{testingAi ? 'Testing...' : 'Test Connection'}</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={handleSaveAiConfig}
-                disabled={savingAi}
-                style={{
-                  padding: '9px 18px',
-                  borderRadius: '10px',
-                  border: 'none',
-                  background: 'linear-gradient(135deg, #7C3AED 0%, #6366F1 100%)',
-                  color: '#FFFFFF',
-                  fontSize: '13px',
-                  fontWeight: '700',
-                  cursor: savingAi ? 'not-allowed' : 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  boxShadow: '0 2px 8px rgba(124, 58, 237, 0.3)',
-                  opacity: savingAi ? 0.7 : 1
-                }}
-              >
-                <Save size={14} />
-                <span>{savingAi ? 'Saving...' : 'Save AI Configuration'}</span>
-              </button>
             </div>
           </div>
 

@@ -118,3 +118,15 @@ Thumbs.db
 tmp/
 scratch/
 .gemini/
+
+# Additional Project Ignores
+.eslintcache
+*.sqlite
+*.sqlite3
+*.db
+*.db-journal
+release/
+desktop/release/
+mobile/ios/Pods/
+mobile/ios/build/
+mobile/ios/Index/

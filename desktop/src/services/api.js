@@ -478,8 +478,12 @@ export const api = {
   },
 
   // AI Strategic Lost Sales Intelligence Reports APIs
-  async getAiReportStatus() {
-    return request('/ai-reports/status');
+  async getAiReportStatus(params = {}) {
+    const query = new URLSearchParams();
+    if (params.month) query.append('month', params.month);
+    if (params.year) query.append('year', params.year);
+    const qs = query.toString();
+    return request(`/ai-reports/status${qs ? `?${qs}` : ''}`);
   },
 
   async generateAiReport(reportType = 'monthly', period) {
@@ -496,6 +500,14 @@ export const api = {
 
   async getAiReportById(id) {
     return request(`/ai-reports/${id}`);
+  },
+
+  async getChatGptPrompt(params = {}) {
+    const query = new URLSearchParams();
+    if (params.reportType) query.append('reportType', params.reportType);
+    if (params.period) query.append('period', params.period);
+    const qs = query.toString();
+    return request(`/ai-reports/chatgpt-prompt${qs ? `?${qs}` : ''}`);
   },
 
   // AI Developer Configuration APIs

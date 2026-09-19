@@ -159,6 +159,7 @@ const createCustomer = async (req, res) => {
       customerId,
       formVersion,
       data: customerData,
+      status: customerData.status || req.body.status || 'New Lead',
       notes: req.body.notes || '',
       createdBy: {
         userId: req.user?._id,
@@ -166,6 +167,7 @@ const createCustomer = async (req, res) => {
         role: req.user?.role || 'employee',
       },
     });
+
 
     res.status(201).json({
       success: true,
@@ -213,7 +215,11 @@ const updateCustomer = async (req, res) => {
     customer.markModified('data');
 
     if (req.body.notes !== undefined) customer.notes = req.body.notes;
-    if (req.body.status) customer.status = req.body.status;
+    if (req.body.status) {
+      customer.status = req.body.status;
+    } else if (mergedData.status) {
+      customer.status = mergedData.status;
+    }
 
     customer.updatedBy = {
       userId: req.user?._id,

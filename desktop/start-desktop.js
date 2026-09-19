@@ -183,6 +183,11 @@ async function main() {
     cwd: DESKTOP_DIR,
     stdio: 'inherit',
     shell: true,
+    env: {
+      ...process.env,
+      NODE_ENV: 'development',
+      VITE_DEV_SERVER_URL: 'http://localhost:5173',
+    },
   });
   processes.push(electronProc);
 

@@ -18,6 +18,8 @@ exports.createLostSale = async (req, res) => {
       customerId,
       customerRef,
       customerName,
+      customerType,
+      requirements,
       phone,
       quoteValue,
       products = ['Tile'],
@@ -55,10 +57,36 @@ exports.createLostSale = async (req, res) => {
       calculatedPercent = Number(((numPriceDiff / numQuoteVal) * 100).toFixed(1));
     }
 
+    // Resolve customerType and requirements from Customer collection if not passed explicitly
+    let resolvedCustomerType = customerType ? String(customerType).trim() : null;
+    let resolvedRequirements = Array.isArray(requirements) && requirements.length > 0 ? requirements : null;
+
+    if ((!resolvedCustomerType || !resolvedRequirements) && (customerId || customerRef)) {
+      try {
+        const query = customerRef ? { _id: customerRef } : { customerId };
+        const cDoc = await Customer.findOne(query).lean();
+        if (cDoc) {
+          const cData = cDoc.data instanceof Map ? Object.fromEntries(cDoc.data) : (cDoc.data || {});
+          if (!resolvedCustomerType) {
+            resolvedCustomerType = cDoc.customerType || cData.customerType || 'Direct Client';
+          }
+          if (!resolvedRequirements) {
+            const reqVal = cDoc.requirements || cData.requirements || cData.requirement || cData.productRequirement;
+            if (Array.isArray(reqVal) && reqVal.length > 0) resolvedRequirements = reqVal;
+            else if (typeof reqVal === 'string' && reqVal.trim()) resolvedRequirements = reqVal.split(',').map((s) => s.trim()).filter(Boolean);
+          }
+        }
+      } catch (err) {
+        console.warn('Auto-resolving customer data for lost sale failed:', err.message);
+      }
+    }
+
     const newLostSale = new LostSale({
       customerId: customerId ? customerId.trim() : undefined,
       customerRef: customerRef || undefined,
       customerName: customerName.trim(),
+      customerType: resolvedCustomerType || 'Direct Client',
+      requirements: resolvedRequirements || (Array.isArray(products) && products.length > 0 ? products : ['Tile']),
       phone: phone ? phone.trim() : undefined,
       quoteValue: numQuoteVal,
       products: Array.isArray(products) && products.length > 0 ? products : ['Tile'],
@@ -178,13 +206,65 @@ exports.getLostSalesList = async (req, res) => {
     }
 
     const skip = (Number(page) - 1) * Number(limit);
-    const [records, total] = await Promise.all([
+    const [rawRecords, total] = await Promise.all([
       LostSale.find(query)
+        .populate('customerRef', 'customerType requirements data')
         .sort({ date: -1, createdAt: -1 })
         .skip(skip)
-        .limit(Number(limit)),
+        .limit(Number(limit))
+        .lean(),
       LostSale.countDocuments(query),
     ]);
+
+    // Gather customerIds needing backfilled customerType or requirements
+    const missingCustomerIds = rawRecords
+      .filter((r) => (!r.customerType || r.customerType === 'Direct Client' || !r.requirements || r.requirements.length === 0) && r.customerId)
+      .map((r) => r.customerId);
+
+    let customerMap = {};
+    if (missingCustomerIds.length > 0) {
+      try {
+        const matchedCustomers = await Customer.find({ customerId: { $in: missingCustomerIds } }).lean();
+        matchedCustomers.forEach((c) => {
+          const d = c.data instanceof Map ? Object.fromEntries(c.data) : (c.data || {});
+          customerMap[c.customerId] = {
+            customerType: c.customerType || d.customerType || 'Direct Client',
+            requirements: c.requirements || d.requirements || d.requirement || d.productRequirement || [],
+          };
+        });
+      } catch (e) {
+        console.warn('Could not batch lookup customers for lost sales list:', e.message);
+      }
+    }
+
+    const records = rawRecords.map((r) => {
+      const cData = r.customerId ? customerMap[r.customerId] : null;
+      const refData = r.customerRef && typeof r.customerRef === 'object' ? r.customerRef : null;
+      const refMapData = refData && refData.data instanceof Map ? Object.fromEntries(refData.data) : (refData?.data || {});
+
+      const finalCustomerType =
+        (r.customerType && r.customerType !== 'Direct Client' && r.customerType !== '-')
+          ? r.customerType
+          : refData?.customerType || refMapData?.customerType || cData?.customerType || r.customerType || 'Direct Client';
+
+      let finalReq = r.requirements;
+      if (!finalReq || !Array.isArray(finalReq) || finalReq.length === 0) {
+        finalReq = (Array.isArray(r.products) && r.products.length > 0) ? r.products : [];
+      }
+      if (finalReq.length === 0) {
+        const reqFromRef = refData?.requirements || refMapData?.requirements || refMapData?.requirement || cData?.requirements;
+        if (Array.isArray(reqFromRef) && reqFromRef.length > 0) finalReq = reqFromRef;
+        else if (typeof reqFromRef === 'string' && reqFromRef.trim()) finalReq = reqFromRef.split(',').map((s) => s.trim()).filter(Boolean);
+      }
+      if (finalReq.length === 0) finalReq = ['Tile'];
+
+      return {
+        ...r,
+        customerType: finalCustomerType,
+        requirements: finalReq,
+        requirement: finalReq.join(', '),
+      };
+    });
 
     res.status(200).json({
       success: true,

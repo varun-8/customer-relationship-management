@@ -23,13 +23,15 @@ import { FollowupSheetView } from './components/followups/FollowupSheetView';
 import { EmployeeManagementView } from './components/employees/EmployeeManagementView';
 import { MobilePairingView } from './components/mobile-pairing/MobilePairingView';
 import { ReportsView } from './components/reports/ReportsView';
+import { AiReportPromptModal } from './components/reports/AiReportPromptModal';
+import { AiLostSalesReportModal } from './components/lost-sales/AiLostSalesReportModal';
 import { AppLoadingScreen } from './components/common/AppLoadingScreen';
 import { LoginPage } from './components/auth/LoginPage';
 import { api } from './services/api';
 
 const MainAppContent = () => {
   const toast = useToast();
-  const { user, isEmployee, loading: authLoading } = useAuth();
+  const { user, isEmployee, isOwner, loading: authLoading } = useAuth();
   const [initialLoading, setInitialLoading] = useState(true);
   const [loadTakingLong, setLoadTakingLong] = useState(false);
 
@@ -38,6 +40,11 @@ const MainAppContent = () => {
   const [editingCustomer, setEditingCustomer] = useState(null);
   const [viewingCustomer, setViewingCustomer] = useState(null);
   const [showAddCustomerModal, setShowAddCustomerModal] = useState(false);
+
+  // AI Prompt Box State (Triggers once at beginning of month/year upon admin login)
+  const [aiPromptInfo, setAiPromptInfo] = useState(null);
+  const [showAiReportModalFromPrompt, setShowAiReportModalFromPrompt] = useState(false);
+  const [aiReportModalConfig, setAiReportModalConfig] = useState(null);
 
   // Automatically enforce allowed tab for employees
   useEffect(() => {
@@ -134,6 +141,57 @@ const MainAppContent = () => {
 
     triggerStartupAutoBackup();
   }, [toast]);
+
+  // Prompt admin ONCE at the start of every month / year to generate the Showroom AI Report
+  useEffect(() => {
+    if (!user || !isOwner) return;
+
+    const today = new Date();
+    const currentMonthStr = today.toISOString().substring(0, 7); // 'YYYY-MM'
+    const currentYearStr = today.getFullYear().toString(); // 'YYYY'
+    const isJanuary = today.getMonth() === 0;
+
+    const promptType = isJanuary ? 'yearly' : 'monthly';
+    const storageKey = isJanuary
+      ? `crm_ai_report_prompt_year_${currentYearStr}`
+      : `crm_ai_report_prompt_month_${currentMonthStr}`;
+
+    const hasSeen = localStorage.getItem(storageKey);
+    if (!hasSeen) {
+      // Delay slightly (1.2s) so the dashboard settles smoothly before presenting the prompt
+      const timer = setTimeout(() => {
+        setAiPromptInfo({
+          type: promptType,
+          period: isJanuary ? currentYearStr : currentMonthStr,
+          monthName: today.toLocaleString('en-US', { month: 'long' }),
+          year: currentYearStr,
+          storageKey,
+        });
+      }, 1200);
+
+      return () => clearTimeout(timer);
+    }
+  }, [user, isOwner]);
+
+  const handleDismissAiPrompt = () => {
+    if (aiPromptInfo?.storageKey) {
+      localStorage.setItem(aiPromptInfo.storageKey, 'dismissed_' + Date.now());
+    }
+    setAiPromptInfo(null);
+  };
+
+  const handleAcceptAiPrompt = () => {
+    if (aiPromptInfo?.storageKey) {
+      localStorage.setItem(aiPromptInfo.storageKey, 'accepted_' + Date.now());
+    }
+    setAiReportModalConfig({
+      reportType: aiPromptInfo?.type || 'monthly',
+      month: aiPromptInfo?.period,
+      year: aiPromptInfo?.year,
+    });
+    setAiPromptInfo(null);
+    setShowAiReportModalFromPrompt(true);
+  };
 
   // Developer Mode is strictly hidden by default
   const [devModeUnlocked, setDevModeUnlocked] = useState(false);
@@ -310,6 +368,28 @@ const MainAppContent = () => {
 
       {showMobileSimulator && (
         <MobileSimulatorModal onClose={() => setShowMobileSimulator(false)} />
+      )}
+
+      {/* Admin Monthly/Yearly Start AI Intelligence Prompt */}
+      {aiPromptInfo && (
+        <AiReportPromptModal
+          promptInfo={aiPromptInfo}
+          onGenerate={handleAcceptAiPrompt}
+          onDismiss={handleDismissAiPrompt}
+        />
+      )}
+
+      {/* Direct AI Report modal triggered from Start Prompt */}
+      {showAiReportModalFromPrompt && (
+        <AiLostSalesReportModal
+          initialReportType={aiReportModalConfig?.reportType || 'monthly'}
+          initialMonth={aiReportModalConfig?.month}
+          initialYear={aiReportModalConfig?.year}
+          onClose={() => {
+            setShowAiReportModalFromPrompt(false);
+            setAiReportModalConfig(null);
+          }}
+        />
       )}
     </div>
   );

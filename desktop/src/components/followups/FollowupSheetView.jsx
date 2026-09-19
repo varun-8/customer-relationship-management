@@ -481,14 +481,14 @@ export const FollowupSheetView = ({ onEditCustomer }) => {
             <RefreshCw size={15} className={loading ? 'spin' : ''} />
           </button>
 
-          {/* Log Activity Primary Button */}
+          {/* Log Activity Light Themed Button */}
           <button
             type="button"
             onClick={() => setLoggingFollowup({})}
             style={{
-              background: 'linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)',
-              color: '#FFFFFF',
-              border: 'none',
+              background: '#EFF6FF',
+              color: '#1D4ED8',
+              border: '1.5px solid #BFDBFE',
               borderRadius: '10px',
               padding: '8px 18px',
               fontSize: '13px',
@@ -497,12 +497,14 @@ export const FollowupSheetView = ({ onEditCustomer }) => {
               display: 'flex',
               alignItems: 'center',
               gap: '6px',
-              boxShadow: '0 4px 14px rgba(37, 99, 235, 0.35)',
+              boxShadow: '0 2px 8px rgba(37, 99, 235, 0.1)',
+              transition: 'all 0.15s ease',
             }}
           >
-            <Plus size={16} />
+            <Plus size={16} color="#1D4ED8" />
             <span>Log Activity</span>
           </button>
+
         </div>
       </div>
 
@@ -685,18 +687,18 @@ export const FollowupSheetView = ({ onEditCustomer }) => {
                             gap: '6px',
                             padding: '7px 14px',
                             fontSize: '12px',
-                            fontWeight: '700',
+                            fontWeight: '800',
                             borderRadius: '8px',
-                            border: 'none',
-                            backgroundColor: '#0F172A',
-                            color: '#FFFFFF',
+                            border: '1px solid #99F6E4',
+                            backgroundColor: '#F0FDFA',
+                            color: '#0F766E',
                             cursor: 'pointer',
-                            boxShadow: '0 2px 6px rgba(15, 23, 42, 0.15)',
+                            boxShadow: '0 1px 3px rgba(15, 118, 110, 0.08)',
                             transition: 'all 0.15s ease',
                           }}
                           title="Log Follow-up Activity & Discussion Notes"
                         >
-                          <PhoneCall size={13} color="#FFFFFF" />
+                          <PhoneCall size={13} color="#0F766E" />
                           <span>Log Activity</span>
                         </button>
                       </td>

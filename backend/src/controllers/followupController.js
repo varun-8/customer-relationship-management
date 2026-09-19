@@ -249,9 +249,15 @@ exports.logFollowupActivity = async (req, res) => {
     }
     if (statusUpdate) {
       currentData.status = statusUpdate;
+      customer.status = statusUpdate;
     }
     if (quotationValue !== undefined && Number(quotationValue) >= 0) {
       currentData.quotationValue = Number(quotationValue);
+    }
+    if (req.body.orderValue !== undefined && Number(req.body.orderValue) >= 0) {
+      currentData.orderValue = Number(req.body.orderValue);
+    } else if (statusUpdate === 'Order Confirmed' && quotationValue !== undefined) {
+      currentData.orderValue = Number(quotationValue);
     }
     if (houseStage) {
       currentData.houseStage = houseStage;
@@ -259,6 +265,7 @@ exports.logFollowupActivity = async (req, res) => {
     if (requirement) {
       currentData.requirement = requirement;
     }
+
 
     // Build discussion notes snippet
     const newNote = `[${todayStr}] ${outcome || 'Follow-up'}: ${discussionNotes || 'Discussion recorded'}`;

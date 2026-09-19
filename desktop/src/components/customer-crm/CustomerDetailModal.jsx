@@ -145,7 +145,8 @@ export const CustomerDetailModal = ({ customer: initialCustomer, onClose, onEdit
         return { bg: '#ECFDF5', text: '#059669', border: '#A7F3D0', label: 'Order Confirmed', dot: '#10B981' };
       case 'Lost':
       case 'LOST':
-        return { bg: '#F1F5F9', text: '#64748B', border: '#CBD5E1', label: 'Lost Opportunity', dot: '#94A3B8' };
+        return { bg: '#FEF2F2', text: '#DC2626', border: '#FECDD3', label: 'Lost Opportunity', dot: '#EF4444' };
+
       default:
         return { bg: '#F8FAFC', text: '#1E293B', border: '#E2E8F0', label: status || 'Active Follow-up', dot: '#475569' };
     }

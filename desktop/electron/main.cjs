@@ -252,7 +252,6 @@ async function startEmbeddedBackend() {
   process.env.PORT = process.env.PORT || '5000';
   process.env.JWT_SECRET = process.env.JWT_SECRET || 'vasantham_jwt_secret_key_2026';
   process.env.DEV_KEY = process.env.DEV_KEY || 'vasantham_dev_secret_wipe_key_2026';
-  process.env.NODE_ENV = 'production';
 
   const backendCwd = path.dirname(path.dirname(backendServerPath));
 
@@ -352,9 +351,10 @@ function createWindow() {
   mainWindow.setTitle('Vasantham Tiles & Sanitary Wares — Customer CRM');
 
   const devUrl = process.env.VITE_DEV_SERVER_URL || 'http://localhost:5173';
-  const isDev = !app.isPackaged && process.env.NODE_ENV === 'development';
+  const isDev = !app.isPackaged;
 
   if (isDev) {
+    log(`🌐 [Electron] Loading Vite Dev Server: ${devUrl}`);
     mainWindow.loadURL(devUrl);
   } else {
     const indexPath = path.join(__dirname, '../dist/index.html');
@@ -364,8 +364,7 @@ function createWindow() {
     } else if (fs.existsSync(altIndexPath)) {
       mainWindow.loadFile(altIndexPath);
     } else {
-      log(`❌ index.html missing at ${indexPath} and ${altIndexPath}`);
-      mainWindow.loadFile(indexPath);
+      mainWindow.loadURL(devUrl);
     }
   }
 

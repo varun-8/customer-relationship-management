@@ -19,14 +19,30 @@ import {
   Award,
   Users,
   ChevronRight,
-  Sparkles,
   ChevronDown,
   ChevronUp,
   BarChart3,
+  Eye,
 } from 'lucide-react';
 import { api } from '../../services/api';
 import { LostSaleModal } from './LostSaleModal';
+import { LostSaleDetailModal } from './LostSaleDetailModal';
 import { ConnectionErrorState } from '../common/ConnectionErrorState';
+
+// Format date nicely (e.g. 12 Sep 2026)
+const formatDateLabel = (dateStr) => {
+  if (!dateStr) return '—';
+  try {
+    const parts = dateStr.split('-');
+    if (parts.length === 3) {
+      const d = new Date(parts[0], parts[1] - 1, parts[2]);
+      return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+    }
+  } catch (e) {
+    // fallback
+  }
+  return dateStr;
+};
 
 export const LostSalesView = () => {
   const todayStr = new Date().toISOString().split('T')[0];
@@ -48,8 +64,17 @@ export const LostSalesView = () => {
   // Modals
   const [showModal, setShowModal] = useState(false);
   const [editingRecord, setEditingRecord] = useState(null);
+  const [detailRecord, setDetailRecord] = useState(null);
   const [reopeningRecord, setReopeningRecord] = useState(null);
   const [winBackNotes, setWinBackNotes] = useState('');
+
+  // Summary calculations for table metrics
+  const totalLostValue = lostSales.reduce((acc, curr) => acc + (Number(curr.quoteValue) || 0), 0);
+  const winBackCount = lostSales.filter((s) => s.status === 'win_back').length;
+  const itemsWithGap = lostSales.filter((s) => Number(s.priceDifference) > 0);
+  const totalGap = itemsWithGap.reduce((acc, curr) => acc + Number(curr.priceDifference), 0);
+  const avgGap = itemsWithGap.length > 0 ? Math.round(totalGap / itemsWithGap.length) : 0;
+
 
   // Fetch live staff members
   useEffect(() => {
@@ -649,6 +674,7 @@ export const LostSalesView = () => {
             <span>Export CSV</span>
           </button>
 
+
           {/* Primary Action Button: Log Lost Sale */}
           <button
             type="button"
@@ -678,30 +704,83 @@ export const LostSalesView = () => {
         </div>
       </div>
 
-      {/* 4. Minimalist Lost Sales Ledger Table Card */}
+      {/* 4. Lost Sales Ledger Table Card */}
       <div
         style={{
           background: '#FFFFFF',
           borderRadius: '16px',
           border: '1px solid #E2E8F0',
-          boxShadow: '0 1px 3px rgba(15, 23, 42, 0.03)',
+          boxShadow: '0 4px 20px -2px rgba(15, 23, 42, 0.04), 0 2px 6px -1px rgba(15, 23, 42, 0.02)',
           overflow: 'hidden',
         }}
       >
-        <div style={{ padding: '14px 20px', borderBottom: '1px solid #F1F5F9', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <FileX size={16} color="#0F172A" />
-            <span style={{ fontWeight: '800', fontSize: '13.5px', color: '#0F172A' }}>
-              Lost Quotations Ledger
-            </span>
-            <span style={{ fontSize: '11.5px', background: '#F1F5F9', color: '#64748B', padding: '2px 8px', borderRadius: '12px', fontWeight: '700' }}>
-              {lostSales.length} {lostSales.length === 1 ? 'record' : 'records'}
-            </span>
+        <div
+          style={{
+            padding: '16px 22px',
+            borderBottom: '1px solid #F1F5F9',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            background: '#FAFAFB',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div
+              style={{
+                width: '32px',
+                height: '32px',
+                borderRadius: '8px',
+                background: '#0F172A',
+                color: '#FFFFFF',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <FileX size={16} />
+            </div>
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontWeight: '800', fontSize: '14px', color: '#0F172A' }}>
+                  Lost Quotations Ledger
+                </span>
+                <span
+                  style={{
+                    fontSize: '11px',
+                    background: '#EEF2F6',
+                    color: '#475569',
+                    padding: '2px 8px',
+                    borderRadius: '12px',
+                    fontWeight: '700',
+                  }}
+                >
+                  {lostSales.length} {lostSales.length === 1 ? 'deal' : 'deals'}
+                </span>
+              </div>
+              <div style={{ fontSize: '11.5px', color: '#64748B', marginTop: '1px' }}>
+                Detailed breakdown of lost quotes, showroom competitors, price gaps, and win-back prospects
+              </div>
+            </div>
           </div>
 
-          <span style={{ fontSize: '11.5px', color: '#94A3B8' }}>
-            Price gaps & win-back opportunities
-          </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div
+              style={{
+                fontSize: '12px',
+                color: '#64748B',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                background: '#FFFFFF',
+                padding: '6px 12px',
+                borderRadius: '8px',
+                border: '1px solid #E2E8F0',
+              }}
+            >
+              <span style={{ color: '#94A3B8' }}>Total Value:</span>
+              <strong style={{ color: '#0F172A', fontWeight: '800' }}>₹{totalLostValue.toLocaleString('en-IN')}</strong>
+            </div>
+          </div>
         </div>
 
         {error && lostSales.length === 0 ? (
@@ -714,148 +793,237 @@ export const LostSalesView = () => {
             />
           </div>
         ) : lostSales.length === 0 ? (
-          <div style={{ padding: '48px 24px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
-            <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: '#F8FAFC', color: '#0F172A', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <FileX size={24} />
+          <div style={{ padding: '60px 24px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
+            <div style={{ width: '56px', height: '56px', borderRadius: '16px', background: '#F1F5F9', color: '#475569', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <FileX size={28} />
             </div>
-            <div style={{ fontWeight: '800', fontSize: '15px', color: '#0F172A' }}>No lost sales logged for {selectedMonth}</div>
-            <p style={{ fontSize: '12px', color: '#64748B', maxWidth: '380px', margin: 0 }}>
-              Record lost customer quotes to uncover competitor discounts and winning showrooms.
+            <div style={{ fontWeight: '800', fontSize: '16px', color: '#0F172A' }}>No lost sales logged for {selectedMonth}</div>
+            <p style={{ fontSize: '12.5px', color: '#64748B', maxWidth: '400px', margin: 0, lineHeight: 1.5 }}>
+              Record lost customer quotes to track competitor showroom pricing, identify price sensitivities, and reactivate win-back deals.
             </p>
             <button
               type="button"
               onClick={() => setShowModal(true)}
               style={{
-                marginTop: '6px',
-                padding: '8px 18px',
+                marginTop: '8px',
+                padding: '9px 20px',
                 borderRadius: '8px',
                 border: 'none',
                 background: '#0F172A',
                 color: '#FFFFFF',
-                fontSize: '12.5px',
-                fontWeight: '800',
+                fontSize: '13px',
+                fontWeight: '700',
                 cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                boxShadow: '0 2px 6px rgba(15, 23, 42, 0.15)',
               }}
             >
-              + Record Lost Sale
+              <Plus size={15} />
+              <span>Record Lost Sale</span>
             </button>
           </div>
         ) : (
           <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12.5px', textAlign: 'left' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px', textAlign: 'left' }}>
               <thead>
-                <tr style={{ background: '#F8FAFC', borderBottom: '1px solid #E2E8F0', color: '#475569', fontWeight: '800' }}>
-                  <th style={{ padding: '10px 16px' }}>Date</th>
-                  <th style={{ padding: '10px 16px' }}>Customer</th>
-                  <th style={{ padding: '10px 16px' }}>Quote Value</th>
-                  <th style={{ padding: '10px 16px' }}>Lost Reason & Competitor</th>
-                  <th style={{ padding: '10px 16px' }}>Price Gap</th>
-                  <th style={{ padding: '10px 16px' }}>Salesperson</th>
-                  <th style={{ padding: '10px 16px' }}>Status</th>
-                  <th style={{ padding: '10px 16px', textAlign: 'right' }}>Actions</th>
+                <tr style={{ background: '#F8FAFC', borderBottom: '1.5px solid #E2E8F0', color: '#475569' }}>
+                  <th style={{ padding: '12px 18px', fontSize: '11px', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Date</th>
+                  <th style={{ padding: '12px 18px', fontSize: '11px', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Customer</th>
+                  <th style={{ padding: '12px 18px', fontSize: '11px', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Lost To</th>
+                  <th style={{ padding: '12px 18px', fontSize: '11px', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Quote Value</th>
+                  <th style={{ padding: '12px 18px', fontSize: '11px', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Status</th>
+                  <th style={{ padding: '12px 18px', fontSize: '11px', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.05em', textAlign: 'right' }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {lostSales.map((s, idx) => {
                   const isWinBack = s.status === 'win_back';
                   const initial = (s.customerName || 'C').charAt(0).toUpperCase();
+                  const custType = s.customerType || s.customerRef?.customerType || 'Direct Client';
 
                   return (
                     <tr
                       key={s._id}
+                      onClick={() => setDetailRecord(s)}
+                      title="Click to view full lost deal intelligence & details"
                       style={{
                         borderBottom: idx < lostSales.length - 1 ? '1px solid #F1F5F9' : 'none',
-                        transition: 'background-color 0.1s ease',
+                        transition: 'background-color 0.12s ease',
+                        cursor: 'pointer',
                       }}
                       onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#F8FAFC')}
                       onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
                     >
                       {/* Date */}
-                      <td style={{ padding: '10px 16px', color: '#64748B', fontSize: '12px', whiteSpace: 'nowrap' }}>
-                        {s.dateString}
+                      <td style={{ padding: '13px 18px', color: '#64748B', fontSize: '12.5px', whiteSpace: 'nowrap' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <Calendar size={13} color="#94A3B8" />
+                          <span style={{ fontWeight: '600' }}>{formatDateLabel(s.dateString)}</span>
+                        </div>
                       </td>
 
                       {/* Customer */}
-                      <td style={{ padding: '10px 16px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: '#F1F5F9', color: '#334155', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: '800' }}>
+                      <td style={{ padding: '13px 18px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <div
+                            style={{
+                              width: '32px',
+                              height: '32px',
+                              borderRadius: '8px',
+                              background: '#F1F5F9',
+                              color: '#334155',
+                              border: '1px solid #E2E8F0',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              fontSize: '12.5px',
+                              fontWeight: '800',
+                              flexShrink: 0,
+                            }}
+                          >
                             {initial}
                           </div>
                           <div>
-                            <div style={{ fontWeight: '800', color: '#0F172A', fontSize: '13px' }}>
+                            <div style={{ fontWeight: '800', color: '#0F172A', fontSize: '13.5px' }}>
                               {s.customerName}
                             </div>
-                            <div style={{ fontSize: '11px', color: '#94A3B8', display: 'flex', gap: '6px' }}>
-                              {s.customerId && <span style={{ color: '#475569', fontFamily: 'monospace' }}>#{s.customerId}</span>}
-                              {s.phone && <span>{s.phone}</span>}
+                            <div style={{ fontSize: '11px', color: '#64748B', display: 'flex', alignItems: 'center', gap: '6px', marginTop: '2px', flexWrap: 'wrap' }}>
+                              {s.customerId && (
+                                <span style={{ color: '#475569', fontFamily: 'monospace', fontWeight: '700' }}>
+                                  #{s.customerId}
+                                </span>
+                              )}
+                              <span>•</span>
+                              <span>{custType}</span>
+                              {s.salesperson && (
+                                <>
+                                  <span>•</span>
+                                  <span>Rep: {s.salesperson}</span>
+                                </>
+                              )}
                             </div>
                           </div>
+                        </div>
+                      </td>
+
+                      {/* Lost To */}
+                      <td style={{ padding: '13px 18px', whiteSpace: 'nowrap' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <Building2 size={13} color="#94A3B8" />
+                          <span style={{ fontWeight: '700', color: '#1E293B', fontSize: '13px' }}>
+                            {s.competitor || 'Local Dealer'}
+                          </span>
                         </div>
                       </td>
 
                       {/* Quote Value */}
-                      <td style={{ padding: '10px 16px', fontWeight: '800', color: '#0F172A', fontSize: '13px', whiteSpace: 'nowrap' }}>
-                        ₹{(s.quoteValue || 0).toLocaleString('en-IN')}
-                      </td>
-
-                      {/* Lost Reason & Competitor */}
-                      <td style={{ padding: '10px 16px' }}>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                          <div style={{ fontWeight: '700', color: '#0F172A', fontSize: '12px' }}>
-                            {s.lostReason}
-                          </div>
-                          <div style={{ fontSize: '11px', color: '#64748B' }}>
-                            via <strong style={{ color: '#0F172A' }}>{s.competitor}</strong>
-                          </div>
+                      <td style={{ padding: '13px 18px', whiteSpace: 'nowrap' }}>
+                        <div style={{ fontWeight: '800', color: '#0F172A', fontSize: '14px', fontVariantNumeric: 'tabular-nums' }}>
+                          ₹{(s.quoteValue || 0).toLocaleString('en-IN')}
                         </div>
                       </td>
 
-                      {/* Price Difference */}
-                      <td style={{ padding: '10px 16px', whiteSpace: 'nowrap' }}>
-                        {s.priceDifference > 0 ? (
-                          <span style={{ fontSize: '11.5px', fontWeight: '700', color: '#475569', background: '#F8FAFC', border: '1px solid #E2E8F0', padding: '2px 6px', borderRadius: '4px' }}>
-                            -₹{s.priceDifference.toLocaleString('en-IN')} {s.priceDiffPercentage > 0 ? `(${s.priceDiffPercentage}%)` : ''}
-                          </span>
-                        ) : (
-                          <span style={{ color: '#CBD5E1' }}>—</span>
-                        )}
-                      </td>
-
-                      {/* Salesperson */}
-                      <td style={{ padding: '10px 16px', color: '#475569', fontSize: '12px', whiteSpace: 'nowrap' }}>
-                        {s.salesperson}
-                      </td>
-
                       {/* Status */}
-                      <td style={{ padding: '10px 16px', whiteSpace: 'nowrap' }}>
+                      <td style={{ padding: '13px 18px', whiteSpace: 'nowrap' }}>
                         {isWinBack ? (
-                          <span style={{ fontSize: '11px', fontWeight: '800', color: '#059669', background: '#ECFDF5', border: '1px solid #A7F3D0', padding: '2px 8px', borderRadius: '12px' }}>
-                            ⚡ Win-Back
+                          <span
+                            style={{
+                              fontSize: '11px',
+                              fontWeight: '800',
+                              color: '#047857',
+                              background: '#ECFDF5',
+                              border: '1px solid #A7F3D0',
+                              padding: '3px 9px',
+                              borderRadius: '12px',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                            }}
+                          >
+                            <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#10B981' }} />
+                            Win-Back
                           </span>
                         ) : (
-                          <span style={{ fontSize: '11px', fontWeight: '700', color: '#64748B', background: '#F8FAFC', border: '1px solid #CBD5E1', padding: '2px 8px', borderRadius: '12px' }}>
+                          <span
+                            style={{
+                              fontSize: '11px',
+                              fontWeight: '700',
+                              color: '#475569',
+                              background: '#F8FAFC',
+                              border: '1px solid #E2E8F0',
+                              padding: '3px 9px',
+                              borderRadius: '12px',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                            }}
+                          >
+                            <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#94A3B8' }} />
                             Lost
                           </span>
                         )}
                       </td>
 
                       {/* Actions */}
-                      <td style={{ padding: '10px 16px', textAlign: 'right', whiteSpace: 'nowrap' }}>
-                        <div style={{ display: 'inline-flex', gap: '4px' }}>
+                      <td style={{ padding: '13px 18px', textAlign: 'right', whiteSpace: 'nowrap' }}>
+                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setDetailRecord(s);
+                            }}
+                            title="View Deal Intelligence"
+                            style={{
+                              width: '28px',
+                              height: '28px',
+                              borderRadius: '6px',
+                              border: '1px solid #E2E8F0',
+                              background: '#FFFFFF',
+                              color: '#0F172A',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              transition: 'all 0.15s ease',
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.background = '#F1F5F9';
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.background = '#FFFFFF';
+                            }}
+                          >
+                            <Eye size={13} />
+                          </button>
                           {!isWinBack && (
                             <button
                               type="button"
-                              onClick={() => setReopeningRecord(s)}
-                              title="Reopen as Win-Back"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setReopeningRecord(s);
+                              }}
+                              title="Reopen as Win-Back opportunity"
                               style={{
-                                padding: '4px 8px',
+                                padding: '4px 9px',
                                 borderRadius: '6px',
                                 border: '1px solid #A7F3D0',
                                 background: '#ECFDF5',
-                                color: '#059669',
+                                color: '#047857',
                                 fontSize: '11px',
-                                fontWeight: '700',
+                                fontWeight: '800',
                                 cursor: 'pointer',
+                                transition: 'all 0.15s ease',
+                              }}
+                              onMouseEnter={(e) => {
+                                e.currentTarget.style.background = '#047857';
+                                e.currentTarget.style.color = '#FFFFFF';
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.background = '#ECFDF5';
+                                e.currentTarget.style.color = '#047857';
                               }}
                             >
                               ⚡ Win-Back
@@ -863,41 +1031,63 @@ export const LostSalesView = () => {
                           )}
                           <button
                             type="button"
-                            onClick={() => {
+                            onClick={(e) => {
+                              e.stopPropagation();
                               setEditingRecord(s);
                               setShowModal(true);
                             }}
-                            title="Edit"
+                            title="Edit Record"
                             style={{
                               width: '28px',
                               height: '28px',
                               borderRadius: '6px',
-                              border: 'none',
-                              background: 'transparent',
+                              border: '1px solid #E2E8F0',
+                              background: '#FFFFFF',
                               color: '#64748B',
                               cursor: 'pointer',
                               display: 'flex',
                               alignItems: 'center',
                               justifyContent: 'center',
+                              transition: 'all 0.15s ease',
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.background = '#F1F5F9';
+                              e.currentTarget.style.color = '#0F172A';
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.background = '#FFFFFF';
+                              e.currentTarget.style.color = '#64748B';
                             }}
                           >
                             <Edit2 size={13} />
                           </button>
                           <button
                             type="button"
-                            onClick={() => handleDelete(s._id, s.customerName)}
-                            title="Delete"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDelete(s._id, s.customerName);
+                            }}
+                            title="Delete Record"
                             style={{
                               width: '28px',
                               height: '28px',
                               borderRadius: '6px',
-                              border: 'none',
-                              background: 'transparent',
+                              border: '1px solid #FEE2E2',
+                              background: '#FFFFFF',
                               color: '#DC2626',
                               cursor: 'pointer',
                               display: 'flex',
                               alignItems: 'center',
                               justifyContent: 'center',
+                              transition: 'all 0.15s ease',
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.background = '#FEF2F2';
+                              e.currentTarget.style.borderColor = '#FCA5A5';
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.background = '#FFFFFF';
+                              e.currentTarget.style.borderColor = '#FEE2E2';
                             }}
                           >
                             <Trash2 size={13} />
@@ -909,9 +1099,58 @@ export const LostSalesView = () => {
                 })}
               </tbody>
             </table>
+
+            {/* Table Summary Footer Bar */}
+            <div
+              style={{
+                padding: '12px 20px',
+                background: '#F8FAFC',
+                borderTop: '1.5px solid #E2E8F0',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: '12px',
+                fontSize: '12px',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '16px', color: '#64748B' }}>
+                <span>
+                  Showing <strong style={{ color: '#0F172A' }}>{lostSales.length}</strong> quotations
+                </span>
+                <span>•</span>
+                <span>
+                  Win-Backs: <strong style={{ color: '#047857' }}>{winBackCount}</strong>
+                </span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ color: '#64748B', fontWeight: '600' }}>Total Lost Pipeline:</span>
+                <span style={{ fontSize: '13px', fontWeight: '800', color: '#0F172A', fontVariantNumeric: 'tabular-nums' }}>
+                  ₹{totalLostValue.toLocaleString('en-IN')}
+                </span>
+              </div>
+            </div>
           </div>
         )}
       </div>
+
+
+      {/* Lost Sale Detail Intelligence Modal */}
+      {detailRecord && (
+        <LostSaleDetailModal
+          record={detailRecord}
+          onClose={() => setDetailRecord(null)}
+          onEdit={(rec) => {
+            setDetailRecord(null);
+            setEditingRecord(rec);
+            setShowModal(true);
+          }}
+          onReopen={(rec) => {
+            setDetailRecord(null);
+            setReopeningRecord(rec);
+          }}
+        />
+      )}
 
       {/* Record / Edit Lost Sale Modal */}
       {showModal && (
@@ -934,7 +1173,7 @@ export const LostSalesView = () => {
             onClick={(e) => e.stopPropagation()}
           >
             <div style={{ padding: '16px 20px', background: '#ECFDF5', borderBottom: '1px solid #A7F3D0', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Sparkles size={18} color="#059669" />
+              <RotateCcw size={18} color="#059669" />
               <h3 style={{ margin: 0, fontSize: '15px', fontWeight: '800', color: '#065F46' }}>
                 Reopen as Win-Back Opportunity
               </h3>
