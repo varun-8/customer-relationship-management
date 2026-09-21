@@ -172,42 +172,44 @@ export const ExecutiveDashboardView = () => {
         />
       ) : (
         <>
-          {/* 2. Top Executive Revenue & Conversion Hero Cards */}
-          <div style={{ display: 'grid', gridTemplateColumns: isToneDown ? 'repeat(auto-fit, minmax(240px, 1fr))' : 'repeat(auto-fit, minmax(240px, 1fr))', gap: isToneDown ? '10px' : '14px' }}>
+          {/* 2. Top Executive Revenue Goal Target & Conversion Cards in Single Horizontal Row */}
+          <div style={{ display: 'grid', gridTemplateColumns: isToneDown ? 'repeat(auto-fit, minmax(280px, 1fr))' : 'repeat(auto-fit, minmax(320px, 1fr))', gap: isToneDown ? '10px' : '16px' }}>
             {/* HERO CARD: Monthly Revenue Goal */}
             {!isToneDown && (
-              <div style={{ backgroundColor: '#0F172A', color: '#FFFFFF', borderRadius: '20px', padding: '20px', boxShadow: '0 4px 15px rgba(0, 0, 0, 0.05)', gridColumn: 'span 2' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <span style={{ fontSize: '11px', fontWeight: '800', color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                    SHOWROOM REVENUE GOAL ({selectedMonth})
-                  </span>
-                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', backgroundColor: `${achievementColor}25`, color: achievementColor, border: `1px solid ${achievementColor}40`, padding: '4px 10px', borderRadius: '10px', fontSize: '12px', fontWeight: '800' }}>
-                    <Zap size={14} />
-                    <span>{kpi.achievementPercent || 0}% Achieved</span>
+              <div style={{ backgroundColor: '#0F172A', color: '#FFFFFF', borderRadius: '20px', padding: '20px', boxShadow: '0 4px 15px rgba(0, 0, 0, 0.05)', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '6px' }}>
+                    <span style={{ fontSize: '11px', fontWeight: '800', color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                      SHOWROOM REVENUE GOAL ({selectedMonth})
+                    </span>
+                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', backgroundColor: `${achievementColor}25`, color: achievementColor, border: `1px solid ${achievementColor}40`, padding: '3px 8px', borderRadius: '8px', fontSize: '11.5px', fontWeight: '800' }}>
+                      <Zap size={13} />
+                      <span>{kpi.achievementPercent || 0}% Achieved</span>
+                    </div>
+                  </div>
+
+                  <div style={{ marginTop: '8px', fontSize: '22px', fontWeight: '900', color: '#FFFFFF' }}>
+                    ₹{(kpi.actualSales || 0).toLocaleString('en-IN')}{' '}
+                    <span style={{ fontSize: '13px', color: '#94A3B8', fontWeight: '600' }}>
+                      / ₹{(kpi.salesTarget || 0).toLocaleString('en-IN')} target
+                    </span>
+                  </div>
+
+                  {/* Progress Meter */}
+                  <div style={{ height: '7px', backgroundColor: 'rgba(255, 255, 255, 0.1)', borderRadius: '4px', marginTop: '10px', overflow: 'hidden' }}>
+                    <div style={{ height: '100%', width: `${Math.min(kpi.achievementPercent || 0, 100)}%`, backgroundColor: achievementColor, borderRadius: '4px', transition: 'width 0.3s ease' }} />
                   </div>
                 </div>
 
-                <div style={{ marginTop: '10px', fontSize: '26px', fontWeight: '900', color: '#FFFFFF' }}>
-                  ₹{(kpi.actualSales || 0).toLocaleString('en-IN')}{' '}
-                  <span style={{ fontSize: '14px', color: '#94A3B8', fontWeight: '600' }}>
-                    / ₹{(kpi.salesTarget || 0).toLocaleString('en-IN')} target
-                  </span>
-                </div>
-
-                {/* Progress Meter */}
-                <div style={{ height: '8px', backgroundColor: 'rgba(255, 255, 255, 0.1)', borderRadius: '4px', marginTop: '12px', overflow: 'hidden' }}>
-                  <div style={{ height: '100%', width: `${Math.min(kpi.achievementPercent || 0, 100)}%`, backgroundColor: achievementColor, borderRadius: '4px', transition: 'width 0.3s ease' }} />
-                </div>
-
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '12px', fontSize: '12px', color: '#CBD5E1' }}>
-                  <span>Remaining: <strong style={{ color: '#FFFFFF' }}>₹{Math.max((kpi.salesTarget || 0) - (kpi.actualSales || 0), 0).toLocaleString('en-IN')}</strong></span>
-                  <span>Run-rate: <strong style={{ color: '#4ADE80' }}>{kpi.orders || 0} deals closed</strong></span>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '10px', fontSize: '11.5px', color: '#CBD5E1' }}>
+                  <span>Rem: <strong style={{ color: '#FFFFFF' }}>₹{Math.max((kpi.salesTarget || 0) - (kpi.actualSales || 0), 0).toLocaleString('en-IN')}</strong></span>
+                  <span>Orders: <strong style={{ color: '#4ADE80' }}>{kpi.orders || 0} closed</strong></span>
                 </div>
               </div>
             )}
 
             {/* CARD 2: Conversion Funnel */}
-            <div className="dash-kpi-card" style={{ backgroundColor: '#FFFFFF', borderRadius: isToneDown ? '8px' : '20px', border: '1px solid #CBD5E1', padding: isToneDown ? '12px 14px' : '20px', boxShadow: isToneDown ? 'none' : '0 2px 8px rgba(0,0,0,0.02)' }}>
+            <div className="dash-kpi-card" style={{ backgroundColor: '#FFFFFF', borderRadius: isToneDown ? '8px' : '20px', border: '1px solid #CBD5E1', padding: isToneDown ? '12px 14px' : '20px', boxShadow: isToneDown ? 'none' : '0 2px 8px rgba(0,0,0,0.02)', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <span style={{ fontSize: '11px', fontWeight: '800', color: isToneDown ? '#0F172A' : '#64748B', textTransform: 'uppercase', letterSpacing: '0.04em' }}>CONVERSION FUNNEL</span>
                 <div style={{ width: isToneDown ? '26px' : '34px', height: isToneDown ? '26px' : '34px', borderRadius: isToneDown ? '6px' : '10px', backgroundColor: isToneDown ? '#F1F5F9' : '#EFF6FF', color: isToneDown ? '#0F172A' : '#2563EB', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -238,7 +240,7 @@ export const ExecutiveDashboardView = () => {
             </div>
 
             {/* CARD 3: Follow-up Velocity */}
-            <div className="dash-kpi-card" style={{ backgroundColor: '#FFFFFF', borderRadius: isToneDown ? '8px' : '20px', border: '1px solid #CBD5E1', padding: isToneDown ? '12px 14px' : '20px', boxShadow: isToneDown ? 'none' : '0 2px 8px rgba(0,0,0,0.02)' }}>
+            <div className="dash-kpi-card" style={{ backgroundColor: '#FFFFFF', borderRadius: isToneDown ? '8px' : '20px', border: '1px solid #CBD5E1', padding: isToneDown ? '12px 14px' : '20px', boxShadow: isToneDown ? 'none' : '0 2px 8px rgba(0,0,0,0.02)', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <span style={{ fontSize: '11px', fontWeight: '800', color: isToneDown ? '#0F172A' : '#64748B', textTransform: 'uppercase', letterSpacing: '0.04em' }}>FOLLOW-UP VELOCITY</span>
                 <div style={{ width: isToneDown ? '26px' : '34px', height: isToneDown ? '26px' : '34px', borderRadius: isToneDown ? '6px' : '10px', backgroundColor: isToneDown ? '#F1F5F9' : '#FAF5FF', color: isToneDown ? '#0F172A' : '#7C3AED', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>

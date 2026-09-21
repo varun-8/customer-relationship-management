@@ -943,7 +943,16 @@ Provide 3 to 4 clear, high-impact improvements with this structure:
 #### 5. ✅ Quick-Win Management Action Checklist
 - A 4-point immediate management checklist for this month.
 
-Generate the complete, modern, colorful, minimalistic PDF-ready report now.`;
+  Generate the complete, modern, colorful, minimalistic PDF-ready report now.`;
+}
+
+/**
+ * Build a minimalistic, executive-grade prompt formatted for pasting into Google Gemini (gemini.google.com)
+ */
+function buildGeminiWebPrompt(params) {
+  // Uses the exact same comprehensive dataset structure optimized for Gemini AI model input
+  const basePrompt = buildChatGPTWebPrompt(params);
+  return basePrompt.replace('# PROMPT: MINIMALISTIC SHOWROOM BUSINESS REPORT & PDF GENERATION', '# GEMINI AI PROMPT: SHOWROOM BUSINESS INTELLIGENCE & PDF REPORT GENERATION');
 }
 
 // Backward compatibility alias: generateLostSalesReport calls generateComprehensiveAiReport
@@ -962,5 +971,5 @@ module.exports = {
   generateComprehensiveAiReport,
   generateLostSalesReport,
   buildChatGPTWebPrompt,
+  buildGeminiWebPrompt,
 };
-

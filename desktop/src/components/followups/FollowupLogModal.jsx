@@ -134,8 +134,8 @@ export const FollowupLogModal = ({ followUp: initialFollowUp, onClose, onSaved, 
   const tomorrow = new Date(today);
   tomorrow.setDate(tomorrow.getDate() + 1);
 
-  // Default active section is 'log'
-  const [activeSection, setActiveSection] = useState('log'); // 'log' | 'info'
+  // Default active section is 'timeline' (Read-only view mode) if initialFollowUp exists, else 'log'
+  const [activeSection, setActiveSection] = useState(() => (initialFollowUp ? 'timeline' : 'log')); // 'timeline' | 'log' | 'info'
 
   const [selectedFollowUp, setSelectedFollowUp] = useState(initialFollowUp || null);
   const [outcome, setOutcome] = useState('Spoke with Customer / Positive Interest');
@@ -161,6 +161,9 @@ export const FollowupLogModal = ({ followUp: initialFollowUp, onClose, onSaved, 
     initialFollowUp?.orderValue !== undefined ? String(initialFollowUp.orderValue) : (initialFollowUp?.quotationValue !== undefined ? String(initialFollowUp.quotationValue) : '')
   );
   const [discussionNotes, setDiscussionNotes] = useState('');
+  const [pipelineStatus, setPipelineStatus] = useState(
+    initialFollowUp?.status || 'Negotiation & Follow-up'
+  );
 
   // Discussion & Customer Notes history state
   const [notesHistory, setNotesHistory] = useState(() => parseNotesHistory(initialFollowUp));
@@ -233,6 +236,7 @@ export const FollowupLogModal = ({ followUp: initialFollowUp, onClose, onSaved, 
     if (mapped.quotationValue) setQuotationValue(String(mapped.quotationValue));
     if (mapped.nextFollowUp) setNextFollowUp(mapped.nextFollowUp);
     if (mapped.houseStage) setHouseStage(mapped.houseStage);
+    if (mapped.status) setPipelineStatus(mapped.status);
     if (mapped.requirement) {
       setRequirements(Array.isArray(mapped.requirement) ? mapped.requirement : [mapped.requirement]);
     }
@@ -334,10 +338,8 @@ export const FollowupLogModal = ({ followUp: initialFollowUp, onClose, onSaved, 
         houseStage,
         quotationValue: quotationValue ? Number(quotationValue) : undefined,
         orderValue: orderValueAmount ? Number(orderValueAmount) : (quotationValue ? Number(quotationValue) : undefined),
-        statusUpdate: outcome === 'Order Confirmed / Ready for Billing' ? 'Order Confirmed' : (outcome === 'Deal Lost / Postponed' ? 'Lost' : undefined),
+        statusUpdate: pipelineStatus || (outcome === 'Order Confirmed / Ready for Billing' ? 'Won - Closed' : (outcome === 'Deal Lost / Postponed' ? 'Lost Sale' : undefined)),
       });
-
-
 
       if (res.success) {
         toast.success(
@@ -368,7 +370,6 @@ export const FollowupLogModal = ({ followUp: initialFollowUp, onClose, onSaved, 
   const approxQuantity = selectedFollowUp?.approxQuantity || '';
   const tileBudget = selectedFollowUp?.tileBudget || '';
   const adhesiveRequirement = selectedFollowUp?.adhesiveRequirement || 'No';
-  const lastReason = selectedFollowUp?.lastReason || selectedFollowUp?.notes || '';
 
   return createPortal(
     <div
@@ -391,9 +392,9 @@ export const FollowupLogModal = ({ followUp: initialFollowUp, onClose, onSaved, 
       <div
         className="modal-card"
         style={{
-          maxWidth: '860px',
-          width: '98%',
-          maxHeight: '92vh',
+          maxWidth: '1040px',
+          width: '92vw',
+          maxHeight: '90vh',
           display: 'flex',
           flexDirection: 'column',
           borderRadius: '20px',
@@ -435,7 +436,7 @@ export const FollowupLogModal = ({ followUp: initialFollowUp, onClose, onSaved, 
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                 <h3 style={{ margin: 0, fontSize: '17px', fontWeight: '800', color: '#FFFFFF', letterSpacing: '-0.01em' }}>
-                  Log Follow-up Activity & Discussion
+                  {activeSection === 'log' ? 'Log Activity & Follow-up' : 'Follow-up Activity & Timeline Info'}
                 </h3>
                 {customerId && (
                   <span
@@ -459,7 +460,7 @@ export const FollowupLogModal = ({ followUp: initialFollowUp, onClose, onSaved, 
                 )}
               </div>
               <p style={{ margin: '3px 0 0', fontSize: '12px', color: '#94A3B8' }}>
-                {customerName} • Record discussion remarks and schedule next reminder
+                {customerName} • {activeSection === 'timeline' ? 'Read-only activity log and history timeline' : 'Record discussion remarks and schedule next reminder'}
               </p>
             </div>
           </div>
@@ -483,7 +484,7 @@ export const FollowupLogModal = ({ followUp: initialFollowUp, onClose, onSaved, 
           </button>
         </div>
 
-        {/* Top Segmented Navigation Switcher: [Log Activity (Default)] vs [Customer Info] */}
+        {/* Top Segmented Navigation Switcher: [Log Info & Timeline (Read-Only)] vs [Log Activity] vs [Customer Info] */}
         <div
           style={{
             backgroundColor: '#FFFFFF',
@@ -492,8 +493,34 @@ export const FollowupLogModal = ({ followUp: initialFollowUp, onClose, onSaved, 
             display: 'flex',
             alignItems: 'center',
             gap: '10px',
+            flexWrap: 'wrap',
           }}
         >
+          <button
+            type="button"
+            onClick={() => setActiveSection('timeline')}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '8px 16px',
+              borderRadius: '9px',
+              fontSize: '12.5px',
+              fontWeight: '700',
+              cursor: 'pointer',
+              border: activeSection === 'timeline' ? '1px solid #99F6E4' : '1px solid transparent',
+              backgroundColor: activeSection === 'timeline' ? '#F0FDFA' : 'transparent',
+              color: activeSection === 'timeline' ? '#0F766E' : '#64748B',
+              transition: 'all 0.15s ease',
+            }}
+          >
+            <History size={14} color={activeSection === 'timeline' ? '#0F766E' : '#64748B'} />
+            <span>Activity Timeline (Read-Only)</span>
+            {activeSection === 'timeline' && (
+              <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#0F766E' }} />
+            )}
+          </button>
+
           <button
             type="button"
             onClick={() => setActiveSection('log')}
@@ -506,16 +533,16 @@ export const FollowupLogModal = ({ followUp: initialFollowUp, onClose, onSaved, 
               fontSize: '12.5px',
               fontWeight: '700',
               cursor: 'pointer',
-              border: activeSection === 'log' ? '1px solid #99F6E4' : '1px solid transparent',
-              backgroundColor: activeSection === 'log' ? '#F0FDFA' : 'transparent',
-              color: activeSection === 'log' ? '#0F766E' : '#64748B',
+              border: activeSection === 'log' ? '1px solid #BFDBFE' : '1px solid transparent',
+              backgroundColor: activeSection === 'log' ? '#EFF6FF' : 'transparent',
+              color: activeSection === 'log' ? '#1D4ED8' : '#64748B',
               transition: 'all 0.15s ease',
             }}
           >
-            <FileText size={14} color={activeSection === 'log' ? '#0F766E' : '#64748B'} />
-            <span>Log Activity</span>
+            <Plus size={14} color={activeSection === 'log' ? '#1D4ED8' : '#64748B'} />
+            <span>Log Activity & Update</span>
             {activeSection === 'log' && (
-              <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#0F766E' }} />
+              <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#1D4ED8' }} />
             )}
           </button>
 
@@ -531,20 +558,20 @@ export const FollowupLogModal = ({ followUp: initialFollowUp, onClose, onSaved, 
               fontSize: '12.5px',
               fontWeight: '700',
               cursor: 'pointer',
-              border: activeSection === 'info' ? '1px solid #99F6E4' : '1px solid transparent',
-              backgroundColor: activeSection === 'info' ? '#F0FDFA' : 'transparent',
-              color: activeSection === 'info' ? '#0F766E' : '#64748B',
+              border: activeSection === 'info' ? '1px solid #E2E8F0' : '1px solid transparent',
+              backgroundColor: activeSection === 'info' ? '#F8FAFC' : 'transparent',
+              color: activeSection === 'info' ? '#0F172A' : '#64748B',
               transition: 'all 0.15s ease',
             }}
           >
-            <User size={14} color={activeSection === 'info' ? '#0F766E' : '#64748B'} />
-            <span>Customer Information</span>
+            <User size={14} color={activeSection === 'info' ? '#0F172A' : '#64748B'} />
+            <span>Customer Specs</span>
           </button>
         </div>
 
-        {/* Modal Form Body */}
+        {/* Modal Body */}
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
-          <div style={{ flex: 1, overflowY: 'auto', padding: '22px 24px', display: 'flex', flexDirection: 'column', gap: '16px', backgroundColor: '#F8FAFC' }}>
+          <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: '16px', backgroundColor: '#F8FAFC' }}>
             {error && (
               <div style={{ padding: '12px 16px', borderRadius: '12px', backgroundColor: '#FEF2F2', border: '1px solid #FECACA', color: '#DC2626', fontSize: '13px', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <AlertTriangle size={16} />
@@ -552,8 +579,133 @@ export const FollowupLogModal = ({ followUp: initialFollowUp, onClose, onSaved, 
               </div>
             )}
 
-            {/* TAB 1: LOG ACTIVITY FORM (Active by default) */}
-            {activeSection === 'log' ? (
+            {/* TAB 1: READ-ONLY ACTIVITY & DISCUSSION TIMELINE (Default on click) */}
+            {activeSection === 'timeline' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                {/* Non-Editable Quick Info Summary Banner */}
+                <div style={{ backgroundColor: '#FFFFFF', borderRadius: '16px', border: '1px solid #E2E8F0', padding: '16px', boxShadow: '0 1px 3px rgba(0,0,0,0.02)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px', marginBottom: '12px', borderBottom: '1px solid #F1F5F9', paddingBottom: '10px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <div style={{ width: '36px', height: '36px', borderRadius: '10px', backgroundColor: '#F0FDFA', color: '#0F766E', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800' }}>
+                        {customerName.charAt(0).toUpperCase()}
+                      </div>
+                      <div>
+                        <div style={{ fontSize: '15px', fontWeight: '800', color: '#0F172A' }}>{customerName}</div>
+                        <div style={{ fontSize: '12px', color: '#64748B', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span>📞 {phone || 'No phone'}</span>
+                          {phone && (
+                            <a
+                              href={getWhatsAppUrl(phone, selectedFollowUp)}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              style={{ color: '#15803D', fontWeight: '800', textDecoration: 'none' }}
+                            >
+                              💬 WhatsApp
+                            </a>
+                          )}
+                          <span>• {customerType}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => setActiveSection('log')}
+                      style={{
+                        padding: '8px 16px',
+                        borderRadius: '9px',
+                        backgroundColor: '#0F766E',
+                        color: '#FFFFFF',
+                        border: 'none',
+                        fontSize: '12.5px',
+                        fontWeight: '800',
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        boxShadow: '0 2px 6px rgba(15, 118, 110, 0.25)',
+                      }}
+                    >
+                      <Plus size={14} />
+                      <span>Log Activity & Update</span>
+                    </button>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '10px', fontSize: '12.5px' }}>
+                    <div style={{ backgroundColor: '#F8FAFC', padding: '8px 12px', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
+                      <span style={{ fontSize: '10.5px', color: '#64748B', fontWeight: '700', textTransform: 'uppercase', display: 'block' }}>STAGE</span>
+                      <span style={{ fontWeight: '800', color: '#0F172A' }}>{houseStage}</span>
+                    </div>
+                    <div style={{ backgroundColor: '#F8FAFC', padding: '8px 12px', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
+                      <span style={{ fontSize: '10.5px', color: '#64748B', fontWeight: '700', textTransform: 'uppercase', display: 'block' }}>PRIORITY</span>
+                      <span style={{ fontWeight: '800', color: leadTemperature === 'Hot' ? '#DC2626' : '#D97706' }}>🔥 {leadTemperature}</span>
+                    </div>
+                    <div style={{ backgroundColor: '#F8FAFC', padding: '8px 12px', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
+                      <span style={{ fontSize: '10.5px', color: '#64748B', fontWeight: '700', textTransform: 'uppercase', display: 'block' }}>NEXT REMINDER</span>
+                      <span style={{ fontWeight: '800', color: '#2563EB' }}>📅 {nextFollowUp || 'Not Set'}</span>
+                    </div>
+                    <div style={{ backgroundColor: '#F8FAFC', padding: '8px 12px', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
+                      <span style={{ fontSize: '10.5px', color: '#64748B', fontWeight: '700', textTransform: 'uppercase', display: 'block' }}>QUOTATION</span>
+                      <span style={{ fontWeight: '800', color: '#059669' }}>₹{quotationValue ? Number(quotationValue).toLocaleString('en-IN') : '0'}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Read-Only Timeline Card */}
+                <div style={{ backgroundColor: '#FFFFFF', borderRadius: '16px', border: '1px solid #E2E8F0', padding: '20px', boxShadow: '0 1px 3px rgba(0,0,0,0.02)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', borderBottom: '1px solid #F1F5F9', paddingBottom: '12px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <History size={18} color="#0F766E" />
+                      <h4 style={{ margin: 0, fontSize: '14px', fontWeight: '800', color: '#0F172A' }}>
+                        Activity & Conversation Timeline
+                      </h4>
+                    </div>
+                    <span style={{ fontSize: '11px', fontWeight: '800', backgroundColor: '#F0FDFA', color: '#0F766E', border: '1px solid #99F6E4', padding: '3px 9px', borderRadius: '6px' }}>
+                      {notesHistory.length} {notesHistory.length === 1 ? 'Timeline Log' : 'Timeline Logs'}
+                    </span>
+                  </div>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    {notesHistory.length === 0 ? (
+                      <div style={{ padding: '24px 16px', textAlign: 'center', backgroundColor: '#F8FAFC', borderRadius: '12px', border: '1px dashed #CBD5E1', color: '#64748B', fontSize: '13px' }}>
+                        💬 No previous follow-up activity logged yet for {customerName}. Click "Log Activity & Update" above to record the first log.
+                      </div>
+                    ) : (
+                      notesHistory.map((note) => (
+                        <div
+                          key={note.id}
+                          style={{
+                            backgroundColor: '#FFFFFF',
+                            border: '1px solid #E2E8F0',
+                            borderLeft: '4px solid #0F766E',
+                            borderRadius: '10px',
+                            padding: '12px 16px',
+                            boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
+                          }}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px', flexWrap: 'wrap', gap: '6px' }}>
+                            <span style={{ fontSize: '11px', fontWeight: '800', color: '#0F766E', backgroundColor: '#F0FDFA', border: '1px solid #CCFBF1', padding: '2px 8px', borderRadius: '5px', fontFamily: 'monospace' }}>
+                              📅 {note.date || 'Log Entry'}
+                            </span>
+                            {note.outcome && (
+                              <span style={{ fontSize: '11px', fontWeight: '700', color: '#1E293B', backgroundColor: '#F1F5F9', padding: '2px 8px', borderRadius: '5px' }}>
+                                {note.outcome}
+                              </span>
+                            )}
+                          </div>
+                          <div style={{ fontSize: '13px', color: '#1E293B', lineHeight: '1.5', whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontWeight: '500' }}>
+                            {note.text}
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* TAB 2: LOG ACTIVITY FORM (Clean Form Mode - No history clutter) */}
+            {activeSection === 'log' && (
               <>
                 {/* Search if no customer selected */}
                 {!selectedFollowUp && (
@@ -608,7 +760,7 @@ export const FollowupLogModal = ({ followUp: initialFollowUp, onClose, onSaved, 
                     <span>1. Call Outcome & Lead Priority</span>
                   </div>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: '14px' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '14px' }}>
                     {/* Outcome Dropdown List Box */}
                     <div>
                       <label style={{ fontSize: '11px', fontWeight: '800', color: '#64748B', display: 'block', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
@@ -622,7 +774,7 @@ export const FollowupLogModal = ({ followUp: initialFollowUp, onClose, onSaved, 
                             width: '100%',
                             padding: '10px 36px 10px 14px',
                             borderRadius: '10px',
-                            border: '1.5px solid #CBD5E1',
+                            border: '1.5px solid #94A3B8',
                             fontSize: '13px',
                             fontWeight: '700',
                             color: outcome === 'Deal Lost / Postponed' ? '#DC2626' : '#0F172A',
@@ -643,6 +795,41 @@ export const FollowupLogModal = ({ followUp: initialFollowUp, onClose, onSaved, 
                       </div>
                     </div>
 
+                    {/* Pipeline Status Dropdown List Box */}
+                    <div>
+                      <label style={{ fontSize: '11px', fontWeight: '800', color: '#64748B', display: 'block', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                        EDIT PIPELINE STATUS <span style={{ color: '#E11D48' }}>*</span>
+                      </label>
+                      <div style={{ position: 'relative' }}>
+                        <select
+                          value={pipelineStatus}
+                          onChange={(e) => setPipelineStatus(e.target.value)}
+                          style={{
+                            width: '100%',
+                            padding: '10px 36px 10px 14px',
+                            borderRadius: '10px',
+                            border: '1.5px solid #94A3B8',
+                            fontSize: '13px',
+                            fontWeight: '700',
+                            color: '#0F172A',
+                            backgroundColor: '#FFFFFF',
+                            appearance: 'none',
+                            WebkitAppearance: 'none',
+                            outline: 'none',
+                            cursor: 'pointer',
+                          }}
+                        >
+                          <option value="Newly Contacted">📌 Newly Contacted</option>
+                          <option value="Requirement Collected">📋 Requirement Collected</option>
+                          <option value="Quotation Provided">📄 Quotation Provided</option>
+                          <option value="Negotiation & Follow-up">🤝 Negotiation & Follow-up</option>
+                          <option value="Won - Closed">🎉 Won - Closed</option>
+                          <option value="Lost Sale">❌ Lost Sale</option>
+                        </select>
+                        <ChevronDown size={16} color="#64748B" style={{ position: 'absolute', right: '12px', top: '12px', pointerEvents: 'none' }} />
+                      </div>
+                    </div>
+
                     {/* Priority Dropdown List Box */}
                     <div>
                       <label style={{ fontSize: '11px', fontWeight: '800', color: '#64748B', display: 'block', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
@@ -656,7 +843,7 @@ export const FollowupLogModal = ({ followUp: initialFollowUp, onClose, onSaved, 
                             width: '100%',
                             padding: '10px 36px 10px 14px',
                             borderRadius: '10px',
-                            border: '1.5px solid #CBD5E1',
+                            border: '1.5px solid #94A3B8',
                             fontSize: '13px',
                             fontWeight: '700',
                             color: leadTemperature === 'Hot' ? '#DC2626' : (leadTemperature === 'Warm' ? '#D97706' : '#0F766E'),
@@ -790,12 +977,8 @@ export const FollowupLogModal = ({ followUp: initialFollowUp, onClose, onSaved, 
                           min="0"
                         />
                       </div>
-                      <div style={{ fontSize: '11.5px', color: '#15803D', fontWeight: '700', marginTop: '6px' }}>
-                        ✓ Setting this order value automatically moves the lead to Order Confirmed and records deal revenue.
-                      </div>
                     </div>
                   )}
-
 
                   {/* Requirements Multi-Select Pills */}
                   <div>
@@ -900,222 +1083,93 @@ export const FollowupLogModal = ({ followUp: initialFollowUp, onClose, onSaved, 
                   </div>
                 </div>
 
-                {/* CARD 4: SEPARATE DEDICATED SECTION FOR DISCUSSION & CUSTOMER NOTES */}
+                {/* CARD 4: NEW DISCUSSION REMARK INPUT (Clean input form - no inline time history clutter) */}
                 <div
                   style={{
                     backgroundColor: '#FFFFFF',
                     borderRadius: '16px',
                     border: '1.5px solid #E2E8F0',
-                    borderLeft: '4px solid #0F172A',
+                    borderLeft: '4px solid #0F766E',
                     padding: '20px',
                     boxShadow: '0 2px 8px rgba(15, 23, 42, 0.04)',
                   }}
                 >
-                  {/* Section Header with Note Counter */}
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px', borderBottom: '1px solid #F1F5F9', paddingBottom: '12px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                      <div style={{ width: '32px', height: '32px', borderRadius: '9px', backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0', color: '#0F172A', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <MessageSquare size={16} />
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px', borderBottom: '1px solid #F1F5F9', paddingBottom: '12px' }}>
+                    <div style={{ width: '32px', height: '32px', borderRadius: '9px', backgroundColor: '#F0FDFA', color: '#0F766E', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <MessageSquare size={16} />
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '13px', fontWeight: '800', color: '#0F172A', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                        4. New Discussion Remark & Notes
                       </div>
-                      <div>
-                        <div style={{ fontSize: '13px', fontWeight: '800', color: '#0F172A', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                          4. Discussion & Customer Notes
-                        </div>
-                        <div style={{ fontSize: '11.5px', color: '#64748B', marginTop: '1px' }}>
-                          Complete client conversation history and new discussion remarks
-                        </div>
+                      <div style={{ fontSize: '11.5px', color: '#64748B', marginTop: '1px' }}>
+                        Type new call notes or client conversation remarks to log into history
                       </div>
                     </div>
-                    <span style={{ fontSize: '11px', fontWeight: '800', backgroundColor: '#F8FAFC', color: '#334155', border: '1px solid #E2E8F0', padding: '3px 9px', borderRadius: '6px' }}>
-                      {notesHistory.length} {notesHistory.length === 1 ? 'Note' : 'Notes'}
-                    </span>
                   </div>
 
-                  {/* A: Previous Customer Notes Stream */}
-                  <div style={{ marginBottom: '16px' }}>
-                    <div style={{ fontSize: '10.5px', fontWeight: '800', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                      <History size={12} />
-                      <span>PREVIOUS DISCUSSION NOTES & REMARKS HISTORY</span>
-                    </div>
-
-                    <div
-                      style={{
-                        maxHeight: '210px',
-                        overflowY: 'auto',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: '8px',
-                        paddingRight: '4px',
-                      }}
-                    >
-                      {notesHistory.length === 0 ? (
-                        <div
+                  {/* Quick Snippet Chips */}
+                  <div style={{ marginBottom: '10px' }}>
+                    <span style={{ fontSize: '10.5px', fontWeight: '800', color: '#64748B', display: 'block', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                      QUICK REMARK SNIPPETS (CLICK TO INSERT)
+                    </span>
+                    <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                      {QUICK_SNIPPETS.map((snip) => (
+                        <button
+                          key={snip}
+                          type="button"
+                          onClick={() => handleAppendSnippet(snip)}
                           style={{
-                            padding: '20px 16px',
-                            textAlign: 'center',
+                            fontSize: '11.5px',
+                            fontWeight: '600',
                             backgroundColor: '#F8FAFC',
-                            borderRadius: '12px',
-                            border: '1px dashed #CBD5E1',
-                            color: '#64748B',
-                            fontSize: '12.5px',
+                            color: '#334155',
+                            border: '1px solid #E2E8F0',
+                            padding: '4px 10px',
+                            borderRadius: '7px',
+                            cursor: 'pointer',
+                            transition: 'all 0.15s ease',
                           }}
                         >
-                          💬 No previous conversation notes found for {customerName}. Type your first discussion note below.
-                        </div>
-                      ) : (
-                        notesHistory.map((note) => (
-                          <div
-                            key={note.id}
-                            style={{
-                              backgroundColor: '#F8FAFC',
-                              border: '1px solid #E2E8F0',
-                              borderRadius: '10px',
-                              padding: '10px 14px',
-                              transition: 'all 0.15s ease',
-                            }}
-                          >
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px', flexWrap: 'wrap', gap: '6px' }}>
-                              <span
-                                style={{
-                                  fontSize: '11px',
-                                  fontWeight: '800',
-                                  color: '#334155',
-                                  backgroundColor: '#FFFFFF',
-                                  border: '1px solid #E2E8F0',
-                                  padding: '1.5px 7px',
-                                  borderRadius: '5px',
-                                  fontFamily: 'monospace',
-                                }}
-                              >
-                                📅 {note.date || 'Recorded Note'}
-                              </span>
-                              {note.outcome && (
-                                <span
-                                  style={{
-                                    fontSize: '11px',
-                                    fontWeight: '700',
-                                    color: '#0F766E',
-                                    backgroundColor: '#F0FDFA',
-                                    border: '1px solid #CCFBF1',
-                                    padding: '1.5px 8px',
-                                    borderRadius: '5px',
-                                  }}
-                                >
-                                  {note.outcome}
-                                </span>
-                              )}
-                            </div>
-                            <div
-                              style={{
-                                fontSize: '12.5px',
-                                color: '#1E293B',
-                                lineHeight: '1.5',
-                                whiteSpace: 'pre-wrap',
-                                wordBreak: 'break-word',
-                              }}
-                            >
-                              {note.text}
-                            </div>
-                          </div>
-                        ))
-                      )}
+                          + {snip}
+                        </button>
+                      ))}
                     </div>
                   </div>
 
-                  {/* B: Add New Notes & Conversation Remarks */}
-                  <div style={{ borderTop: '1px solid #F1F5F9', paddingTop: '14px' }}>
-                    {/* Quick Snippet Chips */}
-                    <div style={{ marginBottom: '10px' }}>
-                      <span style={{ fontSize: '10.5px', fontWeight: '800', color: '#64748B', display: 'block', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                        QUICK REMARK SNIPPETS (CLICK TO INSERT)
-                      </span>
-                      <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                        {QUICK_SNIPPETS.map((snip) => (
-                          <button
-                            key={snip}
-                            type="button"
-                            onClick={() => handleAppendSnippet(snip)}
-                            style={{
-                              fontSize: '11.5px',
-                              fontWeight: '600',
-                              backgroundColor: '#F8FAFC',
-                              color: '#334155',
-                              border: '1px solid #E2E8F0',
-                              padding: '4px 10px',
-                              borderRadius: '7px',
-                              cursor: 'pointer',
-                              transition: 'all 0.15s ease',
-                            }}
-                          >
-                            + {snip}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Textarea */}
-                    <label style={{ fontSize: '11px', fontWeight: '800', color: '#475569', display: 'block', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                      NEW DISCUSSION REMARK / CUSTOMER NOTES
-                    </label>
-                    <textarea
-                      rows={3}
-                      placeholder="Type conversation notes, sample selections, customer commitments, delivery preferences..."
-                      value={discussionNotes}
-                      onChange={(e) => setDiscussionNotes(e.target.value)}
-                      style={{
-                        width: '100%',
-                        padding: '10px 14px',
-                        borderRadius: '10px',
-                        border: '1.5px solid #CBD5E1',
-                        fontSize: '13px',
-                        color: '#0F172A',
-                        backgroundColor: '#FFFFFF',
-                        outline: 'none',
-                        lineHeight: '1.5',
-                        fontFamily: 'inherit',
-                      }}
-                    />
-
-                    {/* Sub-bar with quick save note option */}
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '8px', flexWrap: 'wrap', gap: '8px' }}>
-                      <span style={{ fontSize: '11px', color: '#64748B' }}>
-                        💡 Notes will be recorded to history automatically when saving activity.
-                      </span>
-                      <button
-                        type="button"
-                        onClick={handleAddQuickNote}
-                        disabled={savingQuickNote || !discussionNotes.trim() || !selectedFollowUp}
-                        style={{
-                          padding: '6px 12px',
-                          borderRadius: '8px',
-                          border: '1px solid #CBD5E1',
-                          backgroundColor: '#FFFFFF',
-                          color: savingQuickNote || !discussionNotes.trim() ? '#94A3B8' : '#0F172A',
-                          fontSize: '12px',
-                          fontWeight: '700',
-                          cursor: savingQuickNote || !discussionNotes.trim() ? 'not-allowed' : 'pointer',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '5px',
-                          transition: 'all 0.15s ease',
-                        }}
-                        title="Add this note to history right away"
-                      >
-                        <Plus size={13} />
-                        <span>{savingQuickNote ? 'Adding...' : '+ Add Note Now'}</span>
-                      </button>
-                    </div>
-                  </div>
+                  {/* Textarea */}
+                  <label style={{ fontSize: '11px', fontWeight: '800', color: '#475569', display: 'block', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                    DISCUSSION REMARK / CUSTOMER NOTES
+                  </label>
+                  <textarea
+                    rows={4}
+                    placeholder="Type conversation notes, sample selections, customer commitments, delivery preferences..."
+                    value={discussionNotes}
+                    onChange={(e) => setDiscussionNotes(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '10px 14px',
+                      borderRadius: '10px',
+                      border: '1.5px solid #CBD5E1',
+                      fontSize: '13px',
+                      color: '#0F172A',
+                      backgroundColor: '#FFFFFF',
+                      outline: 'none',
+                      lineHeight: '1.5',
+                      fontFamily: 'inherit',
+                    }}
+                  />
                 </div>
               </>
-            ) : (
-              /* TAB 2: CUSTOMER INFORMATION VIEW */
+            )}
+
+            {/* TAB 3: CUSTOMER SPECIFICATIONS & CONTACT VIEW */}
+            {activeSection === 'info' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                {/* 1. Contact & Profile Details Card */}
                 <div style={{ backgroundColor: '#FFFFFF', borderRadius: '16px', border: '1px solid #E2E8F0', padding: '20px' }}>
                   <div style={{ fontSize: '12px', fontWeight: '800', color: '#0F172A', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <User size={16} color="#2563EB" />
-                    <span>1. Customer & Contact Information</span>
+                    <span>1. Customer & Contact Details</span>
                   </div>
 
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', fontSize: '13px' }}>
@@ -1142,7 +1196,7 @@ export const FollowupLogModal = ({ followUp: initialFollowUp, onClose, onSaved, 
                       )}
                     </div>
                     <div>
-                      <span style={{ color: '#64748B', fontWeight: '600' }}>Site / Location:</span>{' '}
+                      <span style={{ color: '#64748B', fontWeight: '600' }}>Site Location:</span>{' '}
                       <strong style={{ color: '#0F172A' }}>{location || '—'}</strong>
                     </div>
                     <div>
@@ -1152,26 +1206,21 @@ export const FollowupLogModal = ({ followUp: initialFollowUp, onClose, onSaved, 
                       </span>
                     </div>
                     <div>
-                      <span style={{ color: '#64748B', fontWeight: '600' }}>Lead Source:</span>{' '}
-                      <strong style={{ color: '#0F172A' }}>{leadSource}</strong>
-                    </div>
-                    <div>
                       <span style={{ color: '#64748B', fontWeight: '600' }}>Salesperson:</span>{' '}
                       <strong style={{ color: '#2563EB' }}>{salesperson}</strong>
                     </div>
                   </div>
                 </div>
 
-                {/* 2. Project Specifications Card */}
                 <div style={{ backgroundColor: '#FFFFFF', borderRadius: '16px', border: '1px solid #E2E8F0', padding: '20px' }}>
                   <div style={{ fontSize: '12px', fontWeight: '800', color: '#0F172A', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <Layers size={16} color="#059669" />
-                    <span>2. Material & Construction Specifications</span>
+                    <span>2. Construction & Material Specifications</span>
                   </div>
 
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', fontSize: '13px' }}>
                     <div>
-                      <span style={{ color: '#64748B', fontWeight: '600' }}>Construction Stage:</span>{' '}
+                      <span style={{ color: '#64748B', fontWeight: '600' }}>Stage:</span>{' '}
                       <span style={{ backgroundColor: '#EFF6FF', color: '#1D4ED8', padding: '2px 8px', borderRadius: '6px', fontSize: '12px', fontWeight: '800' }}>
                         {houseStage}
                       </span>
@@ -1185,37 +1234,10 @@ export const FollowupLogModal = ({ followUp: initialFollowUp, onClose, onSaved, 
                       <strong style={{ color: '#0F172A' }}>{approxQuantity ? `${approxQuantity} sq.ft` : '—'}</strong>
                     </div>
                     <div>
-                      <span style={{ color: '#64748B', fontWeight: '600' }}>Tile Target Budget:</span>{' '}
+                      <span style={{ color: '#64748B', fontWeight: '600' }}>Tile Budget:</span>{' '}
                       <strong style={{ color: '#0F172A' }}>{tileBudget ? `₹${Number(tileBudget).toLocaleString('en-IN')}` : '—'}</strong>
                     </div>
-                    <div>
-                      <span style={{ color: '#64748B', fontWeight: '600' }}>Adhesive Requirement:</span>{' '}
-                      <strong style={{ color: '#0F172A' }}>{adhesiveRequirement}</strong>
-                    </div>
-                    <div>
-                      <span style={{ color: '#64748B', fontWeight: '600' }}>Quotation Shared:</span>{' '}
-                      <strong style={{ color: '#0F766E', fontSize: '14px' }}>{quotationValue ? `₹${Number(quotationValue).toLocaleString('en-IN')}` : '—'}</strong>
-                    </div>
                   </div>
-                </div>
-
-                <div style={{ textAlign: 'center' }}>
-                  <button
-                    type="button"
-                    onClick={() => setActiveSection('log')}
-                    style={{
-                      padding: '10px 20px',
-                      borderRadius: '10px',
-                      backgroundColor: '#F0FDFA',
-                      color: '#0F766E',
-                      border: '1.5px solid #99F6E4',
-                      fontSize: '13px',
-                      fontWeight: '800',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    ← Return to Logging Form
-                  </button>
                 </div>
               </div>
             )}
@@ -1246,38 +1268,10 @@ export const FollowupLogModal = ({ followUp: initialFollowUp, onClose, onSaved, 
                 color: '#64748B',
               }}
             >
-              Cancel
+              Close
             </button>
 
-            {activeSection === 'log' ? (
-              <button
-                type="submit"
-                disabled={saving || !selectedFollowUp}
-                style={{
-                  padding: '10px 22px',
-                  borderRadius: '10px',
-                  backgroundColor: outcome === 'Deal Lost / Postponed' ? '#DC2626' : '#0F766E',
-                  color: '#FFFFFF',
-                  border: 'none',
-                  fontSize: '13px',
-                  fontWeight: '800',
-                  cursor: saving || !selectedFollowUp ? 'not-allowed' : 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  boxShadow: '0 2px 8px rgba(15, 118, 110, 0.25)',
-                }}
-              >
-                <Send size={14} />
-                <span>
-                  {saving
-                    ? 'Saving...'
-                    : outcome === 'Deal Lost / Postponed'
-                      ? 'Record Lost Deal'
-                      : 'Save & Record Activity'}
-                </span>
-              </button>
-            ) : (
+            {activeSection === 'timeline' ? (
               <button
                 type="button"
                 onClick={() => setActiveSection('log')}
@@ -1290,9 +1284,77 @@ export const FollowupLogModal = ({ followUp: initialFollowUp, onClose, onSaved, 
                   fontSize: '13px',
                   fontWeight: '800',
                   cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  boxShadow: '0 2px 8px rgba(15, 118, 110, 0.25)',
                 }}
               >
-                Switch to Logging Form
+                <Plus size={14} />
+                <span>Log Activity & Update Follow-up</span>
+              </button>
+            ) : activeSection === 'log' ? (
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <button
+                  type="button"
+                  onClick={() => setActiveSection('timeline')}
+                  style={{
+                    padding: '10px 16px',
+                    borderRadius: '10px',
+                    backgroundColor: '#F1F5F9',
+                    color: '#334155',
+                    border: '1px solid #CBD5E1',
+                    fontSize: '13px',
+                    fontWeight: '700',
+                    cursor: 'pointer',
+                  }}
+                >
+                  ← Back to Timeline
+                </button>
+                <button
+                  type="submit"
+                  disabled={saving || !selectedFollowUp}
+                  style={{
+                    padding: '10px 22px',
+                    borderRadius: '10px',
+                    backgroundColor: outcome === 'Deal Lost / Postponed' ? '#DC2626' : '#0F766E',
+                    color: '#FFFFFF',
+                    border: 'none',
+                    fontSize: '13px',
+                    fontWeight: '800',
+                    cursor: saving || !selectedFollowUp ? 'not-allowed' : 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    boxShadow: '0 2px 8px rgba(15, 118, 110, 0.25)',
+                  }}
+                >
+                  <Send size={14} />
+                  <span>
+                    {saving
+                      ? 'Saving...'
+                      : outcome === 'Deal Lost / Postponed'
+                        ? 'Record Lost Deal'
+                        : 'Save & Record Activity'}
+                  </span>
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setActiveSection('timeline')}
+                style={{
+                  padding: '10px 22px',
+                  borderRadius: '10px',
+                  backgroundColor: '#0F766E',
+                  color: '#FFFFFF',
+                  border: 'none',
+                  fontSize: '13px',
+                  fontWeight: '800',
+                  cursor: 'pointer',
+                }}
+              >
+                Return to Timeline
               </button>
             )}
           </div>

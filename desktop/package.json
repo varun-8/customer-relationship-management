@@ -42,7 +42,7 @@
     },
     "win": {
       "icon": "public/logo.png",
-      "requestedExecutionLevel": "requireAdministrator",
+      "requestedExecutionLevel": "asInvoker",
       "target": [
         "nsis",
         "portable"

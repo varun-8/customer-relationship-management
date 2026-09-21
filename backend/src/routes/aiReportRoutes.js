@@ -11,8 +11,9 @@ router.post('/generate', aiReportController.generateReport);
 // History & Archive list
 router.get('/history', aiReportController.getReportsHistory);
 
-// ChatGPT prompt generation (for chatgpt.com integration)
+// ChatGPT & Gemini prompt generation (for chatgpt.com & gemini.google.com integration)
 router.get('/chatgpt-prompt', aiReportController.getChatGptPrompt);
+router.get('/gemini-prompt', aiReportController.getGeminiPrompt);
 
 // Single report details
 router.get('/:id', aiReportController.getReportById);

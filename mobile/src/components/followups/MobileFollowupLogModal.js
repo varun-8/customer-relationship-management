@@ -30,6 +30,15 @@ const OUTCOMES = [
   { label: 'Deal Lost / Postponed', shortLabel: 'Deal Lost / Postponed', icon: 'close-circle-outline', color: '#DC2626' },
 ];
 
+const PIPELINE_STATUSES = [
+  'Newly Contacted',
+  'Requirement Collected',
+  'Quotation Provided',
+  'Negotiation & Follow-up',
+  'Won - Closed',
+  'Lost Sale',
+];
+
 const STAGES = [
   'Foundation',
   'Brickwork',
@@ -136,6 +145,7 @@ export function MobileFollowupLogModal({
   const [activeTab, setActiveTab] = useState('log');
 
   const [outcome, setOutcome] = useState('Spoke with Customer / Positive Interest');
+  const [pipelineStatus, setPipelineStatus] = useState(safeFollowUp.status || data.status || 'Negotiation & Follow-up');
   const [leadTemperature, setLeadTemperature] = useState(safeFollowUp.leadTemperature || data.leadTemperature || 'Hot');
   const [customerName, setCustomerName] = useState(safeFollowUp.customerName || data.customerName || data.name || '');
   const [phone, setPhone] = useState(safeFollowUp.phone || data.phone || data.mobilePhone || data.mobileNumber || '');
@@ -170,6 +180,7 @@ export function MobileFollowupLogModal({
 
   const [submitting, setSubmitting] = useState(false);
   const [outcomeModalVisible, setOutcomeModalVisible] = useState(false);
+  const [pipelineModalVisible, setPipelineModalVisible] = useState(false);
   const [stageModalVisible, setStageModalVisible] = useState(false);
   const [calendarVisible, setCalendarVisible] = useState(false);
 
@@ -182,6 +193,7 @@ export function MobileFollowupLogModal({
       setActiveTab('log'); // Always default to logging section when opened
       const f = followUp || {};
       const d = (f.data instanceof Map) ? Object.fromEntries(f.data) : (f.data || f || {});
+      setPipelineStatus(f.status || d.status || 'Negotiation & Follow-up');
       setLeadTemperature(f.leadTemperature || d.leadTemperature || 'Hot');
       setCustomerName(f.customerName || d.customerName || d.name || '');
       setPhone(f.phone || d.phone || d.mobilePhone || d.mobileNumber || '');
@@ -343,7 +355,7 @@ export function MobileFollowupLogModal({
         requirement: requirements,
         quotationValue: quotationValue ? Number(quotationValue) : undefined,
         orderValue: orderValueAmount ? Number(orderValueAmount) : (quotationValue ? Number(quotationValue) : undefined),
-        statusUpdate: outcome === 'Order Confirmed / Ready for Billing' ? 'Order Confirmed' : (outcome === 'Deal Lost / Postponed' ? 'Lost' : undefined),
+        statusUpdate: pipelineStatus || (outcome === 'Order Confirmed / Ready for Billing' ? 'Won - Closed' : (outcome === 'Deal Lost / Postponed' ? 'Lost Sale' : undefined)),
       });
 
 
@@ -637,6 +649,82 @@ export function MobileFollowupLogModal({
                       );
                     })}
                   </View>
+
+                  {/* Pipeline Stage Status Dropdown */}
+                  <View style={[styles.subHeadingRow, { marginTop: 14 }]}>
+                    <Text style={styles.fieldMicroLabel}>PIPELINE STAGE STATUS *</Text>
+                  </View>
+                  <TouchableOpacity
+                    style={styles.dropdownTriggerBox}
+                    onPress={() => setPipelineModalVisible(true)}
+                    activeOpacity={0.8}
+                  >
+                    <View style={styles.dropdownTriggerLeftGroup}>
+                      <View style={[styles.outcomeIconBadge, { backgroundColor: '#2563EB' }]}>
+                        <Ionicons name="git-network-outline" size={15} color="#FFFFFF" />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={[styles.dropdownTriggerValueText, { color: '#1E293B', fontWeight: '800' }]} numberOfLines={1}>
+                          {pipelineStatus}
+                        </Text>
+                        <Text style={styles.dropdownTriggerHint}>Tap to update deal pipeline status</Text>
+                      </View>
+                    </View>
+                    <Ionicons name="chevron-down" size={18} color="#64748B" />
+                  </TouchableOpacity>
+
+                  {/* Pipeline Status Selection Modal Sheet */}
+                  <Modal
+                    visible={pipelineModalVisible}
+                    transparent
+                    animationType="fade"
+                    onRequestClose={() => setPipelineModalVisible(false)}
+                  >
+                    <View style={styles.outcomeModalBackdrop}>
+                      <View style={styles.outcomeModalSheet}>
+                        <View style={styles.modalHandleWrapper}>
+                          <View style={styles.modalHandle} />
+                        </View>
+
+                        <View style={styles.outcomeModalHeader}>
+                          <Text style={styles.outcomeModalTitle}>Select Pipeline Status</Text>
+                          <TouchableOpacity onPress={() => setPipelineModalVisible(false)} style={styles.modalCloseBtn}>
+                            <Text style={styles.modalCloseBtnText}>Done</Text>
+                          </TouchableOpacity>
+                        </View>
+
+                        <ScrollView style={{ maxHeight: 320 }} showsVerticalScrollIndicator={false}>
+                          {PIPELINE_STATUSES.map((ps) => {
+                            const isSelected = pipelineStatus === ps;
+                            return (
+                              <TouchableOpacity
+                                key={ps}
+                                style={[
+                                  styles.outcomeListItem,
+                                  isSelected && { borderColor: '#2563EB', backgroundColor: '#EFF6FF' },
+                                ]}
+                                onPress={() => {
+                                  setPipelineStatus(ps);
+                                  setPipelineModalVisible(false);
+                                }}
+                                activeOpacity={0.75}
+                              >
+                                <View style={[styles.outcomeListIconBadge, { backgroundColor: isSelected ? '#2563EB' : '#94A3B8' }]}>
+                                  <Ionicons name="funnel-outline" size={14} color="#FFFFFF" />
+                                </View>
+                                <Text style={[styles.outcomeListItemText, isSelected && { color: '#2563EB', fontWeight: '900' }]}>
+                                  {ps}
+                                </Text>
+                                {isSelected && (
+                                  <Ionicons name="checkmark-sharp" size={18} color="#2563EB" />
+                                )}
+                              </TouchableOpacity>
+                            );
+                          })}
+                        </ScrollView>
+                      </View>
+                    </View>
+                  </Modal>
                 </View>
 
                 {/* CARD 2: SITE STAGE & MATERIAL REQUIREMENTS */}
@@ -847,50 +935,17 @@ export function MobileFollowupLogModal({
 
                 {/* CARD 4: SEPARATE DEDICATED SECTION FOR DISCUSSION & CUSTOMER NOTES */}
                 <View style={[styles.sectionCard, styles.notesDedicatedCard]}>
-                  {/* Section Heading & Notes Counter Badge */}
-                  <View style={[styles.sectionHeadingRow, { justifyContent: 'space-between' }]}>
+                  {/* Section Heading */}
+                  <View style={styles.sectionHeadingRow}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
                       <View style={styles.notesSectionIconCircle}>
                         <Ionicons name="chatbubble-ellipses" size={16} color="#0F766E" />
                       </View>
                       <View style={{ flex: 1 }}>
                         <Text style={styles.sectionHeading}>4. Discussion & Customer Notes</Text>
-                        <Text style={styles.notesSectionSubtext}>Conversation summary, commitments, & history</Text>
+                        <Text style={styles.notesSectionSubtext}>Record conversation summary & commitments</Text>
                       </View>
                     </View>
-                    <View style={styles.notesCountBadge}>
-                      <Text style={styles.notesCountBadgeText}>{notesHistory.length} {notesHistory.length === 1 ? 'Note' : 'Notes'}</Text>
-                    </View>
-                  </View>
-
-                  {/* A: Previous Customer Notes Stream */}
-                  <View style={{ marginTop: 10, marginBottom: 12 }}>
-                    <Text style={[styles.fieldMicroLabel, { marginBottom: 6 }]}>PREVIOUS DISCUSSION NOTES & REMARKS</Text>
-                    {notesHistory.length === 0 ? (
-                      <View style={styles.noNotesBox}>
-                        <Text style={styles.noNotesText}>
-                          💬 No previous conversation notes found. Enter your first note below.
-                        </Text>
-                      </View>
-                    ) : (
-                      <ScrollView style={{ maxHeight: 180 }} nestedScrollEnabled showsVerticalScrollIndicator={false}>
-                        {notesHistory.map((n) => (
-                          <View key={n.id} style={styles.noteHistoryCard}>
-                            <View style={styles.noteCardHeader}>
-                              <View style={styles.noteDateBadge}>
-                                <Text style={styles.noteDateBadgeText}>📅 {n.date || 'Recorded'}</Text>
-                              </View>
-                              {n.outcome ? (
-                                <View style={styles.noteOutcomeBadge}>
-                                  <Text style={styles.noteOutcomeBadgeText} numberOfLines={1}>{n.outcome}</Text>
-                                </View>
-                              ) : null}
-                            </View>
-                            <Text style={styles.noteBodyText}>{n.text}</Text>
-                          </View>
-                        ))}
-                      </ScrollView>
-                    )}
                   </View>
 
                   {/* B: Quick Discussion Snippets */}

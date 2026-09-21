@@ -432,7 +432,13 @@ export const DynamicFieldInput = ({ field, value, onChange, error }) => {
   };
 
   return (
-    <div className="form-group" style={{ marginBottom: '16px' }}>
+    <div
+      className="form-group"
+      style={{
+        marginBottom: '16px',
+        gridColumn: (type === 'textarea' || field.fullWidth || name === 'remarks' || name === 'specialDeliveryNotes') ? '1 / -1' : undefined,
+      }}
+    >
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
         <label className="form-label" style={{ margin: 0, fontSize: '11.5px', fontWeight: '800', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
           <span>{label}</span>

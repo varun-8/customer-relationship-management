@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   Search,
   Users,
@@ -182,7 +182,56 @@ export const CustomerListTable = ({ onAddCustomer, onEditCustomer, onViewCustome
     return pages;
   };
 
-  const customFields = (activeForm?.fields || []).filter((f) => f.active);
+  const SYSTEM_COLUMN_KEYS = useMemo(
+    () =>
+      new Set([
+        'customerId',
+        'customerName',
+        'phone',
+        'customerType',
+        'houseStage',
+        'status',
+        'quotationValue',
+        'nextFollowUp',
+        'salesperson',
+        'notes',
+        'createdAt',
+        'createdBy',
+      ]),
+    []
+  );
+
+  const customFieldsOnly = useMemo(() => {
+    const seen = new Set();
+    return (activeForm?.fields || []).filter((f) => {
+      if (!f || !f.active || !f.name) return false;
+      const fNameLower = String(f.name).toLowerCase().trim();
+      const fLabelLower = String(f.label || '').toLowerCase().trim();
+
+      const isSystemDuplicate =
+        SYSTEM_COLUMN_KEYS.has(f.name) ||
+        SYSTEM_COLUMN_KEYS.has(fNameLower) ||
+        fNameLower === 'customerid' ||
+        fNameLower === 'field_customer_id' ||
+        fNameLower === 'customer_id' ||
+        fNameLower === 'remarks' ||
+        fNameLower === 'specialdeliverynotes' ||
+        fNameLower === 'notes' ||
+        fLabelLower === 'customer id';
+
+      if (isSystemDuplicate) return false;
+
+      if (seen.has(f.name)) return false;
+      seen.add(f.name);
+      return true;
+    });
+  }, [activeForm, SYSTEM_COLUMN_KEYS]);
+
+  const totalTableColumnsCount = useMemo(() => {
+    const activeSystem = Array.from(SYSTEM_COLUMN_KEYS).filter((k) => visibleColumnKeys.includes(k)).length;
+    const activeCustom = customFieldsOnly.filter((f) => visibleColumnKeys.includes(f.name)).length;
+    return activeSystem + activeCustom + 1; // +1 for ACTIONS column
+  }, [SYSTEM_COLUMN_KEYS, visibleColumnKeys, customFieldsOnly]);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
@@ -258,7 +307,7 @@ export const CustomerListTable = ({ onAddCustomer, onEditCustomer, onViewCustome
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, minWidth: 0, flexWrap: 'wrap' }}>
           {/* Enhanced Search Input */}
-          <div style={{ position: 'relative', width: '280px', flexShrink: 0 }}>
+          <div style={{ position: 'relative', flex: '1 1 220px', minWidth: '180px', maxWidth: '340px' }}>
             <Search size={15} style={{ position: 'absolute', left: '12px', top: '11px', color: '#94A3B8' }} />
             <input
               type="text"
@@ -548,6 +597,14 @@ export const CustomerListTable = ({ onAddCustomer, onEditCustomer, onViewCustome
                 </th>
               )}
 
+              {visibleColumnKeys.includes('notes') && (
+                <th style={{ width: '160px', whiteSpace: 'nowrap' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <span>SHOWROOM REMARKS & NOTES</span>
+                  </div>
+                </th>
+              )}
+
               {visibleColumnKeys.includes('createdAt') && (
                 <th onClick={() => handleSort('createdAt')} style={{ width: '125px', cursor: 'pointer', whiteSpace: 'nowrap' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
@@ -566,7 +623,7 @@ export const CustomerListTable = ({ onAddCustomer, onEditCustomer, onViewCustome
                 </th>
               )}
 
-              {customFields.map((f) => visibleColumnKeys.includes(f.name) && (
+              {customFieldsOnly.map((f) => visibleColumnKeys.includes(f.name) && (
                 <th key={f.name} style={{ width: '130px', whiteSpace: 'nowrap' }}>
                   <span>{f.label.toUpperCase()}</span>
                 </th>
@@ -578,7 +635,7 @@ export const CustomerListTable = ({ onAddCustomer, onEditCustomer, onViewCustome
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={visibleColumnKeys.length + 1} style={{ textAlign: 'center', padding: '50px 20px' }}>
+                <td colSpan={totalTableColumnsCount} style={{ textAlign: 'center', padding: '50px 20px' }}>
                   <div style={{ display: 'inline-flex', alignItems: 'center', gap: '10px', color: '#2563EB' }}>
                     <div className="spin" style={{ width: '20px', height: '20px', border: '2px solid #2563EB', borderTopColor: 'transparent', borderRadius: '50%' }} />
                     <span style={{ fontWeight: '600' }}>Fetching customer records from database...</span>
@@ -587,7 +644,7 @@ export const CustomerListTable = ({ onAddCustomer, onEditCustomer, onViewCustome
               </tr>
             ) : fetchError && customers.length === 0 ? (
               <tr>
-                <td colSpan={visibleColumnKeys.length + 1} style={{ padding: '30px 20px' }}>
+                <td colSpan={totalTableColumnsCount} style={{ padding: '30px 20px' }}>
                   <ConnectionErrorState
                     title="Unable to Reach CRM Server"
                     message={fetchError}
@@ -597,7 +654,7 @@ export const CustomerListTable = ({ onAddCustomer, onEditCustomer, onViewCustome
               </tr>
             ) : customers.length === 0 ? (
               <tr>
-                <td colSpan={visibleColumnKeys.length + 1} style={{ textAlign: 'center', padding: '60px 20px' }}>
+                <td colSpan={totalTableColumnsCount} style={{ textAlign: 'center', padding: '60px 20px' }}>
                   <div style={{ fontSize: '15px', fontWeight: '700', color: 'var(--text-primary)' }}>
                     No customer records found
                   </div>
@@ -856,6 +913,33 @@ export const CustomerListTable = ({ onAddCustomer, onEditCustomer, onViewCustome
                       </td>
                     )}
 
+                    {visibleColumnKeys.includes('notes') && (
+                      <td style={{ maxWidth: '180px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {data.notes || c.notes ? (
+                          <span
+                            title={data.notes || c.notes}
+                            style={{
+                              fontSize: '12px',
+                              color: '#334155',
+                              backgroundColor: '#F8FAFC',
+                              border: '1px solid #CBD5E1',
+                              padding: '2px 8px',
+                              borderRadius: '6px',
+                              display: 'inline-block',
+                              maxWidth: '170px',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap',
+                            }}
+                          >
+                            📝 {data.notes || c.notes}
+                          </span>
+                        ) : (
+                          <span style={{ color: 'var(--text-light)' }}>—</span>
+                        )}
+                      </td>
+                    )}
+
                     {visibleColumnKeys.includes('createdAt') && (
                       <td style={{ whiteSpace: 'nowrap' }}>
                         <span style={{ fontSize: '12.5px', color: 'var(--text-secondary)', fontWeight: '500' }}>
@@ -872,7 +956,7 @@ export const CustomerListTable = ({ onAddCustomer, onEditCustomer, onViewCustome
                       </td>
                     )}
 
-                    {customFields.map((f) => visibleColumnKeys.includes(f.name) && (
+                    {customFieldsOnly.map((f) => visibleColumnKeys.includes(f.name) && (
                       <td key={f.name} style={{ whiteSpace: 'nowrap' }}>
                         <span style={{ fontSize: '12.5px', color: 'var(--text-secondary)' }}>
                           {data[f.name] !== undefined && data[f.name] !== null ? String(data[f.name]) : '—'}
@@ -1019,7 +1103,7 @@ export const CustomerListTable = ({ onAddCustomer, onEditCustomer, onViewCustome
       {/* Column Customizer Modal */}
       {showColumnModal && (
         <ColumnSettingsModal
-          allFields={customFields}
+          allFields={customFieldsOnly}
           visibleColumnKeys={visibleColumnKeys}
           setVisibleColumnKeys={setVisibleColumnKeys}
           onClose={() => setShowColumnModal(false)}

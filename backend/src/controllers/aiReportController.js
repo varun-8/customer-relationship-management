@@ -186,8 +186,8 @@ exports.getReportById = async (req, res) => {
 };
 
 /**
- * GET /api/ai-reports/chatgpt-prompt
- * Builds complete, formatted ChatGPT prompt with all showroom operational data
+ * GET /api/ai-reports/chatgpt-prompt & /api/ai-reports/gemini-prompt
+ * Builds complete, formatted ChatGPT/Gemini prompt with all showroom operational data
  */
 exports.getChatGptPrompt = async (req, res) => {
   try {
@@ -196,6 +196,7 @@ exports.getChatGptPrompt = async (req, res) => {
     const currentYear = today.getFullYear().toString();
     const reportType = req.query.reportType || 'monthly';
     const period = req.query.period || (reportType === 'monthly' ? currentMonth : currentYear);
+    const provider = (req.query.provider || 'chatgpt').toLowerCase();
 
     const dateRegex = new RegExp(`^${period}`);
 
@@ -224,7 +225,9 @@ exports.getChatGptPrompt = async (req, res) => {
       });
     }
 
-    const prompt = aiService.buildChatGPTWebPrompt({
+    const promptBuilder = provider === 'gemini' ? aiService.buildGeminiWebPrompt : aiService.buildChatGPTWebPrompt;
+
+    const prompt = promptBuilder({
       kpis: kpiRecords || [],
       customers: periodCustomers || [],
       lostSales: lostSaleRecords || [],
@@ -236,9 +239,12 @@ exports.getChatGptPrompt = async (req, res) => {
     const payload = {
       period,
       reportType,
+      provider,
       recordCount: (kpiRecords?.length || 0) + (lostSaleRecords?.length || 0) + (periodCustomers?.length || 0),
       prompt,
+      targetUrl: provider === 'gemini' ? 'https://gemini.google.com/app' : 'https://chatgpt.com/',
       chatGptUrl: 'https://chatgpt.com/',
+      geminiUrl: 'https://gemini.google.com/app',
     };
 
     res.json({
@@ -247,8 +253,13 @@ exports.getChatGptPrompt = async (req, res) => {
       data: payload,
     });
   } catch (err) {
-    console.error('Error generating ChatGPT prompt:', err);
+    console.error('Error generating AI prompt:', err);
     res.status(500).json({ success: false, message: err.message });
   }
+};
+
+exports.getGeminiPrompt = async (req, res) => {
+  req.query.provider = 'gemini';
+  return exports.getChatGptPrompt(req, res);
 };
 

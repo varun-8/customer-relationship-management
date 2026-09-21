@@ -425,9 +425,9 @@ export const CustomerFormModal = ({ customer, onClose, onSuccess }) => {
       <div
         className="modal-card"
         style={{
-          maxWidth: '940px',
-          width: '95%',
-          maxHeight: '94vh',
+          maxWidth: '1040px',
+          width: '92vw',
+          maxHeight: '90vh',
           display: 'flex',
           flexDirection: 'column',
           borderRadius: '16px',
@@ -710,8 +710,8 @@ export const CustomerFormModal = ({ customer, onClose, onSuccess }) => {
                   </div>
                 )}
 
-                {/* 2-Column Responsive Form Fields */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: '16px 20px' }}>
+                {/* Multi-Column Responsive Form Fields */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '14px 18px' }}>
                   {getFieldsForSection(currentSection.fieldNames).map((field) => (
                     <DynamicFieldInput
                       key={field.id}
@@ -749,7 +749,7 @@ export const CustomerFormModal = ({ customer, onClose, onSuccess }) => {
                         </h3>
                       </div>
 
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: '16px 20px' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '14px 18px' }}>
                         {secFields.map((field) => (
                           <DynamicFieldInput
                             key={field.id}

@@ -227,9 +227,9 @@ export const CustomerDetailModal = ({ customer: initialCustomer, onClose, onEdit
       <div
         className="modal-card"
         style={{
-          maxWidth: '1040px',
-          width: '98%',
-          maxHeight: '94vh',
+          maxWidth: '1080px',
+          width: '92vw',
+          maxHeight: '90vh',
           display: 'flex',
           flexDirection: 'column',
           borderRadius: '22px',
@@ -612,15 +612,21 @@ export const CustomerDetailModal = ({ customer: initialCustomer, onClose, onEdit
                     backgroundColor: '#FFFFFF',
                     borderRadius: '16px',
                     border: '1px solid #E2E8F0',
+                    borderLeft: '5px solid #2563EB',
                     padding: '20px',
-                    boxShadow: '0 1px 3px rgba(15, 23, 42, 0.02)',
+                    boxShadow: '0 2px 6px rgba(37, 99, 235, 0.06)',
                   }}
                 >
-                  <div style={{ fontSize: '11.5px', fontWeight: '800', color: '#0F172A', letterSpacing: '0.05em', textTransform: 'uppercase', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <div style={{ width: '26px', height: '26px', borderRadius: '8px', backgroundColor: '#F1F5F9', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <User size={15} color="#0F172A" />
+                  <div style={{ fontSize: '12px', fontWeight: '800', color: '#1E40AF', letterSpacing: '0.04em', textTransform: 'uppercase', marginBottom: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <div style={{ width: '28px', height: '28px', borderRadius: '8px', backgroundColor: '#EFF6FF', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <User size={16} color="#2563EB" />
+                      </div>
+                      <span style={{ fontSize: '13px', fontWeight: '800' }}>Contact & Profile Details</span>
                     </div>
-                    <span>1. Contact & Profile Details</span>
+                    <span style={{ backgroundColor: '#EFF6FF', color: '#2563EB', fontSize: '11px', fontWeight: '800', padding: '3px 8px', borderRadius: '6px', border: '1px solid #BFDBFE' }}>
+                      SECTION 1
+                    </span>
                   </div>
 
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '11px' }}>
@@ -700,15 +706,21 @@ export const CustomerDetailModal = ({ customer: initialCustomer, onClose, onEdit
                     backgroundColor: '#FFFFFF',
                     borderRadius: '16px',
                     border: '1px solid #E2E8F0',
+                    borderLeft: '5px solid #059669',
                     padding: '20px',
-                    boxShadow: '0 1px 3px rgba(15, 23, 42, 0.02)',
+                    boxShadow: '0 2px 6px rgba(5, 150, 105, 0.06)',
                   }}
                 >
-                  <div style={{ fontSize: '11.5px', fontWeight: '800', color: '#0F172A', letterSpacing: '0.05em', textTransform: 'uppercase', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <div style={{ width: '26px', height: '26px', borderRadius: '8px', backgroundColor: '#F1F5F9', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <Layers size={15} color="#0F172A" />
+                  <div style={{ fontSize: '12px', fontWeight: '800', color: '#065F46', letterSpacing: '0.04em', textTransform: 'uppercase', marginBottom: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <div style={{ width: '28px', height: '28px', borderRadius: '8px', backgroundColor: '#ECFDF5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <Layers size={16} color="#059669" />
+                      </div>
+                      <span style={{ fontSize: '13px', fontWeight: '800' }}>Project & Material Specs</span>
                     </div>
-                    <span>2. Project & Material Specifications</span>
+                    <span style={{ backgroundColor: '#ECFDF5', color: '#059669', fontSize: '11px', fontWeight: '800', padding: '3px 8px', borderRadius: '6px', border: '1px solid #A7F3D0' }}>
+                      SECTION 2
+                    </span>
                   </div>
 
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '11px' }}>
@@ -768,15 +780,21 @@ export const CustomerDetailModal = ({ customer: initialCustomer, onClose, onEdit
                     backgroundColor: '#FFFFFF',
                     borderRadius: '16px',
                     border: '1px solid #E2E8F0',
+                    borderLeft: '5px solid #D97706',
                     padding: '20px',
-                    boxShadow: '0 1px 3px rgba(15, 23, 42, 0.02)',
+                    boxShadow: '0 2px 6px rgba(217, 119, 6, 0.06)',
                   }}
                 >
-                  <div style={{ fontSize: '11.5px', fontWeight: '800', color: '#0F172A', letterSpacing: '0.05em', textTransform: 'uppercase', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <div style={{ width: '26px', height: '26px', borderRadius: '8px', backgroundColor: '#F1F5F9', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <DollarSign size={15} color="#0F172A" />
+                  <div style={{ fontSize: '12px', fontWeight: '800', color: '#92400E', letterSpacing: '0.04em', textTransform: 'uppercase', marginBottom: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <div style={{ width: '28px', height: '28px', borderRadius: '8px', backgroundColor: '#FEF3C7', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <DollarSign size={16} color="#D97706" />
+                      </div>
+                      <span style={{ fontSize: '13px', fontWeight: '800' }}>Quotation & Commercials</span>
                     </div>
-                    <span>3. Quotation & Commercial Details</span>
+                    <span style={{ backgroundColor: '#FEF3C7', color: '#D97706', fontSize: '11px', fontWeight: '800', padding: '3px 8px', borderRadius: '6px', border: '1px solid #FDE68A' }}>
+                      SECTION 3
+                    </span>
                   </div>
 
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '11px' }}>
@@ -848,15 +866,21 @@ export const CustomerDetailModal = ({ customer: initialCustomer, onClose, onEdit
                     backgroundColor: '#FFFFFF',
                     borderRadius: '16px',
                     border: '1px solid #E2E8F0',
+                    borderLeft: '5px solid #7C3AED',
                     padding: '20px',
-                    boxShadow: '0 1px 3px rgba(15, 23, 42, 0.02)',
+                    boxShadow: '0 2px 6px rgba(124, 58, 237, 0.06)',
                   }}
                 >
-                  <div style={{ fontSize: '11.5px', fontWeight: '800', color: '#0F172A', letterSpacing: '0.05em', textTransform: 'uppercase', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <div style={{ width: '26px', height: '26px', borderRadius: '8px', backgroundColor: '#F1F5F9', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <Clock size={15} color="#0F172A" />
+                  <div style={{ fontSize: '12px', fontWeight: '800', color: '#5B21B6', letterSpacing: '0.04em', textTransform: 'uppercase', marginBottom: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <div style={{ width: '28px', height: '28px', borderRadius: '8px', backgroundColor: '#F3E8FF', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <Clock size={16} color="#7C3AED" />
+                      </div>
+                      <span style={{ fontSize: '13px', fontWeight: '800' }}>Follow-up & Records</span>
                     </div>
-                    <span>4. Follow-up Tracking & System Records</span>
+                    <span style={{ backgroundColor: '#F3E8FF', color: '#7C3AED', fontSize: '11px', fontWeight: '800', padding: '3px 8px', borderRadius: '6px', border: '1px solid #DDD6FE' }}>
+                      SECTION 4
+                    </span>
                   </div>
 
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '11px' }}>

@@ -45,6 +45,7 @@ export const AiLostSalesReportModal = ({ onClose, initialReportType, initialMont
   const [loadingStatus, setLoadingStatus] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [exportingChatGpt, setExportingChatGpt] = useState(false);
+  const [exportingGemini, setExportingGemini] = useState(false);
   const [chatGptNotice, setChatGptNotice] = useState(null);
   const [selectedReportType, setSelectedReportType] = useState(initialReportType || 'monthly');
   const [currentReport, setCurrentReport] = useState(null);
@@ -191,7 +192,8 @@ export const AiLostSalesReportModal = ({ onClose, initialReportType, initialMont
         setChatGptNotice({
           period: periodToUse,
           type: reportType,
-          message: `Prompt with showroom data copied to clipboard! Paste (Ctrl+V) in the opened ChatGPT tab.`
+          provider: 'ChatGPT',
+          message: `ChatGPT prompt with showroom data copied to clipboard! Paste (Ctrl+V) in the opened ChatGPT tab.`
         });
       } else {
         setError(res?.message || 'Failed to prepare ChatGPT prompt. Please ensure records exist for the selected period.');
@@ -201,6 +203,36 @@ export const AiLostSalesReportModal = ({ onClose, initialReportType, initialMont
       setError(err?.response?.data?.message || err?.message || 'Could not export to ChatGPT');
     } finally {
       setExportingChatGpt(false);
+    }
+  };
+
+  // Export full period dataset prompt and launch Google Gemini (gemini.google.com)
+  const handleOpenInGemini = async (reportType) => {
+    try {
+      setExportingGemini(true);
+      setChatGptNotice(null);
+      setError(null);
+      const periodToUse = reportType === 'monthly' ? selectedMonth : selectedYear;
+      const res = await api.getGeminiPrompt({ reportType, period: periodToUse });
+      const promptText = res?.data?.prompt || res?.prompt;
+
+      if (res && res.success && promptText) {
+        await copyToClipboard(promptText);
+        window.open('https://gemini.google.com/app', '_blank', 'noopener,noreferrer');
+        setChatGptNotice({
+          period: periodToUse,
+          type: reportType,
+          provider: 'Google Gemini',
+          message: `Google Gemini prompt with showroom data copied to clipboard! Paste (Ctrl+V) in the opened Gemini tab.`
+        });
+      } else {
+        setError(res?.message || 'Failed to prepare Gemini prompt. Please ensure records exist for the selected period.');
+      }
+    } catch (err) {
+      console.error('Failed to export to Gemini:', err);
+      setError(err?.response?.data?.message || err?.message || 'Could not export to Gemini');
+    } finally {
+      setExportingGemini(false);
     }
   };
 
@@ -263,9 +295,9 @@ export const AiLostSalesReportModal = ({ onClose, initialReportType, initialMont
       <div
         className="modal-card"
         style={{
-          maxWidth: '1020px',
-          width: '100%',
-          maxHeight: '92vh',
+          maxWidth: '1440px',
+          width: '98%',
+          maxHeight: '94vh',
           display: 'flex',
           flexDirection: 'column',
           borderRadius: '20px',
@@ -383,37 +415,49 @@ export const AiLostSalesReportModal = ({ onClose, initialReportType, initialMont
         {/* Navigation Tabs Bar */}
         <div
           style={{
-            padding: '10px 24px',
-            backgroundColor: '#F8FAFC',
+            padding: '12px 24px',
+            backgroundColor: '#FFFFFF',
             borderBottom: '1px solid #E2E8F0',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
             flexWrap: 'wrap',
-            gap: '8px',
+            gap: '12px',
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          {/* Segmented Pill Container */}
+          <div
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              padding: '4px',
+              borderRadius: '14px',
+              backgroundColor: '#F1F5F9',
+              border: '1px solid #E2E8F0',
+              gap: '4px',
+            }}
+          >
             <button
               type="button"
               onClick={() => setActiveTab('generate')}
               style={{
-                padding: '8px 16px',
+                padding: '8px 18px',
                 borderRadius: '10px',
-                border: activeTab === 'generate' ? '1px solid #E2E8F0' : '1px solid transparent',
-                backgroundColor: activeTab === 'generate' ? '#FFFFFF' : 'transparent',
-                color: activeTab === 'generate' ? '#6D28D9' : '#64748B',
-                fontSize: '12.5px',
-                fontWeight: '800',
+                border: 'none',
+                background: activeTab === 'generate' ? 'linear-gradient(135deg, #6D28D9 0%, #4F46E5 100%)' : 'transparent',
+                color: activeTab === 'generate' ? '#FFFFFF' : '#475569',
+                fontSize: '13px',
+                fontWeight: activeTab === 'generate' ? '800' : '600',
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '7px',
-                boxShadow: activeTab === 'generate' ? '0 2px 6px rgba(0,0,0,0.05)' : 'none',
+                gap: '8px',
+                boxShadow: activeTab === 'generate' ? '0 4px 12px rgba(109, 40, 217, 0.3)' : 'none',
+                transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
               }}
             >
-              <Sparkles size={15} color={activeTab === 'generate' ? '#6D28D9' : '#64748B'} />
-              <span>Generate Report</span>
+              <Sparkles size={15} color={activeTab === 'generate' ? '#FFFFFF' : '#64748B'} />
+              <span>Generate Business Report</span>
             </button>
 
             {currentReport && (
@@ -421,21 +465,22 @@ export const AiLostSalesReportModal = ({ onClose, initialReportType, initialMont
                 type="button"
                 onClick={() => setActiveTab('viewer')}
                 style={{
-                  padding: '8px 16px',
+                  padding: '8px 18px',
                   borderRadius: '10px',
-                  border: activeTab === 'viewer' ? '1px solid #E2E8F0' : '1px solid transparent',
-                  backgroundColor: activeTab === 'viewer' ? '#FFFFFF' : 'transparent',
-                  color: activeTab === 'viewer' ? '#6D28D9' : '#64748B',
-                  fontSize: '12.5px',
-                  fontWeight: '800',
+                  border: 'none',
+                  background: activeTab === 'viewer' ? 'linear-gradient(135deg, #6D28D9 0%, #4F46E5 100%)' : 'transparent',
+                  color: activeTab === 'viewer' ? '#FFFFFF' : '#475569',
+                  fontSize: '13px',
+                  fontWeight: activeTab === 'viewer' ? '800' : '600',
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '7px',
-                  boxShadow: activeTab === 'viewer' ? '0 2px 6px rgba(0,0,0,0.05)' : 'none',
+                  gap: '8px',
+                  boxShadow: activeTab === 'viewer' ? '0 4px 12px rgba(109, 40, 217, 0.3)' : 'none',
+                  transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
                 }}
               >
-                <FileText size={15} color={activeTab === 'viewer' ? '#6D28D9' : '#64748B'} />
+                <FileText size={15} color={activeTab === 'viewer' ? '#FFFFFF' : '#64748B'} />
                 <span>Active Report ({currentReport.period})</span>
               </button>
             )}
@@ -444,22 +489,35 @@ export const AiLostSalesReportModal = ({ onClose, initialReportType, initialMont
               type="button"
               onClick={() => setActiveTab('history')}
               style={{
-                padding: '8px 16px',
+                padding: '8px 18px',
                 borderRadius: '10px',
-                border: activeTab === 'history' ? '1px solid #E2E8F0' : '1px solid transparent',
-                backgroundColor: activeTab === 'history' ? '#FFFFFF' : 'transparent',
-                color: activeTab === 'history' ? '#6D28D9' : '#64748B',
-                fontSize: '12.5px',
-                fontWeight: '800',
+                border: 'none',
+                background: activeTab === 'history' ? 'linear-gradient(135deg, #6D28D9 0%, #4F46E5 100%)' : 'transparent',
+                color: activeTab === 'history' ? '#FFFFFF' : '#475569',
+                fontSize: '13px',
+                fontWeight: activeTab === 'history' ? '800' : '600',
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '7px',
-                boxShadow: activeTab === 'history' ? '0 2px 6px rgba(0,0,0,0.05)' : 'none',
+                gap: '8px',
+                boxShadow: activeTab === 'history' ? '0 4px 12px rgba(109, 40, 217, 0.3)' : 'none',
+                transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
               }}
             >
-              <History size={15} color={activeTab === 'history' ? '#6D28D9' : '#64748B'} />
-              <span>Saved Reports ({reportsHistory.length})</span>
+              <History size={15} color={activeTab === 'history' ? '#FFFFFF' : '#64748B'} />
+              <span>Saved History</span>
+              <span
+                style={{
+                  fontSize: '11px',
+                  fontWeight: '800',
+                  padding: '1px 7px',
+                  borderRadius: '10px',
+                  backgroundColor: activeTab === 'history' ? 'rgba(255, 255, 255, 0.25)' : '#E2E8F0',
+                  color: activeTab === 'history' ? '#FFFFFF' : '#475569',
+                }}
+              >
+                {reportsHistory.length}
+              </span>
             </button>
           </div>
 
@@ -467,8 +525,30 @@ export const AiLostSalesReportModal = ({ onClose, initialReportType, initialMont
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <button
                 type="button"
+                onClick={() => handleOpenInGemini(currentReport.reportType || 'monthly')}
+                disabled={exportingGemini || exportingChatGpt}
+                style={{
+                  padding: '7px 14px',
+                  borderRadius: '8px',
+                  border: '1.2px solid #BFDBFE',
+                  backgroundColor: '#EFF6FF',
+                  color: '#1D4ED8',
+                  fontSize: '12px',
+                  fontWeight: '800',
+                  cursor: (exportingGemini || exportingChatGpt) ? 'not-allowed' : 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                }}
+              >
+                <ExternalLink size={13} />
+                <span>{exportingGemini ? 'Copying Prompt...' : 'Analyze on Gemini.google.com'}</span>
+              </button>
+
+              <button
+                type="button"
                 onClick={() => handleOpenInChatGPT(currentReport.reportType || 'monthly')}
-                disabled={exportingChatGpt}
+                disabled={exportingGemini || exportingChatGpt}
                 style={{
                   padding: '7px 14px',
                   borderRadius: '8px',
@@ -477,14 +557,13 @@ export const AiLostSalesReportModal = ({ onClose, initialReportType, initialMont
                   color: '#065F46',
                   fontSize: '12px',
                   fontWeight: '800',
-                  cursor: exportingChatGpt ? 'not-allowed' : 'pointer',
+                  cursor: (exportingGemini || exportingChatGpt) ? 'not-allowed' : 'pointer',
                   display: 'flex',
                   alignItems: 'center',
                   gap: '6px',
                 }}
               >
-                <ExternalLink size={13} />
-                <span>Analyze on ChatGPT.com</span>
+                <span>{exportingChatGpt ? 'Copying Prompt...' : 'Analyze on ChatGPT.com'}</span>
               </button>
 
               <button
@@ -628,40 +707,42 @@ export const AiLostSalesReportModal = ({ onClose, initialReportType, initialMont
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                   {/* Segmented Type Switch */}
-                  <div style={{ display: 'inline-flex', padding: '3px', borderRadius: '10px', backgroundColor: '#F1F5F9', border: '1px solid #E2E8F0' }}>
+                  <div style={{ display: 'inline-flex', padding: '4px', borderRadius: '12px', backgroundColor: '#F1F5F9', border: '1px solid #CBD5E1', gap: '3px' }}>
                     <button
                       type="button"
                       onClick={() => setSelectedReportType('monthly')}
                       style={{
-                        padding: '6px 14px',
-                        borderRadius: '7px',
+                        padding: '7px 16px',
+                        borderRadius: '8px',
                         border: 'none',
-                        fontSize: '12px',
-                        fontWeight: '800',
+                        fontSize: '12.5px',
+                        fontWeight: selectedReportType === 'monthly' ? '800' : '600',
                         cursor: 'pointer',
-                        backgroundColor: selectedReportType === 'monthly' ? '#FFFFFF' : 'transparent',
-                        color: selectedReportType === 'monthly' ? '#6D28D9' : '#64748B',
-                        boxShadow: selectedReportType === 'monthly' ? '0 2px 4px rgba(0,0,0,0.06)' : 'none',
+                        background: selectedReportType === 'monthly' ? 'linear-gradient(135deg, #6D28D9 0%, #4F46E5 100%)' : 'transparent',
+                        color: selectedReportType === 'monthly' ? '#FFFFFF' : '#475569',
+                        boxShadow: selectedReportType === 'monthly' ? '0 2px 6px rgba(109, 40, 217, 0.3)' : 'none',
+                        transition: 'all 0.15s ease',
                       }}
                     >
-                      Monthly
+                      Monthly Report
                     </button>
                     <button
                       type="button"
                       onClick={() => setSelectedReportType('yearly')}
                       style={{
-                        padding: '6px 14px',
-                        borderRadius: '7px',
+                        padding: '7px 16px',
+                        borderRadius: '8px',
                         border: 'none',
-                        fontSize: '12px',
-                        fontWeight: '800',
+                        fontSize: '12.5px',
+                        fontWeight: selectedReportType === 'yearly' ? '800' : '600',
                         cursor: 'pointer',
-                        backgroundColor: selectedReportType === 'yearly' ? '#FFFFFF' : 'transparent',
-                        color: selectedReportType === 'yearly' ? '#6D28D9' : '#64748B',
-                        boxShadow: selectedReportType === 'yearly' ? '0 2px 4px rgba(0,0,0,0.06)' : 'none',
+                        background: selectedReportType === 'yearly' ? 'linear-gradient(135deg, #6D28D9 0%, #4F46E5 100%)' : 'transparent',
+                        color: selectedReportType === 'yearly' ? '#FFFFFF' : '#475569',
+                        boxShadow: selectedReportType === 'yearly' ? '0 2px 6px rgba(109, 40, 217, 0.3)' : 'none',
+                        transition: 'all 0.15s ease',
                       }}
                     >
-                      Annual
+                      Annual Audit
                     </button>
                   </div>
 
@@ -891,7 +972,7 @@ export const AiLostSalesReportModal = ({ onClose, initialReportType, initialMont
                 </div>
               )}
 
-              {/* 1-Click ChatGPT.com Report Card (Always available) */}
+              {/* 1-Click Web AI Intelligence Export Card (Always available) */}
               <div
                 style={{
                   backgroundColor: '#FFFFFF',
@@ -912,8 +993,8 @@ export const AiLostSalesReportModal = ({ onClose, initialReportType, initialMont
                       width: '38px',
                       height: '38px',
                       borderRadius: '10px',
-                      backgroundColor: '#ECFDF5',
-                      color: '#059669',
+                      backgroundColor: '#EFF6FF',
+                      color: '#2563EB',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
@@ -925,40 +1006,67 @@ export const AiLostSalesReportModal = ({ onClose, initialReportType, initialMont
                   <div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <h4 style={{ margin: 0, fontSize: '14px', fontWeight: '800', color: '#0F172A' }}>
-                        1-Click ChatGPT.com Report
+                        1-Click Web AI Business Intelligence Export
                       </h4>
-                      <span style={{ fontSize: '10px', fontWeight: '800', padding: '2px 7px', borderRadius: '5px', backgroundColor: '#DCFCE7', color: '#166534' }}>
-                        No API Key Needed
+                      <span style={{ fontSize: '10px', fontWeight: '800', padding: '2px 7px', borderRadius: '5px', backgroundColor: '#DBEAFE', color: '#1E40AF' }}>
+                        Google Gemini & ChatGPT Ready
                       </span>
                     </div>
-                    <p style={{ margin: '4px 0 0', fontSize: '12px', color: '#64748B', fontWeight: '600', maxWidth: '580px', lineHeight: 1.5 }}>
-                      Compiles 100% of showroom lost sales, footfall, and quotations for {currentPeriodStr} into formatted markdown tables, copies to your clipboard, and launches ChatGPT.com.
+                    <p style={{ margin: '4px 0 0', fontSize: '12px', color: '#64748B', fontWeight: '600', maxWidth: '540px', lineHeight: 1.5 }}>
+                      Compiles 100% of showroom lost sales, footfall, quotations, and staff metrics for {currentPeriodStr} into clean structured markdown tables, copies to clipboard, and opens your chosen AI web app.
                     </p>
                   </div>
                 </div>
 
-                <button
-                  type="button"
-                  disabled={generating || exportingChatGpt}
-                  onClick={() => handleOpenInChatGPT(selectedReportType)}
-                  style={{
-                    padding: '10px 18px',
-                    borderRadius: '10px',
-                    border: '1.2px solid #86EFAC',
-                    backgroundColor: '#F0FDF4',
-                    color: '#15803D',
-                    fontSize: '12.5px',
-                    fontWeight: '800',
-                    cursor: (generating || exportingChatGpt) ? 'not-allowed' : 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '7px',
-                    boxShadow: '0 2px 6px rgba(16, 185, 129, 0.1)',
-                  }}
-                >
-                  <ExternalLink size={14} />
-                  <span>{exportingChatGpt ? 'Preparing Prompt...' : 'Analyze on ChatGPT.com'}</span>
-                </button>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  {/* Google Gemini 1-Click Button */}
+                  <button
+                    type="button"
+                    disabled={generating || exportingGemini || exportingChatGpt}
+                    onClick={() => handleOpenInGemini(selectedReportType)}
+                    style={{
+                      padding: '10px 16px',
+                      borderRadius: '10px',
+                      border: '1.2px solid #BFDBFE',
+                      backgroundColor: '#EFF6FF',
+                      color: '#1D4ED8',
+                      fontSize: '12.5px',
+                      fontWeight: '800',
+                      cursor: (generating || exportingGemini || exportingChatGpt) ? 'not-allowed' : 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '7px',
+                      boxShadow: '0 2px 6px rgba(37, 99, 235, 0.1)',
+                    }}
+                  >
+                    <ExternalLink size={14} />
+                    <span>{exportingGemini ? 'Preparing Prompt...' : 'Open in Google Gemini'}</span>
+                  </button>
+
+                  {/* ChatGPT 1-Click Button */}
+                  <button
+                    type="button"
+                    disabled={generating || exportingGemini || exportingChatGpt}
+                    onClick={() => handleOpenInChatGPT(selectedReportType)}
+                    style={{
+                      padding: '10px 16px',
+                      borderRadius: '10px',
+                      border: '1.2px solid #86EFAC',
+                      backgroundColor: '#F0FDF4',
+                      color: '#15803D',
+                      fontSize: '12.5px',
+                      fontWeight: '800',
+                      cursor: (generating || exportingGemini || exportingChatGpt) ? 'not-allowed' : 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '7px',
+                      boxShadow: '0 2px 6px rgba(16, 185, 129, 0.1)',
+                    }}
+                  >
+                    <ExternalLink size={14} />
+                    <span>{exportingChatGpt ? 'Preparing Prompt...' : 'Open in ChatGPT'}</span>
+                  </button>
+                </div>
               </div>
             </div>
           )}

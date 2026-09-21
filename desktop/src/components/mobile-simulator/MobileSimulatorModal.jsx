@@ -13,6 +13,9 @@ import {
   User,
   IndianRupee,
   Clock,
+  AlertCircle,
+  Activity,
+  Send,
 } from 'lucide-react';
 import { useCustomer } from '../../context/CustomerContext';
 import { DynamicFieldInput } from '../customer-crm/DynamicFieldInput';
@@ -25,7 +28,7 @@ const SECTIONS = [
 ];
 
 export const MobileSimulatorModal = ({ onClose }) => {
-  const { activeForm, customers, fetchActiveForm, fetchCustomers, createCustomer } = useCustomer();
+  const { activeForm, customers, fetchActiveForm, fetchCustomers, createCustomer, updateCustomer } = useCustomer();
 
   const [activeScreen, setActiveScreen] = useState('list'); // 'list' | 'add' | 'detail'
   const [formSection, setFormSection] = useState('contact');
@@ -34,6 +37,14 @@ export const MobileSimulatorModal = ({ onClose }) => {
   const [errors, setErrors] = useState({});
   const [syncing, setSyncing] = useState(false);
   const [successToast, setSuccessToast] = useState('');
+
+  // Mobile Log Activity & Edit Pipeline Status State
+  const [mobileLogStatus, setMobileLogStatus] = useState('Newly Contacted');
+  const [mobileLogType, setMobileLogType] = useState('Call');
+  const [mobileLogNextDate, setMobileLogNextDate] = useState('');
+  const [mobileLogNotes, setMobileLogNotes] = useState('');
+  const [loggingMobileActivity, setLoggingMobileActivity] = useState(false);
+  const [mobileLogError, setMobileLogError] = useState('');
 
   const activeFields = (activeForm?.fields || []).filter((f) => f.active);
 
@@ -256,6 +267,11 @@ export const MobileSimulatorModal = ({ onClose }) => {
                       key={c._id}
                       onClick={() => {
                         setSelectedMobileCustomer(c);
+                        const cData = c.data instanceof Map ? Object.fromEntries(c.data) : (c.data || {});
+                        setMobileLogStatus(c.status || cData.status || 'Newly Contacted');
+                        setMobileLogNextDate(cData.nextFollowUp || '');
+                        setMobileLogNotes('');
+                        setMobileLogError('');
                         setActiveScreen('detail');
                       }}
                       style={{
@@ -424,19 +440,155 @@ export const MobileSimulatorModal = ({ onClose }) => {
 
                 return (
                   <div>
-                    <div style={{ padding: '12px', background: '#FFFFFF', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-default)', marginBottom: '12px', boxShadow: 'var(--shadow-xs)' }}>
+                    <div style={{ padding: '12px', background: '#FFFFFF', borderRadius: 'var(--radius-md)', border: '1.5px solid #CBD5E1', marginBottom: '12px', boxShadow: 'var(--shadow-xs)' }}>
                       <span className="mono" style={{ fontSize: '13px', fontWeight: '800', color: 'var(--primary-700)' }}>
                         {selectedMobileCustomer.customerId}
                       </span>
-                      <h3 style={{ fontSize: '16px', color: 'var(--text-primary)', marginTop: '2px' }}>
+                      <h3 style={{ fontSize: '16px', color: 'var(--text-primary)', marginTop: '2px', fontWeight: '800' }}>
                         {data.customerName}
                       </h3>
-                      <div style={{ display: 'flex', gap: '6px', marginTop: '4px' }}>
+                      <div style={{ display: 'flex', gap: '6px', marginTop: '6px', flexWrap: 'wrap' }}>
                         <span className={`badge ${getBadgeClass(data.customerType)}`}>
-                          {data.customerType}
+                          {data.customerType || 'Customer'}
                         </span>
-                        {data.status && <span className="badge badge-amber">{data.status}</span>}
+                        <span className="badge badge-amber" style={{ fontWeight: '800' }}>
+                          📌 {selectedMobileCustomer.status || data.status || 'Newly Contacted'}
+                        </span>
                       </div>
+                    </div>
+
+                    {/* Log Activity & Edit Pipeline Status Card */}
+                    <div style={{ padding: '12px', background: '#FFFFFF', borderRadius: 'var(--radius-md)', border: '1.5px solid #3B82F6', marginBottom: '12px', boxShadow: '0 4px 12px rgba(37,99,235,0.08)' }}>
+                      <div style={{ fontSize: '12px', fontWeight: '800', color: '#1E40AF', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '10px' }}>
+                        <Activity size={14} color="#2563EB" />
+                        <span>Log Activity & Edit Pipeline Status</span>
+                      </div>
+
+                      {mobileLogError && (
+                        <div style={{ padding: '8px 10px', background: '#FFF1F2', border: '1px solid #FECDD3', color: '#E11D48', borderRadius: '6px', fontSize: '11px', fontWeight: '600', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <AlertCircle size={13} />
+                          <span>{mobileLogError}</span>
+                        </div>
+                      )}
+
+                      <form
+                        onSubmit={async (e) => {
+                          e.preventDefault();
+                          setMobileLogError('');
+                          setLoggingMobileActivity(true);
+                          try {
+                            const updatedData = {
+                              status: mobileLogStatus,
+                              nextFollowUp: mobileLogNextDate || data.nextFollowUp,
+                              lastFollowUp: new Date().toISOString().split('T')[0],
+                              lastReason: mobileLogNotes || `${mobileLogType}: Status set to ${mobileLogStatus}`,
+                            };
+
+                            const res = await updateCustomer(selectedMobileCustomer._id, updatedData, mobileLogNotes, mobileLogStatus);
+                            if (res.success) {
+                              setSelectedMobileCustomer(res.customer);
+                              setSuccessToast(`🎉 Status updated to "${mobileLogStatus}"!`);
+                              setTimeout(() => setSuccessToast(''), 3000);
+                              setMobileLogNotes('');
+                            } else {
+                              setMobileLogError(res.message || 'Failed to update status');
+                            }
+                          } catch (err) {
+                            console.error('Mobile log error:', err);
+                            setMobileLogError('Error logging mobile activity.');
+                          } finally {
+                            setLoggingMobileActivity(false);
+                          }
+                        }}
+                      >
+                        {/* Editable Pipeline Status Dropdown */}
+                        <div style={{ marginBottom: '10px' }}>
+                          <label style={{ fontSize: '11px', fontWeight: '800', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block', marginBottom: '4px' }}>
+                            EDIT PIPELINE STATUS <span style={{ color: '#E11D48' }}>*</span>
+                          </label>
+                          <select
+                            value={mobileLogStatus}
+                            onChange={(e) => setMobileLogStatus(e.target.value)}
+                            style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1.5px solid #CBD5E1', fontSize: '12.5px', fontWeight: '700', color: '#0F172A', backgroundColor: '#FFFFFF', outline: 'none' }}
+                          >
+                            <option value="Newly Contacted">📌 Newly Contacted</option>
+                            <option value="Requirement Collected">📋 Requirement Collected</option>
+                            <option value="Quotation Provided">📄 Quotation Provided</option>
+                            <option value="Negotiation & Follow-up">🤝 Negotiation & Follow-up</option>
+                            <option value="Won - Closed">🎉 Won - Closed</option>
+                            <option value="Lost Sale">❌ Lost Sale</option>
+                          </select>
+                        </div>
+
+                        {/* Activity Type Dropdown */}
+                        <div style={{ marginBottom: '10px' }}>
+                          <label style={{ fontSize: '11px', fontWeight: '800', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block', marginBottom: '4px' }}>
+                            ACTIVITY TYPE <span style={{ color: '#E11D48' }}>*</span>
+                          </label>
+                          <select
+                            value={mobileLogType}
+                            onChange={(e) => setMobileLogType(e.target.value)}
+                            style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1.5px solid #CBD5E1', fontSize: '12.5px', fontWeight: '600', color: '#0F172A', backgroundColor: '#FFFFFF', outline: 'none' }}
+                          >
+                            <option value="Call">📞 Phone Call</option>
+                            <option value="Showroom Visit">🏬 Showroom Visit</option>
+                            <option value="WhatsApp Message">💬 WhatsApp Message</option>
+                            <option value="Site Visit">🏗️ Site Visit</option>
+                            <option value="Email">✉️ Email</option>
+                          </select>
+                        </div>
+
+                        {/* Next Follow-Up Date */}
+                        <div style={{ marginBottom: '10px' }}>
+                          <label style={{ fontSize: '11px', fontWeight: '800', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block', marginBottom: '4px' }}>
+                            NEXT FOLLOW-UP DATE
+                          </label>
+                          <input
+                            type="date"
+                            value={mobileLogNextDate}
+                            onChange={(e) => setMobileLogNextDate(e.target.value)}
+                            style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1.5px solid #CBD5E1', fontSize: '12.5px', color: '#0F172A', backgroundColor: '#FFFFFF', outline: 'none' }}
+                          />
+                        </div>
+
+                        {/* Activity Remarks */}
+                        <div style={{ marginBottom: '12px' }}>
+                          <label style={{ fontSize: '11px', fontWeight: '800', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block', marginBottom: '4px' }}>
+                            REMARKS / NOTES
+                          </label>
+                          <input
+                            type="text"
+                            placeholder="Enter call notes or client response..."
+                            value={mobileLogNotes}
+                            onChange={(e) => setMobileLogNotes(e.target.value)}
+                            style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1.5px solid #CBD5E1', fontSize: '12.5px', color: '#0F172A', backgroundColor: '#FFFFFF', outline: 'none' }}
+                          />
+                        </div>
+
+                        <button
+                          type="submit"
+                          disabled={loggingMobileActivity}
+                          style={{
+                            width: '100%',
+                            padding: '9.5px',
+                            borderRadius: '8px',
+                            background: '#2563EB',
+                            color: '#FFFFFF',
+                            border: 'none',
+                            fontWeight: '800',
+                            fontSize: '12px',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '6px',
+                            boxShadow: '0 2px 6px rgba(37,99,235,0.25)',
+                          }}
+                        >
+                          <Send size={13} />
+                          <span>{loggingMobileActivity ? 'Updating Status...' : 'Save & Update Pipeline Status'}</span>
+                        </button>
+                      </form>
                     </div>
 
                     {/* 4 Sections */}

@@ -41,7 +41,7 @@ export const AiReportPromptModal = ({ promptInfo, onGenerate, onDismiss }) => {
         className="modal-card"
         style={{
           position: 'relative',
-          maxWidth: '560px',
+          maxWidth: '820px',
           width: '95%',
           backgroundColor: '#FFFFFF',
           borderRadius: '20px',

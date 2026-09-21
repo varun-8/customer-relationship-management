@@ -1351,19 +1351,23 @@ export const DailyKpiView = () => {
                         }}
                       >
                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                          <span
+                          <div
                             style={{
-                              fontSize: '11px',
+                              width: '32px',
+                              height: '32px',
+                              borderRadius: '8px',
+                              backgroundColor: '#EFF6FF',
+                              color: '#2563EB',
                               fontWeight: '800',
-                              backgroundColor: rankBg,
-                              color: rankColor,
-                              border: '1px solid #E2E8F0',
-                              padding: '3px 8px',
-                              borderRadius: '6px',
+                              fontSize: '13px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              border: '1px solid #BFDBFE',
                             }}
                           >
-                            {rankBadge}
-                          </span>
+                            {(s.staffName || 'S').charAt(0).toUpperCase()}
+                          </div>
                           <div>
                             <div style={{ fontSize: isToneDown ? '13px' : '14px', fontWeight: '800', color: '#0F172A' }}>
                               {s.staffName}

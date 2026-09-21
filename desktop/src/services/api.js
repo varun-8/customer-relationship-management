@@ -506,8 +506,18 @@ export const api = {
     const query = new URLSearchParams();
     if (params.reportType) query.append('reportType', params.reportType);
     if (params.period) query.append('period', params.period);
+    query.append('provider', 'chatgpt');
     const qs = query.toString();
     return request(`/ai-reports/chatgpt-prompt${qs ? `?${qs}` : ''}`);
+  },
+
+  async getGeminiPrompt(params = {}) {
+    const query = new URLSearchParams();
+    if (params.reportType) query.append('reportType', params.reportType);
+    if (params.period) query.append('period', params.period);
+    query.append('provider', 'gemini');
+    const qs = query.toString();
+    return request(`/ai-reports/gemini-prompt${qs ? `?${qs}` : ''}`);
   },
 
   // AI Developer Configuration APIs
