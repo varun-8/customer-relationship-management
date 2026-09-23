@@ -143,7 +143,13 @@ export const FollowupSheetView = ({ onEditCustomer }) => {
 
       const res = await api.getFollowupsList(params);
       if (res.success) {
-        setFollowups(res.data || []);
+        const cleanList = (res.data || []).filter((f) => {
+          const st = (f.status || '').toLowerCase();
+          const isConfirmed = f.status === 'Order Confirmed' || st === 'order confirmed' || st.includes('confirmed') || st.includes('won');
+          const isLost = st.includes('lost');
+          return !isConfirmed && !isLost && st !== 'archived';
+        });
+        setFollowups(cleanList);
         if (res.counts) setCounts(res.counts);
       }
     } catch (err) {

@@ -1046,10 +1046,12 @@ export default function App() {
       if (staff && staff !== 'all') params.salesperson = staff;
       const res = await apiClient.getFollowupsList(params);
       if (res && res.success) {
-        // Ensure lost sales are hidden from the active follow-up queue
+        // Ensure closed/won and lost sales are hidden from the active follow-up queue
         const activeList = (res.data || []).filter((f) => {
           const s = (f.status || '').toLowerCase();
-          return !s.includes('lost');
+          const isConfirmed = f.status === 'Order Confirmed' || s === 'order confirmed' || s.includes('confirmed') || s.includes('won');
+          const isLost = s.includes('lost');
+          return !isConfirmed && !isLost && s !== 'archived';
         });
         setFollowups(activeList);
         if (res.counts) setFollowupCounts(res.counts);

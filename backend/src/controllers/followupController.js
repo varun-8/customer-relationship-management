@@ -82,9 +82,16 @@ exports.getFollowupsList = async (req, res) => {
     rawCustomers.forEach((doc) => {
       const c = extractCustomerData(doc);
 
-      // Skip closed or lost deals from active follow-up queue
+      // Skip closed/won or lost/cancelled deals from active follow-up queue
       const statusLower = (c.status || '').toLowerCase();
-      if (c.status === 'Order Confirmed' || statusLower.includes('lost')) return;
+      const isConfirmedOrWon =
+        c.status === 'Order Confirmed' ||
+        statusLower === 'order confirmed' ||
+        statusLower.includes('confirmed') ||
+        statusLower.includes('won');
+      const isLost = statusLower.includes('lost');
+
+      if (isConfirmedOrWon || isLost || statusLower === 'archived') return;
 
       // Determine Time-Horizon Bucket
       let bucket = 'upcoming';

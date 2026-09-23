@@ -333,10 +333,21 @@ export function MobileFollowupLogModal({
   };
 
   const handleSubmit = async () => {
-    if (outcome === 'Deal Lost / Postponed') {
+    const isLostTrigger = outcome === 'Deal Lost / Postponed' || pipelineStatus === 'Lost' || pipelineStatus === 'Lost Sale';
+    if (isLostTrigger) {
       if (onOpenLostSale) {
         onOpenLostSale(followUp);
-        onClose();
+        handleSmoothClose();
+        return;
+      }
+    }
+
+    const isOrderConfirmedTrigger = outcome === 'Order Confirmed / Ready for Billing' || pipelineStatus === 'Order Confirmed';
+    let finalOrderVal = orderValueAmount ? Number(orderValueAmount) : (quotationValue ? Number(quotationValue) : undefined);
+
+    if (isOrderConfirmedTrigger) {
+      if (!finalOrderVal || finalOrderVal <= 0) {
+        Alert.alert('Confirmed Order Value Required', 'Please enter the confirmed order deal amount (₹) at which the deal is closed.');
         return;
       }
     }
@@ -354,8 +365,8 @@ export function MobileFollowupLogModal({
         houseStage,
         requirement: requirements,
         quotationValue: quotationValue ? Number(quotationValue) : undefined,
-        orderValue: orderValueAmount ? Number(orderValueAmount) : (quotationValue ? Number(quotationValue) : undefined),
-        statusUpdate: pipelineStatus || (outcome === 'Order Confirmed / Ready for Billing' ? 'Won - Closed' : (outcome === 'Deal Lost / Postponed' ? 'Lost Sale' : undefined)),
+        orderValue: finalOrderVal,
+        statusUpdate: isOrderConfirmedTrigger ? 'Order Confirmed' : (isLostTrigger ? 'Lost Sale' : (pipelineStatus || undefined)),
       });
 
 
@@ -849,7 +860,7 @@ export function MobileFollowupLogModal({
                   </View>
 
                   {/* Confirmed Order Value (Shown when Order Confirmed option is selected) */}
-                  {outcome === 'Order Confirmed / Ready for Billing' && (
+                  {(outcome === 'Order Confirmed / Ready for Billing' || pipelineStatus === 'Order Confirmed') && (
                     <View style={{ marginTop: 14, backgroundColor: '#F0FDF4', borderWidth: 1.5, borderColor: '#86EFAC', borderRadius: 14, padding: 14 }}>
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 }}>
                         <Ionicons name="ribbon" size={16} color="#059669" />

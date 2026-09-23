@@ -25,6 +25,7 @@ import {
   Eye,
 } from 'lucide-react';
 import { api } from '../../services/api';
+import { useCustomer } from '../../context/CustomerContext';
 import { LostSaleModal } from './LostSaleModal';
 import { LostSaleDetailModal } from './LostSaleDetailModal';
 import { ConnectionErrorState } from '../common/ConnectionErrorState';
@@ -45,6 +46,7 @@ const formatDateLabel = (dateStr) => {
 };
 
 export const LostSalesView = () => {
+  const { fetchCustomers } = useCustomer();
   const todayStr = new Date().toISOString().split('T')[0];
 
   // State
@@ -144,7 +146,8 @@ export const LostSalesView = () => {
       await api.reopenLostSale(reopeningRecord._id, winBackNotes);
       setReopeningRecord(null);
       setWinBackNotes('');
-      fetchData();
+      await fetchData();
+      if (fetchCustomers) await fetchCustomers();
     } catch (e) {
       alert(e.message || 'Failed to reopen deal');
     }
@@ -1160,7 +1163,10 @@ export const LostSalesView = () => {
             setShowModal(false);
             setEditingRecord(null);
           }}
-          onSaved={fetchData}
+          onSaved={() => {
+            fetchData();
+            if (fetchCustomers) fetchCustomers();
+          }}
         />
       )}
 

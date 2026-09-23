@@ -429,7 +429,7 @@ export function MobileSettingsModal({
                 style={styles.dialogInput}
                 value={customHost}
                 onChangeText={setCustomHost}
-                placeholder="http://10.118.85.115:5000/api"
+                placeholder="http://<Desktop-PC-IP>:5000/api"
                 placeholderTextColor="#94A3B8"
                 autoCapitalize="none"
                 autoCorrect={false}

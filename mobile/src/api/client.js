@@ -186,7 +186,7 @@ export const FALLBACK_SCHEMA = {
     {
       id: 'field_status',
       name: 'status',
-      label: 'Status',
+      label: 'Pipeline Status',
       type: 'select',
       required: true,
       active: true,
@@ -201,18 +201,14 @@ export const FALLBACK_SCHEMA = {
         { label: 'Future Requirement', value: 'Future Requirement' },
       ],
     },
-    { id: 'field_next_follow_up', name: 'nextFollowUp', label: 'Next Follow-up', type: 'date', active: true, order: 16 },
-    { id: 'field_last_follow_up', name: 'lastFollowUp', label: 'Last Follow-up', type: 'date', active: true, readOnly: true, order: 17 },
-    { id: 'field_follow_up_count', name: 'followUpCount', label: 'Follow-up Count', type: 'number', active: true, readOnly: true, order: 18 },
-    { id: 'field_order_value', name: 'orderValue', label: 'Order Value', type: 'currency', active: true, order: 19 },
-    { id: 'field_last_reason', name: 'lastReason', label: 'Last Reason / Notes', type: 'text', active: true, order: 20 },
+    { id: 'field_order_value', name: 'orderValue', label: 'Order Value', type: 'currency', active: true, order: 16 },
     {
       id: 'field_cross_sell',
       name: 'crossSell',
       label: 'Cross-sell Products',
       type: 'multiselect',
       active: true,
-      order: 22,
+      order: 17,
       options: [
         { label: 'Grout & Epoxy', value: 'Grout & Epoxy' },
         { label: 'Tile Spacers & Levellers', value: 'Tile Spacers & Levellers' },
@@ -222,6 +218,10 @@ export const FALLBACK_SCHEMA = {
         { label: 'Mirror Cabinets & Vanity', value: 'Mirror Cabinets & Vanity' },
       ],
     },
+    { id: 'field_next_follow_up', name: 'nextFollowUp', label: 'Next Follow-up', type: 'date', active: true, order: 18 },
+    { id: 'field_last_follow_up', name: 'lastFollowUp', label: 'Last Follow-up', type: 'date', active: true, readOnly: true, order: 19 },
+    { id: 'field_follow_up_count', name: 'followUpCount', label: 'Follow-up Count', type: 'number', active: true, readOnly: true, order: 20 },
+    { id: 'field_last_reason', name: 'lastReason', label: 'Last Reason / Notes', type: 'text', active: true, order: 21 },
   ],
 };
 
@@ -406,6 +406,9 @@ export const apiClient = {
     try {
       if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
         const parsed = JSON.parse(trimmed);
+        if (Array.isArray(parsed.allHostUrls) && parsed.allHostUrls.length > 0) {
+          return parsed.allHostUrls;
+        }
         if (parsed.apiBaseUrl) {
           return parsed.apiBaseUrl;
         }
@@ -447,7 +450,7 @@ export const apiClient = {
         const healthUrl = `${baseApi}/health`;
 
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 5000);
+        const timeoutId = setTimeout(() => controller.abort(), 4000);
 
         try {
           const res = await fetch(healthUrl, { signal: controller.signal });
@@ -517,10 +520,18 @@ export const apiClient = {
     } catch (e) {}
   },
 
-  // Test connection to backend
+  // Test connection to backend via parallel candidate URL pings (Ethernet & Wi-Fi supported)
   async testConnection(customBase = null) {
     const candidates = [];
-    if (customBase) {
+    if (Array.isArray(customBase)) {
+      customBase.forEach((u) => {
+        if (u && typeof u === 'string') {
+          let clean = u.trim().replace(/\/+$/, '');
+          if (!clean.endsWith('/api')) clean += '/api';
+          candidates.push(clean);
+        }
+      });
+    } else if (customBase && typeof customBase === 'string') {
       let clean = customBase.trim().replace(/\/+$/, '');
       if (!clean.endsWith('/api')) clean += '/api';
       candidates.push(clean);
@@ -534,26 +545,38 @@ export const apiClient = {
       candidates.push(...getCandidateHosts());
     }
 
-    const uniqueCandidates = [...new Set(candidates)];
+    const uniqueCandidates = [...new Set(candidates.filter(Boolean))];
 
-    for (const host of uniqueCandidates) {
-      try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 6000);
+    // Execute parallel pings for fast multi-interface connection matching
+    const pingPromises = uniqueCandidates.map((host) => {
+      return new Promise(async (resolve) => {
+        try {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 4000);
 
-        const res = await fetch(`${host}/health`, { signal: controller.signal });
-        clearTimeout(timeoutId);
+          const res = await fetch(`${host}/health`, { signal: controller.signal });
+          clearTimeout(timeoutId);
 
-        if (res.ok) {
-          const data = await res.json();
-          cachedWorkingHost = host;
-          await AsyncStorage.setItem(HOST_STORAGE_KEY, host);
-          await AsyncStorage.setItem('vasantham_is_paired', 'true');
-          return { success: true, host, data };
-        }
-      } catch (e) {}
+          if (res.ok) {
+            const data = await res.json();
+            resolve({ success: true, host, data });
+            return;
+          }
+        } catch (e) {}
+        resolve(null);
+      });
+    });
+
+    const results = await Promise.all(pingPromises);
+    const winner = results.find((r) => r && r.success);
+    if (winner) {
+      cachedWorkingHost = winner.host;
+      await AsyncStorage.setItem(HOST_STORAGE_KEY, winner.host);
+      await AsyncStorage.setItem('vasantham_is_paired', 'true');
+      return winner;
     }
-    return { success: false, error: 'Cannot connect to backend API server. Verify backend is running.' };
+
+    return { success: false, error: 'Cannot connect to backend API server. Verify Desktop CRM is running.' };
   },
 
   // Auto-detect Desktop CRM Server across local subnets with dynamic subnet extraction (zero hardcoded IPs)

@@ -1,5 +1,6 @@
 const Customer = require('../models/Customer');
 const CustomerForm = require('../models/CustomerForm');
+const LostSale = require('../models/LostSale');
 const { generateNextId } = require('../utils/idGenerator');
 
 // @desc Get all customers with dynamic search, filter, sort & pagination
@@ -143,6 +144,66 @@ const getCustomerById = async (req, res) => {
   }
 };
 
+// Helper to sync Customer Lost Sale state with LostSale collection
+const syncCustomerLostSaleStatus = async (customer, mergedData, user) => {
+  try {
+    const statusVal = customer.status || mergedData.status || '';
+    const isLost = String(statusVal).toLowerCase().includes('lost');
+    const query = {
+      $or: [
+        { customerRef: customer._id },
+        { customerId: customer.customerId },
+        ...(mergedData.phone ? [{ phone: mergedData.phone }] : []),
+      ],
+    };
+
+    if (isLost) {
+      const existing = await LostSale.findOne(query);
+      const reqArr = Array.isArray(mergedData.requirement)
+        ? mergedData.requirement
+        : (mergedData.requirement ? [mergedData.requirement] : ['Tile']);
+
+      if (existing) {
+        existing.status = 'lost';
+        existing.quoteValue = Number(mergedData.quotationValue || mergedData.tileBudget || existing.quoteValue || 0);
+        existing.salesperson = mergedData.salesperson || existing.salesperson || 'Staff';
+        existing.customerName = mergedData.customerName || existing.customerName;
+        existing.phone = mergedData.phone || existing.phone;
+        await existing.save();
+      } else {
+        await LostSale.create({
+          customerId: customer.customerId,
+          customerRef: customer._id,
+          customerName: mergedData.customerName || 'Unknown Customer',
+          customerType: customer.customerType || mergedData.customerType || 'Building Owner',
+          requirements: reqArr,
+          phone: mergedData.phone || '',
+          quoteValue: Number(mergedData.quotationValue || mergedData.tileBudget || 0),
+          products: reqArr,
+          salesperson: mergedData.salesperson || user?.name || 'Staff',
+          lostReason: mergedData.lostReason || 'Pipeline Status updated to Lost in Customer Section',
+          competitor: mergedData.lostCompetitor || 'Unknown Dealer',
+          priceDifference: Number(mergedData.priceDifference || 0),
+          date: new Date(),
+          dateString: new Date().toISOString().split('T')[0],
+          notes: customer.notes || '',
+          status: 'lost',
+          createdBy: {
+            userId: user?._id,
+            name: user?.name || 'Staff',
+            role: user?.role || 'employee',
+          },
+        });
+      }
+    } else {
+      // If status is updated away from Lost to another section, remove non-win_back records from Lost Sales collection
+      await LostSale.deleteMany({ ...query, status: { $ne: 'win_back' } });
+    }
+  } catch (err) {
+    console.warn('Error in syncCustomerLostSaleStatus:', err.message);
+  }
+};
+
 // @desc Create a new customer (Atomic Customer ID generation + dynamic data)
 // @route POST /api/customers
 const createCustomer = async (req, res) => {
@@ -168,6 +229,7 @@ const createCustomer = async (req, res) => {
       },
     });
 
+    await syncCustomerLostSaleStatus(customer, customerData, req.user);
 
     res.status(201).json({
       success: true,
@@ -229,6 +291,8 @@ const updateCustomer = async (req, res) => {
     customer.updatedAt = new Date();
 
     await customer.save();
+
+    await syncCustomerLostSaleStatus(customer, mergedData, req.user);
 
     res.json({
       success: true,

@@ -20,6 +20,7 @@ import {
 import { DynamicFieldInput } from './DynamicFieldInput';
 import { useCustomer } from '../../context/CustomerContext';
 import { api } from '../../services/api';
+import { LostSaleModal } from '../lost-sales/LostSaleModal';
 
 const STANDARD_MOBILE_FIELDS = [
   // Section 1: Contact & Profile
@@ -197,6 +198,7 @@ export const CustomerFormModal = ({ customer, onClose, onSuccess }) => {
   const [existingCustomer, setExistingCustomer] = useState(null);
   const [lookingUpPhone, setLookingUpPhone] = useState(false);
   const [staffOptions, setStaffOptions] = useState([]);
+  const [pendingLostCustomer, setPendingLostCustomer] = useState(null);
 
   // Fetch live showroom sales executives to populate salesperson dropdown
   useEffect(() => {
@@ -334,25 +336,45 @@ export const CustomerFormModal = ({ customer, onClose, onSuccess }) => {
     setGeneralError('');
 
     try {
+      const payloadData = { ...formData };
+      const stLower = (payloadData.status || '').toLowerCase();
+      if (stLower === 'order confirmed' || stLower.includes('confirmed')) {
+        payloadData.status = 'Order Confirmed';
+        if (!payloadData.orderValue || Number(payloadData.orderValue) <= 0) {
+          payloadData.orderValue = Number(payloadData.quotationValue) || Number(payloadData.tileBudget) || 0;
+        }
+      } else if (stLower.includes('lost')) {
+        payloadData.status = 'Lost Sale';
+      }
+
+      let savedCustomerObj = null;
+
       if (isEdit) {
         const customerIdToUpdate = customer?._id || customer?.customerId || customer?.id;
-        const res = await updateCustomer(customerIdToUpdate, formData, notes);
+        const res = await updateCustomer(customerIdToUpdate, payloadData, notes);
         if (res && res.success) {
-          onSuccess && onSuccess(res.customer);
-          onClose();
+          savedCustomerObj = res.customer;
         } else {
           setGeneralError(res?.message || 'Failed to update customer');
           if (res?.errors) setErrors(res.errors);
+          return;
         }
       } else {
-        const res = await createCustomer(formData, notes);
+        const res = await createCustomer(payloadData, notes);
         if (res.success) {
-          onSuccess && onSuccess(res.customer);
-          onClose();
+          savedCustomerObj = res.customer;
         } else {
           setGeneralError(res.message || 'Failed to create customer');
           if (res.errors) setErrors(res.errors);
+          return;
         }
+      }
+
+      if (stLower.includes('lost') && savedCustomerObj) {
+        setPendingLostCustomer(savedCustomerObj);
+      } else {
+        onSuccess && onSuccess(savedCustomerObj);
+        onClose();
       }
     } catch (err) {
       setGeneralError(err.message || 'An unexpected error occurred.');

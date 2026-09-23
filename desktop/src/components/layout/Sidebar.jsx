@@ -19,6 +19,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useBranding } from '../../context/BrandingContext';
 import { useCustomer } from '../../context/CustomerContext';
 import { useToneDown } from '../../context/ToneDownContext';
+import { LogoutConfirmationModal } from '../auth/LogoutConfirmationModal';
 
 export const Sidebar = ({
   activeTab,
@@ -31,6 +32,7 @@ export const Sidebar = ({
   const { isToneDown } = useToneDown();
 
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
 
   // Dynamic customer count badge
   const totalCustomers = pagination?.total || customers?.length || 0;
@@ -279,38 +281,146 @@ export const Sidebar = ({
         </button>
       </div>
 
-      {/* 3. Desktop Sidebar Footer: Real User Identity Card */}
-      <div className="sidebar-footer-wrapper">
+      {/* 3. Desktop Sidebar Footer: Real User Identity Card & Logout Action */}
+      <div className="sidebar-footer-wrapper" style={{ padding: '12px', borderTop: '1px solid rgba(255, 255, 255, 0.08)' }}>
         <div
           className={`sidebar-profile-card ${isCollapsed ? 'sidebar-profile-card-collapsed' : ''}`}
           title={isCollapsed ? `${userName} (${userRole})` : undefined}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: isCollapsed ? 'center' : 'space-between',
+            gap: '10px',
+            padding: isCollapsed ? '8px 4px' : '10px 12px',
+            borderRadius: '12px',
+            backgroundColor: 'rgba(255, 255, 255, 0.04)',
+            border: '1px solid rgba(255, 255, 255, 0.08)',
+          }}
         >
-          <div className="sidebar-avatar-circle">
-            <span>{userInitials}</span>
-          </div>
-
-          {!isCollapsed && (
-            <div className="sidebar-profile-meta">
-              <div className="sidebar-profile-name">{userName}</div>
-              <div className="sidebar-profile-role">
-                <Shield size={10} color="#38BDF8" />
-                <span>{userRole}</span>
-              </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0, flex: 1, justifyContent: isCollapsed ? 'center' : 'flex-start' }}>
+            <div
+              className="sidebar-avatar-circle"
+              style={{
+                width: '36px',
+                height: '36px',
+                borderRadius: '50%',
+                backgroundColor: primaryColor || '#2563EB',
+                color: '#FFFFFF',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontWeight: '700',
+                fontSize: '13px',
+                flexShrink: 0,
+              }}
+            >
+              <span>{userInitials}</span>
             </div>
-          )}
+
+            {!isCollapsed && (
+              <div className="sidebar-profile-meta" style={{ minWidth: 0, flex: 1 }}>
+                <div
+                  className="sidebar-profile-name"
+                  style={{
+                    color: '#F8FAFC',
+                    fontSize: '13px',
+                    fontWeight: '600',
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                  }}
+                >
+                  {userName}
+                </div>
+                <div
+                  className="sidebar-profile-role"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    color: '#94A3B8',
+                    fontSize: '11px',
+                  }}
+                >
+                  <Shield size={10} color="#38BDF8" />
+                  <span>{userRole}</span>
+                </div>
+              </div>
+            )}
+          </div>
 
           {!isCollapsed && (
             <button
               type="button"
-              onClick={logout}
+              onClick={() => setShowLogoutModal(true)}
               className="sidebar-logout-btn"
-              title="Sign Out / Switch Profile"
+              title="Sign Out / Logout"
+              style={{
+                padding: '8px',
+                borderRadius: '8px',
+                border: '1px solid rgba(239, 68, 68, 0.25)',
+                backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                color: '#FCA5A5',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                transition: 'all 0.2s ease',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.25)';
+                e.currentTarget.style.color = '#FFFFFF';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.1)';
+                e.currentTarget.style.color = '#FCA5A5';
+              }}
             >
-              <LogOut size={14} />
+              <LogOut size={15} />
             </button>
           )}
         </div>
+
+        {/* Dedicated Full-Width Logout Button when Collapsed */}
+        {isCollapsed && (
+          <button
+            type="button"
+            onClick={() => setShowLogoutModal(true)}
+            title="Log Out (Sign Out)"
+            style={{
+              marginTop: '8px',
+              width: '100%',
+              padding: '9px 0',
+              borderRadius: '10px',
+              border: '1px solid rgba(239, 68, 68, 0.3)',
+              backgroundColor: 'rgba(239, 68, 68, 0.12)',
+              color: '#FCA5A5',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              transition: 'all 0.2s ease',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.3)';
+              e.currentTarget.style.color = '#FFFFFF';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.12)';
+              e.currentTarget.style.color = '#FCA5A5';
+            }}
+          >
+            <LogOut size={16} />
+          </button>
+        )}
       </div>
+
+      {/* Executive Logout Confirmation Modal */}
+      <LogoutConfirmationModal
+        isOpen={showLogoutModal}
+        onClose={() => setShowLogoutModal(false)}
+        onConfirm={logout}
+      />
     </aside>
   );
 };

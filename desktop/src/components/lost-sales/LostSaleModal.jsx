@@ -143,6 +143,9 @@ export const LostSaleModal = ({ initialData, customer, onClose, onSaved }) => {
   );
   const [date, setDate] = useState(initialData?.dateString || todayStr);
   const [notes, setNotes] = useState(initialData?.notes || '');
+  const [pipelineStatus, setPipelineStatus] = useState(
+    initialData?.pipelineStatus || initialData?.customerStatus || (initialData?.status && initialData.status !== 'lost' && initialData.status !== 'win_back' ? initialData.status : 'Lost') || customer?.status || 'Lost'
+  );
 
   // CRM Search state
   const [crmCustomers, setCrmCustomers] = useState([]);
@@ -248,6 +251,8 @@ export const LostSaleModal = ({ initialData, customer, onClose, onSaved }) => {
         priceDiffPercentage: diffPercent,
         date,
         notes: notes.trim(),
+        pipelineStatus,
+        status: pipelineStatus,
       };
 
       if (initialData?._id) {
@@ -498,6 +503,45 @@ export const LostSaleModal = ({ initialData, customer, onClose, onSaved }) => {
                     style={{ padding: '9px 12px', borderRadius: '10px', border: '1.5px solid #CBD5E1', fontWeight: '700' }}
                   />
                 </div>
+              </div>
+
+              {/* Pipeline Status Selector */}
+              <div className="form-group" style={{ marginTop: '12px' }}>
+                <label className="form-label" style={{ fontSize: '12px', fontWeight: '800', color: '#0F172A', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <span>Pipeline Status</span>
+                  {pipelineStatus !== 'Lost' && (
+                    <span style={{ color: '#059669', fontSize: '11px', fontWeight: '800' }}>Will move to {pipelineStatus} section</span>
+                  )}
+                </label>
+                <select
+                  className="form-input"
+                  value={pipelineStatus}
+                  onChange={(e) => setPipelineStatus(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '9px 12px',
+                    borderRadius: '10px',
+                    border: pipelineStatus === 'Lost' ? '1.5px solid #CBD5E1' : '1.5px solid #059669',
+                    fontWeight: '800',
+                    fontSize: '13px',
+                    color: pipelineStatus === 'Lost' ? '#475569' : '#047857',
+                    backgroundColor: pipelineStatus === 'Lost' ? '#F8FAFC' : '#ECFDF5',
+                    cursor: 'pointer',
+                  }}
+                >
+                  <option value="Lost">Lost (Keep in Lost Sales Section)</option>
+                  <option value="New Lead">New Lead (Move to New Lead Section)</option>
+                  <option value="Quotation">Quotation (Move to Quotation Section)</option>
+                  <option value="Follow-up">Follow-up (Move to Follow-up Section)</option>
+                  <option value="Negotiation">Negotiation (Move to Negotiation Section)</option>
+                  <option value="Order Confirmed">Order Confirmed (Move to Order Confirmed Section)</option>
+                  <option value="Future Requirement">Future Requirement (Move to Future Requirement Section)</option>
+                </select>
+                {pipelineStatus !== 'Lost' && (
+                  <p style={{ margin: '6px 0 0', fontSize: '11.5px', color: '#047857', fontWeight: '700' }}>
+                    ✓ Saving will move this customer record out of Lost Sales section into the <strong>{pipelineStatus}</strong> pipeline stage.
+                  </p>
+                )}
               </div>
             </div>
 

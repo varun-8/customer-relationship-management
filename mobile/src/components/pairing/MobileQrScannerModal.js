@@ -51,8 +51,8 @@ export const MobileQrScannerModal = ({
 
   // Manual IP & Auto-detect state
   const [showManualInput, setShowManualInput] = useState(false);
-  const [manualHost, setManualHost] = useState('http://10.118.85.115:5000/api');
-  const [quickHost, setQuickHost] = useState('http://10.118.85.115:5000/api');
+  const [manualHost, setManualHost] = useState('');
+  const [quickHost, setQuickHost] = useState('');
   const [autoDetecting, setAutoDetecting] = useState(false);
 
   // Concurrency guard to prevent rapid duplicate scans
@@ -163,9 +163,6 @@ export const MobileQrScannerModal = ({
         if (base) {
           setManualHost(base);
           setQuickHost(base);
-        } else {
-          setManualHost('http://10.118.85.115:5000/api');
-          setQuickHost('http://10.118.85.115:5000/api');
         }
       });
     }
@@ -281,7 +278,7 @@ export const MobileQrScannerModal = ({
   const handleManualConnect = async (targetHost = null) => {
     const hostToUse = (typeof targetHost === 'string' && targetHost.trim())
       ? targetHost.trim()
-      : (manualHost.trim() || quickHost || 'http://10.118.85.115:5000/api');
+      : (manualHost.trim() || quickHost);
 
     if (!hostToUse) {
       Alert.alert('Required', 'Please enter your Desktop CRM IP address or URL.');

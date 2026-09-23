@@ -411,7 +411,7 @@ exports.getLostSalesAnalytics = async (req, res) => {
 };
 
 /**
- * Update a Lost Sale record
+ * Update a Lost Sale record & handles pipeline status updates
  */
 exports.updateLostSale = async (req, res) => {
   try {
@@ -428,14 +428,86 @@ exports.updateLostSale = async (req, res) => {
       updates.dateString = toDateString(updates.date);
     }
 
+    const lostSale = await LostSale.findById(id);
+    if (!lostSale) {
+      return res.status(404).json({ success: false, message: 'Lost sale record not found' });
+    }
+
+    const newStatus = updates.pipelineStatus || updates.customerStatus || updates.status;
+
+    // Check if pipeline status is changed to something OTHER than Lost
+    if (newStatus && !String(newStatus).toLowerCase().includes('lost')) {
+      // Find linked customer record
+      const cQuery = {
+        $or: [
+          ...(lostSale.customerRef ? [{ _id: lostSale.customerRef }] : []),
+          ...(lostSale.customerId ? [{ customerId: lostSale.customerId }] : []),
+          ...(lostSale.phone ? [{ 'data.phone': lostSale.phone }] : []),
+        ],
+      };
+
+      let customerDoc = null;
+      if (cQuery.$or.length > 0) {
+        customerDoc = await Customer.findOne(cQuery);
+      }
+
+      if (customerDoc) {
+        customerDoc.status = newStatus;
+        const cData = customerDoc.data instanceof Map ? Object.fromEntries(customerDoc.data) : (customerDoc.data || {});
+        cData.status = newStatus;
+        if (updates.customerName) cData.customerName = updates.customerName.trim();
+        if (updates.phone) cData.phone = updates.phone.trim();
+        if (updates.salesperson) cData.salesperson = updates.salesperson.trim();
+        if (updates.quoteValue !== undefined) cData.quotationValue = Number(updates.quoteValue);
+        customerDoc.data = cData;
+        customerDoc.markModified('data');
+        await customerDoc.save();
+      }
+
+      // Delete LostSale record so it moves out of Lost Sales section to the target pipeline section
+      await LostSale.findByIdAndDelete(id);
+
+      return res.status(200).json({
+        success: true,
+        moved: true,
+        message: `Customer moved from Lost Sales to ${newStatus} section`,
+        data: { _id: id, status: newStatus },
+      });
+    }
+
+    // Normal Lost Sale record update
     const updatedRecord = await LostSale.findByIdAndUpdate(
       id,
       { $set: updates },
       { new: true, runValidators: true }
     );
 
-    if (!updatedRecord) {
-      return res.status(404).json({ success: false, message: 'Lost sale record not found' });
+    // Sync changes to Customer document if linked
+    if (updatedRecord && (updatedRecord.customerId || updatedRecord.customerRef || updatedRecord.phone)) {
+      try {
+        const cQuery = {
+          $or: [
+            ...(updatedRecord.customerRef ? [{ _id: updatedRecord.customerRef }] : []),
+            ...(updatedRecord.customerId ? [{ customerId: updatedRecord.customerId }] : []),
+            ...(updatedRecord.phone ? [{ 'data.phone': updatedRecord.phone }] : []),
+          ],
+        };
+        if (cQuery.$or.length > 0) {
+          const cDoc = await Customer.findOne(cQuery);
+          if (cDoc) {
+            const cData = cDoc.data instanceof Map ? Object.fromEntries(cDoc.data) : (cDoc.data || {});
+            if (updates.customerName) cData.customerName = updates.customerName.trim();
+            if (updates.phone) cData.phone = updates.phone.trim();
+            if (updates.salesperson) cData.salesperson = updates.salesperson.trim();
+            if (updates.quoteValue !== undefined) cData.quotationValue = Number(updates.quoteValue);
+            cDoc.data = cData;
+            cDoc.markModified('data');
+            await cDoc.save();
+          }
+        }
+      } catch (err) {
+        console.warn('Sync back to Customer doc failed:', err.message);
+      }
     }
 
     res.status(200).json({
@@ -493,31 +565,45 @@ exports.reopenLostSale = async (req, res) => {
     }
 
     lostSale.status = 'win_back';
-    if (winBackNotes) {
-      lostSale.notes = `${lostSale.notes ? lostSale.notes + ' | ' : ''}Win-back note: ${winBackNotes.trim()}`;
+    lostSale.winBackDate = new Date();
+    if (winBackNotes && winBackNotes.trim()) {
+      lostSale.winBackNotes = winBackNotes.trim();
+      const dateTag = new Date().toLocaleDateString('en-IN');
+      lostSale.notes = `${lostSale.notes ? lostSale.notes + '\n' : ''}[Win-Back Reopened ${dateTag}]: ${winBackNotes.trim()}`;
     }
     await lostSale.save();
 
-    // Reopen in Customer collection if linked
-    if (lostSale.customerId || lostSale.customerRef) {
+    // Reopen in Customer collection if linked (match by customerRef, customerId, or phone)
+    const cQuery = {
+      $or: [
+        ...(lostSale.customerRef ? [{ _id: lostSale.customerRef }] : []),
+        ...(lostSale.customerId ? [{ customerId: lostSale.customerId }] : []),
+        ...(lostSale.phone ? [{ 'data.phone': lostSale.phone }] : []),
+      ],
+    };
+
+    if (cQuery.$or.length > 0) {
       try {
-        const query = lostSale.customerRef ? { _id: lostSale.customerRef } : { customerId: lostSale.customerId };
-        const customer = await Customer.findOne(query);
+        const customer = await Customer.findOne(cQuery);
         if (customer) {
+          customer.status = 'Negotiation';
           const currentData = customer.data instanceof Map ? Object.fromEntries(customer.data) : (customer.data || {});
           currentData.status = 'Negotiation';
-          currentData.lastReason = `Win-Back Reopened: ${winBackNotes || 'Customer re-engaged for negotiation'}`;
+          currentData.lastReason = `Win-Back Reopened: ${winBackNotes ? winBackNotes.trim() : 'Customer re-engaged for negotiation'}`;
+          currentData.winBackNotes = winBackNotes ? winBackNotes.trim() : '';
+          currentData.nextFollowUp = new Date().toISOString().split('T')[0];
           customer.data = currentData;
+          customer.markModified('data');
           await customer.save();
         }
       } catch (err) {
-        console.warn('Could not sync status to Customer document:', err.message);
+        console.warn('Could not sync win-back status to Customer document:', err.message);
       }
     }
 
     res.status(200).json({
       success: true,
-      message: `Deal for ${lostSale.customerName} marked as Win-Back Opportunity!`,
+      message: `Deal for ${lostSale.customerName} recorded as Win-Back Opportunity & moved to Negotiation!`,
       data: lostSale,
     });
   } catch (error) {

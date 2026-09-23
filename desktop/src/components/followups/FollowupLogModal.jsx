@@ -315,10 +315,21 @@ export const FollowupLogModal = ({ followUp: initialFollowUp, onClose, onSaved, 
       return;
     }
 
-    if (outcome === 'Deal Lost / Postponed') {
+    const isLostTrigger = outcome === 'Deal Lost / Postponed' || pipelineStatus === 'Lost' || pipelineStatus === 'Lost Sale';
+    if (isLostTrigger) {
       if (onOpenLostSale) {
         onOpenLostSale(selectedFollowUp);
         onClose();
+        return;
+      }
+    }
+
+    const isOrderConfirmedTrigger = outcome === 'Order Confirmed / Ready for Billing' || pipelineStatus === 'Order Confirmed';
+    let finalOrderVal = orderValueAmount ? Number(orderValueAmount) : (quotationValue ? Number(quotationValue) : undefined);
+
+    if (isOrderConfirmedTrigger) {
+      if (!finalOrderVal || finalOrderVal <= 0) {
+        setError('Please enter the confirmed order deal amount (₹) at which the deal is closed.');
         return;
       }
     }
@@ -337,8 +348,8 @@ export const FollowupLogModal = ({ followUp: initialFollowUp, onClose, onSaved, 
         leadTemperature,
         houseStage,
         quotationValue: quotationValue ? Number(quotationValue) : undefined,
-        orderValue: orderValueAmount ? Number(orderValueAmount) : (quotationValue ? Number(quotationValue) : undefined),
-        statusUpdate: pipelineStatus || (outcome === 'Order Confirmed / Ready for Billing' ? 'Won - Closed' : (outcome === 'Deal Lost / Postponed' ? 'Lost Sale' : undefined)),
+        orderValue: finalOrderVal,
+        statusUpdate: isOrderConfirmedTrigger ? 'Order Confirmed' : (isLostTrigger ? 'Lost Sale' : (pipelineStatus || undefined)),
       });
 
       if (res.success) {
@@ -947,7 +958,7 @@ export const FollowupLogModal = ({ followUp: initialFollowUp, onClose, onSaved, 
                   </div>
 
                   {/* Confirmed Order Value Input Field (Visible when Order Confirmed option is selected) */}
-                  {outcome === 'Order Confirmed / Ready for Billing' && (
+                  {(outcome === 'Order Confirmed / Ready for Billing' || pipelineStatus === 'Order Confirmed') && (
                     <div style={{ marginTop: '14px', backgroundColor: '#F0FDF4', border: '1.5px solid #86EFAC', borderRadius: '12px', padding: '14px', marginBottom: '14px' }}>
                       <div style={{ fontSize: '11px', fontWeight: '900', color: '#166534', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
                         <Award size={16} color="#059669" />

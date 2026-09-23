@@ -127,6 +127,11 @@ exports.getMobilePairingInfo = async (req, res) => {
     const port = Number(process.env.PORT) || 5000;
     const apiBaseUrl = `http://${serverIp}:${port}/api`;
 
+    // Gather all candidate host URLs across physical network adapters (Ethernet, Wi-Fi, LAN)
+    const physicalIps = networkInterfaces.filter((item) => !item.isVirtual).map((item) => item.ip);
+    if (!physicalIps.includes(serverIp)) physicalIps.unshift(serverIp);
+    const allHostUrls = physicalIps.map((ip) => `http://${ip}:${port}/api`);
+
     const pairingPayload = {
       type: 'VASANTHAM_CRM_PAIR',
       v: 1,
@@ -134,6 +139,7 @@ exports.getMobilePairingInfo = async (req, res) => {
       serverIp,
       port,
       apiBaseUrl,
+      allHostUrls,
       healthUrl: `http://${serverIp}:${port}/api/health`,
       ts: Date.now(),
     };
@@ -144,6 +150,7 @@ exports.getMobilePairingInfo = async (req, res) => {
         serverIp,
         port,
         apiBaseUrl,
+        allHostUrls,
         pairingPayload,
         pairingString: JSON.stringify(pairingPayload),
         networkInterfaces,

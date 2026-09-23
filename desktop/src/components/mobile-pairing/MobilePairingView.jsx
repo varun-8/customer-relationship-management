@@ -99,6 +99,7 @@ export const MobilePairingView = ({ isModal = false, onClose = null }) => {
     serverIp: selectedIp || '127.0.0.1',
     port: Number(customPort) || 5000,
     apiBaseUrl: currentApiUrl,
+    allHostUrls: pairingData?.allHostUrls || [currentApiUrl],
     healthUrl: `http://${selectedIp || '127.0.0.1'}:${customPort || 5000}/api/health`,
     ts: Date.now(),
   });

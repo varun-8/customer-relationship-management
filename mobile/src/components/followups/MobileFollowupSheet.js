@@ -173,11 +173,24 @@ export function MobileFollowupSheet({
   );
   const staffName = currentProfile?.name ? currentProfile.name.trim().toLowerCase() : '';
 
-  // Filter leads to only the logged-in salesperson's records if employee
+  // Filter leads to only active follow-ups and logged-in salesperson's records if employee
   const staffScopedFollowups = useMemo(() => {
     if (!followups || followups.length === 0) return [];
-    if (!isEmployee || !staffName) return followups;
-    return followups.filter((f) => {
+
+    // Strictly exclude Order Confirmed, Won, and Lost Sales leads from active queue
+    const activeOnly = followups.filter((f) => {
+      const st = (f.status || '').toLowerCase();
+      const isConfirmed =
+        f.status === 'Order Confirmed' ||
+        st === 'order confirmed' ||
+        st.includes('confirmed') ||
+        st.includes('won');
+      const isLost = st.includes('lost');
+      return !isConfirmed && !isLost && st !== 'archived';
+    });
+
+    if (!isEmployee || !staffName) return activeOnly;
+    return activeOnly.filter((f) => {
       const s = (f.salesperson || '').trim().toLowerCase();
       return s === staffName || s.includes(staffName) || staffName.includes(s);
     });
