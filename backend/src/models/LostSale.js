@@ -36,7 +36,6 @@ const lostSaleSchema = new mongoose.Schema(
     },
     products: {
       type: [String],
-      enum: ['Tile', 'Sanitary', 'CP', 'Adhesive', 'Fittings', 'Vanity', 'Kitchen Sink', 'Other'],
       default: ['Tile'],
     },
     salesperson: {

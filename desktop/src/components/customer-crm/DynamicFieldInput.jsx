@@ -355,7 +355,11 @@ export const DynamicFieldInput = ({ field, value, onChange, error }) => {
         );
 
       case 'multiselect': {
-        const selectedArr = Array.isArray(value) ? value : [];
+        const selectedArr = Array.isArray(value)
+          ? value
+          : (typeof value === 'string' && value.trim()
+            ? value.split(',').map((s) => s.trim()).filter(Boolean)
+            : []);
         const toggleSelection = (optVal) => {
           if (selectedArr.includes(optVal)) {
             handleChange(selectedArr.filter((item) => item !== optVal));

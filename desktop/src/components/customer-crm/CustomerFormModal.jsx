@@ -882,6 +882,20 @@ export const CustomerFormModal = ({ customer, onClose, onSuccess }) => {
           </div>
         </div>
       </div>
+
+      {pendingLostCustomer && (
+        <LostSaleModal
+          customer={pendingLostCustomer}
+          onClose={() => {
+            onSuccess && onSuccess(pendingLostCustomer);
+            onClose();
+          }}
+          onSaved={() => {
+            onSuccess && onSuccess(pendingLostCustomer);
+            onClose();
+          }}
+        />
+      )}
     </div>
   );
 };

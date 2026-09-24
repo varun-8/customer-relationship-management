@@ -307,7 +307,7 @@ const MainAppContent = () => {
             {activeTab === 'followups' && (
               <FollowupSheetView onEditCustomer={(customer) => setEditingCustomer(customer)} />
             )}
-            {activeTab === 'lost' && <LostSalesView />}
+            {activeTab === 'lost' && <LostSalesView onNavigateTab={(tab) => setActiveTab(tab)} />}
             {activeTab === 'employees' && <EmployeeManagementView />}
             {activeTab === 'mobile-pairing' && <MobilePairingView />}
             {activeTab === 'builder' && (

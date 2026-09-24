@@ -261,6 +261,21 @@ export const LostSaleModal = ({ initialData, customer, onClose, onSaved }) => {
         await api.createLostSale(payload);
       }
 
+      // Sync customer document status in database to Lost
+      const targetCustId = customer?._id || customer?.customerId || customer?.id || initialData?.customerRef || initialData?.customerId;
+      if (targetCustId) {
+        try {
+          await api.updateCustomer(targetCustId, {
+            status: 'Lost',
+            lostReason: finalReason,
+            lostCompetitor: competitor || 'Unknown Dealer',
+            lastReason: `Lost Deal to ${competitor || 'competitor'}: ${finalReason}`,
+          });
+        } catch (cErr) {
+          console.warn('Customer status sync error in LostSaleModal:', cErr);
+        }
+      }
+
       if (onSaved) onSaved();
       onClose();
     } catch (err) {

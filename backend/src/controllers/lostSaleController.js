@@ -1,5 +1,6 @@
 const LostSale = require('../models/LostSale');
 const Customer = require('../models/Customer');
+const { generateNextId } = require('../utils/idGenerator');
 
 // Helper to format Date to 'YYYY-MM-DD'
 const toDateString = (d) => {
@@ -108,11 +109,16 @@ exports.createLostSale = async (req, res) => {
 
     await newLostSale.save();
 
-    // If customerId is provided, update customer status to 'Lost' in Customer collection
-    if (customerId || customerRef) {
+    // If customerId or customerRef is provided, update customer status to 'Lost' in Customer collection
+    const queryConditions = [];
+    if (customerRef) queryConditions.push({ _id: customerRef });
+    if (customerId) {
+      queryConditions.push({ customerId: customerId });
+      queryConditions.push({ _id: customerId });
+    }
+    if (queryConditions.length > 0) {
       try {
-        const query = customerRef ? { _id: customerRef } : { customerId };
-        const customer = await Customer.findOne(query);
+        const customer = await Customer.findOne({ $or: queryConditions });
         if (customer) {
           customer.status = 'Lost';
           const currentData = customer.data instanceof Map ? Object.fromEntries(customer.data) : (customer.data || {});
@@ -437,12 +443,13 @@ exports.updateLostSale = async (req, res) => {
 
     // Check if pipeline status is changed to something OTHER than Lost
     if (newStatus && !String(newStatus).toLowerCase().includes('lost')) {
+      const todayStr = toDateString(new Date());
       // Find linked customer record
       const cQuery = {
         $or: [
           ...(lostSale.customerRef ? [{ _id: lostSale.customerRef }] : []),
           ...(lostSale.customerId ? [{ customerId: lostSale.customerId }] : []),
-          ...(lostSale.phone ? [{ 'data.phone': lostSale.phone }] : []),
+          ...(lostSale.phone ? [{ 'data.phone': lostSale.phone }, { phone: lostSale.phone }] : []),
         ],
       };
 
@@ -459,9 +466,37 @@ exports.updateLostSale = async (req, res) => {
         if (updates.phone) cData.phone = updates.phone.trim();
         if (updates.salesperson) cData.salesperson = updates.salesperson.trim();
         if (updates.quoteValue !== undefined) cData.quotationValue = Number(updates.quoteValue);
+        if (!cData.nextFollowUp) cData.nextFollowUp = todayStr;
         customerDoc.data = cData;
         customerDoc.markModified('data');
         await customerDoc.save();
+      } else {
+        // Create customer record if missing so it reflects in the target section
+        try {
+          const nextSeq = await generateNextId('customer_id');
+          await Customer.create({
+            customerId: nextSeq.id,
+            status: newStatus,
+            notes: updates.notes || lostSale.notes || '',
+            data: {
+              customerName: updates.customerName || lostSale.customerName,
+              phone: updates.phone || lostSale.phone || '',
+              customerType: updates.customerType || lostSale.customerType || 'Building Owner',
+              requirement: updates.products || lostSale.products || ['Tiles'],
+              quotationValue: updates.quoteValue !== undefined ? Number(updates.quoteValue) : (lostSale.quoteValue || 0),
+              salesperson: updates.salesperson || lostSale.salesperson || 'Showroom Staff',
+              status: newStatus,
+              nextFollowUp: todayStr,
+            },
+            createdBy: {
+              userId: req.user?._id,
+              name: req.user?.name || updates.salesperson || 'Showroom Staff',
+              role: req.user?.role || 'employee',
+            },
+          });
+        } catch (e) {
+          console.warn('Auto-creating customer record on lost sale move failed:', e.message);
+        }
       }
 
       // Delete LostSale record so it moves out of Lost Sales section to the target pipeline section
@@ -470,7 +505,7 @@ exports.updateLostSale = async (req, res) => {
       return res.status(200).json({
         success: true,
         moved: true,
-        message: `Customer moved from Lost Sales to ${newStatus} section`,
+        message: `Customer moved from Lost Sales to ${newStatus} section and reflected in Follow-up`,
         data: { _id: id, status: newStatus },
       });
     }
@@ -489,7 +524,7 @@ exports.updateLostSale = async (req, res) => {
           $or: [
             ...(updatedRecord.customerRef ? [{ _id: updatedRecord.customerRef }] : []),
             ...(updatedRecord.customerId ? [{ customerId: updatedRecord.customerId }] : []),
-            ...(updatedRecord.phone ? [{ 'data.phone': updatedRecord.phone }] : []),
+            ...(updatedRecord.phone ? [{ 'data.phone': updatedRecord.phone }, { phone: updatedRecord.phone }] : []),
           ],
         };
         if (cQuery.$or.length > 0) {
@@ -564,6 +599,8 @@ exports.reopenLostSale = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Lost sale record not found' });
     }
 
+    const todayStr = toDateString(new Date());
+
     lostSale.status = 'win_back';
     lostSale.winBackDate = new Date();
     if (winBackNotes && winBackNotes.trim()) {
@@ -571,40 +608,79 @@ exports.reopenLostSale = async (req, res) => {
       const dateTag = new Date().toLocaleDateString('en-IN');
       lostSale.notes = `${lostSale.notes ? lostSale.notes + '\n' : ''}[Win-Back Reopened ${dateTag}]: ${winBackNotes.trim()}`;
     }
-    await lostSale.save();
 
     // Reopen in Customer collection if linked (match by customerRef, customerId, or phone)
     const cQuery = {
       $or: [
         ...(lostSale.customerRef ? [{ _id: lostSale.customerRef }] : []),
         ...(lostSale.customerId ? [{ customerId: lostSale.customerId }] : []),
-        ...(lostSale.phone ? [{ 'data.phone': lostSale.phone }] : []),
+        ...(lostSale.phone ? [{ 'data.phone': lostSale.phone }, { phone: lostSale.phone }] : []),
       ],
     };
 
+    let linkedCustomer = null;
     if (cQuery.$or.length > 0) {
       try {
-        const customer = await Customer.findOne(cQuery);
-        if (customer) {
-          customer.status = 'Negotiation';
-          const currentData = customer.data instanceof Map ? Object.fromEntries(customer.data) : (customer.data || {});
-          currentData.status = 'Negotiation';
-          currentData.lastReason = `Win-Back Reopened: ${winBackNotes ? winBackNotes.trim() : 'Customer re-engaged for negotiation'}`;
-          currentData.winBackNotes = winBackNotes ? winBackNotes.trim() : '';
-          currentData.nextFollowUp = new Date().toISOString().split('T')[0];
-          customer.data = currentData;
-          customer.markModified('data');
-          await customer.save();
-        }
+        linkedCustomer = await Customer.findOne(cQuery);
       } catch (err) {
-        console.warn('Could not sync win-back status to Customer document:', err.message);
+        console.warn('Could not lookup Customer in reopenLostSale:', err.message);
       }
     }
 
+    if (linkedCustomer) {
+      linkedCustomer.status = 'Negotiation & Follow-up';
+      const currentData = linkedCustomer.data instanceof Map ? Object.fromEntries(linkedCustomer.data) : (linkedCustomer.data || {});
+      currentData.status = 'Negotiation & Follow-up';
+      currentData.lastReason = `Win-Back Reopened: ${winBackNotes ? winBackNotes.trim() : 'Customer re-engaged for negotiation'}`;
+      currentData.winBackNotes = winBackNotes ? winBackNotes.trim() : '';
+      currentData.nextFollowUp = todayStr;
+      currentData.discussionNotes = `${currentData.discussionNotes ? currentData.discussionNotes + '\n' : ''}[Win-Back ${todayStr}]: ${winBackNotes ? winBackNotes.trim() : 'Reopened opportunity'}`;
+
+      linkedCustomer.data = currentData;
+      linkedCustomer.markModified('data');
+      await linkedCustomer.save();
+    } else {
+      // If customer doesn't exist in Customer collection, create one so it appears in Leads and Follow-up sections
+      try {
+        const nextSeq = await generateNextId('customer_id');
+        const newCustomerId = nextSeq.id;
+        const newCustomer = await Customer.create({
+          customerId: newCustomerId,
+          status: 'Negotiation & Follow-up',
+          notes: winBackNotes ? `[Win-Back Reopened]: ${winBackNotes.trim()}` : 'Win-Back Reopened Opportunity',
+          data: {
+            customerName: lostSale.customerName,
+            phone: lostSale.phone || '',
+            customerType: lostSale.customerType || 'Building Owner',
+            requirement: lostSale.products || lostSale.requirements || ['Tiles'],
+            quotationValue: lostSale.quoteValue || 0,
+            salesperson: lostSale.salesperson || 'Showroom Staff',
+            status: 'Negotiation & Follow-up',
+            nextFollowUp: todayStr,
+            lastReason: `Win-Back Reopened: ${winBackNotes ? winBackNotes.trim() : 'Customer re-engaged for negotiation'}`,
+            discussionNotes: `[Win-Back ${todayStr}]: ${winBackNotes ? winBackNotes.trim() : 'Reopened opportunity'}`,
+          },
+          createdBy: {
+            userId: req.user?._id,
+            name: req.user?.name || lostSale.salesperson || 'Showroom Staff',
+            role: req.user?.role || 'employee',
+          },
+        });
+        lostSale.customerId = newCustomerId;
+        lostSale.customerRef = newCustomer._id;
+      } catch (createErr) {
+        console.warn('Auto-creating customer record for reopened lost sale failed:', createErr.message);
+      }
+    }
+
+    // Remove from LostSale collection so it moves out of Lost Sales section and into Follow-up Sheet
+    await LostSale.findByIdAndDelete(id);
+
     res.status(200).json({
       success: true,
-      message: `Deal for ${lostSale.customerName} recorded as Win-Back Opportunity & moved to Negotiation!`,
-      data: lostSale,
+      moved: true,
+      message: `Deal for ${lostSale.customerName} has been reopened & moved to the Follow-up Sheet!`,
+      data: { _id: id, customerName: lostSale.customerName, status: 'Negotiation & Follow-up' },
     });
   } catch (error) {
     console.error('Error in reopenLostSale:', error);

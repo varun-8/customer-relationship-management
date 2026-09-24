@@ -23,9 +23,11 @@ import {
   ChevronUp,
   BarChart3,
   Eye,
+  X,
 } from 'lucide-react';
 import { api } from '../../services/api';
 import { useCustomer } from '../../context/CustomerContext';
+import { useToast } from '../../context/ToastContext';
 import { LostSaleModal } from './LostSaleModal';
 import { LostSaleDetailModal } from './LostSaleDetailModal';
 import { ConnectionErrorState } from '../common/ConnectionErrorState';
@@ -45,7 +47,8 @@ const formatDateLabel = (dateStr) => {
   return dateStr;
 };
 
-export const LostSalesView = () => {
+export const LostSalesView = ({ onNavigateTab }) => {
+  const toast = useToast();
   const { fetchCustomers } = useCustomer();
   const todayStr = new Date().toISOString().split('T')[0];
 
@@ -142,14 +145,22 @@ export const LostSalesView = () => {
 
   const handleReopenSubmit = async () => {
     if (!reopeningRecord) return;
+    const targetName = reopeningRecord.customerName || 'Customer';
     try {
       await api.reopenLostSale(reopeningRecord._id, winBackNotes);
+      toast.success(
+        `Deal for ${targetName} has been reopened & moved to Follow-up Sheet!`,
+        'Win-Back Reopened'
+      );
       setReopeningRecord(null);
       setWinBackNotes('');
       await fetchData();
       if (fetchCustomers) await fetchCustomers();
+      if (onNavigateTab) {
+        onNavigateTab('followups');
+      }
     } catch (e) {
-      alert(e.message || 'Failed to reopen deal');
+      toast.error(e.message || 'Failed to reopen deal', 'Reopen Error');
     }
   };
 
@@ -450,15 +461,16 @@ export const LostSalesView = () => {
         </div>
       )}
 
-      {/* 3. Aesthetic Executive Control Toolbar */}
+      {/* 3. Sleek Executive Filter & Search Intel Toolbar */}
       <div
         className="control-bar-container"
         style={{
-          backgroundColor: '#FFFFFF',
+          background: '#FFFFFF',
           borderRadius: '16px',
           border: '1px solid #E2E8F0',
-          boxShadow: '0 2px 8px rgba(15, 23, 42, 0.04)',
-          padding: '14px 18px',
+          borderLeft: '4px solid #DC2626',
+          boxShadow: '0 4px 16px -2px rgba(15, 23, 42, 0.05), 0 2px 4px -1px rgba(15, 23, 42, 0.03)',
+          padding: '16px 20px',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
@@ -467,26 +479,26 @@ export const LostSalesView = () => {
         }}
       >
         {/* Left Filter Controls */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
           {/* Search Box */}
-          <form onSubmit={handleSearchSubmit} style={{ position: 'relative', width: '270px' }}>
-            <Search size={15} style={{ position: 'absolute', left: '12px', top: '10px', color: '#94A3B8' }} />
+          <form onSubmit={handleSearchSubmit} style={{ position: 'relative', width: '280px' }}>
+            <Search size={16} style={{ position: 'absolute', left: '12px', top: '11px', color: '#64748B' }} />
             <input
               type="text"
-              placeholder="Search lost deals, competitors..."
+              placeholder="Search lost leads, competitors, reason..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               style={{
                 width: '100%',
-                paddingLeft: '34px',
-                paddingRight: search ? '30px' : '12px',
-                paddingTop: '8px',
-                paddingBottom: '8px',
+                paddingLeft: '36px',
+                paddingRight: search ? '32px' : '12px',
+                paddingTop: '9px',
+                paddingBottom: '9px',
                 backgroundColor: '#F8FAFC',
                 border: '1.5px solid #CBD5E1',
-                borderRadius: '10px',
+                borderRadius: '11px',
                 fontSize: '13px',
-                fontWeight: '600',
+                fontWeight: '700',
                 color: '#0F172A',
                 outline: 'none',
                 boxSizing: 'border-box',
@@ -500,12 +512,13 @@ export const LostSalesView = () => {
                 style={{
                   position: 'absolute',
                   right: '10px',
-                  top: '8px',
+                  top: '9px',
                   background: 'none',
                   border: 'none',
                   color: '#94A3B8',
                   cursor: 'pointer',
-                  fontSize: '12px',
+                  fontSize: '13px',
+                  fontWeight: '700',
                 }}
               >
                 ✕
@@ -517,10 +530,10 @@ export const LostSalesView = () => {
           <div
             style={{
               display: 'flex',
-              gap: '3px',
+              gap: '4px',
               backgroundColor: '#F1F5F9',
-              padding: '3px 4px',
-              borderRadius: '10px',
+              padding: '4px 5px',
+              borderRadius: '12px',
               border: '1px solid #E2E8F0',
             }}
           >
@@ -538,22 +551,22 @@ export const LostSalesView = () => {
                   type="button"
                   onClick={() => setProductFilter(p.id)}
                   style={{
-                    padding: '6px 11px',
-                    borderRadius: '7px',
+                    padding: '6px 12px',
+                    borderRadius: '8px',
                     border: 'none',
                     backgroundColor: isSelected ? '#FFFFFF' : 'transparent',
-                    color: isSelected ? '#2563EB' : '#64748B',
+                    color: isSelected ? '#1E40AF' : '#64748B',
                     fontWeight: isSelected ? '800' : '600',
-                    fontSize: '12px',
+                    fontSize: '12.5px',
                     cursor: 'pointer',
-                    boxShadow: isSelected ? '0 1px 3px rgba(0,0,0,0.06)' : 'none',
+                    boxShadow: isSelected ? '0 2px 6px rgba(0,0,0,0.06)' : 'none',
                     display: 'inline-flex',
                     alignItems: 'center',
-                    gap: '4px',
+                    gap: '5px',
                     transition: 'all 0.15s ease',
                   }}
                 >
-                  <span style={{ fontSize: '11px' }}>{p.icon}</span>
+                  <span style={{ fontSize: '12px' }}>{p.icon}</span>
                   <span>{p.label}</span>
                 </button>
               );
@@ -564,30 +577,31 @@ export const LostSalesView = () => {
           <span
             style={{
               fontSize: '12px',
-              color: '#64748B',
-              fontWeight: '700',
-              backgroundColor: '#F8FAFC',
-              border: '1px solid #E2E8F0',
-              padding: '6px 12px',
-              borderRadius: '9px',
+              color: '#475569',
+              fontWeight: '800',
+              backgroundColor: '#FEF2F2',
+              border: '1px solid #FECDD3',
+              padding: '6px 14px',
+              borderRadius: '20px',
               display: 'inline-flex',
               alignItems: 'center',
-              gap: '4px',
+              gap: '5px',
             }}
           >
-            Records: <strong style={{ color: '#0F172A' }}>{lostSales.length}</strong>
+            <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#DC2626' }} />
+            Records: <strong style={{ color: '#991B1B' }}>{lostSales.length}</strong>
           </span>
         </div>
 
         {/* Right Filter & Action Group */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
           {/* Sales Staff Select */}
           <select
             value={staffFilter}
             onChange={(e) => setStaffFilter(e.target.value)}
             style={{
-              padding: '8px 30px 8px 12px',
-              borderRadius: '9px',
+              padding: '9px 32px 9px 14px',
+              borderRadius: '11px',
               border: '1.5px solid #CBD5E1',
               fontSize: '12.5px',
               fontWeight: '700',
@@ -595,18 +609,18 @@ export const LostSalesView = () => {
               backgroundColor: '#FFFFFF',
               backgroundImage: `url("data:image/svg+xml;utf8,<svg fill='%23475569' height='16' viewBox='0 0 24 24' width='16' xmlns='http://www.w3.org/2000/svg'><path d='M7 10l5 5 5-5z'/></svg>")`,
               backgroundRepeat: 'no-repeat',
-              backgroundPosition: 'right 8px center',
+              backgroundPosition: 'right 10px center',
               appearance: 'none',
               WebkitAppearance: 'none',
               outline: 'none',
               cursor: 'pointer',
-              minWidth: '150px',
+              minWidth: '160px',
             }}
           >
-            <option value="all">All Sales Staff</option>
+            <option value="all">All Sales Executives</option>
             {staffList.map((name) => (
               <option key={name} value={name}>
-                {name}
+                👤 {name}
               </option>
             ))}
           </select>
@@ -617,8 +631,8 @@ export const LostSalesView = () => {
             value={selectedMonth}
             onChange={(e) => setSelectedMonth(e.target.value)}
             style={{
-              padding: '7px 11px',
-              borderRadius: '9px',
+              padding: '8px 12px',
+              borderRadius: '11px',
               border: '1.5px solid #CBD5E1',
               backgroundColor: '#FFFFFF',
               fontSize: '12.5px',
@@ -635,21 +649,21 @@ export const LostSalesView = () => {
             onClick={fetchData}
             title="Refresh Intelligence Data"
             style={{
-              padding: '8px 12px',
-              borderRadius: '9px',
+              padding: '9px 14px',
+              borderRadius: '11px',
               border: '1.5px solid #CBD5E1',
               backgroundColor: '#FFFFFF',
-              color: '#0F172A',
-              fontSize: '12px',
+              color: '#334155',
+              fontSize: '12.5px',
               fontWeight: '700',
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
-              gap: '5px',
+              gap: '6px',
               transition: 'all 0.15s ease',
             }}
           >
-            <RefreshCw size={13} className={loading ? 'spin' : ''} />
+            <RefreshCw size={14} className={loading ? 'spin' : ''} />
             <span>Refresh</span>
           </button>
 
@@ -659,24 +673,23 @@ export const LostSalesView = () => {
             onClick={handleExportCSV}
             title="Export CSV"
             style={{
-              padding: '8px 13px',
-              borderRadius: '9px',
+              padding: '9px 15px',
+              borderRadius: '11px',
               border: '1.5px solid #CBD5E1',
               backgroundColor: '#FFFFFF',
-              color: '#0F172A',
-              fontSize: '12px',
-              fontWeight: '700',
+              color: '#0F766E',
+              fontSize: '12.5px',
+              fontWeight: '800',
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
-              gap: '5px',
+              gap: '6px',
               transition: 'all 0.15s ease',
             }}
           >
-            <Download size={13} />
+            <Download size={14} />
             <span>Export CSV</span>
           </button>
-
 
           {/* Primary Action Button: Log Lost Sale */}
           <button
@@ -686,22 +699,22 @@ export const LostSalesView = () => {
               setShowModal(true);
             }}
             style={{
-              padding: '8.5px 16px',
-              borderRadius: '9px',
+              padding: '9px 18px',
+              borderRadius: '11px',
               border: 'none',
-              background: '#0F172A',
+              background: 'linear-gradient(135deg, #0F172A 0%, #1E293B 100%)',
               color: '#FFFFFF',
               fontSize: '13px',
               fontWeight: '800',
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
-              gap: '6px',
-              boxShadow: '0 2px 8px rgba(15, 23, 42, 0.2)',
+              gap: '7px',
+              boxShadow: '0 4px 12px rgba(15, 23, 42, 0.25)',
               transition: 'all 0.15s ease',
             }}
           >
-            <Plus size={15} />
+            <Plus size={16} />
             <span>Log Lost Sale</span>
           </button>
         </div>
@@ -1172,41 +1185,193 @@ export const LostSalesView = () => {
 
       {/* Win-Back Reopen Confirmation Dialog */}
       {reopeningRecord && (
-        <div className="modal-backdrop" onClick={() => setReopeningRecord(null)} style={{ zIndex: 9999 }}>
+        <div
+          className="modal-backdrop"
+          onClick={() => setReopeningRecord(null)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            width: '100vw',
+            height: '100vh',
+            backgroundColor: 'rgba(15, 23, 42, 0.75)',
+            backdropFilter: 'blur(16px)',
+            WebkitBackdropFilter: 'blur(16px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 99999,
+            padding: '20px',
+            margin: 0,
+            animation: 'fadeIn 0.2s ease-out',
+          }}
+        >
           <div
             className="modal-card"
-            style={{ maxWidth: '440px', background: '#FFFFFF', borderRadius: '16px', overflow: 'hidden' }}
+            style={{
+              maxWidth: '520px',
+              width: '100%',
+              background: '#FFFFFF',
+              borderRadius: '20px',
+              overflow: 'hidden',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.1)',
+              border: '1px solid #E2E8F0',
+              animation: 'scaleUp 0.2s ease-out',
+            }}
             onClick={(e) => e.stopPropagation()}
           >
-            <div style={{ padding: '16px 20px', background: '#ECFDF5', borderBottom: '1px solid #A7F3D0', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <RotateCcw size={18} color="#059669" />
-              <h3 style={{ margin: 0, fontSize: '15px', fontWeight: '800', color: '#065F46' }}>
-                Reopen as Win-Back Opportunity
-              </h3>
+            {/* Header */}
+            <div
+              style={{
+                padding: '20px 24px',
+                background: 'linear-gradient(135deg, #064E3B 0%, #065F46 50%, #047857 100%)',
+                color: '#FFFFFF',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div
+                  style={{
+                    width: '40px',
+                    height: '40px',
+                    borderRadius: '12px',
+                    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: '#A7F3D0',
+                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                  }}
+                >
+                  <RotateCcw size={20} />
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '800', color: '#FFFFFF', letterSpacing: '-0.01em' }}>
+                    Reopen as Win-Back Opportunity
+                  </h3>
+                  <p style={{ margin: '2px 0 0', fontSize: '12px', color: '#A7F3D0' }}>
+                    Move customer lead directly to Follow-up Sheet
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setReopeningRecord(null)}
+                style={{
+                  background: 'rgba(255, 255, 255, 0.1)',
+                  border: 'none',
+                  borderRadius: '10px',
+                  padding: '7px',
+                  color: '#FFFFFF',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <X size={18} />
+              </button>
             </div>
-            <div style={{ padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              <p style={{ fontSize: '13px', color: '#334155', lineHeight: 1.5, margin: 0 }}>
-                Move <strong>{reopeningRecord.customerName}</strong> (₹{reopeningRecord.quoteValue.toLocaleString('en-IN')}) back to active showroom negotiation.
+
+            {/* Body */}
+            <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px', backgroundColor: '#FFFFFF' }}>
+              {/* Customer summary pill card */}
+              <div
+                style={{
+                  backgroundColor: '#F0FDF4',
+                  borderRadius: '14px',
+                  border: '1.5px solid #BBF7D0',
+                  padding: '14px 16px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  flexWrap: 'wrap',
+                  gap: '10px',
+                }}
+              >
+                <div>
+                  <div style={{ fontSize: '14px', fontWeight: '800', color: '#14532D' }}>
+                    {reopeningRecord.customerName}
+                  </div>
+                  <div style={{ fontSize: '12px', color: '#166534', marginTop: '2px' }}>
+                    📞 {reopeningRecord.phone || 'No phone recorded'} • 👤 {reopeningRecord.salesperson || 'Staff'}
+                  </div>
+                </div>
+
+                <div
+                  style={{
+                    backgroundColor: '#FFFFFF',
+                    padding: '6px 12px',
+                    borderRadius: '10px',
+                    border: '1px solid #86EFAC',
+                    textAlign: 'right',
+                  }}
+                >
+                  <div style={{ fontSize: '10px', color: '#166534', fontWeight: '700', textTransform: 'uppercase' }}>DEAL VALUE</div>
+                  <div style={{ fontSize: '14px', fontWeight: '900', color: '#047857' }}>
+                    ₹{Number(reopeningRecord.quoteValue || 0).toLocaleString('en-IN')}
+                  </div>
+                </div>
+              </div>
+
+              <p style={{ fontSize: '12.5px', color: '#475569', lineHeight: 1.5, margin: 0 }}>
+                This action sets the customer pipeline status to <strong>Negotiation & Follow-up</strong> and places them immediately into today's follow-up reminders.
               </p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                <label style={{ fontSize: '11.5px', fontWeight: '800', color: '#475569', textTransform: 'uppercase' }}>
-                  Win-Back Strategy / Special Offer Notes:
+
+              {/* Notes input */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <label style={{ fontSize: '11px', fontWeight: '800', color: '#334155', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  Win-Back Strategy / Special Offer Remarks:
                 </label>
                 <textarea
                   rows={3}
-                  placeholder="e.g. Matched competitor price with 5% discount + free transport..."
+                  placeholder="e.g. Matched competitor price with 5% discount, arranged free site delivery..."
                   value={winBackNotes}
                   onChange={(e) => setWinBackNotes(e.target.value)}
-                  style={{ borderRadius: '8px', padding: '8px', border: '1px solid #CBD5E1', fontSize: '12.5px' }}
+                  style={{
+                    width: '100%',
+                    borderRadius: '10px',
+                    padding: '10px 12px',
+                    border: '1.5px solid #CBD5E1',
+                    fontSize: '13px',
+                    color: '#0F172A',
+                    backgroundColor: '#F8FAFC',
+                    outline: 'none',
+                    lineHeight: '1.4',
+                    fontFamily: 'inherit',
+                    boxSizing: 'border-box',
+                  }}
                 />
               </div>
             </div>
-            <div style={{ padding: '14px 20px', background: '#F8FAFC', borderTop: '1px solid #E2E8F0', display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+
+            {/* Footer */}
+            <div
+              style={{
+                padding: '16px 24px',
+                background: '#F8FAFC',
+                borderTop: '1px solid #E2E8F0',
+                display: 'flex',
+                justifyContent: 'flex-end',
+                alignItems: 'center',
+                gap: '10px',
+              }}
+            >
               <button
                 type="button"
-                className="btn btn-secondary btn-sm"
                 onClick={() => setReopeningRecord(null)}
-                style={{ borderRadius: '8px', fontSize: '12px' }}
+                style={{
+                  padding: '9px 18px',
+                  borderRadius: '10px',
+                  border: '1px solid #CBD5E1',
+                  backgroundColor: '#FFFFFF',
+                  color: '#475569',
+                  fontSize: '13px',
+                  fontWeight: '700',
+                  cursor: 'pointer',
+                }}
               >
                 Cancel
               </button>
@@ -1214,17 +1379,22 @@ export const LostSalesView = () => {
                 type="button"
                 onClick={handleReopenSubmit}
                 style={{
-                  padding: '7px 16px',
-                  borderRadius: '8px',
+                  padding: '9px 20px',
+                  borderRadius: '10px',
                   border: 'none',
-                  background: '#059669',
+                  background: 'linear-gradient(135deg, #059669 0%, #047857 100%)',
                   color: '#FFFFFF',
-                  fontSize: '12.5px',
+                  fontSize: '13px',
                   fontWeight: '800',
                   cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  boxShadow: '0 4px 12px rgba(5, 150, 105, 0.3)',
                 }}
               >
-                ✓ Reopen & Win-Back
+                <RotateCcw size={15} />
+                <span>Reopen & Move to Follow-ups</span>
               </button>
             </div>
           </div>

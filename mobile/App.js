@@ -1667,13 +1667,9 @@ export default function App() {
 
   const activeFields = (formSchema?.fields || []).filter((f) => f.active && f.name !== 'quotationDate');
 
-  // Filter customers by employee (for Owner) or type (for Employee), lost leads hidden
+  // Filter customers by employee (for Owner) or type (for Employee) - matches Desktop directory
   const filteredCustomers = customers.filter((c) => {
     const d = c.data instanceof Map ? Object.fromEntries(c.data) : (c.data || c);
-    
-    // Hide lost leads from active mobile list
-    const status = (d.status || c.status || '').toLowerCase();
-    if (status.includes('lost')) return false;
 
     // For Owner: Filter based on the selected employee/salesperson
     if (currentProfile.role === 'owner') {
@@ -1720,10 +1716,13 @@ export default function App() {
       case 'Order Confirmed':
         return { bg: '#DCFCE7', border: '#86EFAC', text: '#15803D', dot: '#16A34A', icon: '🎉' };
       case 'Negotiation':
+      case 'Negotiation & Follow-up':
         return { bg: '#FEF3C7', border: '#FDE68A', text: '#B45309', dot: '#D97706', icon: '🤝' };
       case 'Quotation':
+      case 'Quotation Provided':
         return { bg: '#EFF6FF', border: '#BFDBFE', text: '#1D4ED8', dot: '#2563EB', icon: '📄' };
       case 'Follow-up':
+      case 'Requirement Collected':
         return { bg: '#EEF2FF', border: '#C7D2FE', text: '#4338CA', dot: '#4F46E5', icon: '📞' };
       case 'New Lead':
       case 'Newly Contacted':
@@ -1731,7 +1730,9 @@ export default function App() {
       case 'Walk-in':
         return { bg: '#F0FDFA', border: '#99F6E4', text: '#0F766E', dot: '#0D9488', icon: '🚶' };
       case 'Lost':
-        return { bg: '#F1F5F9', border: '#CBD5E1', text: '#475569', dot: '#64748B', icon: '✕' };
+      case 'Lost Sale':
+      case 'Sale Lost':
+        return { bg: '#FEF2F2', border: '#FECACA', text: '#DC2626', dot: '#EF4444', icon: '✕' };
       case 'Future Requirement':
         return { bg: '#FAF5FF', border: '#DDD6FE', text: '#7E22CE', dot: '#9333EA', icon: '⏳' };
       default:
@@ -2070,14 +2071,10 @@ export default function App() {
                 ['all', ...profiles.filter((p) => p.role === 'employee').map((p) => p.name)].map((staff) => {
                   const isSelected = ownerStaffFilter === staff;
                   const count = staff === 'all'
-                    ? customers.filter((c) => {
-                        const d = c.data instanceof Map ? Object.fromEntries(c.data) : (c.data || c);
-                        return !(d.status || c.status || '').toLowerCase().includes('lost');
-                      }).length
+                    ? customers.length
                     : customers.filter((c) => {
                         const d = c.data instanceof Map ? Object.fromEntries(c.data) : (c.data || c);
-                        const s = (d.status || c.status || '').toLowerCase();
-                        return !s.includes('lost') && (d.salesperson || '').toLowerCase().includes(staff.toLowerCase());
+                        return (d.salesperson || '').toLowerCase().includes(staff.toLowerCase());
                       }).length;
                   return (
                     <TouchableOpacity
@@ -2102,9 +2099,7 @@ export default function App() {
                     ? filteredCustomers.length
                     : customers.filter((c) => {
                         const d = c.data instanceof Map ? Object.fromEntries(c.data) : (c.data || c);
-                        const s = (d.status || c.status || '').toLowerCase();
-                        return !s.includes('lost')
-                          && d.customerType === type
+                        return d.customerType === type
                           && (d.salesperson || '').toLowerCase().includes(currentProfile.name.toLowerCase());
                       }).length;
                   return (

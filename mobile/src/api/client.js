@@ -884,12 +884,42 @@ export const apiClient = {
     }
   },
 
-  async getLostSalesAnalytics(params = {}) {
+  async updateLostSale(id, data) {
     try {
       const base = await this.getApiBase();
       const headers = await this.getHeaders();
-      const query = new URLSearchParams(params).toString();
-      const res = await fetch(`${base}/lost-sales/analytics${query ? `?${query}` : ''}`, {
+      const res = await fetch(`${base}/lost-sales/${id}`, {
+        method: 'PUT',
+        headers,
+        body: JSON.stringify(data),
+      });
+      return await res.json();
+    } catch (e) {
+      return { success: false, message: `Connection error: ${e.message}` };
+    }
+  },
+
+  async reopenLostSale(id, winBackNotes = '') {
+    try {
+      const base = await this.getApiBase();
+      const headers = await this.getHeaders();
+      const res = await fetch(`${base}/lost-sales/${id}/reopen`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ winBackNotes }),
+      });
+      return await res.json();
+    } catch (e) {
+      return { success: false, message: `Connection error: ${e.message}` };
+    }
+  },
+
+  async deleteLostSale(id) {
+    try {
+      const base = await this.getApiBase();
+      const headers = await this.getHeaders();
+      const res = await fetch(`${base}/lost-sales/${id}`, {
+        method: 'DELETE',
         headers,
       });
       return await res.json();

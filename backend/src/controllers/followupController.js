@@ -254,17 +254,36 @@ exports.logFollowupActivity = async (req, res) => {
       currentData.leadTemperature = leadTemperature;
       currentData.temperature = leadTemperature;
     }
-    if (statusUpdate) {
+    const isConfirmedStatus =
+      statusUpdate === 'Order Confirmed' ||
+      (statusUpdate && statusUpdate.toLowerCase().includes('confirmed')) ||
+      (outcome && outcome.toLowerCase().includes('order confirmed'));
+
+    const isLostStatus =
+      statusUpdate === 'Lost Sale' ||
+      statusUpdate === 'Lost' ||
+      (statusUpdate && statusUpdate.toLowerCase().includes('lost')) ||
+      (outcome && outcome.toLowerCase().includes('lost'));
+
+    if (isConfirmedStatus) {
+      currentData.status = 'Order Confirmed';
+      customer.status = 'Order Confirmed';
+    } else if (isLostStatus) {
+      currentData.status = 'Lost Sale';
+      customer.status = 'Lost Sale';
+    } else if (statusUpdate) {
       currentData.status = statusUpdate;
       customer.status = statusUpdate;
     }
+
     if (quotationValue !== undefined && Number(quotationValue) >= 0) {
       currentData.quotationValue = Number(quotationValue);
     }
+
     if (req.body.orderValue !== undefined && Number(req.body.orderValue) >= 0) {
       currentData.orderValue = Number(req.body.orderValue);
-    } else if (statusUpdate === 'Order Confirmed' && quotationValue !== undefined) {
-      currentData.orderValue = Number(quotationValue);
+    } else if (isConfirmedStatus) {
+      currentData.orderValue = Number(currentData.quotationValue) || Number(quotationValue) || 0;
     }
     if (houseStage) {
       currentData.houseStage = houseStage;

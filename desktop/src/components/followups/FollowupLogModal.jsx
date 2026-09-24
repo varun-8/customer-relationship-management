@@ -315,8 +315,37 @@ export const FollowupLogModal = ({ followUp: initialFollowUp, onClose, onSaved, 
       return;
     }
 
-    const isLostTrigger = outcome === 'Deal Lost / Postponed' || pipelineStatus === 'Lost' || pipelineStatus === 'Lost Sale';
+    const isLostTrigger =
+      outcome === 'Deal Lost / Postponed' ||
+      pipelineStatus === 'Lost' ||
+      pipelineStatus === 'Lost Sale' ||
+      pipelineStatus === 'Sale Lost' ||
+      (pipelineStatus && String(pipelineStatus).toLowerCase().includes('lost'));
+
+    let finalOrderVal = orderValueAmount ? Number(orderValueAmount) : (quotationValue ? Number(quotationValue) : undefined);
+
     if (isLostTrigger) {
+      setSaving(true);
+      try {
+        const followUpId = selectedFollowUp._id || selectedFollowUp.customerId;
+        await api.logFollowupActivity(followUpId, {
+          outcome,
+          customerName: selectedFollowUp.customerName,
+          phone: selectedFollowUp.phone,
+          discussionNotes: discussionNotes.trim(),
+          nextFollowUp,
+          leadTemperature,
+          houseStage,
+          quotationValue: quotationValue ? Number(quotationValue) : undefined,
+          orderValue: finalOrderVal,
+          statusUpdate: 'Lost Sale',
+        });
+      } catch (logErr) {
+        console.warn('Error logging followup prior to lost sale modal:', logErr);
+      } finally {
+        setSaving(false);
+      }
+
       if (onOpenLostSale) {
         onOpenLostSale(selectedFollowUp);
         onClose();
@@ -325,8 +354,6 @@ export const FollowupLogModal = ({ followUp: initialFollowUp, onClose, onSaved, 
     }
 
     const isOrderConfirmedTrigger = outcome === 'Order Confirmed / Ready for Billing' || pipelineStatus === 'Order Confirmed';
-    let finalOrderVal = orderValueAmount ? Number(orderValueAmount) : (quotationValue ? Number(quotationValue) : undefined);
-
     if (isOrderConfirmedTrigger) {
       if (!finalOrderVal || finalOrderVal <= 0) {
         setError('Please enter the confirmed order deal amount (₹) at which the deal is closed.');
@@ -551,7 +578,7 @@ export const FollowupLogModal = ({ followUp: initialFollowUp, onClose, onSaved, 
             }}
           >
             <Plus size={14} color={activeSection === 'log' ? '#1D4ED8' : '#64748B'} />
-            <span>Log Activity & Update</span>
+            <span>Log Follow-up Form</span>
             {activeSection === 'log' && (
               <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#1D4ED8' }} />
             )}
@@ -619,27 +646,19 @@ export const FollowupLogModal = ({ followUp: initialFollowUp, onClose, onSaved, 
                       </div>
                     </div>
 
-                    <button
-                      type="button"
-                      onClick={() => setActiveSection('log')}
+                    <span
                       style={{
-                        padding: '8px 16px',
-                        borderRadius: '9px',
-                        backgroundColor: '#0F766E',
-                        color: '#FFFFFF',
-                        border: 'none',
-                        fontSize: '12.5px',
+                        padding: '6px 14px',
+                        borderRadius: '20px',
+                        backgroundColor: '#F0FDFA',
+                        color: '#0F766E',
+                        border: '1px solid #99F6E4',
+                        fontSize: '12px',
                         fontWeight: '800',
-                        cursor: 'pointer',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '6px',
-                        boxShadow: '0 2px 6px rgba(15, 118, 110, 0.25)',
                       }}
                     >
-                      <Plus size={14} />
-                      <span>Log Activity & Update</span>
-                    </button>
+                      Status: {pipelineStatus}
+                    </span>
                   </div>
 
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '10px', fontSize: '12.5px' }}>

@@ -333,8 +333,37 @@ export function MobileFollowupLogModal({
   };
 
   const handleSubmit = async () => {
-    const isLostTrigger = outcome === 'Deal Lost / Postponed' || pipelineStatus === 'Lost' || pipelineStatus === 'Lost Sale';
+    const isLostTrigger =
+      outcome === 'Deal Lost / Postponed' ||
+      pipelineStatus === 'Lost' ||
+      pipelineStatus === 'Lost Sale' ||
+      pipelineStatus === 'Sale Lost' ||
+      (pipelineStatus && String(pipelineStatus).toLowerCase().includes('lost'));
+
+    let finalOrderVal = orderValueAmount ? Number(orderValueAmount) : (quotationValue ? Number(quotationValue) : undefined);
+
     if (isLostTrigger) {
+      setSubmitting(true);
+      try {
+        const recordId = followUp._id || followUp.customerId || data.customerId;
+        await apiClient.logFollowupActivity(recordId, {
+          outcome,
+          customerName: customerName.trim(),
+          phone: phone.trim(),
+          discussionNotes: discussionNotes.trim(),
+          nextFollowUp,
+          leadTemperature,
+          houseStage,
+          quotationValue: quotationValue ? Number(quotationValue) : undefined,
+          orderValue: finalOrderVal,
+          statusUpdate: 'Lost Sale',
+        });
+      } catch (logErr) {
+        console.warn('Error logging followup prior to MobileLostSale modal:', logErr);
+      } finally {
+        setSubmitting(false);
+      }
+
       if (onOpenLostSale) {
         onOpenLostSale(followUp);
         handleSmoothClose();
@@ -343,7 +372,6 @@ export function MobileFollowupLogModal({
     }
 
     const isOrderConfirmedTrigger = outcome === 'Order Confirmed / Ready for Billing' || pipelineStatus === 'Order Confirmed';
-    let finalOrderVal = orderValueAmount ? Number(orderValueAmount) : (quotationValue ? Number(quotationValue) : undefined);
 
     if (isOrderConfirmedTrigger) {
       if (!finalOrderVal || finalOrderVal <= 0) {
